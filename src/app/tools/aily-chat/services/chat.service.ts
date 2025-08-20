@@ -114,7 +114,7 @@ export class ChatService {
               try {
                 const msg = JSON.parse(line);
                 messageSubject.next(msg);
-                console.log(msg);
+                // console.log(msg);
 
                 if (msg.type === 'TaskCompleted') {
                   messageSubject.complete();
