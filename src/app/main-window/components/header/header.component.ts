@@ -275,7 +275,7 @@ export class HeaderComponent {
         this.builderService.build().then(result => {
           item.state = 'done';
         }).catch(err => {
-          console.error("编译失败: ", err);
+          console.log("编译未完成: ", JSON.stringify(err));
           if (err.state) item.state = err.state;
         })
         break;
@@ -285,7 +285,7 @@ export class HeaderComponent {
         this.uploaderService.upload().then(result => {
           item.state = 'done';
         }).catch(err => {
-          console.log("上传失败: ", err);
+          console.log("上传未完成: ", JSON.stringify(err));
           if (err.state) item.state = err.state;
         });
         break;
