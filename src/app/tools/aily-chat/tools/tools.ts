@@ -17,16 +17,14 @@ export interface ToolUseResult {
 export const TOOLS = [
     {
         name: 'create_project',
-        description: `创建一个新项目，返回项目路径。需要提供开发板信息，包含名称、昵称和版本号。`,
+        description: `创建一个新项目，返回项目路径。需要提供开发板信息，包含名称。`,
         input_schema: {
             type: 'object',
             properties: {
                 board: {
                     type: 'object',
                     properties: {
-                        name: { type: 'string', description: '板子名称' },
-                        nickname: { type: 'string', description: '板子昵称' },
-                        version: { type: 'string', description: '版本号' }
+                        name: { type: 'string', description: '板子名称' }
                     },
                     description: '开发板信息'
                 },

@@ -35,6 +35,7 @@ import { checkExistsTool } from './tools/checkExistsTool';
 import { getDirectoryTreeTool } from './tools/getDirectoryTreeTool';
 import { fetchTool, FetchToolService } from './tools/fetchTool';
 import { NzModalService } from 'ng-zorro-antd/modal';
+import { ConfigService } from '../../services/config.service';
 
 const { pt } = (window as any)['electronAPI'].platform;
 
@@ -257,7 +258,8 @@ export class AilyChatComponent implements OnDestroy {
     private router: Router,
     private message: NzMessageService,
     private authService: AuthService,
-    private modal: NzModalService
+    private modal: NzModalService,
+    private configService: ConfigService
   ) { }
 
   ngOnInit() {
@@ -771,7 +773,7 @@ ${JSON.stringify(errData)}
 }
 \`\`\`\n\n
                     `);
-                    toolResult = await newProjectTool(this.projectService, this.prjRootPath, toolArgs);
+                    toolResult = await newProjectTool(this.prjRootPath, toolArgs, this.projectService, this.configService);
                     if (toolResult.is_error) {
                       this.uiService.updateFooterState({ state: 'error', text: '项目创建失败' });
                       resultState = "error"
