@@ -277,6 +277,10 @@ export class AilyChatComponent implements OnDestroy {
       }
     );
 
+    this.authService.initializeAuth().then((res) => {
+      console.log('AuthService initialized:', res);
+    });
+
     // 订阅登录状态变化
     this.loginStatusSubscription = this.authService.isLoggedIn$.subscribe(
       isLoggedIn => {
