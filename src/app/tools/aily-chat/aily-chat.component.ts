@@ -35,6 +35,7 @@ import { checkExistsTool } from './tools/checkExistsTool';
 import { getDirectoryTreeTool } from './tools/getDirectoryTreeTool';
 import { fetchTool, FetchToolService } from './tools/fetchTool';
 import { NzModalService } from 'ng-zorro-antd/modal';
+import { ConfigService } from '../../services/config.service';
 
 const { pt } = (window as any)['electronAPI'].platform;
 
@@ -257,7 +258,8 @@ export class AilyChatComponent implements OnDestroy {
     private router: Router,
     private message: NzMessageService,
     private authService: AuthService,
-    private modal: NzModalService
+    private modal: NzModalService,
+    private configService: ConfigService
   ) { }
 
   ngOnInit() {
@@ -276,6 +278,10 @@ export class AilyChatComponent implements OnDestroy {
         this.receiveTextFromExternal(message.text, message.options);
       }
     );
+
+    this.authService.initializeAuth().then((res) => {
+      console.log('AuthService initialized:', res);
+    });
 
     // 订阅登录状态变化
     this.loginStatusSubscription = this.authService.isLoggedIn$.subscribe(
@@ -555,14 +561,60 @@ ${JSON.stringify(errData)}
 
     this.isWaiting = true;
 
-    this.chatService.sendMessage(this.sessionId, text, sender).subscribe((res: any) => {
-      if (res.status === 'success') {
-        if (res.data) {
-          this.appendMessage('aily', res.data);
-        }
+    this.sendMessageWithRetry(this.sessionId, text, sender, clear, 3);
+  }
 
-        if (clear) {
-          this.inputValue = ''; // 发送后清空输入框
+  /**
+   * 发送消息并支持自动重试
+   * @param sessionId 会话ID
+   * @param text 发送的文本内容
+   * @param sender 发送者类型
+   * @param clear 是否清空输入框
+   * @param retryCount 剩余重试次数
+   */
+  private sendMessageWithRetry(sessionId: string, text: string, sender: string, clear: boolean, retryCount: number): void {
+    this.chatService.sendMessage(sessionId, text, sender).subscribe({
+      next: (res: any) => {
+        console.log("sendRes: ", res);
+        if (res.status === 'success') {
+          if (res.data) {
+            this.appendMessage('aily', res.data);
+          }
+
+          if (clear) {
+            this.inputValue = ''; // 发送后清空输入框
+          }
+        }
+      },
+      error: (error) => {
+        console.error('发送消息失败:', error);
+        
+        // 检查是否是502错误且还有重试次数
+        if (error.status === 502 && retryCount > 0) {
+          console.log(`遇到502错误，还有${retryCount}次重试机会，正在重试...`);
+          
+          // 延迟1秒后重试
+          setTimeout(() => {
+            this.sendMessageWithRetry(sessionId, text, sender, clear, retryCount - 1);
+          }, 1000);
+        } else {
+          // 重试次数用完或非502错误，显示错误信息
+          this.isWaiting = false;
+          
+          let errorMessage = '发送消息失败';
+          if (error.status === 502) {
+            errorMessage = '服务器暂时无法响应，请稍后重试';
+          } else if (error.message) {
+            errorMessage = error.message;
+          }
+          
+          this.appendMessage('错误', `
+\`\`\`aily-error
+{
+  "message": "${errorMessage}",
+  "status": ${error.status || 'unknown'}
+}
+\`\`\`\n\n`);
         }
       }
     });
@@ -721,7 +773,7 @@ ${JSON.stringify(errData)}
 }
 \`\`\`\n\n
                     `);
-                    toolResult = await newProjectTool(this.projectService, this.prjRootPath, toolArgs);
+                    toolResult = await newProjectTool(this.prjRootPath, toolArgs, this.projectService, this.configService);
                     if (toolResult.is_error) {
                       this.uiService.updateFooterState({ state: 'error', text: '项目创建失败' });
                       resultState = "error"

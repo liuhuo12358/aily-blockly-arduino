@@ -371,6 +371,16 @@ export async function editAbiFileTool(
             console.log(`追加ABI内容长度: ${content.length}`);
         }
 
+        // 验证最终内容是否为有效的JSON格式
+        try {
+            JSON.parse(finalContent);
+        } catch (jsonError) {
+            return {
+                is_error: true,
+                content: `最终ABI内容不是有效的JSON格式: ${jsonError.message}`
+            };
+        }
+
         // 写入文件
         await window['fs'].writeFileSync(filePath, finalContent, encoding);
         
