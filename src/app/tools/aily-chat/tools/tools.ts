@@ -12,6 +12,7 @@ export type ToolParamName = (typeof toolParamNames)[number];
 export interface ToolUseResult {
     is_error: boolean;
     content: string;
+    details?: string;
 }
 
 export const TOOLS = [
