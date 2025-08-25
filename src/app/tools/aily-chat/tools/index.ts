@@ -10,6 +10,16 @@ export { deleteFolderTool } from './deleteFolderTool';
 export { checkExistsTool } from './checkExistsTool';
 export { getDirectoryTreeTool } from './getDirectoryTreeTool';
 
+// Blockly编辑工具索引
+export { 
+  smartBlockTool, 
+  connectBlocksTool, 
+//   createCodeStructureTool, 
+  configureBlockTool, 
+  variableManagerTool, 
+  findBlockTool 
+} from './editBlockTool';
+
 // 其他工具
 export { newProjectTool } from './createProjectTool';
 export { executeCommandTool } from './executeCommandTool';

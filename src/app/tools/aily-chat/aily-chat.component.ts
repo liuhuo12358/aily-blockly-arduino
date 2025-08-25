@@ -34,6 +34,14 @@ import { deleteFolderTool } from './tools/deleteFolderTool';
 import { checkExistsTool } from './tools/checkExistsTool';
 import { getDirectoryTreeTool } from './tools/getDirectoryTreeTool';
 import { fetchTool, FetchToolService } from './tools/fetchTool';
+import { 
+  smartBlockTool, 
+  connectBlocksTool, 
+  // createCodeStructureTool, 
+  configureBlockTool, 
+  variableManagerTool, 
+  findBlockTool 
+} from './tools/editBlockTool';
 import { NzModalService } from 'ng-zorro-antd/modal';
 
 const { pt } = (window as any)['electronAPI'].platform;
@@ -1207,6 +1215,136 @@ ${JSON.stringify(errData)}
                       resultText = 'ABI数据重新加载失败: ' + (toolResult.content || '未知错误');
                     } else {
                       resultText = 'ABI数据重新加载成功';
+                    }
+                    break;
+                  case 'smart_block_tool':
+                    console.log('🔧 [智能块工具被调用]');
+                    console.log('📥 大模型传入的完整参数:', JSON.stringify(toolArgs, null, 2));
+                    console.log('📋 参数解析:');
+                    console.log('  - 块类型:', toolArgs.type);
+                    console.log('  - 位置:', toolArgs.position);
+                    console.log('  - 字段:', toolArgs.fields);
+                    console.log('  - 输入:', toolArgs.inputs);
+                    console.log('  - 父级连接:', toolArgs.parentConnection);
+                    console.log('  - 创建变量:', toolArgs.createVariables);
+                    
+                    this.appendMessage('aily', `
+
+\`\`\`aily-state
+{
+  "state": "doing",
+  "text": "正在操作Blockly块: ${toolArgs.type}",
+  "id": "${toolCallId}"
+}
+\`\`\`\n\n
+                    `);
+                    toolResult = await smartBlockTool(toolArgs);
+                    console.log('✅ 智能块工具执行结果:', toolResult);
+                    if (toolResult.is_error) {
+                      resultState = "error";
+                      resultText = '智能块操作失败: ' + (toolResult.content || '未知错误');
+                    } else {
+                      resultText = `智能块操作成功: ${toolArgs.type}`;
+                    }
+                    break;
+                  case 'connect_blocks_tool':
+                    console.log('[块连接工具被调用]', toolArgs);
+                    this.appendMessage('aily', `
+
+\`\`\`aily-state
+{
+  "state": "doing",
+  "text": "正在连接Blockly块...",
+  "id": "${toolCallId}"
+}
+\`\`\`\n\n
+                    `);
+                    toolResult = await connectBlocksTool(toolArgs);
+                    if (toolResult.is_error) {
+                      resultState = "error";
+                      resultText = '块连接失败: ' + (toolResult.content || '未知错误');
+                    } else {
+                      resultText = `块连接成功: ${toolArgs.connectionType}连接`;
+                    }
+                    break;
+//                   case 'create_code_structure_tool':
+//                     console.log('[代码结构创建工具被调用]', toolArgs);
+//                     this.appendMessage('aily', `
+
+// \`\`\`aily-state
+// {
+//   "state": "doing",
+//   "text": "正在创建代码结构: ${toolArgs.structureType}",
+//   "id": "${toolCallId}"
+// }
+// \`\`\`\n\n
+//                     `);
+//                     toolResult = await createCodeStructureTool(toolArgs);
+//                     if (toolResult.is_error) {
+//                       resultState = "error";
+//                       resultText = '代码结构创建失败: ' + (toolResult.content || '未知错误');
+//                     } else {
+//                       resultText = `代码结构创建成功: ${toolArgs.structureType}`;
+//                     }
+//                     break;
+                  case 'configure_block_tool':
+                    console.log('[块配置工具被调用]', toolArgs);
+                    this.appendMessage('aily', `
+
+\`\`\`aily-state
+{
+  "state": "doing",
+  "text": "正在配置Blockly块...",
+  "id": "${toolCallId}"
+}
+\`\`\`\n\n
+                    `);
+                    toolResult = await configureBlockTool(toolArgs);
+                    if (toolResult.is_error) {
+                      resultState = "error";
+                      resultText = '块配置失败: ' + (toolResult.content || '未知错误');
+                    } else {
+                      resultText = `块配置成功: ID ${toolArgs.blockId}`;
+                    }
+                    break;
+                  case 'variable_manager_tool':
+                    console.log('[变量管理工具被调用]', toolArgs);
+                    this.appendMessage('aily', `
+
+\`\`\`aily-state
+{
+  "state": "doing",
+  "text": "正在${toolArgs.operation === 'create' ? '创建' : toolArgs.operation === 'delete' ? '删除' : toolArgs.operation === 'rename' ? '重命名' : '列出'}变量...",
+  "id": "${toolCallId}"
+}
+\`\`\`\n\n
+                    `);
+                    toolResult = await variableManagerTool(toolArgs);
+                    if (toolResult.is_error) {
+                      resultState = "error";
+                      resultText = '变量操作失败: ' + (toolResult.content || '未知错误');
+                    } else {
+                      resultText = `变量操作成功: ${toolArgs.operation}${toolArgs.variableName ? ' ' + toolArgs.variableName : ''}`;
+                    }
+                    break;
+                  case 'find_block_tool':
+                    console.log('[块查找工具被调用]', toolArgs);
+                    this.appendMessage('aily', `
+
+\`\`\`aily-state
+{
+  "state": "doing",
+  "text": "正在查找Blockly块...",
+  "id": "${toolCallId}"
+}
+\`\`\`\n\n
+                    `);
+                    toolResult = await findBlockTool(toolArgs);
+                    if (toolResult.is_error) {
+                      resultState = "error";
+                      resultText = '块查找失败: ' + (toolResult.content || '未知错误');
+                    } else {
+                      resultText = '块查找完成';
                     }
                     break;
                 }

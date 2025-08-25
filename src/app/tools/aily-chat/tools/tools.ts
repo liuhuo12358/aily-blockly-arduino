@@ -349,5 +349,211 @@ export const TOOLS = [
             },
             required: ['content']
         }
+    },
+    {
+        name: "smart_block_tool",
+        description: `智能块操作工具。创建、配置和操作Blockly工作区中的块。支持创建各种类型的块，配置字段值和输入连接，自动处理位置和变量创建。可以创建独立块（如全局变量、函数定义）或连接到父级块。`,
+        input_schema: {
+            type: 'object',
+            properties: {
+                type: {
+                    type: 'string',
+                    description: '块类型，如 logic_boolean、controls_if、math_number 等'
+                },
+                position: {
+                    type: 'object',
+                    properties: {
+                        x: { type: 'number', description: 'X坐标' },
+                        y: { type: 'number', description: 'Y坐标' }
+                    },
+                    description: '块在工作区中的位置'
+                },
+                fields: {
+                    type: 'object',
+                    description: '块的字段配置，如布尔值、数字值、变量名等'
+                },
+                inputs: {
+                    type: 'object',
+                    description: '块的输入配置，连接其他块'
+                },
+                parentConnection: {
+                    type: 'object',
+                    properties: {
+                        blockId: { type: 'string', description: '父块ID' },
+                        connectionType: { type: 'string', description: '连接类型' },
+                        inputName: { type: 'string', description: '输入名称' }
+                    },
+                    description: '父块连接配置（可选）。不提供时创建独立块，适用于全局变量、函数定义等顶级代码块'
+                },
+                createVariables: {
+                    type: 'boolean',
+                    description: '是否自动创建所需变量',
+                    default: true
+                }
+            },
+            required: ['type']
+        }
+    },
+    {
+        name: "connect_blocks_tool",
+        description: `块连接工具。连接两个Blockly块，支持多种连接类型：next（顺序连接）、input（输入连接）、stack（堆叠连接）。自动处理连接验证和错误检查。`,
+        input_schema: {
+            type: 'object',
+            properties: {
+                sourceBlock: {
+                    type: 'string',
+                    description: '源块ID或块配置对象'
+                },
+                targetBlock: {
+                    type: 'string', 
+                    description: '目标块ID或块配置对象'
+                },
+                connectionType: {
+                    type: 'string',
+                    enum: ['next', 'input', 'stack'],
+                    description: '连接类型：next=顺序连接，input=输入连接，stack=堆叠连接'
+                },
+                inputName: {
+                    type: 'string',
+                    description: '输入名称（input连接类型时必需）'
+                }
+            },
+            required: ['sourceBlock', 'targetBlock', 'connectionType']
+        }
+    },
+    // {
+    //     name: "create_code_structure_tool", 
+    //     description: `代码结构创建工具。创建复杂的代码结构，如循环、条件语句、函数等。支持嵌套结构和自动变量管理。`,
+    //     input_schema: {
+    //         type: 'object',
+    //         properties: {
+    //             structureType: {
+    //                 type: 'string',
+    //                 enum: ['if', 'for', 'while', 'function', 'event', 'variable'],
+    //                 description: '结构类型：if=条件，for=循环，while=循环，function=函数，event=事件，variable=变量'
+    //             },
+    //             position: {
+    //                 type: 'object',
+    //                 properties: {
+    //                     x: { type: 'number', description: 'X坐标' },
+    //                     y: { type: 'number', description: 'Y坐标' }
+    //                 },
+    //                 description: '结构在工作区中的位置'
+    //             },
+    //             config: {
+    //                 type: 'object',
+    //                 description: '结构配置，如条件表达式、循环变量、函数参数等'
+    //             },
+    //             nested: {
+    //                 type: 'array',
+    //                 items: {
+    //                     type: 'object',
+    //                     description: '嵌套的子结构配置'
+    //                 },
+    //                 description: '嵌套的子结构'
+    //             }
+    //         },
+    //         required: ['structureType']
+    //     }
+    // },
+    {
+        name: "configure_block_tool",
+        description: `块配置工具。修改现有块的属性，包括字段值、输入连接、样式等。支持批量配置和属性验证。`,
+        input_schema: {
+            type: 'object',
+            properties: {
+                blockId: {
+                    type: 'string',
+                    description: '要配置的块ID'
+                },
+                fields: {
+                    type: 'object',
+                    description: '要更新的字段值'
+                },
+                inputs: {
+                    type: 'object', 
+                    description: '要更新的输入连接'
+                },
+                position: {
+                    type: 'object',
+                    properties: {
+                        x: { type: 'number', description: 'X坐标' },
+                        y: { type: 'number', description: 'Y坐标' }
+                    },
+                    description: '新位置'
+                },
+                style: {
+                    type: 'object',
+                    description: '块的样式配置'
+                }
+            },
+            required: ['blockId']
+        }
+    },
+    {
+        name: "variable_manager_tool",
+        description: `变量管理工具。创建、删除、重命名工作区中的变量。支持不同类型的变量和作用域管理。`,
+        input_schema: {
+            type: 'object',
+            properties: {
+                operation: {
+                    type: 'string',
+                    enum: ['create', 'delete', 'rename', 'list'],
+                    description: '操作类型：create=创建，delete=删除，rename=重命名，list=列出所有变量'
+                },
+                variableName: {
+                    type: 'string',
+                    description: '变量名（create、delete、rename时必需）'
+                },
+                newName: {
+                    type: 'string',
+                    description: '新变量名（rename时必需）'
+                },
+                variableType: {
+                    type: 'string',
+                    description: '变量类型，如String、Number、Boolean等',
+                    default: 'String'
+                }
+            },
+            required: ['operation']
+        }
+    },
+    {
+        name: "find_block_tool",
+        description: `块查找工具。在工作区中查找特定的块，支持多种查找条件：块类型、字段值、位置等。返回匹配的块信息。`,
+        input_schema: {
+            type: 'object', 
+            properties: {
+                criteria: {
+                    type: 'object',
+                    properties: {
+                        type: { type: 'string', description: '块类型' },
+                        fields: { type: 'object', description: '字段值匹配' },
+                        position: { 
+                            type: 'object',
+                            properties: {
+                                x: { type: 'number' },
+                                y: { type: 'number' },
+                                tolerance: { type: 'number', description: '位置容差' }
+                            },
+                            description: '位置匹配'
+                        },
+                        connected: { type: 'boolean', description: '是否已连接' }
+                    },
+                    description: '查找条件'
+                },
+                limit: {
+                    type: 'number',
+                    description: '返回结果数量限制',
+                    default: 10
+                },
+                includeMetadata: {
+                    type: 'boolean',
+                    description: '是否包含详细元数据',
+                    default: false
+                }
+            },
+            required: ['criteria']
+        }
     }
 ]
