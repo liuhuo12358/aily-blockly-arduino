@@ -152,12 +152,16 @@ export class BuilderService {
           // 判断src目录下是否有且仅有一个src目录，没有别的文件或文件夹
           if (window['fs'].existsSync(sourcePath)) {
             const srcContents = window['fs'].readDirSync(sourcePath);
-            if (srcContents.length === 1 &&
-              srcContents[0].name === 'src' &&
-              window['fs'].isDirectory(`${sourcePath}/${srcContents[0].name}`)) {
-              // 如果有且仅有一个src目录，则将复制源路径定位到src/src
-              console.log(`库 ${lib} 检测到嵌套src目录，使用 ${sourcePath}/src 作为源路径`);
-              sourcePath = `${sourcePath}/src`;
+            if (srcContents.length === 1) {
+              // 兼容处理文件对象和字符串
+              const firstItem = srcContents[0];
+              const itemName = typeof firstItem === 'object' && firstItem !== null ? firstItem.name : firstItem;
+              
+              if (itemName === 'src' && window['fs'].isDirectory(`${sourcePath}/${itemName}`)) {
+                // 如果有且仅有一个src目录，则将复制源路径定位到src/src
+                console.log(`库 ${lib} 检测到嵌套src目录，使用 ${sourcePath}/src 作为源路径`);
+                sourcePath = `${sourcePath}/src`;
+              }
             }
           }
 
@@ -180,16 +184,22 @@ export class BuilderService {
               let targetName = lib.split('@aily-project/')[1];
               let targetPath = `${librariesPath}/${targetName}`;
 
+              let shouldCopy = true;
               if (window['path'].isExists(targetPath)) {
                 if (this.configService.data.devmode || false) {
                   await this.cmdService.runAsync(`Remove-Item -Path "${targetPath}" -Recurse -Force`);
                 } else {
-                  continue
+                  // 非开发模式下，仍然记录为已复制，避免被清理
+                  console.log(`库 ${lib} 目标路径已存在，跳过复制但保留记录`);
+                  shouldCopy = false;
                 }
               }
-              // 直接复制src到targetPath
-              await this.cmdService.runAsync(`Copy-Item -Path "${sourcePath}" -Destination "${targetPath}" -Recurse -Force`);
-              // 记录已复制的文件夹名称
+              
+              if (shouldCopy) {
+                // 直接复制src到targetPath
+                await this.cmdService.runAsync(`Copy-Item -Path "${sourcePath}" -Destination "${targetPath}" -Recurse -Force`);
+              }
+              // 无论是否复制，都记录已处理的文件夹名称
               copiedLibraries.push(targetName);
             } else {
               // For libraries without header files, copy each directory individually
@@ -201,27 +211,33 @@ export class BuilderService {
                 // Process each directory
                 for (const item of items) {
                   console.log("item: ", item);
-                  const fullSourcePath = `${sourcePath}/${item.name}`;
+                  // 兼容处理文件对象和字符串
+                  const itemName = typeof item === 'object' && item !== null ? item.name : item;
+                  const fullSourcePath = `${sourcePath}/${itemName}`;
 
                   // Check if it's a directory
                   if (window['fs'].isDirectory(fullSourcePath)) {
-                    const targetPath = `${librariesPath}/${item.name}`;
+                    const targetPath = `${librariesPath}/${itemName}`;
 
+                    let shouldCopy = true;
                     // Delete target directory if it exists
                     if (window['path'].isExists(targetPath)) {
                       if (this.configService.data.devmode || false) {
                         await this.cmdService.runAsync(`Remove-Item -Path "${targetPath}" -Recurse -Force`);
                       } else {
-                        // 如果不是debug模式，则跳过删除
-                        continue;
+                        // 如果不是debug模式，仍然记录但跳过复制
+                        console.log(`目录 ${itemName} 已存在，跳过复制但保留记录`);
+                        shouldCopy = false;
                       }
                     }
 
-                    // Copy directory
-                    await this.cmdService.runAsync(`Copy-Item -Path "${fullSourcePath}" -Destination "${targetPath}" -Recurse -Force`);
-                    // 记录已复制的文件夹名称
-                    copiedLibraries.push(item.name);
-                    // console.log(`目录 ${item.name} 已复制到 ${targetPath}`);
+                    if (shouldCopy) {
+                      // Copy directory
+                      await this.cmdService.runAsync(`Copy-Item -Path "${fullSourcePath}" -Destination "${targetPath}" -Recurse -Force`);
+                    }
+                    // 无论是否复制，都记录已处理的文件夹名称
+                    copiedLibraries.push(itemName);
+                    // console.log(`目录 ${itemName} 已处理`);
                   }
                 }
               }
