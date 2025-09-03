@@ -108,13 +108,12 @@ export class LogComponent {
   @ViewChild('logBox', { static: false }) logBoxRef!: ElementRef<HTMLDivElement>;
   scrollToBottom() {
     setTimeout(() => {
-      if (this.logBoxRef) {
-        // console.log('Scrolling to bottom');
-        this.logBoxRef.nativeElement.scrollTo({
-          top: this.logBoxRef.nativeElement.scrollHeight,
-          behavior: 'auto'
-        });
-      }
+      requestAnimationFrame(() => {
+        if (this.logBoxRef) {
+          const element = this.logBoxRef.nativeElement;
+          element.scrollTop = element.scrollHeight;
+        }
+      });
     }, 100);
   }
 
