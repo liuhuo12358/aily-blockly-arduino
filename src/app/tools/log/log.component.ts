@@ -1,6 +1,6 @@
 import { Component, OnDestroy, OnInit, AfterViewInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Datasource, UiScrollModule } from 'ngx-ui-scroll4';
+import { Datasource, UiScrollModule } from 'ngx-ui-scroll';
 import { LogService, LogOptions } from '../../services/log.service';
 import { AnsiPipe } from './ansi.pipe';
 import { NzMessageService } from 'ng-zorro-antd/message';
