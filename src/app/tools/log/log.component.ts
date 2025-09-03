@@ -1,6 +1,6 @@
 import { Component, OnDestroy, OnInit, AfterViewInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Datasource, UiScrollModule } from 'ngx-ui-scroll';
+import { Datasource, SizeStrategy, UiScrollModule } from 'ngx-ui-scroll';
 import { LogService, LogOptions } from '../../services/log.service';
 import { AnsiPipe } from './ansi.pipe';
 import { NzMessageService } from 'ng-zorro-antd/message';
@@ -17,35 +17,38 @@ import { ElectronService } from '../../services/electron.service';
 export class LogComponent implements OnInit, OnDestroy, AfterViewInit {
   private clickTimeout: any;
   private preventSingleClick = false;
-  private isInitialized = false;
   private lastLogCount = 0; // 记录上次的日志数量
 
   // 虚拟滚动数据源
-  datasource = new Datasource<LogOptions>({
-    get: (index: number, count: number) => {
-      console.log(`Datasource get called: index=${index}, count=${count}, total=${this.logService.list.length}`);
-      const data: LogOptions[] = [];
-      const startIndex = Math.max(0, index);
-      const endIndex = Math.min(this.logService.list.length, startIndex + count);
+  datasource;
 
-      for (let i = startIndex; i < endIndex; i++) {
-        if (this.logService.list[i]) {
-          data.push(this.logService.list[i]);
-        }
-      }
+  // = new Datasource<LogOptions>({
+  //   get: (index: number, count: number) => {
+  //     console.log(`Datasource get called: index=${index}, count=${count}, total=${this.logService.list.length}`);
+  //     const data: LogOptions[] = [];
+  //     const startIndex = Math.max(0, index);
+  //     const endIndex = Math.min(this.logService.list.length, startIndex + count);
 
-      console.log(`Datasource returning ${data.length} items for range [${startIndex}, ${endIndex})`);
-      return Promise.resolve(data);
-    },
+  //     for (let i = startIndex; i < endIndex; i++) {
+  //       if (this.logService.list[i]) {
+  //         this.logService.list[i]['id'] = i; // 确保每个日志项都有唯一的 ID
+  //         data.push(this.logService.list[i]);
+  //       }
+  //     }
 
-    settings: {
-      minIndex: 0,
-      startIndex: 0,
-      bufferSize: 20, // 减少缓冲区大小，降低内存使用
-      padding: 0.3, // 适中的 padding 值
-      infinite: false
-    }
-  });
+  //     console.log(`Datasource returning ${data.length} items for range [${startIndex}, ${endIndex})`);
+
+  //     return Promise.resolve(data);
+  //   },
+
+  //   settings: {
+  //     minIndex: 0,
+  //     startIndex: 0,
+  //     bufferSize: 30, // 减少缓冲区大小，降低内存使用
+  //     padding: 0.3, // 适中的 padding 值
+  //     sizeStrategy: SizeStrategy.Frequent
+  //   }
+  // });
 
   get logList() {
     return this.logService.list;
@@ -60,58 +63,80 @@ export class LogComponent implements OnInit, OnDestroy, AfterViewInit {
   ) { }
 
   ngOnInit() {
-    console.log('LogComponent ngOnInit, current log count:', this.logService.list.length);
-    // 监听日志更新
-    this.logService.stateSubject.subscribe((opts) => {
-      console.log('logService stateSubject received:', opts, 'isInitialized:', this.isInitialized);
-      if (this.isInitialized) {
-        // 使用更高效的方式处理日志更新
-        this.handleLogUpdate(opts);
+    this.datasource = new Datasource<LogOptions>({
+      get: (index: number, count: number) => {
+        console.log(`Datasource get called: index=${index}, count=${count}, total=${this.logService.list.length}`);
+        const data: LogOptions[] = [];
+        const startIndex = Math.max(0, index);
+        const endIndex = Math.min(this.logService.list.length, startIndex + count);
+
+        for (let i = startIndex; i < endIndex; i++) {
+          if (this.logService.list[i]) {
+            this.logService.list[i]['id'] = i; // 确保每个日志项都有唯一的 ID
+            data.push(this.logService.list[i]);
+          }
+        }
+
+        console.log(`Datasource returning ${data.length} items for range [${startIndex}, ${endIndex})`);
+
+        return Promise.resolve(data);
+      },
+
+      settings: {
+        minIndex: 0,
+        startIndex: this.logService.list.length - 1, // 默认滚动到最后一行
+        bufferSize: 30, // 减少缓冲区大小，降低内存使用
+        padding: 0.3, // 适中的 padding 值
+        sizeStrategy: SizeStrategy.Frequent
       }
     });
   }
 
   ngAfterViewInit() {
-    this.initializeAndScrollToBottom();
+    // 监听日志更新
+    this.logService.stateSubject.subscribe((opts) => {
+      this.handleLogUpdate();
+    });
+    // setTimeout(() => this.scrollToBottom(), 100);
   }
 
-  private initializeAndScrollToBottom() {
-    // 设置初始日志计数
-    this.lastLogCount = this.logService.list.length;
-    console.log('Initializing with log count:', this.lastLogCount);
-    
+  private scrollToBottom() {
     if (this.logService.list.length > 0) {
-      // 如果有日志数据，从一个合理的位置开始显示
-      const startIndex = Math.max(0, this.logService.list.length - 50);
-      console.log('Loading from startIndex:', startIndex);
+      const startIndex = this.logService.list.length - 1;
+      console.log('Scrolling to index:', startIndex);
+      const settings = {
+        startIndex: startIndex,
+        bufferSize: 30
+      };
+      this.datasource.adapter.reset({ settings });
 
-      const reloadPromise = this.datasource.adapter.reload(startIndex);
-      if (reloadPromise && typeof reloadPromise.then === 'function') {
-        reloadPromise.then(() => {
-          console.log('Datasource reloaded successfully');
-          this.isInitialized = true;
-          setTimeout(() => {
-            this.forceScrollToBottom();
-          }, 50);
-        });
-      } else {
-        console.log('Datasource reload returned no promise');
-        this.isInitialized = true;
-        setTimeout(() => {
-          this.forceScrollToBottom();
-        }, 50);
-      }
-    } else {
-      // 如果没有数据，直接初始化
-      console.log('No log data, initializing directly');
-      this.isInitialized = true;
+      // this.datasource.adapter.fix({
+      //   scrollToItem: ({ data }) => data.id === startIndex,
+      //   scrollToItemOpt: false
+      // });
+      // console.log('Loading from startIndex:', startIndex);
+
+      // const reloadPromise = this.datasource.adapter.reload(startIndex);
+      // if (reloadPromise && typeof reloadPromise.then === 'function') {
+      //   reloadPromise.then(() => {
+      //     console.log('Datasource reloaded successfully');
+      //     setTimeout(() => {
+      //       this.forceScrollToBottom();
+      //     }, 50);
+      //   });
+      // } else {
+      //   console.log('Datasource reload returned no promise');
+      //   setTimeout(() => {
+      //     this.forceScrollToBottom();
+      //   }, 50);
+      // }
     }
   }
 
   // 处理日志更新的新方法
-  private handleLogUpdate(opts: LogOptions) {
+  private handleLogUpdate() {
     const currentLogCount = this.logService.list.length;
-    
+
     // 如果日志被清空
     if (currentLogCount === 0 && this.lastLogCount > 0) {
       this.lastLogCount = 0;
@@ -120,24 +145,24 @@ export class LogComponent implements OnInit, OnDestroy, AfterViewInit {
       }
       return;
     }
-    
+
     // 如果有新增日志
     if (currentLogCount > this.lastLogCount) {
       const newItemsCount = currentLogCount - this.lastLogCount;
       this.lastLogCount = currentLogCount;
-      
+
       // 对于新增日志，我们需要确保数据源能够获取到新数据
       if (this.datasource.adapter) {
         // 检查用户是否在底部附近
         const viewport = document.querySelector('.log-box');
-        const shouldScrollToBottom = viewport ? 
+        const shouldScrollToBottom = viewport ?
           viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight < 100 : true;
-        
+
         // 使用更轻量的方式更新，但确保数据源能获取到新数据
         // 由于 ngx-ui-scroll 的数据获取机制，我们仍需要刷新数据源
         const currentFirstVisible = this.datasource.adapter.firstVisible?.$index || 0;
         const currentLastVisible = this.datasource.adapter.lastVisible?.$index || 0;
-        
+
         // 如果当前可见区域接近数据末尾，需要重新加载以显示新数据
         if (currentLastVisible >= this.lastLogCount - newItemsCount - 10) {
           // 保持当前视图位置，只是扩展数据范围
@@ -169,7 +194,7 @@ export class LogComponent implements OnInit, OnDestroy, AfterViewInit {
       const scrollHeight = viewport.scrollHeight;
       const clientHeight = viewport.clientHeight;
       const isNearBottom = scrollHeight - scrollTop - clientHeight < 100; // 距离底部不到100px
-      
+
       if (isNearBottom) {
         this.forceScrollToBottom();
       }
@@ -216,13 +241,13 @@ export class LogComponent implements OnInit, OnDestroy, AfterViewInit {
     if (this.clickTimeout) {
       clearTimeout(this.clickTimeout);
     }
-    // 清理数据源
-    this.isInitialized = false;
     this.lastLogCount = 0;
   }
 
   // 处理点击事件，区分单击和双击
   handleClick(item: any, event: MouseEvent) {
+    console.log('单击事件:', item);
+
     this.clickTimeout = setTimeout(() => {
       if (!this.preventSingleClick) {
         this.copyLogItemToClipboard(item);

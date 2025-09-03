@@ -29,8 +29,9 @@ export class LogService {
 }
 
 export interface LogOptions {
-  title?: string,
-  detail?: string,
-  state?: string,
-  timestamp?: number,
+  id?: number;
+  title?: string;
+  detail?: string;
+  state?: string;
+  timestamp?: number;
 }
