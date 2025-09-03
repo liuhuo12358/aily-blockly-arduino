@@ -396,66 +396,107 @@ export const TOOLS = [
     },
     {
         name: "connect_blocks_tool",
-        description: `块连接工具。连接两个Blockly块，支持多种连接类型：next（顺序连接）、input（输入连接）、stack（堆叠连接）。自动处理连接验证和错误检查。`,
+        description: `块连接工具。连接两个Blockly块，支持三种连接类型：next（顺序连接）、input（输入连接）、statement（语句连接）。自动处理连接验证和错误检查，智能识别块类型并自动选择最佳连接方式。`,
         input_schema: {
             type: 'object',
             properties: {
                 sourceBlock: {
                     type: 'string',
-                    description: '源块ID或块配置对象'
+                    description: '输出块ID（提供连接的块）'
                 },
                 targetBlock: {
                     type: 'string', 
-                    description: '目标块ID或块配置对象'
+                    description: '接收块ID（接收连接的块）'
                 },
                 connectionType: {
                     type: 'string',
-                    enum: ['next', 'input', 'stack'],
-                    description: '连接类型：next=顺序连接，input=输入连接，stack=堆叠连接'
+                    enum: ['next', 'input', 'statement'],
+                    description: '连接类型：next=顺序连接，input=输入连接，statement=语句连接（推荐，支持指定inputName，用于事件处理块和容器块）'
                 },
                 inputName: {
                     type: 'string',
-                    description: '输入名称（input连接类型时必需）'
+                    description: '输入名称（input和statement连接类型时可指定具体连接点，不指定时系统会自动检测最佳连接点）'
                 }
             },
             required: ['sourceBlock', 'targetBlock', 'connectionType']
         }
     },
-    // {
-    //     name: "create_code_structure_tool", 
-    //     description: `代码结构创建工具。创建复杂的代码结构，如循环、条件语句、函数等。支持嵌套结构和自动变量管理。`,
-    //     input_schema: {
-    //         type: 'object',
-    //         properties: {
-    //             structureType: {
-    //                 type: 'string',
-    //                 enum: ['if', 'for', 'while', 'function', 'event', 'variable'],
-    //                 description: '结构类型：if=条件，for=循环，while=循环，function=函数，event=事件，variable=变量'
-    //             },
-    //             position: {
-    //                 type: 'object',
-    //                 properties: {
-    //                     x: { type: 'number', description: 'X坐标' },
-    //                     y: { type: 'number', description: 'Y坐标' }
-    //                 },
-    //                 description: '结构在工作区中的位置'
-    //             },
-    //             config: {
-    //                 type: 'object',
-    //                 description: '结构配置，如条件表达式、循环变量、函数参数等'
-    //             },
-    //             nested: {
-    //                 type: 'array',
-    //                 items: {
-    //                     type: 'object',
-    //                     description: '嵌套的子结构配置'
-    //                 },
-    //                 description: '嵌套的子结构'
-    //             }
-    //         },
-    //         required: ['structureType']
-    //     }
-    // },
+    {
+        name: "create_code_structure_tool", 
+        description: `动态结构创建工具。使用动态结构处理器创建任意复杂的代码块结构，支持自定义块组合和连接规则。`,
+        input_schema: {
+            type: 'object',
+            properties: {
+                structure: {
+                    type: 'string',
+                    description: '结构名称（任意字符串，用于日志和元数据）'
+                },
+                config: {
+                    type: 'object',
+                    properties: {
+                        structureDefinition: {
+                            type: 'object',
+                            properties: {
+                                rootBlock: {
+                                    type: 'object',
+                                    description: '根块配置'
+                                },
+                                additionalBlocks: {
+                                    type: 'array',
+                                    items: { type: 'object' },
+                                    description: '附加块配置数组'
+                                },
+                                connectionRules: {
+                                    type: 'array',
+                                    items: {
+                                        type: 'object',
+                                        properties: {
+                                            source: { type: 'string', description: '输出块引用' },
+                                            target: { type: 'string', description: '接收块引用' },
+                                            inputName: { type: 'string', description: '接收块的输入名称' },
+                                            connectionType: { 
+                                                type: 'string', 
+                                                enum: ['next', 'input', 'statement'],
+                                                description: '连接类型' 
+                                            }
+                                        },
+                                        required: ['source', 'target']
+                                    },
+                                    description: '块连接规则'
+                                }
+                            },
+                            required: ['rootBlock'],
+                            description: '动态结构定义'
+                        }
+                    },
+                    required: ['structureDefinition'],
+                    description: '结构配置'
+                },
+                position: {
+                    type: 'object',
+                    properties: {
+                        x: { type: 'number', description: 'X坐标' },
+                        y: { type: 'number', description: 'Y坐标' }
+                    },
+                    description: '结构在工作区中的位置'
+                },
+                insertPosition: {
+                    type: 'string',
+                    enum: ['workspace', 'after', 'before', 'input', 'statement', 'append'],
+                    description: '插入位置：workspace=独立放置，after=目标块后，before=目标块前，input=目标块输入，statement=statement连接（用于hat块），append=追加到工作区'
+                },
+                targetBlock: {
+                    type: 'string',
+                    description: '目标块ID（当insertPosition不是workspace时必需）'
+                },
+                targetInput: {
+                    type: 'string',
+                    description: '目标输入名（当insertPosition是input时必需）'
+                }
+            },
+            required: ['structure']
+        }
+    },
     {
         name: "configure_block_tool",
         description: `块配置工具。修改现有块的属性，包括字段值、输入连接、样式等。支持批量配置和属性验证。`,
@@ -554,6 +595,71 @@ export const TOOLS = [
                 }
             },
             required: ['criteria']
+        }
+    },
+    {
+        name: "delete_block_tool",
+        description: `块删除工具。通过块ID删除工作区中的指定块。支持两种删除模式：普通删除（只删除指定块，保留连接的块）和级联删除（删除整个块树，包括所有连接的子块）。`,
+        input_schema: {
+            type: 'object',
+            properties: {
+                blockId: {
+                    type: 'string',
+                    description: '要删除的块的ID'
+                },
+                cascade: {
+                    type: 'boolean',
+                    description: '是否级联删除连接的块。false=只删除指定块，true=删除整个块树',
+                    default: false
+                }
+            },
+            required: ['blockId']
+        }
+    },
+    {
+        name: "get_workspace_overview_tool",
+        description: `工作区全览分析工具。提供工作区的完整分析，包括结构分析、代码生成、复杂度评估、连接关系和树状结构展示。支持多种输出格式：JSON、Markdown、详细报告和控制台输出。`,
+        input_schema: {
+            type: 'object',
+            properties: {
+                outputFormat: {
+                    type: 'string',
+                    enum: ['json', 'markdown', 'detailed', 'console'],
+                    description: '输出格式',
+                    default: 'console'
+                },
+                includeCode: {
+                    type: 'boolean',
+                    description: '是否包含生成的C++代码',
+                    default: true
+                },
+                includeStructure: {
+                    type: 'boolean',
+                    description: '是否包含结构分析',
+                    default: true
+                },
+                includeConnections: {
+                    type: 'boolean',
+                    description: '是否包含连接关系分析',
+                    default: true
+                },
+                includeComplexity: {
+                    type: 'boolean',
+                    description: '是否包含复杂度分析',
+                    default: true
+                },
+                maxDepth: {
+                    type: 'number',
+                    description: '树状结构的最大深度',
+                    default: 10
+                },
+                showDetails: {
+                    type: 'boolean',
+                    description: '是否显示详细信息',
+                    default: false
+                }
+            },
+            required: []
         }
     }
 ]

@@ -14,10 +14,12 @@ export { getDirectoryTreeTool } from './getDirectoryTreeTool';
 export { 
   smartBlockTool, 
   connectBlocksTool, 
-//   createCodeStructureTool, 
+  createCodeStructureTool, 
   configureBlockTool, 
   variableManagerTool, 
-  findBlockTool 
+  findBlockTool,
+  deleteBlockTool,
+  getWorkspaceOverviewTool // 新增工具
 } from './editBlockTool';
 
 // 其他工具

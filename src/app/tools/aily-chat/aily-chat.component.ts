@@ -37,10 +37,12 @@ import { fetchTool, FetchToolService } from './tools/fetchTool';
 import { 
   smartBlockTool, 
   connectBlocksTool, 
-  // createCodeStructureTool, 
+  createCodeStructureTool, 
   configureBlockTool, 
   variableManagerTool, 
-  findBlockTool 
+  findBlockTool,
+  deleteBlockTool,
+  getWorkspaceOverviewTool  // 新增工具导入
 } from './tools/editBlockTool';
 import { NzModalService } from 'ng-zorro-antd/modal';
 
@@ -1267,26 +1269,26 @@ ${JSON.stringify(errData)}
                       resultText = `块连接成功: ${toolArgs.connectionType}连接`;
                     }
                     break;
-//                   case 'create_code_structure_tool':
-//                     console.log('[代码结构创建工具被调用]', toolArgs);
-//                     this.appendMessage('aily', `
+                  case 'create_code_structure_tool':
+                    console.log('[代码结构创建工具被调用]', toolArgs);
+                    this.appendMessage('aily', `
 
-// \`\`\`aily-state
-// {
-//   "state": "doing",
-//   "text": "正在创建代码结构: ${toolArgs.structureType}",
-//   "id": "${toolCallId}"
-// }
-// \`\`\`\n\n
-//                     `);
-//                     toolResult = await createCodeStructureTool(toolArgs);
-//                     if (toolResult.is_error) {
-//                       resultState = "error";
-//                       resultText = '代码结构创建失败: ' + (toolResult.content || '未知错误');
-//                     } else {
-//                       resultText = `代码结构创建成功: ${toolArgs.structureType}`;
-//                     }
-//                     break;
+\`\`\`aily-state
+{
+  "state": "doing",
+  "text": "正在创建代码结构: ${toolArgs.structure}",
+  "id": "${toolCallId}"
+}
+\`\`\`\n\n
+                    `);
+                    toolResult = await createCodeStructureTool(toolArgs);
+                    if (toolResult.is_error) {
+                      resultState = "error";
+                      resultText = '代码结构创建失败: ' + (toolResult.content || '未知错误');
+                    } else {
+                      resultText = `代码结构创建成功: ${toolArgs.structure}`;
+                    }
+                    break;
                   case 'configure_block_tool':
                     console.log('[块配置工具被调用]', toolArgs);
                     this.appendMessage('aily', `
@@ -1345,6 +1347,52 @@ ${JSON.stringify(errData)}
                       resultText = '块查找失败: ' + (toolResult.content || '未知错误');
                     } else {
                       resultText = '块查找完成';
+                    }
+                    break;
+                  case 'delete_block_tool':
+                    console.log('[块删除工具被调用]', toolArgs);
+                    this.appendMessage('aily', `
+
+\`\`\`aily-state
+{
+  "state": "doing",
+  "text": "正在删除Blockly块...",
+  "id": "${toolCallId}"
+}
+\`\`\`\n\n
+                    `);
+                    toolResult = await deleteBlockTool(toolArgs);
+                    if (toolResult.is_error) {
+                      resultState = "error";
+                      resultText = '块删除失败: ' + (toolResult.content || '未知错误');
+                    } else {
+                      resultText = `块删除成功: ${toolResult.content}`;
+                    }
+                    break;
+                  case 'get_workspace_overview_tool':
+                    console.log('[工作区全览工具被调用]', toolArgs);
+                    this.appendMessage('aily', `
+
+\`\`\`aily-state
+{
+  "state": "doing",
+  "text": "正在分析工作区全览...",
+  "id": "${toolCallId}"
+}
+\`\`\`\n\n
+                    `);
+                    toolResult = await getWorkspaceOverviewTool(toolArgs);
+                    if (toolResult.is_error) {
+                      resultState = "error";
+                      resultText = '工作区分析失败: ' + (toolResult.content || '未知错误');
+                    } else {
+                      // 从 metadata 中提取关键统计信息用于显示
+                      const stats = toolResult.metadata?.statistics;
+                      if (stats) {
+                        resultText = `工作区分析完成: 共${stats.totalBlocks}个块，${stats.independentStructures}个独立结构，最大深度${stats.maxDepth}层`;
+                      } else {
+                        resultText = `工作区分析完成`;
+                      }
                     }
                     break;
                 }
