@@ -5,6 +5,8 @@ import { LogService, LogOptions } from '../../services/log.service';
 import { AnsiPipe } from './ansi.pipe';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { UiService } from '../../services/ui.service';
+import { ProjectService } from '../../services/project.service';
+import { ElectronService } from '../../services/electron.service';
 
 @Component({
   selector: 'app-log',
@@ -50,7 +52,9 @@ export class LogComponent implements OnInit, OnDestroy, AfterViewInit {
   constructor(
     private logService: LogService,
     private message: NzMessageService,
-    private uiService: UiService
+    private uiService: UiService,
+    private projectService: ProjectService,
+    private electronService: ElectronService
   ) { }
 
   ngOnInit() {
@@ -217,4 +221,47 @@ export class LogComponent implements OnInit, OnDestroy, AfterViewInit {
       }
     }
   }
+
+  async exportData() {
+    if (this.logService.list.length === 0) {
+      this.message.warning('没有日志数据可以导出');
+      return;
+    }
+
+    // 弹出保存对话框
+    const folderPath = await window['ipcRenderer'].invoke('select-folder-saveAs', {
+      title: '导出日志数据',
+      path: this.projectService.currentProjectPath,
+      suggestedName: 'log_' + new Date().toLocaleString('zh-CN', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+      }).replace(/[/,:]/g, '_').replace(/\s/g, '_') + '.txt',
+      filters: [
+        { name: '文本文件', extensions: ['txt'] },
+        { name: '所有文件', extensions: ['*'] }
+      ]
+    });
+
+    if (!folderPath) {
+      return;
+    }
+
+    // 准备要写入的内容
+    let fileContent = '';
+
+    for (const item of this.logService.list) {
+      const timeString = new Date(item.timestamp).toLocaleTimeString();
+      fileContent += `[${timeString}] ${item.detail || ''}\n`;
+    }
+
+    // 写入文件
+    this.electronService.writeFile(folderPath, fileContent);
+    this.message.success('日志数据已成功导出到' + folderPath);
+  }
+
+
 }
