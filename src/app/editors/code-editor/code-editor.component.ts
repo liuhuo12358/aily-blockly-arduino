@@ -81,6 +81,9 @@ export class CodeEditorComponent {
         this.message.error('没有找到项目路径');
       }
     });
+
+    window.history.replaceState(null, '', window.location.href);
+    window.history.pushState(null, '', window.location.href);
   }
 
   ngOnDestroy(): void {

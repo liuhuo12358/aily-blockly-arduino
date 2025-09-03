@@ -244,7 +244,7 @@ export class MainWindowComponent {
     this.showFloatSider = false;
   }
 
-  exportLog(){
+  exportLog() {
     this.logComponent?.exportData();
   }
 
