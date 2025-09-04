@@ -46,6 +46,7 @@ import {
 } from './tools/editBlockTool';
 import { todoWriteTool } from './tools';
 import { NzModalService } from 'ng-zorro-antd/modal';
+import { ConfigService } from '../../services/config.service';
 
 const { pt } = (window as any)['electronAPI'].platform;
 
@@ -109,7 +110,7 @@ export class AilyChatComponent implements OnDestroy {
     "state": "done"
   }];
 
-  list: ChatMessage[] = [...this.defaultList.map(item => ({...item}))];
+  list: ChatMessage[] = [...this.defaultList.map(item => ({ ...item }))];
   // list = ChatListExamples  // 示例数据
 
   currentUrl;
@@ -268,7 +269,8 @@ export class AilyChatComponent implements OnDestroy {
     private router: Router,
     private message: NzMessageService,
     private authService: AuthService,
-    private modal: NzModalService
+    private modal: NzModalService,
+    private configService: ConfigService
   ) { }
 
   ngOnInit() {
@@ -287,6 +289,10 @@ export class AilyChatComponent implements OnDestroy {
         this.receiveTextFromExternal(message.text, message.options);
       }
     );
+
+    this.authService.initializeAuth().then((res) => {
+      console.log('AuthService initialized:', res);
+    });
 
     // 订阅登录状态变化
     this.loginStatusSubscription = this.authService.isLoggedIn$.subscribe(
@@ -337,16 +343,16 @@ export class AilyChatComponent implements OnDestroy {
 
   async disconnect() {
     try {
-      // 先停止会话
+      // 先取消对话
       if (this.sessionId) {
         await new Promise<void>((resolve) => {
-          this.chatService.stopSession(this.sessionId).subscribe({
+          this.chatService.cancelTask(this.sessionId).subscribe({
             next: (res: any) => {
-              console.log('关闭时会话已停止:', res);
+              console.log('取消对话成功:', res);
               resolve();
             },
             error: (err) => {
-              console.error('关闭时停止会话失败:', err);
+              console.error('取消对话失败:', err);
               resolve(); // 即使失败也继续
             }
           });
@@ -482,14 +488,12 @@ export class AilyChatComponent implements OnDestroy {
 {
   "message": ${res.message || '启动会话失败，请稍后重试。'}
 }
-\`\`\`\n\n
-
-            `)
+\`\`\`\n\n`)
             reject(new Error(res.message || '启动会话失败'));
           }
         },
         error: (err) => {
-          console.error('启动会话失败:', err);
+          console.warn('启动会话失败:', err);
           let errData = {
             status: err.status,
             message: err.message
@@ -497,8 +501,7 @@ export class AilyChatComponent implements OnDestroy {
           this.appendMessage('error', `
 \`\`\`aily-error
 ${JSON.stringify(errData)}
-\`\`\`\n\n
-            `)
+\`\`\`\n\n`)
           reject(err);
         }
       });
@@ -548,6 +551,9 @@ ${JSON.stringify(errData)}
         return;
       }
 
+      // 将用户输入的文本包裹在<user-query>标签中
+      text = `<user-query>${text}</user-query>`;
+
       const resourcesText = this.getResourcesText();
       if (resourcesText) {
         text = resourcesText + '\n\n' + text;
@@ -566,14 +572,60 @@ ${JSON.stringify(errData)}
 
     this.isWaiting = true;
 
-    this.chatService.sendMessage(this.sessionId, text, sender).subscribe((res: any) => {
-      if (res.status === 'success') {
-        if (res.data) {
-          this.appendMessage('aily', res.data);
-        }
+    this.sendMessageWithRetry(this.sessionId, text, sender, clear, 3);
+  }
 
-        if (clear) {
-          this.inputValue = ''; // 发送后清空输入框
+  /**
+   * 发送消息并支持自动重试
+   * @param sessionId 会话ID
+   * @param text 发送的文本内容
+   * @param sender 发送者类型
+   * @param clear 是否清空输入框
+   * @param retryCount 剩余重试次数
+   */
+  private sendMessageWithRetry(sessionId: string, text: string, sender: string, clear: boolean, retryCount: number): void {
+    this.chatService.sendMessage(sessionId, text, sender).subscribe({
+      next: (res: any) => {
+        console.log("sendRes: ", res);
+        if (res.status === 'success') {
+          if (res.data) {
+            this.appendMessage('aily', res.data);
+          }
+
+          if (clear) {
+            this.inputValue = ''; // 发送后清空输入框
+          }
+        }
+      },
+      error: (error) => {
+        console.error('发送消息失败:', error);
+        
+        // 检查是否是502错误且还有重试次数
+        if (error.status === 502 && retryCount > 0) {
+          console.log(`遇到502错误，还有${retryCount}次重试机会，正在重试...`);
+          
+          // 延迟1秒后重试
+          setTimeout(() => {
+            this.sendMessageWithRetry(sessionId, text, sender, clear, retryCount - 1);
+          }, 1000);
+        } else {
+          // 重试次数用完或非502错误，显示错误信息
+          this.isWaiting = false;
+          
+          let errorMessage = '发送消息失败';
+          if (error.status === 502) {
+            errorMessage = '服务器暂时无法响应，请稍后重试';
+          } else if (error.message) {
+            errorMessage = error.message;
+          }
+          
+          this.appendMessage('错误', `
+\`\`\`aily-error
+{
+  "message": "${errorMessage}",
+  "status": ${error.status || 'unknown'}
+}
+\`\`\`\n\n`);
         }
       }
     });
@@ -593,48 +645,6 @@ ${JSON.stringify(errData)}
         console.error('取消任务失败:', res);
       }
     });
-
-    // this.chatService.stopSession(this.sessionId).subscribe((res: any) => {
-    //   // 处理停止会话的响应
-    //   if (res.status == 'success') {
-    //     console.log('会话已停止:', res);
-    //     return;
-    //   }
-    //   console.error('停止会话失败:', res);
-    // });
-  }
-
-  async handleEditAbiFile(toolArgs) {
-    // 获取当前项目路径
-    let resultState;
-    let resultText;
-    let toolResult;
-  
-    const currentProjectPath = this.getCurrentProjectPath();
-    if (!currentProjectPath) {
-      console.warn('当前未打开项目');
-      resultState = "error";
-      resultText = "当前未打开项目";
-    } else {
-      const toolResult = await editAbiFileTool({ path: currentProjectPath, content: toolArgs.content });
-      if (toolResult.is_error) {
-        resultState = "error";
-        resultText = 'ABI文件编辑失败: ' + (toolResult.content || '未知错误');
-      } else {
-        resultText = 'ABI文件编辑成功';
-
-        // 导入工具函数
-        const { ReloadAbiJsonToolService } = await import('./tools/reloadAbiJsonTool');
-        const reloadAbiJsonService = new ReloadAbiJsonToolService(this.blocklyService, this.projectService);
-        await reloadAbiJsonService.executeReloadAbiJson(toolArgs).then(() => {
-          console.log('ABI JSON重新加载成功');
-        }).catch((error) => {
-          console.error('ABI JSON重新加载失败:', error);
-        });
-      }
-    }
-
-    return { state: resultState, text: resultText, toolResult: toolResult };
   }
 
   streamConnect(): void {
@@ -643,9 +653,13 @@ ${JSON.stringify(errData)}
 
     this.chatService.streamConnect(this.sessionId).subscribe({
       next: async (data: any) => {
-        // if (!this.isWaiting) {
-        //   return; // 如果不在等待状态，直接返回
-        // }
+        if (!this.isWaiting) {
+          return; // 如果不在等待状态，直接返回
+        }
+
+        console.log("=============== start ==========")
+        console.log("Rev: ", data);
+        console.log("=============== end ==========")
 
         try {
           if (data.type === 'ModelClientStreamingChunkEvent') {
@@ -653,6 +667,8 @@ ${JSON.stringify(errData)}
             if (data.content) {
               this.appendMessage('aily', data.content);
             }
+          } else if (data.type === 'TextMessage') {
+            // 每条完整的对话信息
           } else if (data.type === 'ToolCallRequestEvent') {
             // 处理工具调用请求
           } else if (data.type === 'ToolCallExecutionEvent') {
@@ -768,7 +784,7 @@ ${JSON.stringify(errData)}
 }
 \`\`\`\n\n
                     `);
-                    toolResult = await newProjectTool(this.projectService, this.prjRootPath, toolArgs);
+                    toolResult = await newProjectTool(this.prjRootPath, toolArgs, this.projectService, this.configService);
                     if (toolResult.is_error) {
                       this.uiService.updateFooterState({ state: 'error', text: '项目创建失败' });
                       resultState = "error"
@@ -1185,11 +1201,11 @@ ${JSON.stringify(errData)}
                         // 导入工具函数
                         const { ReloadAbiJsonToolService } = await import('./tools/reloadAbiJsonTool');
                         const reloadAbiJsonService = new ReloadAbiJsonToolService(this.blocklyService, this.projectService);
-                        await reloadAbiJsonService.executeReloadAbiJson(toolArgs).then(() => {
-                          console.log('ABI JSON重新加载成功');
-                        }).catch((error) => {
-                          console.error('ABI JSON重新加载失败:', error);
-                        });
+                        const reloadResult = await reloadAbiJsonService.executeReloadAbiJson(toolArgs);
+                        toolResult = {
+                          content: reloadResult.content,
+                          is_error: reloadResult.is_error
+                        }
                       }
                     }
                     break;
@@ -1590,7 +1606,7 @@ ${JSON.stringify(errData)}
       if (this.isWaiting) {
         return;
       }
-      
+
       if (this.isCompleted) {
         console.log('上次会话已完成，需要重新启动会话');
         await this.resetChat();
@@ -1946,6 +1962,11 @@ ${JSON.stringify(errData)}
       text += '\n\n';
     }
 
+    // 将整个资源描述文本包裹在context标签中
+    if (text) {
+      text = `<context>\n${text}</context>`;
+    }
+
     return text.trim();
   }
 
@@ -2014,7 +2035,7 @@ ${JSON.stringify(errData)}
   }
 
   modeMenuClick(item: IMenuItem) {
-    if (item.data?.mode) {
+    if (item.data?.mode && item.data.mode !== this.currentMode) {
       this.switchToMode(item.data.mode);
       // if (this.currentMode != item.data.mode) {
       //   // 判断是否已经有对话内容产生，有则提醒切换模式会创建新的session
