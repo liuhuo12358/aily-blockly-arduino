@@ -44,6 +44,7 @@ import {
   deleteBlockTool,
   getWorkspaceOverviewTool  // 新增工具导入
 } from './tools/editBlockTool';
+import { todoWriteTool } from './tools';
 import { NzModalService } from 'ng-zorro-antd/modal';
 
 const { pt } = (window as any)['electronAPI'].platform;
@@ -71,7 +72,7 @@ import { NzMessageService } from 'ng-zorro-antd/message';
 import { TOOLS } from './tools/tools';
 import { AuthService } from '../../services/auth.service';
 import { resolveObjectURL } from 'buffer';
-import { reloadAbiJsonTool, reloadAbiJsonToolSimple } from './tools';
+// import { reloadAbiJsonTool, reloadAbiJsonToolSimple } from './tools';
 
 @Component({
   selector: 'app-aily-chat',
@@ -1393,6 +1394,79 @@ ${JSON.stringify(errData)}
                       } else {
                         resultText = `工作区分析完成`;
                       }
+                    }
+                    break;
+                  case 'todo_write_tool':
+                    console.log('[TODO工具被调用]', toolArgs);
+                    this.appendMessage('aily', `
+
+\`\`\`aily-state
+{
+  "state": "doing", 
+  "text": "正在管理TODO项目...",
+  "id": "${toolCallId}"
+}
+\`\`\`\n\n
+                    `);
+                    // 将当前会话ID传递给todoWriteTool，确保每个会话的TODO数据独立存储
+                    const todoArgs = { ...toolArgs, sessionId: this.sessionId };
+                    toolResult = await todoWriteTool(todoArgs);
+                    if (toolResult.is_error) {
+                      resultState = "error";
+                      resultText = 'TODO操作失败: ' + (toolResult.content || '未知错误');
+                    } else {
+                      // 根据操作类型显示不同的成功消息
+                      const operation = toolArgs.operation || 'unknown';
+                      const itemTitle = toolArgs.content || toolArgs.title || '项目';
+                      
+                      // 基础成功消息
+                      let baseMessage = '';
+                      switch(operation) {
+                        case 'add':
+                          baseMessage = `TODO项目添加成功: ${itemTitle}`;
+                          break;
+                        case 'batch_add':
+                          baseMessage = `TODO项目批量添加成功`;
+                          break;
+                        case 'list':
+                          baseMessage = `TODO列表获取成功`;
+                          break;
+                        case 'update':
+                          baseMessage = `TODO项目更新成功`;
+                          break;
+                        case 'toggle':
+                          baseMessage = `TODO项目状态切换成功`;
+                          break;
+                        case 'delete':
+                          baseMessage = `TODO项目删除成功`;
+                          break;
+                        case 'clear':
+                          baseMessage = `TODO列表清空成功`;
+                          break;
+                        case 'query':
+                          baseMessage = `TODO查询完成`;
+                          break;
+                        case 'stats':
+                          baseMessage = `TODO统计完成`;
+                          break;
+                        default:
+                          baseMessage = `TODO操作完成`;
+                      }
+                      
+                      // // 如果有todos数据，添加任务列表显示
+                      // if (toolResult.todos && Array.isArray(toolResult.todos) && toolResult.todos.length > 0) {
+                      //   const todoList = toolResult.todos.map(todo => {
+                      //     const statusIcon = todo.status === 'completed' ? '✅' : 
+                      //                       todo.status === 'in_progress' ? '🔄' : '⏸️';
+                      //     const priorityIcon = todo.priority === 'high' ? '🔴' : 
+                      //                         todo.priority === 'medium' ? '🟡' : '🟢';
+                      //     return `${priorityIcon} ${todo.content} ${statusIcon}`;
+                      //   }).join('\n');
+                        
+                      //   resultText = `${baseMessage}\n\n当前任务列表:\n${todoList}`;
+                      // } else {
+                      resultText = baseMessage;
+                      // }
                     }
                     break;
                 }

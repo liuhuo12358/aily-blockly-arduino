@@ -71,7 +71,189 @@ interface VariableConfig {
 // =============================================================================
 
 /**
- * 🔧 JSON 修复工具函数（增强版）
+ * � 块ID模糊匹配函数
+ * 解决AI模型传递blockId时可能多字符或少字符的问题
+ * 
+ * @param providedId 模型提供的块ID（可能有偏差）
+ * @param workspace Blockly工作区对象
+ * @returns 匹配到的真实块对象，如果没找到返回null
+ */
+function findBlockByFuzzyId(providedId: string, workspace: any): any | null {
+  if (!providedId || !workspace) {
+    console.log('⚠️ findBlockByFuzzyId: 参数无效');
+    return null;
+  }
+
+  console.log(`🔍 开始模糊匹配块ID: "${providedId}"`);
+  
+  // 获取工作区中的所有块
+  const allBlocks = workspace.getAllBlocks();
+  if (!allBlocks || allBlocks.length === 0) {
+    console.log('⚠️ 工作区中没有找到任何块');
+    return null;
+  }
+
+  console.log(`📊 工作区中共有 ${allBlocks.length} 个块`);
+  
+  // 1. 首先尝试精确匹配
+  for (const block of allBlocks) {
+    if (block.id === providedId) {
+      console.log(`✅ 精确匹配成功: ${block.type}(${block.id})`);
+      return block;
+    }
+  }
+  console.log('⚠️ 精确匹配失败，尝试模糊匹配...');
+
+  // 2. 模糊匹配策略
+  const matches: Array<{block: any, score: number, reason: string}> = [];
+  
+  for (const block of allBlocks) {
+    const blockId = block.id;
+    let score = 0;
+    let reason = '';
+    
+    // 策略1: 包含匹配 - 较短的ID在较长的ID中连续存在
+    if (providedId.length > blockId.length && providedId.includes(blockId)) {
+      score = 90;
+      reason = `工作区ID "${blockId}" 连续包含在提供的ID "${providedId}" 中`;
+    } else if (blockId.length > providedId.length && blockId.includes(providedId)) {
+      score = 85;
+      reason = `提供的ID "${providedId}" 连续包含在工作区ID "${blockId}" 中`;
+    }
+    
+    // 策略2: 前缀匹配
+    else if (blockId.startsWith(providedId) || providedId.startsWith(blockId)) {
+      const minLength = Math.min(blockId.length, providedId.length);
+      const maxLength = Math.max(blockId.length, providedId.length);
+      score = (minLength / maxLength) * 80;
+      reason = `前缀匹配: "${providedId}" 与 "${blockId}" 有共同前缀`;
+    }
+    
+    // 策略3: 后缀匹配
+    else if (blockId.endsWith(providedId) || providedId.endsWith(blockId)) {
+      const minLength = Math.min(blockId.length, providedId.length);
+      const maxLength = Math.max(blockId.length, providedId.length);
+      score = (minLength / maxLength) * 75;
+      reason = `后缀匹配: "${providedId}" 与 "${blockId}" 有共同后缀`;
+    }
+    
+    // 策略4: 编辑距离匹配（用于处理1-2个字符的差异）
+    else {
+      const editDistance = calculateEditDistance(providedId, blockId);
+      const maxLength = Math.max(providedId.length, blockId.length);
+      if (editDistance <= 2 && maxLength > 5) { // 最多允许2个字符差异，且ID足够长
+        score = ((maxLength - editDistance) / maxLength) * 70;
+        reason = `编辑距离匹配: "${providedId}" 与 "${blockId}" 相似度高(距离=${editDistance})`;
+      }
+    }
+    
+    if (score > 0) {
+      matches.push({block, score, reason});
+      console.log(`🎯 候选匹配: ${block.type}(${blockId}) - 得分: ${score.toFixed(2)} - ${reason}`);
+    }
+  }
+  
+  if (matches.length === 0) {
+    console.log('❌ 未找到任何匹配的块');
+    return null;
+  }
+  
+  // 按得分排序，选择最佳匹配
+  matches.sort((a, b) => b.score - a.score);
+  const bestMatch = matches[0];
+  
+  console.log(`🏆 最佳匹配: ${bestMatch.block.type}(${bestMatch.block.id})`);
+  console.log(`📊 匹配得分: ${bestMatch.score.toFixed(2)}`);
+  console.log(`📋 匹配原因: ${bestMatch.reason}`);
+  
+  // 如果最佳匹配得分太低，拒绝匹配
+  if (bestMatch.score < 60) {
+    console.log('⚠️ 最佳匹配得分过低，拒绝匹配');
+    return null;
+  }
+  
+  // 如果有多个高分匹配，提醒可能存在歧义
+  const highScoreMatches = matches.filter(m => m.score >= bestMatch.score - 10);
+  if (highScoreMatches.length > 1) {
+    console.log(`⚠️ 检测到 ${highScoreMatches.length} 个高分匹配，可能存在歧义:`);
+    highScoreMatches.forEach(m => {
+      console.log(`   - ${m.block.type}(${m.block.id}) - 得分: ${m.score.toFixed(2)}`);
+    });
+  }
+  
+  return bestMatch.block;
+}
+
+/**
+ * 🎯 智能获取块函数（支持模糊匹配）
+ * 先尝试精确匹配，如果失败则使用模糊匹配
+ * 
+ * @param workspace Blockly工作区对象
+ * @param blockId 块ID（可能有偏差）
+ * @returns 匹配到的块对象，如果没找到返回null
+ */
+function getBlockByIdSmart(workspace: any, blockId: string): any | null {
+  if (!workspace || !blockId) {
+    console.log('⚠️ getBlockByIdSmart: 参数无效');
+    return null;
+  }
+
+  console.log(`🎯 智能获取块: "${blockId}"`);
+  
+  // 首先尝试原有的精确匹配
+  let block = workspace.getBlockById(blockId);
+  if (block) {
+    console.log(`✅ 精确匹配成功: ${block.type}(${block.id})`);
+    return block;
+  }
+  
+  console.log('⚠️ 精确匹配失败，尝试模糊匹配...');
+  
+  // 使用模糊匹配
+  block = findBlockByFuzzyId(blockId, workspace);
+  if (block) {
+    console.log(`✅ 模糊匹配成功: ${block.type}(${block.id})`);
+    return block;
+  }
+  
+  console.log('❌ 模糊匹配也失败了');
+  return null;
+}
+
+/**
+ * 计算两个字符串的编辑距离（Levenshtein Distance）
+ */
+function calculateEditDistance(str1: string, str2: string): number {
+  const matrix: number[][] = [];
+  
+  // 初始化矩阵
+  for (let i = 0; i <= str1.length; i++) {
+    matrix[i] = [i];
+  }
+  for (let j = 0; j <= str2.length; j++) {
+    matrix[0][j] = j;
+  }
+  
+  // 填充矩阵
+  for (let i = 1; i <= str1.length; i++) {
+    for (let j = 1; j <= str2.length; j++) {
+      if (str1[i - 1] === str2[j - 1]) {
+        matrix[i][j] = matrix[i - 1][j - 1];
+      } else {
+        matrix[i][j] = Math.min(
+          matrix[i - 1][j] + 1,     // 删除
+          matrix[i][j - 1] + 1,     // 插入
+          matrix[i - 1][j - 1] + 1  // 替换
+        );
+      }
+    }
+  }
+  
+  return matrix[str1.length][str2.length];
+}
+
+/**
+ * �🔧 JSON 修复工具函数（增强版）
  * 结合 jsonrepair 库和自定义修复逻辑，提供强大的 JSON 修复能力
  * 
  * @param jsonString 待修复的 JSON 字符串
@@ -331,6 +513,7 @@ export function simpleFixJson(jsonString: string): string | null {
  */
 interface SmartBlockArgs {
   type: string;
+  id?: string;  // 新增：自定义块ID参数
   position?: Position;
   fields?: FieldConfig;
   inputs?: InputConfig;
@@ -358,7 +541,7 @@ export async function smartBlockTool(
   console.log('📦 接收到的参数:', JSON.stringify(toolArgs, null, 2));
 
   try {
-    let { type, position, fields, inputs, parentConnection, createVariables = true } = toolArgs;
+    let { type, id, position, fields, inputs, parentConnection, createVariables = true } = toolArgs;
 
     // 🔧 参数修复和转换
     console.log('� 开始参数修复和转换...');
@@ -527,6 +710,7 @@ export async function smartBlockTool(
 
     console.log('🔍 修复后的参数:');
     console.log(`  - 块类型: ${type}`);
+    console.log(`  - 自定义ID: ${id || '未指定'}`);
     console.log(`  - 位置: ${JSON.stringify(position)}`);
     console.log(`  - 字段: ${JSON.stringify(fields)}`);
     console.log(`  - 输入: ${JSON.stringify(inputs)}`);
@@ -555,9 +739,12 @@ export async function smartBlockTool(
 
     // 创建块
     console.log(`🏗️ 创建块 "${type}"...`);
+    if (id) {
+      console.log(`🆔 将使用自定义ID: ${id}`);
+    }
     const blockPosition = calculateBlockPosition(workspace, position?.x, position?.y);
     console.log(`📍 计算得到的位置: ${JSON.stringify(blockPosition)}`);
-    const block = await createBlockSafely(workspace, type, blockPosition, false);
+    const block = await createBlockSafely(workspace, type, blockPosition, false, id);
 
     if (!block) {
       throw new Error(`创建 Block "${type}" 失败`);
@@ -628,6 +815,9 @@ export async function smartBlockTool(
   } catch (error) {
     is_error = true;
     toolResult = `创建 Block 失败: ${error instanceof Error ? error.message : String(error)}`;
+  } finally {
+    // 确保事件组正确清理，避免拖动时的事件冲突
+    ensureEventGroupCleanup();
   }
 
   return {
@@ -874,6 +1064,9 @@ export async function connectBlocksTool(
     is_error = true;
     toolResult = `连接块失败: ${error instanceof Error ? error.message : String(error)}`;
     console.error(`❌ ${toolResult}`);
+  } finally {
+    // 确保事件组正确清理，避免拖动时的事件冲突
+    ensureEventGroupCleanup();
   }
 
   return {
@@ -1081,6 +1274,9 @@ export async function createCodeStructureTool(
     is_error = true;
     toolResult = `创建代码结构失败: ${error instanceof Error ? error.message : String(error)}`;
     console.error('❌ createCodeStructureTool 执行失败:', error);
+  } finally {
+    // 确保事件组正确清理，避免拖动时的事件冲突
+    ensureEventGroupCleanup();
   }
 
   console.log('📤 返回结果:', { content: toolResult, is_error, metadata });
@@ -1224,6 +1420,9 @@ export async function configureBlockTool(
     is_error = true;
     toolResult = `配置块失败: ${error instanceof Error ? error.message : String(error)}`;
     console.error('❌ configureBlockTool 执行失败:', error);
+  } finally {
+    // 确保事件组正确清理，避免拖动时的事件冲突
+    ensureEventGroupCleanup();
   }
 
   return {
@@ -1631,9 +1830,9 @@ export async function deleteBlockTool(
 
     // 查找要删除的块
     console.log(`🔍 查找块 ID: ${blockId}`);
-    const blockToDelete = workspace.getBlockById(blockId);
+    const blockToDelete = getBlockByIdSmart(workspace, blockId);
     if (!blockToDelete) {
-      throw new Error(`未找到块 ID: ${blockId}`);
+      throw new Error(`未找到块 ID: ${blockId}（已尝试模糊匹配）`);
     }
 
     console.log(`✅ 找到目标块: ${blockToDelete.type} (ID: ${blockToDelete.id})`);
@@ -1643,6 +1842,11 @@ export async function deleteBlockTool(
     let beforeCount = 0;
     let afterCount = 0;
     let actualDeleted = 1; // 至少删除主块
+    
+    // 智能删除相关变量
+    let isHatBlock = false;
+    let reconnectedBlocks = 0;
+    let nextBlockPreserved = false;
 
     if (cascade) {
       console.log('🔗 启用级联删除，收集连接的块...');
@@ -1721,7 +1925,7 @@ export async function deleteBlockTool(
       
       // 删除所有连接的块
       for (const blockId of cascadeDeleted) {
-        const blockToDeleteCascade = workspace.getBlockById(blockId);
+        const blockToDeleteCascade = getBlockByIdSmart(workspace, blockId);
         if (blockToDeleteCascade) {
           console.log(`🗑️ 删除连接块: ${blockToDeleteCascade.type}(${blockToDeleteCascade.id})`);
           blockToDeleteCascade.dispose(false); // 不再级联，因为我们手动控制
@@ -1746,10 +1950,109 @@ export async function deleteBlockTool(
       
       toolResult = `成功级联删除块 "${deletedBlockType}" 及其 ${deletedIds.length - 1} 个连接块（共删除 ${deletedIds.length} 个块）`;
     } else {
-      console.log('🎯 执行单块删除...');
-      // 单独删除：只删除指定的块，保留连接的块
-      blockToDelete.dispose(false); // false表示只删除当前块
-      toolResult = `成功删除块 "${deletedBlockType}"`;
+      console.log('🎯 执行智能单块删除...');
+      // 智能单块删除：保留连接的块，并尝试重新连接前后块
+      
+      // 检查是否是 hat 块（顶级块，如 arduino_setup, arduino_loop 等）
+      isHatBlock = !blockToDelete.previousConnection || 
+                   blockToDelete.type.includes('setup') || 
+                   blockToDelete.type.includes('loop') ||
+                   blockToDelete.type.includes('hat') ||
+                   blockToDelete.type.includes('event');
+      
+      let nextBlockPreserved = false;
+      
+      if (isHatBlock) {
+        console.log(`📋 检测到 Hat 块 ${blockToDelete.type}，将删除其statement中的所有块`);
+        // Hat 块删除时，其 statement 连接的块也应该被删除
+        blockToDelete.dispose(false);
+        console.log('✅ Hat 块及其语句块已删除');
+      } else {
+        console.log(`📋 检测到普通块 ${blockToDelete.type}，执行智能删除和重连...`);
+        
+        // 获取前一个块和后一个块
+        const previousBlock = blockToDelete.getPreviousBlock ? blockToDelete.getPreviousBlock() : null;
+        const nextBlock = blockToDelete.getNextBlock ? blockToDelete.getNextBlock() : null;
+        
+        console.log(`🔍 连接状态分析:`);
+        console.log(`   前一个块: ${previousBlock ? `${previousBlock.type}(${previousBlock.id})` : '无'}`);
+        console.log(`   后一个块: ${nextBlock ? `${nextBlock.type}(${nextBlock.id})` : '无'}`);
+        
+        // 先断开所有连接
+        if (blockToDelete.previousConnection && blockToDelete.previousConnection.targetConnection) {
+          console.log('🔗 断开与前一个块的连接');
+          blockToDelete.previousConnection.disconnect();
+        }
+        if (blockToDelete.nextConnection && blockToDelete.nextConnection.targetConnection) {
+          console.log('🔗 断开与后一个块的连接');
+          blockToDelete.nextConnection.disconnect();
+        }
+        
+        // 删除目标块
+        console.log(`🗑️ 删除目标块: ${blockToDelete.type}(${blockToDelete.id})`);
+        blockToDelete.dispose(false);
+        
+        // 🎯 智能重连：如果前后都有块，尝试重新连接
+        if (previousBlock && nextBlock) {
+          console.log('🔄 智能重连模式：尝试将前后块重新连接...');
+          try {
+            if (previousBlock.nextConnection && nextBlock.previousConnection) {
+              // 检查连接兼容性
+              const isCompatible = checkConnectionCompatibility(previousBlock.nextConnection, nextBlock.previousConnection);
+              if (isCompatible) {
+                // 禁用事件系统避免连接时的移动事件错误
+                const wasRecordingUndo = window['Blockly'].Events.getRecordUndo();
+                const currentGroup = window['Blockly'].Events.getGroup();
+                window['Blockly'].Events.disable();
+                
+                try {
+                  previousBlock.nextConnection.connect(nextBlock.previousConnection);
+                  reconnectedBlocks = 2;
+                  nextBlockPreserved = true;
+                  console.log(`✅ 智能重连成功: ${previousBlock.type} → ${nextBlock.type}`);
+                } catch (connectError) {
+                  console.warn(`⚠️ 智能重连时出错: ${connectError}, 但块已保留`);
+                  nextBlockPreserved = true;
+                } finally {
+                  // 恢复事件系统
+                  window['Blockly'].Events.enable();
+                  if (currentGroup) {
+                    window['Blockly'].Events.setGroup(currentGroup);
+                  }
+                  window['Blockly'].Events.setRecordUndo(wasRecordingUndo);
+                }
+              } else {
+                console.log('⚠️ 前后块类型不兼容，无法重连，但块已保留');
+                nextBlockPreserved = true;
+              }
+            } else {
+              console.log('⚠️ 连接点不匹配，无法重连，但块已保留');
+              nextBlockPreserved = true;
+            }
+          } catch (reconnectError) {
+            console.warn('⚠️ 重连过程中出现错误，但块已保留:', reconnectError);
+            nextBlockPreserved = true;
+          }
+        } else if (nextBlock) {
+          console.log('✅ 后续块已保留（无前一个块需要重连）');
+          nextBlockPreserved = true;
+        } else if (previousBlock) {
+          console.log('✅ 前一个块保持不变（无后续块需要重连）');
+        } else {
+          console.log('ℹ️ 删除的是独立块，无需重连');
+        }
+      }
+      
+      // 生成结果消息
+      if (isHatBlock) {
+        toolResult = `成功删除 Hat 块 "${deletedBlockType}" 及其相关语句块`;
+      } else if (reconnectedBlocks > 0) {
+        toolResult = `成功删除块 "${deletedBlockType}"，并智能重连了前后块`;
+      } else if (nextBlockPreserved) {
+        toolResult = `成功删除块 "${deletedBlockType}"，后续块已保留`;
+      } else {
+        toolResult = `成功删除块 "${deletedBlockType}"`;
+      }
     }
 
     console.log(`✅ 删除完成: ${toolResult}`);
@@ -1769,7 +2072,10 @@ export async function deleteBlockTool(
       metadata = {
         deletedBlockId: blockId,
         deletedBlockType: deletedBlockType,
-        deletionMethod: '单块删除'
+        deletionMethod: '智能单块删除',
+        isHatBlock: isHatBlock,
+        reconnectedBlocks: reconnectedBlocks || 0,
+        nextBlockPreserved: nextBlockPreserved || false
       };
     }
 
@@ -1777,6 +2083,9 @@ export async function deleteBlockTool(
     is_error = true;
     toolResult = `删除块失败: ${error instanceof Error ? error.message : String(error)}`;
     console.error('❌ deleteBlockTool 执行失败:', error);
+  } finally {
+    // 确保事件组正确清理，避免拖动时的事件冲突
+    ensureEventGroupCleanup();
   }
 
   console.log('📤 返回结果:', { content: toolResult, is_error, metadata });
@@ -1815,12 +2124,29 @@ async function createIfConditionStructure(
     const conditionBlock = await createBlockFromConfig(workspace, config.condition);
     if (conditionBlock) {
       createdBlocks.push(conditionBlock.id);
-      ifBlock.getInput('IF0').connection.connect(conditionBlock.outputConnection);
-      connections.push({
-        sourceId: conditionBlock.id,
-        targetId: ifBlock.id,
-        connectionType: 'value'
-      });
+      
+      // 禁用事件系统避免连接时的移动事件错误
+      const wasRecordingUndo = window['Blockly'].Events.getRecordUndo();
+      const currentGroup = window['Blockly'].Events.getGroup();
+      window['Blockly'].Events.disable();
+      
+      try {
+        ifBlock.getInput('IF0').connection.connect(conditionBlock.outputConnection);
+        connections.push({
+          sourceId: conditionBlock.id,
+          targetId: ifBlock.id,
+          connectionType: 'value'
+        });
+      } catch (connectError) {
+        console.warn(`⚠️ if条件连接时出错: ${connectError}, 但连接尝试继续`);
+      } finally {
+        // 恢复事件系统
+        window['Blockly'].Events.enable();
+        if (currentGroup) {
+          window['Blockly'].Events.setGroup(currentGroup);
+        }
+        window['Blockly'].Events.setRecordUndo(wasRecordingUndo);
+      }
     }
   }
   
@@ -1829,12 +2155,29 @@ async function createIfConditionStructure(
     const branchBlocks = await createBlockSequence(workspace, config.ifBranch);
     if (branchBlocks.length > 0) {
       createdBlocks.push(...branchBlocks.map(b => b.id));
-      ifBlock.getInput('DO0').connection.connect(branchBlocks[0].previousConnection);
-      connections.push({
-        sourceId: branchBlocks[0].id,
-        targetId: ifBlock.id,
-        connectionType: 'statement'
-      });
+      
+      // 禁用事件系统避免连接时的移动事件错误
+      const wasRecordingUndo2 = window['Blockly'].Events.getRecordUndo();
+      const currentGroup2 = window['Blockly'].Events.getGroup();
+      window['Blockly'].Events.disable();
+      
+      try {
+        ifBlock.getInput('DO0').connection.connect(branchBlocks[0].previousConnection);
+        connections.push({
+          sourceId: branchBlocks[0].id,
+          targetId: ifBlock.id,
+          connectionType: 'statement'
+        });
+      } catch (connectError) {
+        console.warn(`⚠️ if分支连接时出错: ${connectError}, 但连接尝试继续`);
+      } finally {
+        // 恢复事件系统
+        window['Blockly'].Events.enable();
+        if (currentGroup2) {
+          window['Blockly'].Events.setGroup(currentGroup2);
+        }
+        window['Blockly'].Events.setRecordUndo(wasRecordingUndo2);
+      }
     }
   }
   
@@ -1861,12 +2204,29 @@ async function createIfElseStructure(
     const conditionBlock = await createBlockFromConfig(workspace, config.condition);
     if (conditionBlock) {
       createdBlocks.push(conditionBlock.id);
-      ifElseBlock.getInput('IF0').connection.connect(conditionBlock.outputConnection);
-      connections.push({
-        sourceId: conditionBlock.id,
-        targetId: ifElseBlock.id,
-        connectionType: 'value'
-      });
+      
+      // 禁用事件系统避免连接时的移动事件错误
+      const wasRecordingUndo = window['Blockly'].Events.getRecordUndo();
+      const currentGroup = window['Blockly'].Events.getGroup();
+      window['Blockly'].Events.disable();
+      
+      try {
+        ifElseBlock.getInput('IF0').connection.connect(conditionBlock.outputConnection);
+        connections.push({
+          sourceId: conditionBlock.id,
+          targetId: ifElseBlock.id,
+          connectionType: 'value'
+        });
+      } catch (connectError) {
+        console.warn(`⚠️ if-else条件连接时出错: ${connectError}, 但连接尝试继续`);
+      } finally {
+        // 恢复事件系统
+        window['Blockly'].Events.enable();
+        if (currentGroup) {
+          window['Blockly'].Events.setGroup(currentGroup);
+        }
+        window['Blockly'].Events.setRecordUndo(wasRecordingUndo);
+      }
     }
   }
   
@@ -1875,12 +2235,29 @@ async function createIfElseStructure(
     const ifBranchBlocks = await createBlockSequence(workspace, config.ifBranch);
     if (ifBranchBlocks.length > 0) {
       createdBlocks.push(...ifBranchBlocks.map(b => b.id));
-      ifElseBlock.getInput('DO0').connection.connect(ifBranchBlocks[0].previousConnection);
-      connections.push({
-        sourceId: ifBranchBlocks[0].id,
-        targetId: ifElseBlock.id,
-        connectionType: 'statement'
-      });
+      
+      // 禁用事件系统避免连接时的移动事件错误
+      const wasRecordingUndo2 = window['Blockly'].Events.getRecordUndo();
+      const currentGroup2 = window['Blockly'].Events.getGroup();
+      window['Blockly'].Events.disable();
+      
+      try {
+        ifElseBlock.getInput('DO0').connection.connect(ifBranchBlocks[0].previousConnection);
+        connections.push({
+          sourceId: ifBranchBlocks[0].id,
+          targetId: ifElseBlock.id,
+          connectionType: 'statement'
+        });
+      } catch (connectError) {
+        console.warn(`⚠️ if分支连接时出错: ${connectError}, 但连接尝试继续`);
+      } finally {
+        // 恢复事件系统
+        window['Blockly'].Events.enable();
+        if (currentGroup2) {
+          window['Blockly'].Events.setGroup(currentGroup2);
+        }
+        window['Blockly'].Events.setRecordUndo(wasRecordingUndo2);
+      }
     }
   }
   
@@ -1889,12 +2266,29 @@ async function createIfElseStructure(
     const elseBranchBlocks = await createBlockSequence(workspace, config.elseBranch);
     if (elseBranchBlocks.length > 0) {
       createdBlocks.push(...elseBranchBlocks.map(b => b.id));
-      ifElseBlock.getInput('ELSE').connection.connect(elseBranchBlocks[0].previousConnection);
-      connections.push({
-        sourceId: elseBranchBlocks[0].id,
-        targetId: ifElseBlock.id,
-        connectionType: 'statement'
-      });
+      
+      // 禁用事件系统避免连接时的移动事件错误
+      const wasRecordingUndo3 = window['Blockly'].Events.getRecordUndo();
+      const currentGroup3 = window['Blockly'].Events.getGroup();
+      window['Blockly'].Events.disable();
+      
+      try {
+        ifElseBlock.getInput('ELSE').connection.connect(elseBranchBlocks[0].previousConnection);
+        connections.push({
+          sourceId: elseBranchBlocks[0].id,
+          targetId: ifElseBlock.id,
+          connectionType: 'statement'
+        });
+      } catch (connectError) {
+        console.warn(`⚠️ else分支连接时出错: ${connectError}, 但连接尝试继续`);
+      } finally {
+        // 恢复事件系统
+        window['Blockly'].Events.enable();
+        if (currentGroup3) {
+          window['Blockly'].Events.setGroup(currentGroup3);
+        }
+        window['Blockly'].Events.setRecordUndo(wasRecordingUndo3);
+      }
     }
   }
   
@@ -1922,12 +2316,29 @@ async function createRepeatLoopStructure(
       const numberBlock = await createBlockSafely(workspace, 'math_number', { x: position.x + 150, y: position.y }, true);
       numberBlock.setFieldValue(config.loopCount.toString(), 'NUM');
       createdBlocks.push(numberBlock.id);
-      repeatBlock.getInput('TIMES').connection.connect(numberBlock.outputConnection);
-      connections.push({
-        sourceId: numberBlock.id,
-        targetId: repeatBlock.id,
-        connectionType: 'value'
-      });
+      
+      // 禁用事件系统避免连接时的移动事件错误
+      const wasRecordingUndo = window['Blockly'].Events.getRecordUndo();
+      const currentGroup = window['Blockly'].Events.getGroup();
+      window['Blockly'].Events.disable();
+      
+      try {
+        repeatBlock.getInput('TIMES').connection.connect(numberBlock.outputConnection);
+        connections.push({
+          sourceId: numberBlock.id,
+          targetId: repeatBlock.id,
+          connectionType: 'value'
+        });
+      } catch (connectError) {
+        console.warn(`⚠️ 循环次数连接时出错: ${connectError}, 但连接尝试继续`);
+      } finally {
+        // 恢复事件系统
+        window['Blockly'].Events.enable();
+        if (currentGroup) {
+          window['Blockly'].Events.setGroup(currentGroup);
+        }
+        window['Blockly'].Events.setRecordUndo(wasRecordingUndo);
+      }
     }
   }
   
@@ -1936,12 +2347,29 @@ async function createRepeatLoopStructure(
     const loopBodyBlocks = await createBlockSequence(workspace, config.loopBody);
     if (loopBodyBlocks.length > 0) {
       createdBlocks.push(...loopBodyBlocks.map(b => b.id));
-      repeatBlock.getInput('DO').connection.connect(loopBodyBlocks[0].previousConnection);
-      connections.push({
-        sourceId: loopBodyBlocks[0].id,
-        targetId: repeatBlock.id,
-        connectionType: 'statement'
-      });
+      
+      // 禁用事件系统避免连接时的移动事件错误
+      const wasRecordingUndo2 = window['Blockly'].Events.getRecordUndo();
+      const currentGroup2 = window['Blockly'].Events.getGroup();
+      window['Blockly'].Events.disable();
+      
+      try {
+        repeatBlock.getInput('DO').connection.connect(loopBodyBlocks[0].previousConnection);
+        connections.push({
+          sourceId: loopBodyBlocks[0].id,
+          targetId: repeatBlock.id,
+          connectionType: 'statement'
+        });
+      } catch (connectError) {
+        console.warn(`⚠️ 循环体连接时出错: ${connectError}, 但连接尝试继续`);
+      } finally {
+        // 恢复事件系统
+        window['Blockly'].Events.enable();
+        if (currentGroup2) {
+          window['Blockly'].Events.setGroup(currentGroup2);
+        }
+        window['Blockly'].Events.setRecordUndo(wasRecordingUndo2);
+      }
     }
   }
   
@@ -1968,25 +2396,58 @@ async function createSetupLoopStructure(
   const loopBlock = await createBlockSafely(workspace, 'arduino_loop', { x: position.x, y: position.y + 120 }, true);
   createdBlocks.push(loopBlock.id);
   
-  // 连接 setup 和 loop
-  setupBlock.nextConnection.connect(loopBlock.previousConnection);
-  connections.push({
-    sourceId: setupBlock.id,
-    targetId: loopBlock.id,
-    connectionType: 'next'
-  });
+  // 禁用事件系统避免连接时的移动事件错误
+  const wasRecordingUndo = window['Blockly'].Events.getRecordUndo();
+  const currentGroup = window['Blockly'].Events.getGroup();
+  window['Blockly'].Events.disable();
+  
+  try {
+    // 连接 setup 和 loop
+    setupBlock.nextConnection.connect(loopBlock.previousConnection);
+    connections.push({
+      sourceId: setupBlock.id,
+      targetId: loopBlock.id,
+      connectionType: 'next'
+    });
+  } catch (connectError) {
+    console.warn(`⚠️ Arduino结构连接时出错: ${connectError}, 但连接尝试继续`);
+  } finally {
+    // 恢复事件系统
+    window['Blockly'].Events.enable();
+    if (currentGroup) {
+      window['Blockly'].Events.setGroup(currentGroup);
+    }
+    window['Blockly'].Events.setRecordUndo(wasRecordingUndo);
+  }
   
   // 设置 setup 内容
   if (config.setupBlocks) {
     const setupBodyBlocks = await createBlockSequence(workspace, config.setupBlocks);
     if (setupBodyBlocks.length > 0) {
       createdBlocks.push(...setupBodyBlocks.map(b => b.id));
-      setupBlock.getInput('ARDUINO_SETUP').connection.connect(setupBodyBlocks[0].previousConnection);
-      connections.push({
-        sourceId: setupBodyBlocks[0].id,
-        targetId: setupBlock.id,
-        connectionType: 'statement'
-      });
+      
+      // 禁用事件系统避免连接时的移动事件错误
+      const wasRecordingUndo2 = window['Blockly'].Events.getRecordUndo();
+      const currentGroup2 = window['Blockly'].Events.getGroup();
+      window['Blockly'].Events.disable();
+      
+      try {
+        setupBlock.getInput('ARDUINO_SETUP').connection.connect(setupBodyBlocks[0].previousConnection);
+        connections.push({
+          sourceId: setupBodyBlocks[0].id,
+          targetId: setupBlock.id,
+          connectionType: 'statement'
+        });
+      } catch (connectError) {
+        console.warn(`⚠️ Arduino setup内容连接时出错: ${connectError}, 但连接尝试继续`);
+      } finally {
+        // 恢复事件系统
+        window['Blockly'].Events.enable();
+        if (currentGroup2) {
+          window['Blockly'].Events.setGroup(currentGroup2);
+        }
+        window['Blockly'].Events.setRecordUndo(wasRecordingUndo2);
+      }
     }
   }
   
@@ -1995,12 +2456,29 @@ async function createSetupLoopStructure(
     const loopBodyBlocks = await createBlockSequence(workspace, config.loopBlocks);
     if (loopBodyBlocks.length > 0) {
       createdBlocks.push(...loopBodyBlocks.map(b => b.id));
-      loopBlock.getInput('ARDUINO_LOOP').connection.connect(loopBodyBlocks[0].previousConnection);
-      connections.push({
-        sourceId: loopBodyBlocks[0].id,
-        targetId: loopBlock.id,
-        connectionType: 'statement'
-      });
+      
+      // 禁用事件系统避免连接时的移动事件错误
+      const wasRecordingUndo3 = window['Blockly'].Events.getRecordUndo();
+      const currentGroup3 = window['Blockly'].Events.getGroup();
+      window['Blockly'].Events.disable();
+      
+      try {
+        loopBlock.getInput('ARDUINO_LOOP').connection.connect(loopBodyBlocks[0].previousConnection);
+        connections.push({
+          sourceId: loopBodyBlocks[0].id,
+          targetId: loopBlock.id,
+          connectionType: 'statement'
+        });
+      } catch (connectError) {
+        console.warn(`⚠️ Arduino loop内容连接时出错: ${connectError}, 但连接尝试继续`);
+      } finally {
+        // 恢复事件系统
+        window['Blockly'].Events.enable();
+        if (currentGroup3) {
+          window['Blockly'].Events.setGroup(currentGroup3);
+        }
+        window['Blockly'].Events.setRecordUndo(wasRecordingUndo3);
+      }
     }
   }
   
@@ -2036,13 +2514,30 @@ async function createSerialCommunicationStructure(
     const commBlocks = await createBlockSequence(workspace, config.communicationBlocks);
     if (commBlocks.length > 0) {
       createdBlocks.push(...commBlocks.map(b => b.id));
-      // 连接到串口初始化块的下方
-      serialInitBlock.nextConnection.connect(commBlocks[0].previousConnection);
-      connections.push({
-        sourceId: serialInitBlock.id,
-        targetId: commBlocks[0].id,
-        connectionType: 'next'
-      });
+      
+      // 禁用事件系统避免连接时的移动事件错误
+      const wasRecordingUndo = window['Blockly'].Events.getRecordUndo();
+      const currentGroup = window['Blockly'].Events.getGroup();
+      window['Blockly'].Events.disable();
+      
+      try {
+        // 连接到串口初始化块的下方
+        serialInitBlock.nextConnection.connect(commBlocks[0].previousConnection);
+        connections.push({
+          sourceId: serialInitBlock.id,
+          targetId: commBlocks[0].id,
+          connectionType: 'next'
+        });
+      } catch (connectError) {
+        console.warn(`⚠️ 通信块连接时出错: ${connectError}, 但连接尝试继续`);
+      } finally {
+        // 恢复事件系统
+        window['Blockly'].Events.enable();
+        if (currentGroup) {
+          window['Blockly'].Events.setGroup(currentGroup);
+        }
+        window['Blockly'].Events.setRecordUndo(wasRecordingUndo);
+      }
     }
   }
   
@@ -2150,80 +2645,121 @@ async function createDynamicStructure(
   
   // 1. 创建根块
   console.log('📦 创建根块:', rootConfig.type);
+  console.log('🔍 根块配置:', JSON.stringify(rootConfig, null, 2));
   const enhancedRootConfig = enhanceConfigWithInputs(rootConfig, blockInputRequirements);
   const rootBlock = await createBlockFromConfig(workspace, enhancedRootConfig);
   if (rootBlock) {
+    console.log(`✅ 根块创建成功: ${rootBlock.type}[${rootBlock.id}]`);
     createdBlocks.push(rootBlock.id);
     blockMap.set('root', rootBlock);
     
     // 如果根块配置有标识符，也用标识符作为键
     if (rootConfig.id) {
+      console.log(`🗂️ 设置根块映射键: ${rootConfig.id} → ${rootBlock.type}[${rootBlock.id}]`);
       blockMap.set(rootConfig.id, rootBlock);
+    } else {
+      console.log(`⚠️ 根块配置没有ID，只使用 'root' 作为键`);
     }
+  } else {
+    console.error(`❌ 根块创建失败: ${rootConfig.type}`);
   }
   
   // 2. 创建附加块
   for (let i = 0; i < additionalBlocks.length; i++) {
     const blockConfig = additionalBlocks[i];
     console.log(`📦 创建附加块 ${i + 1}:`, blockConfig.type);
+    console.log(`🔍 附加块配置:`, JSON.stringify(blockConfig, null, 2));
     
     const enhancedConfig = enhanceConfigWithInputs(blockConfig, blockInputRequirements);
     const block = await createBlockFromConfig(workspace, enhancedConfig);
     if (block) {
+      console.log(`✅ 附加块创建成功: ${block.type}[${block.id}]`);
       createdBlocks.push(block.id);
       
       // 使用配置中的ID或索引作为键
       const blockKey = blockConfig.id || `block_${i}`;
+      console.log(`🗂️ 设置附加块映射键: ${blockKey} → ${block.type}[${block.id}]`);
       blockMap.set(blockKey, block);
+    } else {
+      console.error(`❌ 附加块创建失败: ${blockConfig.type}`);
     }
   }
   
   // 3. 根据连接规则连接块
+  console.log('🗺️ 当前块映射表:');
+  for (const [key, block] of blockMap.entries()) {
+    console.log(`  - ${key} → ${block.type}[${block.id}]`);
+  }
+  
   for (const rule of connectionRules) {
     try {
+      console.log(`🔍 尝试连接: ${rule.source} -> ${rule.target}`);
       const sourceBlock = blockMap.get(rule.source);
       const targetBlock = blockMap.get(rule.target);
       
       if (sourceBlock && targetBlock) {
+        console.log(`✅ 找到连接块: ${sourceBlock.type}[${sourceBlock.id}] -> ${targetBlock.type}[${targetBlock.id}]`);
         console.log(`🔗 连接块: ${rule.source} -> ${rule.target}`);
         
-        if (rule.connectionType === 'next' || !rule.connectionType) {
-          // 下一个块连接
-          if (sourceBlock.nextConnection && targetBlock.previousConnection) {
-            sourceBlock.nextConnection.connect(targetBlock.previousConnection);
-            connections.push({
-              sourceId: sourceBlock.id,
-              targetId: targetBlock.id,
-              connectionType: 'next'
-            });
+        // 在连接操作时临时禁用事件，避免移动事件错误
+        const wasRecordingUndo = window['Blockly'].Events.getRecordUndo();
+        const currentGroup = window['Blockly'].Events.getGroup();
+        window['Blockly'].Events.disable();
+        
+        try {
+          if (rule.connectionType === 'next' || !rule.connectionType) {
+            // 下一个块连接
+            if (sourceBlock.nextConnection && targetBlock.previousConnection) {
+              sourceBlock.nextConnection.connect(targetBlock.previousConnection);
+              connections.push({
+                sourceId: sourceBlock.id,
+                targetId: targetBlock.id,
+                connectionType: 'next'
+              });
+              console.log(`✅ next 连接成功: ${sourceBlock.type} -> ${targetBlock.type}`);
+            }
+          } else if (rule.connectionType === 'input' && rule.inputName) {
+            // 输入连接
+            const inputConnection = sourceBlock.getInput(rule.inputName);
+            if (inputConnection && targetBlock.outputConnection) {
+              inputConnection.connection.connect(targetBlock.outputConnection);
+              connections.push({
+                sourceId: sourceBlock.id,
+                targetId: targetBlock.id,
+                connectionType: 'input',
+                inputName: rule.inputName
+              });
+              console.log(`✅ input 连接成功: ${sourceBlock.type}.${rule.inputName} -> ${targetBlock.type}`);
+            }
+          } else if (rule.connectionType === 'statement') {
+            // 父块连接（statement连接）
+            const statementConnection = sourceBlock.getInput(rule.inputName || 'DO');
+            if (statementConnection && targetBlock.previousConnection) {
+              statementConnection.connection.connect(targetBlock.previousConnection);
+              connections.push({
+                sourceId: sourceBlock.id,
+                targetId: targetBlock.id,
+                connectionType: 'statement',
+                inputName: rule.inputName || 'DO'
+              });
+              console.log(`✅ statement 连接成功: ${sourceBlock.type}.${rule.inputName || 'DO'} -> ${targetBlock.type}`);
+            }
           }
-        } else if (rule.connectionType === 'input' && rule.inputName) {
-          // 输入连接
-          const inputConnection = sourceBlock.getInput(rule.inputName);
-          if (inputConnection && targetBlock.outputConnection) {
-            inputConnection.connection.connect(targetBlock.outputConnection);
-            connections.push({
-              sourceId: sourceBlock.id,
-              targetId: targetBlock.id,
-              connectionType: 'input',
-              inputName: rule.inputName
-            });
+        } catch (connectError) {
+          console.warn(`⚠️ 连接操作时出错: ${connectError}, 但连接尝试继续`);
+        } finally {
+          // 恢复事件系统
+          window['Blockly'].Events.enable();
+          if (currentGroup) {
+            window['Blockly'].Events.setGroup(currentGroup);
           }
-        } else if (rule.connectionType === 'statement') {
-          // 父块连接（statement连接）
-          const statementConnection = sourceBlock.getInput(rule.inputName || 'DO');
-          if (statementConnection && targetBlock.previousConnection) {
-            statementConnection.connection.connect(targetBlock.previousConnection);
-            connections.push({
-              sourceId: sourceBlock.id,
-              targetId: targetBlock.id,
-              connectionType: 'statement',
-              inputName: rule.inputName || 'DO'
-            });
-          }
+          window['Blockly'].Events.setRecordUndo(wasRecordingUndo);
         }
       } else {
         console.warn(`⚠️ 无法找到连接的块: ${rule.source} -> ${rule.target}`);
+        console.warn(`  源块 "${rule.source}": ${sourceBlock ? '✅ 找到' : '❌ 未找到'}`);
+        console.warn(`  目标块 "${rule.target}": ${targetBlock ? '✅ 找到' : '❌ 未找到'}`);
+        console.warn(`  可用的块键: [${Array.from(blockMap.keys()).join(', ')}]`);
       }
     } catch (error) {
       console.error(`❌ 连接块时出错:`, error);
@@ -2290,15 +2826,40 @@ async function createBlockSequence(workspace: any, sequence: BlockConfig | Block
   const blocks: any[] = [];
   const configs = Array.isArray(sequence) ? sequence : [sequence];
   
-  for (let i = 0; i < configs.length; i++) {
-    const block = await createBlockFromConfig(workspace, configs[i]);
-    blocks.push(block);
-    
-    // 连接到前一个块
-    if (i > 0 && blocks[i-1].nextConnection && block.previousConnection) {
-      blocks[i-1].nextConnection.connect(block.previousConnection);
+  // 禁用事件系统避免连接时的移动事件错误
+  const wasRecordingUndo = window['Blockly'].Events.getRecordUndo();
+  const currentGroup = window['Blockly'].Events.getGroup();
+  window['Blockly'].Events.disable();
+  
+  try {
+    for (let i = 0; i < configs.length; i++) {
+      const block = await createBlockFromConfig(workspace, configs[i]);
+      blocks.push(block);
+      
+      // 连接到前一个块
+      if (i > 0 && blocks[i-1].nextConnection && block.previousConnection) {
+        blocks[i-1].nextConnection.connect(block.previousConnection);
+      }
     }
+  } catch (sequenceError) {
+    console.warn(`⚠️ 块序列创建时出错: ${sequenceError}, 但序列创建尝试继续`);
+  } finally {
+    // 恢复事件系统
+    window['Blockly'].Events.enable();
+    if (currentGroup) {
+      window['Blockly'].Events.setGroup(currentGroup);
+    }
+    window['Blockly'].Events.setRecordUndo(wasRecordingUndo);
   }
+  
+  // 确保序列创建完成后事件组正确清理
+  setTimeout(() => {
+    try {
+      window['Blockly'].Events.setGroup(false);
+    } catch (e) {
+      console.warn('⚠️ 序列创建后事件组清理出错:', e);
+    }
+  }, 100);
   
   return blocks;
 }
@@ -2319,9 +2880,9 @@ async function handleBlockInsertion(
   console.log(`🎯 目标块ID: ${targetBlockId}`);
   console.log(`🎯 目标输入: ${targetInput || '未指定'}`);
   
-  const targetBlock = workspace.getBlockById(targetBlockId);
+  const targetBlock = getBlockByIdSmart(workspace, targetBlockId);
   if (!targetBlock) {
-    console.log(`❌ 未找到目标块: ${targetBlockId}`);
+    console.log(`❌ 未找到目标块: ${targetBlockId}（已尝试模糊匹配）`);
     throw new Error(`未找到目标块: ${targetBlockId}`);
   }
   
@@ -2331,32 +2892,48 @@ async function handleBlockInsertion(
     case 'after':
       console.log(`🔗 执行 after 连接（智能插入版）...`);
       if (targetBlock.nextConnection && newBlock.previousConnection) {
-        // 🎯 智能插入：如果目标块后面已经有块，自动后移
-        const existingNextBlock = targetBlock.getNextBlock();
-        if (existingNextBlock) {
-          console.log(`🔄 检测到目标块后已有块: ${existingNextBlock.type}(${existingNextBlock.id})`);
-          console.log('📋 智能插入模式：将现有块后移到新插入块的后面');
-          
-          // 断开现有连接
-          targetBlock.nextConnection.disconnect();
-          console.log('✅ 已断开目标块的现有连接');
-          
-          // 连接新块到目标块
-          targetBlock.nextConnection.connect(newBlock.previousConnection);
-          console.log('✅ 新块已连接到目标块');
-          
-          // 将原有的下一个块连接到新块后面
-          if (newBlock.nextConnection && existingNextBlock.previousConnection) {
-            newBlock.nextConnection.connect(existingNextBlock.previousConnection);
-            console.log(`✅ 原有块 ${existingNextBlock.type} 已重新连接到新块后面`);
-            console.log(`🎉 智能插入完成：${targetBlock.type} → ${newBlock.type} → ${existingNextBlock.type}`);
+        // 禁用事件系统避免连接时的移动事件错误
+        const wasRecordingUndo = window['Blockly'].Events.getRecordUndo();
+        const currentGroup = window['Blockly'].Events.getGroup();
+        window['Blockly'].Events.disable();
+        
+        try {
+          // 🎯 智能插入：如果目标块后面已经有块，自动后移
+          const existingNextBlock = targetBlock.getNextBlock();
+          if (existingNextBlock) {
+            console.log(`🔄 检测到目标块后已有块: ${existingNextBlock.type}(${existingNextBlock.id})`);
+            console.log('📋 智能插入模式：将现有块后移到新插入块的后面');
+            
+            // 断开现有连接
+            targetBlock.nextConnection.disconnect();
+            console.log('✅ 已断开目标块的现有连接');
+            
+            // 连接新块到目标块
+            targetBlock.nextConnection.connect(newBlock.previousConnection);
+            console.log('✅ 新块已连接到目标块');
+            
+            // 将原有的下一个块连接到新块后面
+            if (newBlock.nextConnection && existingNextBlock.previousConnection) {
+              newBlock.nextConnection.connect(existingNextBlock.previousConnection);
+              console.log(`✅ 原有块 ${existingNextBlock.type} 已重新连接到新块后面`);
+              console.log(`🎉 智能插入完成：${targetBlock.type} → ${newBlock.type} → ${existingNextBlock.type}`);
+            } else {
+              console.log('⚠️ 无法重新连接原有块，原有块将保持断开状态');
+            }
           } else {
-            console.log('⚠️ 无法重新连接原有块，原有块将保持断开状态');
+            // 没有现有连接，直接连接
+            targetBlock.nextConnection.connect(newBlock.previousConnection);
+            console.log(`✅ after 连接完成（无现有块）`);
           }
-        } else {
-          // 没有现有连接，直接连接
-          targetBlock.nextConnection.connect(newBlock.previousConnection);
-          console.log(`✅ after 连接完成（无现有块）`);
+        } catch (connectError) {
+          console.warn(`⚠️ after连接时出错: ${connectError}, 但连接尝试继续`);
+        } finally {
+          // 恢复事件系统
+          window['Blockly'].Events.enable();
+          if (currentGroup) {
+            window['Blockly'].Events.setGroup(currentGroup);
+          }
+          window['Blockly'].Events.setRecordUndo(wasRecordingUndo);
         }
       } else {
         console.log(`❌ after 连接失败 - 连接类型不兼容`);
@@ -2366,30 +2943,46 @@ async function handleBlockInsertion(
     case 'before':
       console.log(`🔗 执行 before 连接（智能插入版）...`);
       if (targetBlock.previousConnection && newBlock.nextConnection) {
-        // 🎯 智能插入：如果目标块前面已经有块，保持连接
-        const existingPrevBlock = targetBlock.getPreviousBlock();
-        if (existingPrevBlock) {
-          console.log(`🔄 检测到目标块前已有块: ${existingPrevBlock.type}(${existingPrevBlock.id})`);
-          console.log('📋 智能插入模式：在前一个块和目标块之间插入新块');
-          
-          // 断开现有连接
-          existingPrevBlock.nextConnection.disconnect();
-          console.log('✅ 已断开前一个块的连接');
-          
-          // 连接前一个块到新块
-          if (existingPrevBlock.nextConnection && newBlock.previousConnection) {
-            existingPrevBlock.nextConnection.connect(newBlock.previousConnection);
-            console.log('✅ 前一个块已连接到新块');
+        // 禁用事件系统避免连接时的移动事件错误
+        const wasRecordingUndo = window['Blockly'].Events.getRecordUndo();
+        const currentGroup = window['Blockly'].Events.getGroup();
+        window['Blockly'].Events.disable();
+        
+        try {
+          // 🎯 智能插入：如果目标块前面已经有块，保持连接
+          const existingPrevBlock = targetBlock.getPreviousBlock();
+          if (existingPrevBlock) {
+            console.log(`🔄 检测到目标块前已有块: ${existingPrevBlock.type}(${existingPrevBlock.id})`);
+            console.log('📋 智能插入模式：在前一个块和目标块之间插入新块');
+            
+            // 断开现有连接
+            existingPrevBlock.nextConnection.disconnect();
+            console.log('✅ 已断开前一个块的连接');
+            
+            // 连接前一个块到新块
+            if (existingPrevBlock.nextConnection && newBlock.previousConnection) {
+              existingPrevBlock.nextConnection.connect(newBlock.previousConnection);
+              console.log('✅ 前一个块已连接到新块');
+            }
+            
+            // 连接新块到目标块
+            newBlock.nextConnection.connect(targetBlock.previousConnection);
+            console.log(`✅ 新块已连接到目标块`);
+            console.log(`🎉 智能插入完成：${existingPrevBlock.type} → ${newBlock.type} → ${targetBlock.type}`);
+          } else {
+            // 没有前一个块，直接连接
+            newBlock.nextConnection.connect(targetBlock.previousConnection);
+            console.log(`✅ before 连接完成（无前一个块）`);
           }
-          
-          // 连接新块到目标块
-          newBlock.nextConnection.connect(targetBlock.previousConnection);
-          console.log(`✅ 新块已连接到目标块`);
-          console.log(`🎉 智能插入完成：${existingPrevBlock.type} → ${newBlock.type} → ${targetBlock.type}`);
-        } else {
-          // 没有前一个块，直接连接
-          newBlock.nextConnection.connect(targetBlock.previousConnection);
-          console.log(`✅ before 连接完成（无前一个块）`);
+        } catch (connectError) {
+          console.warn(`⚠️ before连接时出错: ${connectError}, 但连接尝试继续`);
+        } finally {
+          // 恢复事件系统
+          window['Blockly'].Events.enable();
+          if (currentGroup) {
+            window['Blockly'].Events.setGroup(currentGroup);
+          }
+          window['Blockly'].Events.setRecordUndo(wasRecordingUndo);
         }
       } else {
         console.log(`❌ before 连接失败 - 连接类型不兼容`);
@@ -2399,15 +2992,31 @@ async function handleBlockInsertion(
     case 'input':
       console.log(`🔗 执行 input 连接...`);
       if (targetInput && targetBlock.getInput(targetInput)) {
-        const input = targetBlock.getInput(targetInput);
-        if (input.connection && newBlock.outputConnection) {
-          input.connection.connect(newBlock.outputConnection);
-          console.log(`✅ input 连接完成 (output)`);
-        } else if (input.connection && newBlock.previousConnection) {
-          input.connection.connect(newBlock.previousConnection);
-          console.log(`✅ input 连接完成 (previous)`);
-        } else {
-          console.log(`❌ input 连接失败 - 连接类型不兼容`);
+        // 禁用事件系统避免连接时的移动事件错误
+        const wasRecordingUndo = window['Blockly'].Events.getRecordUndo();
+        const currentGroup = window['Blockly'].Events.getGroup();
+        window['Blockly'].Events.disable();
+        
+        try {
+          const input = targetBlock.getInput(targetInput);
+          if (input.connection && newBlock.outputConnection) {
+            input.connection.connect(newBlock.outputConnection);
+            console.log(`✅ input 连接完成 (output)`);
+          } else if (input.connection && newBlock.previousConnection) {
+            input.connection.connect(newBlock.previousConnection);
+            console.log(`✅ input 连接完成 (previous)`);
+          } else {
+            console.log(`❌ input 连接失败 - 连接类型不兼容`);
+          }
+        } catch (connectError) {
+          console.warn(`⚠️ input连接时出错: ${connectError}, 但连接尝试继续`);
+        } finally {
+          // 恢复事件系统
+          window['Blockly'].Events.enable();
+          if (currentGroup) {
+            window['Blockly'].Events.setGroup(currentGroup);
+          }
+          window['Blockly'].Events.setRecordUndo(wasRecordingUndo);
         }
       } else {
         console.log(`❌ input 连接失败 - 目标输入无效`);
@@ -2451,21 +3060,38 @@ async function handleStatementInsertion(
     
     if (input.connection && input.connection.type === 3 && newBlock.previousConnection) { // type 3 是 statement 连接
       console.log(`🔗 准备连接到指定输入...`);
-      // 如果已经有连接的块，插入到链的末尾
-      if (input.connection.isConnected()) {
-        console.log(`⚠️ 输入已有连接，插入到链末尾...`);
-        let lastBlock = input.connection.targetBlock();
-        while (lastBlock && lastBlock.getNextBlock()) {
-          lastBlock = lastBlock.getNextBlock();
+      
+      // 禁用事件系统避免连接时的移动事件错误
+      const wasRecordingUndo = window['Blockly'].Events.getRecordUndo();
+      const currentGroup = window['Blockly'].Events.getGroup();
+      window['Blockly'].Events.disable();
+      
+      try {
+        // 如果已经有连接的块，插入到链的末尾
+        if (input.connection.isConnected()) {
+          console.log(`⚠️ 输入已有连接，插入到链末尾...`);
+          let lastBlock = input.connection.targetBlock();
+          while (lastBlock && lastBlock.getNextBlock()) {
+            lastBlock = lastBlock.getNextBlock();
+          }
+          if (lastBlock && lastBlock.nextConnection) {
+            lastBlock.nextConnection.connect(newBlock.previousConnection);
+            console.log(`✅ 成功连接到链末尾: ${lastBlock.type} → ${newBlock.type}`);
+          }
+        } else {
+          console.log(`🔗 直接连接到空输入...`);
+          input.connection.connect(newBlock.previousConnection);
+          console.log(`✅ 成功连接: ${targetBlock.type}.${targetInput} ← ${newBlock.type}`);
         }
-        if (lastBlock && lastBlock.nextConnection) {
-          lastBlock.nextConnection.connect(newBlock.previousConnection);
-          console.log(`✅ 成功连接到链末尾: ${lastBlock.type} → ${newBlock.type}`);
+      } catch (connectError) {
+        console.warn(`⚠️ statement连接时出错: ${connectError}, 但连接尝试继续`);
+      } finally {
+        // 恢复事件系统
+        window['Blockly'].Events.enable();
+        if (currentGroup) {
+          window['Blockly'].Events.setGroup(currentGroup);
         }
-      } else {
-        console.log(`🔗 直接连接到空输入...`);
-        input.connection.connect(newBlock.previousConnection);
-        console.log(`✅ 成功连接: ${targetBlock.type}.${targetInput} ← ${newBlock.type}`);
+        window['Blockly'].Events.setRecordUndo(wasRecordingUndo);
       }
     } else {
       console.log(`❌ 连接失败 - 连接类型不兼容`);
@@ -2506,21 +3132,37 @@ async function handleStatementInsertion(
     
     // 执行连接
     if (selectedInput.connection && newBlock.previousConnection) {
-      if (selectedInput.connection.isConnected()) {
-        console.log(`⚠️ 输入已有连接，插入到链末尾...`);
-        // 插入到现有块链的末尾
-        let lastBlock = selectedInput.connection.targetBlock();
-        while (lastBlock && lastBlock.getNextBlock()) {
-          lastBlock = lastBlock.getNextBlock();
+      // 禁用事件系统避免连接时的移动事件错误
+      const wasRecordingUndo = window['Blockly'].Events.getRecordUndo();
+      const currentGroup = window['Blockly'].Events.getGroup();
+      window['Blockly'].Events.disable();
+      
+      try {
+        if (selectedInput.connection.isConnected()) {
+          console.log(`⚠️ 输入已有连接，插入到链末尾...`);
+          // 插入到现有块链的末尾
+          let lastBlock = selectedInput.connection.targetBlock();
+          while (lastBlock && lastBlock.getNextBlock()) {
+            lastBlock = lastBlock.getNextBlock();
+          }
+          if (lastBlock && lastBlock.nextConnection) {
+            lastBlock.nextConnection.connect(newBlock.previousConnection);
+            console.log(`✅ 成功连接到链末尾: ${lastBlock.type} → ${newBlock.type}`);
+          }
+        } else {
+          console.log(`🔗 直接连接到空输入...`);
+          selectedInput.connection.connect(newBlock.previousConnection);
+          console.log(`✅ 成功连接: ${targetBlock.type}.${selectedInput.name} ← ${newBlock.type}`);
         }
-        if (lastBlock && lastBlock.nextConnection) {
-          lastBlock.nextConnection.connect(newBlock.previousConnection);
-          console.log(`✅ 成功连接到链末尾: ${lastBlock.type} → ${newBlock.type}`);
+      } catch (connectError) {
+        console.warn(`⚠️ 自动statement连接时出错: ${connectError}, 但连接尝试继续`);
+      } finally {
+        // 恢复事件系统
+        window['Blockly'].Events.enable();
+        if (currentGroup) {
+          window['Blockly'].Events.setGroup(currentGroup);
         }
-      } else {
-        console.log(`🔗 直接连接到空输入...`);
-        selectedInput.connection.connect(newBlock.previousConnection);
-        console.log(`✅ 成功连接: ${targetBlock.type}.${selectedInput.name} ← ${newBlock.type}`);
+        window['Blockly'].Events.setRecordUndo(wasRecordingUndo);
       }
     } else {
       console.log(`❌ 连接失败 - 连接对象无效`);
@@ -2933,13 +3575,110 @@ function calculateBlockPosition(workspace: any, x?: number, y?: number): Positio
 }
 
 /**
+ * 初始化事件错误处理器，防止拖动时的事件错误
+ */
+function initializeEventErrorHandler(): void {
+  try {
+    const workspace = window['Blockly'].getMainWorkspace();
+    if (workspace && !workspace.disposed) {
+      
+      // 添加全局事件监听器来捕获和处理事件错误
+      const originalAddEventHandler = workspace.addChangeListener;
+      if (originalAddEventHandler) {
+        workspace.addChangeListener = function(handler) {
+          const wrappedHandler = function(event) {
+            try {
+              // 检查事件对象的有效性
+              if (event && event.blockId) {
+                const block = workspace.getBlockById(event.blockId);
+                if (!block && event.type === 'move') {
+                  console.warn(`⚠️ 忽略无效的移动事件，块ID: ${event.blockId}`);
+                  return; // 忽略无效的移动事件
+                }
+              }
+              
+              return handler.call(this, event);
+            } catch (error) {
+              console.warn(`⚠️ 事件处理器出错: ${error}, 事件类型: ${event?.type}`);
+              // 不重新抛出错误，避免破坏用户体验
+            }
+          };
+          
+          return originalAddEventHandler.call(this, wrappedHandler);
+        };
+        
+        console.log('🛡️ 事件错误处理器已初始化');
+      }
+    }
+  } catch (error) {
+    console.warn('⚠️ 初始化事件错误处理器失败:', error);
+  }
+}
+
+/**
+ * 生成唯一ID的工具函数
+ */
+function generateUniqueId(prefix: string = 'id'): string {
+  return prefix + '_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+}
+
+/**
+ * 确保事件组正确清理，避免拖动时的事件冲突
+ */
+function ensureEventGroupCleanup(): void {
+  try {
+    // 清除任何遗留的事件组
+    window['Blockly'].Events.setGroup(false);
+    
+    // 确保事件系统启用
+    window['Blockly'].Events.enable();
+    
+    // 恢复撤销记录
+    window['Blockly'].Events.setRecordUndo(true);
+    
+    // 触发工作区刷新，确保所有事件处理器处于正确状态
+    const workspace = window['Blockly'].getMainWorkspace();
+    if (workspace && !workspace.disposed) {
+      // 清理撤销栈中可能的无效事件
+      try {
+        workspace.clearUndo();
+        console.log('🧹 事件组清理完成，工作区状态已重置');
+      } catch (undoError) {
+        console.log('🧹 事件组清理完成 (撤销栈清理跳过)');
+      }
+      
+      // 强制刷新工作区渲染，确保所有块都处于正确状态
+      setTimeout(() => {
+        try {
+          workspace.render();
+        } catch (renderError) {
+          console.warn('⚠️ 工作区渲染刷新出错:', renderError);
+        }
+      }, 50);
+    } else {
+      console.log('🧹 事件组清理完成');
+    }
+  } catch (error) {
+    console.warn('⚠️ 事件组清理时出错:', error);
+    // 即使清理出错，也要确保基本的事件系统状态
+    try {
+      window['Blockly'].Events.enable();
+      window['Blockly'].Events.setGroup(false);
+    } catch (fallbackError) {
+      console.error('❌ 事件系统恢复失败:', fallbackError);
+    }
+  }
+}
+
+/**
  * 安全地在工作区中创建块
  */
 async function createBlockSafely(
   workspace: any,
   type: string,
   position: Position,
-  animate: boolean
+  animate: boolean,
+  customId?: string  // 新增：自定义块ID参数
 ): Promise<any> {
   try {
     return new Promise((resolve, reject) => {
@@ -2953,6 +3692,7 @@ async function createBlockSafely(
           const wasRecordingUndo = window['Blockly'].Events.getRecordUndo();
           const currentGroup = window['Blockly'].Events.getGroup();
 
+          // 禁用事件系统，避免ID更改时的事件错误
           window['Blockly'].Events.disable();
 
           const block = workspace.newBlock(type);
@@ -2963,17 +3703,56 @@ async function createBlockSafely(
             return;
           }
 
+          // 设置自定义ID（在initSvg之前，避免事件问题）
+          if (customId) {
+            console.log(`🆔 设置自定义块ID: ${customId}`);
+            // 检查ID是否已存在
+            const existingBlock = workspace.getBlockById(customId);
+            if (existingBlock) {
+              console.warn(`⚠️ 块ID "${customId}" 已存在，将使用默认生成的ID: ${block.id}`);
+            } else {
+              try {
+                // 在initSvg之前设置ID，避免事件问题
+                const originalId = block.id;
+                block.id = customId;
+                console.log(`✅ 自定义块ID设置成功: ${customId} (原ID: ${originalId})`);
+              } catch (error) {
+                console.warn(`⚠️ 设置自定义ID失败: ${error}, 将使用默认ID: ${block.id}`);
+              }
+            }
+          }
+
+          // 确保在设置ID后再初始化SVG
           block.initSvg();
           block.render();
 
+          // 重新启用事件系统
           window['Blockly'].Events.enable();
 
+          // 确保事件组正确恢复，避免拖动时的事件冲突
           if (currentGroup) {
             window['Blockly'].Events.setGroup(currentGroup);
+          } else {
+            // 确保没有遗留的事件组
+            window['Blockly'].Events.setGroup(false);
           }
           window['Blockly'].Events.setRecordUndo(wasRecordingUndo);
 
-          block.moveBy(position.x || 0, position.y || 0);
+          // 移动块到指定位置（在事件系统恢复后，但暂时禁用事件避免错误）
+          if (position.x !== 0 || position.y !== 0) {
+            // 为移动操作创建新的事件组，避免与之前的事件冲突
+            const moveEventGroup = generateUniqueId('move');
+            window['Blockly'].Events.setGroup(moveEventGroup);
+            
+            try {
+              block.moveBy(position.x || 0, position.y || 0);
+            } catch (moveError) {
+              console.warn(`⚠️ 块移动时出错: ${moveError}, 但块创建成功`);
+            } finally {
+              // 移动完成后清除事件组
+              window['Blockly'].Events.setGroup(false);
+            }
+          }
 
           resolve(block);
 
@@ -3257,7 +4036,7 @@ async function createBlockFromConfig(workspace: any, config: BlockConfig | strin
     
     console.log(`🔨 创建块类型: ${config.type}`);
     const position = config.position || { x: 0, y: 0 };
-    const block = await createBlockSafely(workspace, config.type, position, false);
+    const block = await createBlockSafely(workspace, config.type, position, false, config.id);
     
     if (!block) {
       console.error(`❌ 块创建失败: ${config.type}`);
@@ -3704,16 +4483,48 @@ async function smartInsertBlock(
     case 'statement':
       // 对于statement连接，暂时使用基本逻辑
       console.log('📝 statement连接暂时使用基本逻辑');
-      const statementInputs = parentBlock.inputList?.filter((input: any) => 
-        input.type === window['Blockly']?.INPUT_STATEMENT
-      );
+      console.log(`📍 查找输入名称: ${inputName}`);
       
-      if (statementInputs && statementInputs.length > 0) {
-        const statementInput = inputName ? 
-          parentBlock.getInput(inputName) : 
-          statementInputs[0];
-          
-        if (statementInput && statementInput.connection) {
+      // 首先尝试使用指定的输入名称
+      let statementInput = null;
+      if (inputName) {
+        statementInput = parentBlock.getInput(inputName);
+        console.log(`🔍 尝试获取指定输入 "${inputName}": ${statementInput ? '✅ 找到' : '❌ 未找到'}`);
+      }
+      
+      // 如果指定的输入名称没找到，尝试常见的statement输入名称
+      if (!statementInput) {
+        const commonNames = ['DO', 'ARDUINO_LOOP', 'ARDUINO_SETUP', 'STACK', 'NAME', 'DO0', 'ELSE'];
+        for (const name of commonNames) {
+          statementInput = parentBlock.getInput(name);
+          if (statementInput) {
+            console.log(`🔍 找到常见输入名称 "${name}"`);
+            break;
+          }
+        }
+      }
+      
+      // 如果还是没找到，尝试查找第一个statement类型的输入
+      if (!statementInput) {
+        const statementInputs = parentBlock.inputList?.filter((input: any) => 
+          input.type === window['Blockly']?.INPUT_STATEMENT
+        );
+        
+        if (statementInputs && statementInputs.length > 0) {
+          statementInput = statementInputs[0];
+          console.log(`🔍 使用第一个statement输入: ${statementInput.name}`);
+        }
+      }
+      
+      if (statementInput && statementInput.connection) {
+        console.log(`✅ 找到有效的statement输入: ${statementInput.name}`);
+        
+        // 禁用事件系统避免连接时的移动事件错误
+        const wasRecordingUndo = window['Blockly'].Events.getRecordUndo();
+        const currentGroup = window['Blockly'].Events.getGroup();
+        window['Blockly'].Events.disable();
+        
+        try {
           // 检查是否已有连接的语句块
           const existingStatementBlock = statementInput.connection.targetBlock();
           if (existingStatementBlock) {
@@ -3739,8 +4550,31 @@ async function smartInsertBlock(
               return { smartInsertion: false, autoMovedBlock: null };
             }
           }
+        } catch (connectError) {
+          console.warn(`⚠️ statement连接时出错: ${connectError}, 但连接尝试继续`);
+          throw connectError;
+        } finally {
+          // 恢复事件系统
+          window['Blockly'].Events.enable();
+          if (currentGroup) {
+            window['Blockly'].Events.setGroup(currentGroup);
+          } else {
+            window['Blockly'].Events.setGroup(false);
+          }
+          window['Blockly'].Events.setRecordUndo(wasRecordingUndo);
         }
       }
+      
+      // 如果到这里还没有成功，输出调试信息
+      console.error(`❌ 无法找到有效的statement输入`);
+      console.error(`📊 父块类型: ${parentBlock.type}`);
+      console.error(`📊 父块ID: ${parentBlock.id}`);
+      console.error(`📊 请求的输入名称: ${inputName}`);
+      console.error(`📊 父块的所有输入:`, parentBlock.inputList?.map((input: any) => ({
+        name: input.name,
+        type: input.type,
+        hasConnection: !!input.connection
+      })));
       
       throw new Error(`无法执行statement连接到块 ${parentBlock.type}`);
       
@@ -3762,13 +4596,21 @@ async function connectToParentBlock(
   
   try {
     // 查找父级块
-    const parentBlock = workspace.getBlockById(parentConnection.blockId);
+    const parentBlock = getBlockByIdSmart(workspace, parentConnection.blockId);
     if (!parentBlock) {
-      throw new Error(`未找到父级块 ID: ${parentConnection.blockId}`);
+      throw new Error(`未找到父级块 ID: ${parentConnection.blockId}（已尝试模糊匹配）`);
     }
     
     console.log(`📊 父级块: ${parentBlock.type} (ID: ${parentBlock.id})`);
     console.log(`📊 子级块: ${childBlock.type} (ID: ${childBlock.id})`);
+    
+    // 添加详细的父级块输入调试信息
+    if (parentBlock.inputList) {
+      console.log('🔍 父级块的所有输入:');
+      parentBlock.inputList.forEach((input: any, index: number) => {
+        console.log(`  ${index}: 名称="${input.name}", 类型=${input.type}, 有连接=${!!input.connection}`);
+      });
+    }
     
     // 使用智能插入功能
     const result = await smartInsertBlock(
@@ -4035,8 +4877,19 @@ async function performBlockConnection(
               // 方法2: 尝试通过工作区移动来建立连接
               else if (targetBlock.moveBy) {
                 const sourcePos = sourceBlock.getRelativeToSurfaceXY ? sourceBlock.getRelativeToSurfaceXY() : { x: 0, y: 0 };
-                targetBlock.moveBy(sourcePos.x, sourcePos.y + 50);
-                console.log('✅ 通过位置移动建立连接');
+                
+                // 使用事件保护进行移动
+                const moveEventGroup = generateUniqueId('connect_move');
+                window['Blockly'].Events.setGroup(moveEventGroup);
+                
+                try {
+                  targetBlock.moveBy(sourcePos.x, sourcePos.y + 50);
+                  console.log('✅ 通过位置移动建立连接');
+                } catch (moveError) {
+                  console.warn(`⚠️ 连接移动时出错: ${moveError}`);
+                } finally {
+                  window['Blockly'].Events.setGroup(false);
+                }
               }
               // 方法3: 最后的回退方案
               else {
@@ -4292,14 +5145,14 @@ async function getOrCreateBlock(workspace: any, blockRef: string | BlockConfig):
     const blockId = parseBlockId(blockRef);
     console.log(`🔎 查找现有块 ID: "${blockId}" (原始: "${blockRef}")`);
     
-    // 查找现有块
-    const block = workspace.getBlockById(blockId);
+    // 查找现有块（使用智能匹配）
+    const block = getBlockByIdSmart(workspace, blockId);
     
     if (block) {
       console.log(`✅ 找到块: ${block.type} (ID: ${block.id})`);
       return block;
     } else {
-      console.error(`❌ 未找到块 ID: "${blockId}"`);
+      console.error(`❌ 未找到块 ID: "${blockId}"（已尝试模糊匹配）`);
       
       // 列出所有可用的块ID进行调试
       const allBlocks = workspace.getAllBlocks();
@@ -4680,9 +5533,9 @@ async function insertStructureAtTarget(
   targetBlockId: string, 
   targetInput?: string
 ): Promise<void> {
-  const targetBlock = workspace.getBlockById(targetBlockId);
+  const targetBlock = getBlockByIdSmart(workspace, targetBlockId);
   if (!targetBlock) {
-    throw new Error('未找到目标块');
+    throw new Error(`未找到目标块: ${targetBlockId}，已尝试模糊匹配`);
   }
 
   switch (insertPosition) {
@@ -4727,7 +5580,7 @@ async function insertStructureAtTarget(
  */
 async function findTargetBlock(workspace: any, criteria: BlockReference): Promise<any> {
   if (criteria.id) {
-    return workspace.getBlockById(criteria.id);
+    return getBlockByIdSmart(workspace, criteria.id);
   }
   
   if (criteria.type) {
@@ -5669,3 +6522,17 @@ export const blocklyEditTools = {
 
 // 默认导出主要的编辑工具
 export default smartBlockTool;
+
+// 调试信息：事件系统保护已启用
+console.log('🛡️ Blockly事件系统全面保护已启用 - 版本 2024.12.03');
+console.log('🔧 包含功能：');
+console.log('  - 块创建事件保护');
+console.log('  - 连接操作事件保护');  
+console.log('  - 智能插入事件保护');
+console.log('  - 拖动冲突预防');
+console.log('  - 事件组自动清理');
+
+// 初始化事件错误处理器
+setTimeout(() => {
+  initializeEventErrorHandler();
+}, 1000);
