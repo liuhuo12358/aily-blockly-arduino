@@ -1,10 +1,12 @@
-import { Component, OnDestroy, OnInit, AfterViewInit } from '@angular/core';
+import { Component, OnDestroy, OnInit, AfterViewInit, ViewChild, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Datasource, UiScrollModule } from 'ngx-ui-scroll4';
+import { Datasource, SizeStrategy, UiScrollModule } from 'ngx-ui-scroll';
 import { LogService, LogOptions } from '../../services/log.service';
 import { AnsiPipe } from './ansi.pipe';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { UiService } from '../../services/ui.service';
+import { ProjectService } from '../../services/project.service';
+import { ElectronService } from '../../services/electron.service';
 
 @Component({
   selector: 'app-log',
@@ -12,36 +14,40 @@ import { UiService } from '../../services/ui.service';
   templateUrl: './log.component.html',
   styleUrl: './log.component.scss',
 })
-export class LogComponent implements OnInit, OnDestroy, AfterViewInit {
+export class LogComponent {
   private clickTimeout: any;
   private preventSingleClick = false;
-  private isInitialized = false;
 
   // 虚拟滚动数据源
-  datasource = new Datasource<LogOptions>({
-    get: (index: number, count: number) => {
-      // console.log(`Datasource get called: index=${index}, count=${count}, total=${this.logService.list.length}`);
-      const data: LogOptions[] = [];
-      const startIndex = Math.max(0, index);
-      const endIndex = Math.min(this.logService.list.length, startIndex + count);
+  datasource;
 
-      for (let i = startIndex; i < endIndex; i++) {
-        if (this.logService.list[i]) {
-          data.push(this.logService.list[i]);
-        }
-      }
+  // = new Datasource<LogOptions>({
+  //   get: (index: number, count: number) => {
+  //     console.log(`Datasource get called: index=${index}, count=${count}, total=${this.logService.list.length}`);
+  //     const data: LogOptions[] = [];
+  //     const startIndex = Math.max(0, index);
+  //     const endIndex = Math.min(this.logService.list.length, startIndex + count);
 
-      return Promise.resolve(data);
-    },
+  //     for (let i = startIndex; i < endIndex; i++) {
+  //       if (this.logService.list[i]) {
+  //         this.logService.list[i]['id'] = i; // 确保每个日志项都有唯一的 ID
+  //         data.push(this.logService.list[i]);
+  //       }
+  //     }
 
-    settings: {
-      minIndex: 0,
-      startIndex: 0, // 从0开始，确保稳定性
-      bufferSize: 30, // 增加缓冲区大小，提高滚动性能
-      padding: 0.5, // 增加padding，确保有足够的缓冲
-      infinite: false
-    }
-  });
+  //     console.log(`Datasource returning ${data.length} items for range [${startIndex}, ${endIndex})`);
+
+  //     return Promise.resolve(data);
+  //   },
+
+  //   settings: {
+  //     minIndex: 0,
+  //     startIndex: 0,
+  //     bufferSize: 30, // 减少缓冲区大小，降低内存使用
+  //     padding: 0.3, // 适中的 padding 值
+  //     sizeStrategy: SizeStrategy.Frequent
+  //   }
+  // });
 
   get logList() {
     return this.logService.list;
@@ -50,80 +56,82 @@ export class LogComponent implements OnInit, OnDestroy, AfterViewInit {
   constructor(
     private logService: LogService,
     private message: NzMessageService,
-    private uiService: UiService
+    private uiService: UiService,
+    private projectService: ProjectService,
+    private electronService: ElectronService
   ) { }
 
   ngOnInit() {
-    // 监听日志更新
-    this.logService.stateSubject.subscribe((opts) => {
-      // console.log('logService stateSubject', opts);
-      // console.log(opts.timestamp);
-      if (this.isInitialized) {
-        // 当有新日志时，重新加载数据源
-        this.reloadDatasource();
+    let startIndex = 0;
+    if (this.logService.list.length > 0) {
+      startIndex = this.logService.list.length - 1;
+    }
+
+    this.datasource = new Datasource<LogOptions>({
+      get: (index: number, count: number) => {
+        // console.log(`Datasource get called: index=${index}, count=${count}, total=${this.logService.list.length}`);
+        const data: LogOptions[] = [];
+        const startIndex = Math.max(0, index);
+        const endIndex = Math.min(this.logService.list.length, startIndex + count);
+
+        for (let i = startIndex; i < endIndex; i++) {
+          if (this.logService.list[i]) {
+            this.logService.list[i]['id'] = i; // 确保每个日志项都有唯一的 ID
+            data.push(this.logService.list[i]);
+          }
+        }
+        return Promise.resolve(data);
+      },
+
+      settings: {
+        minIndex: 0,
+        startIndex,
+        bufferSize: 30, // 减少缓冲区大小，降低内存使用
+        padding: 0.5, // 适中的 padding 值
+        sizeStrategy: SizeStrategy.Average,
+        infinite: false
       }
     });
   }
 
   ngAfterViewInit() {
-    this.initializeAndScrollToBottom();
-  }
+    // 监听日志更新
+    this.logService.stateSubject.subscribe((opts) => {
+      this.handleLogUpdate();
+    });
 
-  private initializeAndScrollToBottom() {
     if (this.logService.list.length > 0) {
-      // 如果有日志数据，使用更安全的方式加载并滚动
-      // 不要从最后一个索引开始，而是从合理的范围开始
-      const startIndex = Math.max(0, this.logService.list.length - 100); // 显示最后100项，避免空白
-
-      const reloadPromise = this.datasource.adapter.reload(startIndex);
-      if (reloadPromise && typeof reloadPromise.then === 'function') {
-        reloadPromise.then(() => {
-          this.isInitialized = true;
-          // 等待更长时间确保渲染完成
-          setTimeout(() => {
-            this.forceScrollToBottom();
-          }, 100);
-        });
-      } else {
-        this.isInitialized = true;
-        setTimeout(() => {
-          this.forceScrollToBottom();
-        }, 100);
-      }
-    } else {
-      // 如果没有数据，仍然需要初始化
-      const relaxPromise = this.datasource.adapter.relax();
-      if (relaxPromise && typeof relaxPromise.then === 'function') {
-        relaxPromise.then(() => {
-          this.isInitialized = true;
-        });
-      } else {
-        this.isInitialized = true;
-      }
+      this.scrollToBottom();
     }
   }
 
-  reloadDatasource() {
-    // 重新加载整个数据源以确保显示最新数据
-    if (this.datasource.adapter && this.logService.list.length > 0) {
-      // 从合理的范围开始加载，避免空白屏幕
-      const startIndex = Math.max(0, this.logService.list.length - 50); // 显示最后50项
+  @ViewChild('logBox', { static: false }) logBoxRef!: ElementRef<HTMLDivElement>;
+  scrollToBottom() {
+    setTimeout(() => {
+      requestAnimationFrame(() => {
+        if (this.logBoxRef) {
+          const element = this.logBoxRef.nativeElement;
+          element.scrollTop = element.scrollHeight;
+        }
+      });
+    }, 100);
+  }
 
-      const reloadPromise = this.datasource.adapter.reload(startIndex);
-      if (reloadPromise && typeof reloadPromise.then === 'function') {
-        reloadPromise.then(() => {
-          // 重新加载后直接使用原生滚动
-          setTimeout(() => {
-            this.forceScrollToBottom();
-          }, 100);
-        });
-      } else {
-        // 如果 reload() 没有返回 Promise，直接滚动到底部
-        setTimeout(() => {
-          this.forceScrollToBottom();
-        }, 100);
+  // 处理日志更新的新方法
+  private handleLogUpdate() {
+    const currentLogCount = this.logService.list.length;
+
+    // 如果日志被清空
+    if (currentLogCount === 0) {
+      if (this.datasource.adapter) {
+        this.datasource.adapter.reload(0);
       }
+      return;
     }
+    const startIndex = currentLogCount - 1;
+    this.datasource.adapter.reload(startIndex).then(() => {
+      this.scrollToBottom();
+    });
   }
 
   clear() {
@@ -137,10 +145,13 @@ export class LogComponent implements OnInit, OnDestroy, AfterViewInit {
     if (this.clickTimeout) {
       clearTimeout(this.clickTimeout);
     }
+    // this.lastLogCount = 0;
   }
 
   // 处理点击事件，区分单击和双击
   handleClick(item: any, event: MouseEvent) {
+    console.log('单击事件:', item);
+
     this.clickTimeout = setTimeout(() => {
       if (!this.preventSingleClick) {
         this.copyLogItemToClipboard(item);
@@ -183,38 +194,46 @@ export class LogComponent implements OnInit, OnDestroy, AfterViewInit {
     this.message.info('日志内容已发送到AI助手');
   }
 
-  private forceScrollToBottom(): void {
-    // 先确保虚拟滚动定位到最后一个元素
-    if (this.datasource.adapter && this.logService.list.length > 0) {
-      const lastIndex = this.logService.list.length - 1;
-
-      // 使用 reload 方法重新加载并定位到最后一个元素
-      const reloadPromise = this.datasource.adapter.reload(lastIndex);
-      if (reloadPromise && typeof reloadPromise.then === 'function') {
-        reloadPromise.then(() => {
-          // 等待虚拟滚动完成后，再进行原生滚动到底部
-          setTimeout(() => {
-            const viewport = document.querySelector('.log-box');
-            if (viewport) {
-              viewport.scrollTop = viewport.scrollHeight;
-            }
-          }, 50);
-        });
-      } else {
-        // 如果 reload() 没有返回 Promise，直接原生滚动
-        setTimeout(() => {
-          const viewport = document.querySelector('.log-box');
-          if (viewport) {
-            viewport.scrollTop = viewport.scrollHeight;
-          }
-        }, 50);
-      }
-    } else {
-      // 如果没有虚拟滚动数据，直接原生滚动
-      const viewport = document.querySelector('.log-box');
-      if (viewport) {
-        viewport.scrollTop = viewport.scrollHeight;
-      }
+  async exportData() {
+    if (this.logService.list.length === 0) {
+      this.message.warning('没有日志数据可以导出');
+      return;
     }
+
+    // 弹出保存对话框
+    const folderPath = await window['ipcRenderer'].invoke('select-folder-saveAs', {
+      title: '导出日志数据',
+      path: this.projectService.currentProjectPath,
+      suggestedName: 'log_' + new Date().toLocaleString('zh-CN', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+      }).replace(/[/,:]/g, '_').replace(/\s/g, '_') + '.txt',
+      filters: [
+        { name: '文本文件', extensions: ['txt'] },
+        { name: '所有文件', extensions: ['*'] }
+      ]
+    });
+
+    if (!folderPath) {
+      return;
+    }
+
+    // 准备要写入的内容
+    let fileContent = '';
+
+    for (const item of this.logService.list) {
+      const timeString = new Date(item.timestamp).toLocaleTimeString();
+      fileContent += `[${timeString}] ${item.detail || ''}\n`;
+    }
+
+    // 写入文件
+    this.electronService.writeFile(folderPath, fileContent);
+    this.message.success('日志数据已成功导出到' + folderPath);
   }
+
+
 }

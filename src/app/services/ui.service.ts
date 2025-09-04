@@ -69,13 +69,6 @@ export class UiService {
       });
     }
 
-    // this.router.events.pipe(
-    //   filter(event => event instanceof NavigationEnd)
-    // ).subscribe(() => {
-    //   const fullUrl = this.router.url;
-    //   console.log('当前完整路径:', fullUrl);
-    // });
-
   }
 
   openWindow(opt: WindowOpts) {

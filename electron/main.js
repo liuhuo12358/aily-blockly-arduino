@@ -225,12 +225,15 @@ function createWindow() {
     frame: false,
     titleBarStyle: 'default',
     alwaysOnTop: false,
+    autoHideMenuBar: true,
     webPreferences: {
       nodeIntegration: true,
       webSecurity: false,
       preload: path.join(__dirname, "preload.js"),
     },
   });
+
+  mainWindow.setMenu(null);
 
   // 当页面准备好显示时，再显示窗口
   mainWindow.once('ready-to-show', () => {
