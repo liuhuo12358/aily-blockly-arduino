@@ -34,6 +34,17 @@ import { deleteFolderTool } from './tools/deleteFolderTool';
 import { checkExistsTool } from './tools/checkExistsTool';
 import { getDirectoryTreeTool } from './tools/getDirectoryTreeTool';
 import { fetchTool, FetchToolService } from './tools/fetchTool';
+import { 
+  smartBlockTool, 
+  connectBlocksTool, 
+  createCodeStructureTool, 
+  configureBlockTool, 
+  variableManagerTool, 
+  findBlockTool,
+  deleteBlockTool,
+  getWorkspaceOverviewTool  // 新增工具导入
+} from './tools/editBlockTool';
+import { todoWriteTool } from './tools';
 import { NzModalService } from 'ng-zorro-antd/modal';
 import { ConfigService } from '../../services/config.service';
 
@@ -62,7 +73,7 @@ import { NzMessageService } from 'ng-zorro-antd/message';
 import { TOOLS } from './tools/tools';
 import { AuthService } from '../../services/auth.service';
 import { resolveObjectURL } from 'buffer';
-import { reloadAbiJsonTool, reloadAbiJsonToolSimple } from './tools';
+// import { reloadAbiJsonTool, reloadAbiJsonToolSimple } from './tools';
 
 @Component({
   selector: 'app-aily-chat',
@@ -1243,6 +1254,255 @@ ${JSON.stringify(errData)}
                       resultText = 'ABI数据重新加载失败: ' + (toolResult.content || '未知错误');
                     } else {
                       resultText = 'ABI数据重新加载成功';
+                    }
+                    break;
+                  case 'smart_block_tool':
+                    console.log('🔧 [智能块工具被调用]');
+                    console.log('📥 大模型传入的完整参数:', JSON.stringify(toolArgs, null, 2));
+                    console.log('📋 参数解析:');
+                    console.log('  - 块类型:', toolArgs.type);
+                    console.log('  - 位置:', toolArgs.position);
+                    console.log('  - 字段:', toolArgs.fields);
+                    console.log('  - 输入:', toolArgs.inputs);
+                    console.log('  - 父级连接:', toolArgs.parentConnection);
+                    console.log('  - 创建变量:', toolArgs.createVariables);
+                    
+                    this.appendMessage('aily', `
+
+\`\`\`aily-state
+{
+  "state": "doing",
+  "text": "正在操作Blockly块: ${toolArgs.type}",
+  "id": "${toolCallId}"
+}
+\`\`\`\n\n
+                    `);
+                    toolResult = await smartBlockTool(toolArgs);
+                    console.log('✅ 智能块工具执行结果:', toolResult);
+                    if (toolResult.is_error) {
+                      resultState = "error";
+                      resultText = '智能块操作失败: ' + (toolResult.content || '未知错误');
+                    } else {
+                      resultText = `智能块操作成功: ${toolArgs.type}`;
+                    }
+                    break;
+                  case 'connect_blocks_tool':
+                    console.log('[块连接工具被调用]', toolArgs);
+                    this.appendMessage('aily', `
+
+\`\`\`aily-state
+{
+  "state": "doing",
+  "text": "正在连接Blockly块...",
+  "id": "${toolCallId}"
+}
+\`\`\`\n\n
+                    `);
+                    toolResult = await connectBlocksTool(toolArgs);
+                    if (toolResult.is_error) {
+                      resultState = "error";
+                      resultText = '块连接失败: ' + (toolResult.content || '未知错误');
+                    } else {
+                      resultText = `块连接成功: ${toolArgs.connectionType}连接`;
+                    }
+                    break;
+                  case 'create_code_structure_tool':
+                    console.log('[代码结构创建工具被调用]', toolArgs);
+                    this.appendMessage('aily', `
+
+\`\`\`aily-state
+{
+  "state": "doing",
+  "text": "正在创建代码结构: ${toolArgs.structure}",
+  "id": "${toolCallId}"
+}
+\`\`\`\n\n
+                    `);
+                    toolResult = await createCodeStructureTool(toolArgs);
+                    if (toolResult.is_error) {
+                      resultState = "error";
+                      resultText = '代码结构创建失败: ' + (toolResult.content || '未知错误');
+                    } else {
+                      resultText = `代码结构创建成功: ${toolArgs.structure}`;
+                    }
+                    break;
+                  case 'configure_block_tool':
+                    console.log('[块配置工具被调用]', toolArgs);
+                    this.appendMessage('aily', `
+
+\`\`\`aily-state
+{
+  "state": "doing",
+  "text": "正在配置Blockly块...",
+  "id": "${toolCallId}"
+}
+\`\`\`\n\n
+                    `);
+                    toolResult = await configureBlockTool(toolArgs);
+                    if (toolResult.is_error) {
+                      resultState = "error";
+                      resultText = '块配置失败: ' + (toolResult.content || '未知错误');
+                    } else {
+                      resultText = `块配置成功: ID ${toolArgs.blockId}`;
+                    }
+                    break;
+                  case 'variable_manager_tool':
+                    console.log('[变量管理工具被调用]', toolArgs);
+                    this.appendMessage('aily', `
+
+\`\`\`aily-state
+{
+  "state": "doing",
+  "text": "正在${toolArgs.operation === 'create' ? '创建' : toolArgs.operation === 'delete' ? '删除' : toolArgs.operation === 'rename' ? '重命名' : '列出'}变量...",
+  "id": "${toolCallId}"
+}
+\`\`\`\n\n
+                    `);
+                    toolResult = await variableManagerTool(toolArgs);
+                    if (toolResult.is_error) {
+                      resultState = "error";
+                      resultText = '变量操作失败: ' + (toolResult.content || '未知错误');
+                    } else {
+                      resultText = `变量操作成功: ${toolArgs.operation}${toolArgs.variableName ? ' ' + toolArgs.variableName : ''}`;
+                    }
+                    break;
+                  case 'find_block_tool':
+                    console.log('[块查找工具被调用]', toolArgs);
+                    this.appendMessage('aily', `
+
+\`\`\`aily-state
+{
+  "state": "doing",
+  "text": "正在查找Blockly块...",
+  "id": "${toolCallId}"
+}
+\`\`\`\n\n
+                    `);
+                    toolResult = await findBlockTool(toolArgs);
+                    if (toolResult.is_error) {
+                      resultState = "error";
+                      resultText = '块查找失败: ' + (toolResult.content || '未知错误');
+                    } else {
+                      resultText = '块查找完成';
+                    }
+                    break;
+                  case 'delete_block_tool':
+                    console.log('[块删除工具被调用]', toolArgs);
+                    this.appendMessage('aily', `
+
+\`\`\`aily-state
+{
+  "state": "doing",
+  "text": "正在删除Blockly块...",
+  "id": "${toolCallId}"
+}
+\`\`\`\n\n
+                    `);
+                    toolResult = await deleteBlockTool(toolArgs);
+                    if (toolResult.is_error) {
+                      resultState = "error";
+                      resultText = '块删除失败: ' + (toolResult.content || '未知错误');
+                    } else {
+                      resultText = `块删除成功: ${toolResult.content}`;
+                    }
+                    break;
+                  case 'get_workspace_overview_tool':
+                    console.log('[工作区全览工具被调用]', toolArgs);
+                    this.appendMessage('aily', `
+
+\`\`\`aily-state
+{
+  "state": "doing",
+  "text": "正在分析工作区全览...",
+  "id": "${toolCallId}"
+}
+\`\`\`\n\n
+                    `);
+                    toolResult = await getWorkspaceOverviewTool(toolArgs);
+                    if (toolResult.is_error) {
+                      resultState = "error";
+                      resultText = '工作区分析失败: ' + (toolResult.content || '未知错误');
+                    } else {
+                      // 从 metadata 中提取关键统计信息用于显示
+                      const stats = toolResult.metadata?.statistics;
+                      if (stats) {
+                        resultText = `工作区分析完成: 共${stats.totalBlocks}个块，${stats.independentStructures}个独立结构，最大深度${stats.maxDepth}层`;
+                      } else {
+                        resultText = `工作区分析完成`;
+                      }
+                    }
+                    break;
+                  case 'todo_write_tool':
+                    console.log('[TODO工具被调用]', toolArgs);
+                    this.appendMessage('aily', `
+
+\`\`\`aily-state
+{
+  "state": "doing", 
+  "text": "正在管理TODO项目...",
+  "id": "${toolCallId}"
+}
+\`\`\`\n\n
+                    `);
+                    // 将当前会话ID传递给todoWriteTool，确保每个会话的TODO数据独立存储
+                    const todoArgs = { ...toolArgs, sessionId: this.sessionId };
+                    toolResult = await todoWriteTool(todoArgs);
+                    if (toolResult.is_error) {
+                      resultState = "error";
+                      resultText = 'TODO操作失败: ' + (toolResult.content || '未知错误');
+                    } else {
+                      // 根据操作类型显示不同的成功消息
+                      const operation = toolArgs.operation || 'unknown';
+                      const itemTitle = toolArgs.content || toolArgs.title || '项目';
+                      
+                      // 基础成功消息
+                      let baseMessage = '';
+                      switch(operation) {
+                        case 'add':
+                          baseMessage = `TODO项目添加成功: ${itemTitle}`;
+                          break;
+                        case 'batch_add':
+                          baseMessage = `TODO项目批量添加成功`;
+                          break;
+                        case 'list':
+                          baseMessage = `TODO列表获取成功`;
+                          break;
+                        case 'update':
+                          baseMessage = `TODO项目更新成功`;
+                          break;
+                        case 'toggle':
+                          baseMessage = `TODO项目状态切换成功`;
+                          break;
+                        case 'delete':
+                          baseMessage = `TODO项目删除成功`;
+                          break;
+                        case 'clear':
+                          baseMessage = `TODO列表清空成功`;
+                          break;
+                        case 'query':
+                          baseMessage = `TODO查询完成`;
+                          break;
+                        case 'stats':
+                          baseMessage = `TODO统计完成`;
+                          break;
+                        default:
+                          baseMessage = `TODO操作完成`;
+                      }
+                      
+                      // // 如果有todos数据，添加任务列表显示
+                      // if (toolResult.todos && Array.isArray(toolResult.todos) && toolResult.todos.length > 0) {
+                      //   const todoList = toolResult.todos.map(todo => {
+                      //     const statusIcon = todo.status === 'completed' ? '✅' : 
+                      //                       todo.status === 'in_progress' ? '🔄' : '⏸️';
+                      //     const priorityIcon = todo.priority === 'high' ? '🔴' : 
+                      //                         todo.priority === 'medium' ? '🟡' : '🟢';
+                      //     return `${priorityIcon} ${todo.content} ${statusIcon}`;
+                      //   }).join('\n');
+                        
+                      //   resultText = `${baseMessage}\n\n当前任务列表:\n${todoList}`;
+                      // } else {
+                      resultText = baseMessage;
+                      // }
                     }
                     break;
                 }
