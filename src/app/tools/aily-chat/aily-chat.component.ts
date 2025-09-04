@@ -110,6 +110,7 @@ export class AilyChatComponent implements OnDestroy {
   windowInfo = 'AI助手';
 
   isCompleted = false;
+  private isSessionStarting = false; // 防止重复启动会话的标志位
 
   private textMessageSubscription: Subscription;
   private loginStatusSubscription: Subscription;
@@ -453,6 +454,13 @@ export class AilyChatComponent implements OnDestroy {
   }
 
   startSession(): Promise<void> {
+    // 如果会话正在启动中，直接返回
+    if (this.isSessionStarting) {
+      return Promise.resolve();
+    }
+    
+    this.isSessionStarting = true;
+    
     // tools + mcp tools
     this.isCompleted = false;
     let tools = this.tools;
@@ -470,6 +478,7 @@ export class AilyChatComponent implements OnDestroy {
           if (res.status === 'success') {
             this.chatService.currentSessionId = res.data;
             this.streamConnect();
+            this.isSessionStarting = false;
             resolve();
           } else {
             this.appendMessage('错误', `
@@ -478,6 +487,7 @@ export class AilyChatComponent implements OnDestroy {
   "message": ${res.message || '启动会话失败，请稍后重试。'}
 }
 \`\`\`\n\n`)
+            this.isSessionStarting = false;
             reject(new Error(res.message || '启动会话失败'));
           }
         },
@@ -491,6 +501,7 @@ export class AilyChatComponent implements OnDestroy {
 \`\`\`aily-error
 ${JSON.stringify(errData)}
 \`\`\`\n\n`)
+          this.isSessionStarting = false;
           reject(err);
         }
       });
@@ -638,9 +649,18 @@ ${JSON.stringify(errData)}
 
   streamConnect(): void {
     console.log("stream connect sessionId: ", this.sessionId);
-    if (!this.sessionId) return;
+    if (!this.sessionId) {
+      console.warn('无法建立流连接：sessionId 为空');
+      return;
+    }
 
-    this.chatService.streamConnect(this.sessionId).subscribe({
+    // 如果已经在连接中，先断开
+    if (this.messageSubscription) {
+      this.messageSubscription.unsubscribe();
+      this.messageSubscription = null;
+    }
+
+    this.messageSubscription = this.chatService.streamConnect(this.sessionId).subscribe({
       next: async (data: any) => {
         if (!this.isWaiting) {
           return; // 如果不在等待状态，直接返回
@@ -1491,19 +1511,27 @@ ${JSON.stringify(errData)}
   async stopAndCloseSession() {
     try {
       // 等待停止操作完成
-      await new Promise<void>((resolve) => {
+      await new Promise<void>((resolve, reject) => {
         if (!this.sessionId) {
           resolve();
           return;
         }
 
+        // 设置超时，避免无限等待
+        const timeout = setTimeout(() => {
+          console.warn('停止会话超时，继续执行');
+          resolve();
+        }, 5000);
+
         this.chatService.stopSession(this.sessionId).subscribe({
           next: (res: any) => {
+            clearTimeout(timeout);
             console.log('会话已停止:', res);
             this.isWaiting = false;
             resolve();
           },
           error: (err) => {
+            clearTimeout(timeout);
             console.error('停止会话失败:', err);
             resolve(); // 即使失败也继续
           }
@@ -1511,18 +1539,26 @@ ${JSON.stringify(errData)}
       });
 
       // 等待关闭会话完成
-      await new Promise<void>((resolve) => {
+      await new Promise<void>((resolve, reject) => {
         if (!this.sessionId) {
           resolve();
           return;
         }
 
+        // 设置超时，避免无限等待
+        const timeout = setTimeout(() => {
+          console.warn('关闭会话超时，继续执行');
+          resolve();
+        }, 5000);
+
         this.chatService.closeSession(this.sessionId).subscribe({
           next: (res: any) => {
+            clearTimeout(timeout);
             console.log('会话已关闭:', res);
             resolve();
           },
           error: (err) => {
+            clearTimeout(timeout);
             console.error('关闭会话失败:', err);
             resolve(); // 即使失败也继续
           }
@@ -1530,6 +1566,7 @@ ${JSON.stringify(errData)}
       });
     } catch (error) {
       console.error('停止和关闭会话失败:', error);
+      throw error; // 抛出错误，让调用者处理
     }
   }
 
@@ -1542,9 +1579,37 @@ ${JSON.stringify(errData)}
     this.autoScrollEnabled = true;
     this.isCompleted = false;
 
-    await this.stopAndCloseSession();
-    this.chatService.currentSessionId = '';
-    await this.startSession();
+    try {
+      // 先停止并关闭当前会话
+      await this.stopAndCloseSession();
+      
+      // 确保会话完全关闭后再清空ID
+      this.chatService.currentSessionId = '';
+      
+      // 重置会话启动标志
+      this.isSessionStarting = false;
+      
+      // 等待一小段时间确保所有异步操作完成
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      // 启动新会话
+      await this.startSession();
+      
+    } catch (error) {
+      console.error('新会话启动失败:', error);
+      
+      // 即使失败也要确保标志位重置
+      this.isSessionStarting = false;
+      
+      // 显示错误消息
+      this.appendMessage('错误', `
+\`\`\`aily-error
+{
+  "message": "新会话启动失败，请重试",
+  "error": "${error.message || '未知错误'}"
+}
+\`\`\`\n\n`);
+    }
   }
 
   selectContent: ResourceItem[] = []
@@ -1829,6 +1894,9 @@ ${JSON.stringify(errData)}
     if (this.loginStatusSubscription) {
       this.loginStatusSubscription.unsubscribe();
     }
+
+    // 重置会话启动标志
+    this.isSessionStarting = false;
 
     this.disconnect();
   }
