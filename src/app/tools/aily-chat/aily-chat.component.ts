@@ -539,10 +539,10 @@ ${JSON.stringify(errData)}
     // 发送消息时重新启用自动滚动
     this.autoScrollEnabled = true;
 
-    if (this.isCompleted) {
-      console.log('上次会话已完成，需要重新启动会话');
-      await this.resetChat();
-    }
+    // if (this.isCompleted) {
+    //   console.log('上次会话已完成，需要重新启动会话');
+    //   await this.resetChat();
+    // }
 
     this.send('user', this.inputValue.trim(), true);
     this.inputValue = ''; // 发送后清空输入框
@@ -676,10 +676,6 @@ ${JSON.stringify(errData)}
         if (!this.isWaiting) {
           return; // 如果不在等待状态，直接返回
         }
-
-        console.log("=============== start ==========")
-        console.log("Rev: ", data);
-        console.log("=============== end ==========")
 
         try {
           if (data.type === 'ModelClientStreamingChunkEvent') {
