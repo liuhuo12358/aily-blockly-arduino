@@ -1,3 +1,19 @@
+/* AI聊天组件主容器布局 */
+.aily-chat-wrapper {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+/* TODO面板容器样式 */
+.todo-panel-container {
+  flex-shrink: 0;
+  border-top: 1px solid var(--border-color, #3c3c3c);
+  background: var(--vscode-sideBar-background, #252526);
+  max-height: 300px;
+  overflow: hidden;
+}
+
 .window-box {
   position: relative;
   display: flex;

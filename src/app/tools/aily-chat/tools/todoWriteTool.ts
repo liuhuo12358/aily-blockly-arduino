@@ -16,6 +16,7 @@ import {
   optimizeTodoStorage,
   validateTodos
 } from "../utils/todoStorage";
+import { notifyTodoUpdate } from "../services/todoUpdate.service";
 
 export async function todoWriteTool(toolArgs: any): Promise<ToolUseResult> {
   let toolResult = null;
@@ -84,6 +85,7 @@ export async function todoWriteTool(toolArgs: any): Promise<ToolUseResult> {
         }
 
         setTodos(validatedTodos, sessionId);
+        notifyTodoUpdate(sessionId); // 触发UI更新通知
         toolResult = `✅ **TODO列表更新成功**\n\n${formatTodoList(validatedTodos)}`;
         break;
 
@@ -115,6 +117,7 @@ export async function todoWriteTool(toolArgs: any): Promise<ToolUseResult> {
           }
 
           const updatedTodos = addTodo(newTodo, sessionId);
+          notifyTodoUpdate(sessionId); // 触发UI更新通知
           
           const statusIcon = newTodo.status === 'completed' ? '✅' : 
                             newTodo.status === 'in_progress' ? '🔄' : '⏸️';
@@ -181,6 +184,9 @@ export async function todoWriteTool(toolArgs: any): Promise<ToolUseResult> {
           }
 
           const updatedTodos = getTodos(sessionId);
+          if (addedCount > 0) {
+            notifyTodoUpdate(sessionId); // 触发UI更新通知
+          }
           
           let resultMessage = `✅ **批量添加完成**: 成功添加${addedCount}个任务`;
           if (failedTasks.length > 0) {
@@ -256,6 +262,7 @@ export async function todoWriteTool(toolArgs: any): Promise<ToolUseResult> {
           }
 
           const updatedTodos = updateTodo(id, { status: newStatus }, sessionId);
+          notifyTodoUpdate(sessionId); // 触发UI更新通知
           
           const statusText = newStatus === 'completed' ? '完成' : 
                             newStatus === 'in_progress' ? '开始进行' : '重置为待处理';
@@ -282,6 +289,7 @@ export async function todoWriteTool(toolArgs: any): Promise<ToolUseResult> {
           }
 
           const updatedTodos = deleteTodo(id, sessionId);
+          notifyTodoUpdate(sessionId); // 触发UI更新通知
           toolResult = `✅ **任务删除成功**: ${todo.content}\n\n${formatTodoList(updatedTodos)}`;
         } catch (error) {
           toolResult = `❌ **删除失败**: ${error instanceof Error ? error.message : '未知错误'}`;
@@ -292,12 +300,16 @@ export async function todoWriteTool(toolArgs: any): Promise<ToolUseResult> {
       case 'clear':
         const count = getTodos(sessionId).length;
         clearTodos(sessionId);
+        if (count > 0) {
+          notifyTodoUpdate(sessionId); // 触发UI更新通知
+        }
         toolResult = `✅ **清空完成**: 删除了${count}个任务`;
         break;
 
       case 'optimize':
         optimizeTodoStorage(sessionId);
         const optimizedTodos = getTodos(sessionId);
+        notifyTodoUpdate(sessionId); // 触发UI更新通知
         toolResult = `✅ **存储优化完成**\n\n${formatTodoList(optimizedTodos)}`;
         break;
 

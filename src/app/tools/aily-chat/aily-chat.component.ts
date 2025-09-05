@@ -73,6 +73,8 @@ import { NzMessageService } from 'ng-zorro-antd/message';
 import { TOOLS } from './tools/tools';
 import { AuthService } from '../../services/auth.service';
 import { resolveObjectURL } from 'buffer';
+import { FloatingTodoComponent } from './components/floating-todo/floating-todo.component';
+import { TodoUpdateService } from './services/todoUpdate.service';
 // import { reloadAbiJsonTool, reloadAbiJsonToolSimple } from './tools';
 
 @Component({
@@ -88,7 +90,8 @@ import { resolveObjectURL } from 'buffer';
     NzResizableModule,
     NzToolTipModule,
     SimplebarAngularModule,
-    MenuComponent
+    MenuComponent,
+    FloatingTodoComponent
   ],
   templateUrl: './aily-chat.component.html',
   styleUrl: './aily-chat.component.scss',
@@ -270,7 +273,8 @@ export class AilyChatComponent implements OnDestroy {
     private message: NzMessageService,
     private authService: AuthService,
     private modal: NzModalService,
-    private configService: ConfigService
+    private configService: ConfigService,
+    private todoUpdateService: TodoUpdateService
   ) { }
 
   ngOnInit() {
@@ -650,6 +654,10 @@ ${JSON.stringify(errData)}
   streamConnect(): void {
     console.log("stream connect sessionId: ", this.sessionId);
     if (!this.sessionId) return;
+
+    // 通知TODO组件sessionId已更新，预加载TODO数据
+    this.todoUpdateService.preloadTodos(this.sessionId);
+    console.log('[TODO Panel] 已通知TODO组件sessionId更新:', this.sessionId);
 
     this.chatService.streamConnect(this.sessionId).subscribe({
       next: async (data: any) => {
@@ -1414,16 +1422,16 @@ ${JSON.stringify(errData)}
                     break;
                   case 'todo_write_tool':
                     console.log('[TODO工具被调用]', toolArgs);
-                    this.appendMessage('aily', `
+//                     this.appendMessage('aily', `
 
-\`\`\`aily-state
-{
-  "state": "doing", 
-  "text": "正在管理TODO项目...",
-  "id": "${toolCallId}"
-}
-\`\`\`\n\n
-                    `);
+// \`\`\`aily-state
+// {
+//   "state": "doing", 
+//   "text": "正在管理TODO项目...",
+//   "id": "${toolCallId}"
+// }
+// \`\`\`\n\n
+//                     `);
                     // 将当前会话ID传递给todoWriteTool，确保每个会话的TODO数据独立存储
                     const todoArgs = { ...toolArgs, sessionId: this.sessionId };
                     toolResult = await todoWriteTool(todoArgs);
@@ -1503,7 +1511,7 @@ ${JSON.stringify(errData)}
               };
             }
 
-            this.toolCallStates[data.tool_id] = resultText;
+            // this.toolCallStates[data.tool_id] = resultText;
             this.send("tool", JSON.stringify({
               "type": "tool",
               "tool_id": data.tool_id,
