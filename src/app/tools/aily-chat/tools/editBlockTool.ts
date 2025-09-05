@@ -1686,6 +1686,7 @@ export async function getWorkspaceOverviewTool(
   }
 
   console.log('📤 返回结果长度:', toolResult?.length || 0);
+  console.log('📤 返回结果:', toolResult);
   return {
     content: toolResult,
     is_error,

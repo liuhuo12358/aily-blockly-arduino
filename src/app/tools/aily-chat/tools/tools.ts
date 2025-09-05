@@ -808,13 +808,32 @@ export const TOOLS = [
 - \`tags\`: 标签数组
 
 示例:
-## 添加任务 (add)
+## 添加单个任务 (add)
 \`\`\`json
 {
   "operation": "add",
   "content": "完成项目文档",
   "priority": "high",
-  "tags": ["文档", "重要"]
+  "status": "pending",
+}
+\`\`\`
+
+## 批量添加任务 (batch_add)
+\`\`\`json
+{
+  "operation": "batch_add",
+  "todos": [
+    {
+      "content": "任务1内容",
+      "priority": "medium",
+      "status": "pending"
+    },
+    {
+      "content": "任务2内容",
+      "priority": "low",
+      "status": "in_progress"
+    }
+  ]
 }
 \`\`\`
 
