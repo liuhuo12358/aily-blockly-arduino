@@ -184,6 +184,16 @@ export class FileTreeComponent implements OnInit {
     this.loadRootPath();
   }
 
+  ngAfterViewInit() {
+    setTimeout(() => {
+      const files = this.dataSource.getCurrentData();
+      const inoFile = files.find(f => f.isLeaf && f.title.endsWith('.ino'));
+      if (inoFile) {
+        this.openFile(inoFile);
+      }
+    }, 0);
+  }
+
   loadRootPath(path = this.rootPath): void {
     const files = this.fileService.readDir(path);
     console.log('Loaded root path files:', files);
@@ -216,7 +226,7 @@ export class FileTreeComponent implements OnInit {
   menuList;
   onRightClick(event: MouseEvent, node: FlatFileNode = null) {
     event.preventDefault(); // 阻止浏览器默认右键菜单
-    
+
     // 如果是在文件或文件夹节点上右键，阻止事件冒泡
     if (node) {
       event.stopPropagation();

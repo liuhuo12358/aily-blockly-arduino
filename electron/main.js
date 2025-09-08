@@ -233,7 +233,7 @@ function createWindow() {
     },
   });
 
-  mainWindow.setMenu(null);
+  // mainWindow.setMenu(null);
 
   // 当页面准备好显示时，再显示窗口
   mainWindow.once('ready-to-show', () => {
