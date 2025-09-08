@@ -15,6 +15,9 @@ import { CmdService } from '../../services/cmd.service';
 import { BuilderService } from '../../services/builder.service';
 import { UploaderService } from '../../services/uploader.service';
 import { ElectronService } from '../../services/electron.service';
+import { CodeService } from './code.service';
+import { ShortcutService, ShortcutAction, ShortcutKeyMapping } from './shortcut.service';
+import { Subscription } from 'rxjs';
 
 export interface OpenedFile {
   path: string;      // 文件路径
@@ -49,6 +52,10 @@ export class CodeEditorComponent {
 
   loaded = false;
 
+  // 快捷键订阅
+  private shortcutSubscription?: Subscription;
+  private keydownListener?: (event: KeyboardEvent) => void;
+
   get projectPath() {
     return this.projectService.currentProjectPath
   }
@@ -65,6 +72,8 @@ export class CodeEditorComponent {
     private builderService: BuilderService,
     private uploadService: UploaderService,
     private electronService: ElectronService,
+    private codeService: CodeService,
+    private shortcutService: ShortcutService,
   ) { }
 
   async ngOnInit() {
@@ -82,6 +91,9 @@ export class CodeEditorComponent {
       }
     });
 
+    // 初始化快捷键监听
+    this.initShortcutListeners();
+
     window.history.replaceState(null, '', window.location.href);
     window.history.pushState(null, '', window.location.href);
   }
@@ -91,6 +103,9 @@ export class CodeEditorComponent {
     this.uploadService.cancel();
     this.cmdService.killArduinoCli();
     this.electronService.setTitle('aily blockly');
+    
+    // 清理快捷键监听器
+    this.cleanupShortcutListeners();
   }
 
   ngAfterViewInit(): void {
@@ -270,5 +285,156 @@ export class CodeEditorComponent {
  */
   private hasFileWithExtension(fileList: Array<{ name: string; parentPath: string; path: string }>, extension: string): boolean {
     return fileList.some(file => file.name.toLowerCase().endsWith(extension.toLowerCase()));
+  }
+
+  /**
+   * 初始化快捷键监听器
+   */
+  private initShortcutListeners(): void {
+    // 监听快捷键事件
+    this.shortcutSubscription = this.shortcutService.shortcutKey$.subscribe(action => {
+      this.handleShortcutAction(action);
+    });
+
+    // 添加全局键盘事件监听器
+    this.keydownListener = (event: KeyboardEvent) => {
+      this.handleKeyDown(event);
+    };
+    document.addEventListener('keydown', this.keydownListener);
+  }
+
+  /**
+   * 清理快捷键监听器
+   */
+  private cleanupShortcutListeners(): void {
+    if (this.shortcutSubscription) {
+      this.shortcutSubscription.unsubscribe();
+      this.shortcutSubscription = undefined;
+    }
+
+    if (this.keydownListener) {
+      document.removeEventListener('keydown', this.keydownListener);
+      this.keydownListener = undefined;
+    }
+  }
+
+  /**
+   * 处理键盘按下事件
+   * @param event 键盘事件
+   */
+  private handleKeyDown(event: KeyboardEvent): void {
+    // 检查是否在代码编辑器区域内
+    const target = event.target as HTMLElement;
+    if (!target || !target.closest('.code-editor')) {
+      return;
+    }
+
+    const shortcutKey = this.shortcutService.getShortcutFromEvent(event);
+    const action = this.shortcutService.getShortcutAction(shortcutKey, 'editor');
+    
+    if (action) {
+      event.preventDefault();
+      this.handleShortcutAction(action);
+    }
+  }
+
+  /**
+   * 处理快捷键动作
+   * @param action 动作对象
+   */
+  private handleShortcutAction(action: ShortcutAction): void {
+    switch (action.type) {
+      case 'save':
+        this.handleSaveShortcut();
+        break;
+      case 'close':
+        this.handleCloseShortcut();
+        break;
+      case 'find':
+        this.message.info('查找功能正在开发中...');
+        break;
+      case 'replace':
+        this.message.info('替换功能正在开发中...');
+        break;
+      case 'open':
+        this.message.info('打开文件功能正在开发中...');
+        break;
+      default:
+        console.log('未知的快捷键动作:', action.type);
+        break;
+    }
+  }
+
+  /**
+   * 处理关闭标签页快捷键
+   */
+  private handleCloseShortcut(): void {
+    if (this.openedFiles.length === 0) {
+      this.message.info('没有打开的文件');
+      return;
+    }
+
+    if (this.selectedIndex < 0 || this.selectedIndex >= this.openedFiles.length) {
+      this.message.error('没有选中的文件');
+      return;
+    }
+
+    // 关闭当前选中的标签页
+    this.closeTab({ index: this.selectedIndex });
+  }
+
+  /**
+   * 处理保存快捷键
+   */
+  private handleSaveShortcut(): void {
+    if (this.openedFiles.length === 0) {
+      this.message.info('没有打开的文件');
+      return;
+    }
+
+    if (this.selectedIndex < 0 || this.selectedIndex >= this.openedFiles.length) {
+      this.message.error('没有选中的文件');
+      return;
+    }
+
+    const currentFile = this.openedFiles[this.selectedIndex];
+    if (!currentFile.isDirty) {
+      this.message.info(`文件 ${currentFile.title} 没有需要保存的更改`);
+      return;
+    }
+
+    try {
+      this.saveCurrentFile();
+      this.message.success(`文件 ${currentFile.title} 保存成功`);
+    } catch (error) {
+      console.error('保存文件失败:', error);
+      this.message.error(`保存文件 ${currentFile.title} 失败`);
+    }
+  }
+
+  /**
+   * 获取所有可用的快捷键
+   * @returns 快捷键列表
+   */
+  getAvailableShortcuts(): ShortcutKeyMapping[] {
+    return this.shortcutService.getAllShortcuts().filter(shortcut => 
+      shortcut.context === 'editor' || shortcut.context === 'global'
+    );
+  }
+
+  /**
+   * 显示快捷键帮助
+   */
+  showShortcutHelp(): void {
+    const shortcuts = this.getAvailableShortcuts();
+    const helpText = shortcuts.map(shortcut => 
+      `${shortcut.key.toUpperCase()} - ${shortcut.description}`
+    ).join('\n');
+    
+    this.modal.info({
+      nzTitle: '快捷键帮助',
+      nzContent: `<pre style="white-space: pre-wrap;">${helpText}</pre>`,
+      nzWidth: 500
+    });
   }
 }

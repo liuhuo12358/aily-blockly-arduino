@@ -160,6 +160,35 @@ contextBridge.exposeInMainWorld("electronAPI", {
     rmdirSync: (path) => require("fs").rmdirSync(path, { recursive: true, force: true }),
     renameSync: (oldPath, newPath) => require("fs").renameSync(oldPath, newPath),
   },
+  glob: {
+    // 使用glob模式查找文件
+    sync: (pattern, options = {}) => {
+      try {
+        const glob = require("glob");
+        return glob.sync(pattern, options);
+      } catch (error) {
+        console.error("Glob sync error:", error);
+        return [];
+      }
+    },
+    // 异步版本
+    async: (pattern, options = {}) => {
+      return new Promise((resolve, reject) => {
+        try {
+          const glob = require("glob");
+          glob(pattern, options, (error, files) => {
+            if (error) {
+              reject(error);
+            } else {
+              resolve(files);
+            }
+          });
+        } catch (error) {
+          reject(error);
+        }
+      });
+    }
+  },
   ble: {
 
   },
