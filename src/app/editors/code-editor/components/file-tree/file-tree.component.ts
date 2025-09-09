@@ -586,6 +586,10 @@ export class FileTreeComponent implements OnInit {
   }
 
   private async pasteFromClipboard(targetNode: FlatFileNode) {
+    // 获取剪贴板状态，判断是否是剪切操作
+    const clipboardStatus = this.fileService.getClipboardStatus();
+    const isCutOperation = clipboardStatus.operation === 'cut';
+    
     const result = await this.fileService.pasteFromClipboard(targetNode);
     if (result.success && result.newFiles) {
       // 确定实际的目标路径
@@ -593,6 +597,13 @@ export class FileTreeComponent implements OnInit {
       if (targetNode.isLeaf) {
         // 如果是文件，使用其父目录
         targetPath = window['path'].dirname(targetPath);
+      }
+      
+      // 如果是剪切操作，先从原位置删除文件节点
+      if (isCutOperation && clipboardStatus.nodes.length > 0) {
+        for (const originalNode of clipboardStatus.nodes) {
+          this.removeFileNode(originalNode.path);
+        }
       }
       
       // 增量添加新文件，避免全量刷新
