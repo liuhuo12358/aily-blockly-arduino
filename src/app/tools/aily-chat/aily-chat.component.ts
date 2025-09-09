@@ -125,6 +125,7 @@ export class AilyChatComponent implements OnDestroy {
 
   private textMessageSubscription: Subscription;
   private loginStatusSubscription: Subscription;
+  private mcpInitialized = false; // 添加标志位防止重复初始化MCP
 
   get sessionId() {
     return this.chatService.currentSessionId;
@@ -297,8 +298,15 @@ export class AilyChatComponent implements OnDestroy {
 
     // 订阅登录状态变化
     this.loginStatusSubscription = this.authService.isLoggedIn$.subscribe(
-      isLoggedIn => {
+      async isLoggedIn => {
         this.list = [...this.defaultList.map(item => ({...item}))]; // 重置消息列表
+        
+        // 只在登录状态且未初始化过MCP时才初始化
+        if (isLoggedIn && !this.mcpInitialized) {
+          this.mcpInitialized = true;
+          await this.mcpService.init();
+        }
+        
         this.startSession().then(() => {
           this.getHistory();
         });
@@ -476,7 +484,9 @@ export class AilyChatComponent implements OnDestroy {
     this.isCompleted = false;
     let tools = this.tools;
     let mcpTools = this.mcpService.tools.map(tool => {
-      tool.name = "mcp_" + tool.name;
+      if (!tool.name.startsWith("mcp_")) {
+        tool.name = "mcp_" + tool.name;
+      }
       return tool;
     });
     if (mcpTools && mcpTools.length > 0) {
@@ -780,6 +790,8 @@ ${JSON.stringify(errData)}
             let toolResult = null;
             let resultState = "done";
             let resultText = '';
+
+            console.log("工具调用请求: ", data.tool_name, toolArgs);
 
             try {
               if (data.tool_name.startsWith('mcp_')) {
@@ -2151,8 +2163,9 @@ ${JSON.stringify(errData)}
       this.loginStatusSubscription.unsubscribe();
     }
 
-    // 重置会话启动标志
+    // 重置会话启动标志和MCP初始化标志
     this.isSessionStarting = false;
+    this.mcpInitialized = false;
 
     this.disconnect();
   }
