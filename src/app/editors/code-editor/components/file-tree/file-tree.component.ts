@@ -11,7 +11,8 @@ import { MenuComponent } from '../../../../components/menu/menu.component';
 import {
   FILE_RIGHTCLICK_MENU,
   FOLDER_RIGHTCLICK_MENU,
-  ROOT_RIGHTCLICK_MENU
+  ROOT_RIGHTCLICK_MENU,
+  MULTI_SELECT_MENU
 } from './menu.config';
 import { IMenuItem } from '../../../../configs/menu.config';
 
@@ -190,27 +191,41 @@ class DynamicFileDataSource implements DataSource<FlatFileNode> {
     const data = this.flattenedData.getValue();
     const nodeIndex = data.findIndex(n => n.path === nodePath);
     
+    console.log('DynamicFileDataSource.removeNode called for:', nodePath);
+    console.log('Node found at index:', nodeIndex);
+    
     if (nodeIndex !== -1) {
       const node = data[nodeIndex];
       const nodesToRemove = [nodeIndex];
+      
+      console.log('Removing node:', node.title, 'expandable:', node.expandable);
       
       // 如果是文件夹，也要删除所有子节点
       if (node.expandable) {
         for (let i = nodeIndex + 1; i < data.length; i++) {
           if (data[i].level > node.level) {
             nodesToRemove.push(i);
+            console.log('Also removing child node:', data[i].title);
           } else {
             break;
           }
         }
       }
       
+      console.log('Total nodes to remove:', nodesToRemove.length);
+      
       // 从后往前删除，避免索引问题
       nodesToRemove.reverse().forEach(index => {
+        const removedNode = data[index];
+        console.log('Removing node at index', index, ':', removedNode.title);
         data.splice(index, 1);
       });
       
+      console.log('Updating flattenedData with new array, length:', data.length);
       this.flattenedData.next([...data]);
+      
+      // 更新树控件的数据节点
+      this.treeControl.dataNodes = [...data];
       
       // 清除相关的展开状态
       this.expandedPaths.delete(nodePath);
@@ -219,6 +234,10 @@ class DynamicFileDataSource implements DataSource<FlatFileNode> {
           this.childrenLoadedSet.delete(loadedNode);
         }
       });
+      
+      console.log('Node removal completed for:', nodePath);
+    } else {
+      console.warn('Node not found for removal:', nodePath);
     }
   }
 
@@ -288,7 +307,10 @@ export class FileTreeComponent implements OnInit {
   };
 
   // 选择模型 - 用于跟踪选中的节点
-  nodeSelection = new SelectionModel<FlatFileNode>();
+  nodeSelection = new SelectionModel<FlatFileNode>(true); // 允许多选
+
+  // 最后一次点击的节点，用于 Shift 范围选择
+  private lastClickedNode: FlatFileNode | null = null;
 
   // 树控件 - 使用 FlatTreeControl
   // eslint-disable-next-line @typescript-eslint/ban-ts-comment
@@ -357,11 +379,59 @@ export class FileTreeComponent implements OnInit {
   hasChild = (_: number, node: FlatFileNode): boolean => node.expandable;
 
   // 当节点被点击时
-  nodeClick(node: FlatFileNode): void {
-    if (node.isLeaf) {
+  nodeClick(node: FlatFileNode, event?: MouseEvent): void {
+    // 处理多选逻辑
+    this.handleNodeSelection(node, event);
+
+    // 如果是文件且只选择了一个，则打开文件
+    if (node.isLeaf && this.nodeSelection.selected.length === 1 && this.nodeSelection.isSelected(node)) {
       this.openFile(node);
-    } else {
+    } else if (!node.isLeaf && this.nodeSelection.selected.length === 1 && this.nodeSelection.isSelected(node)) {
+      // 如果是文件夹且只选择了一个，则展开/收起
       this.openFolder(node);
+    }
+  }
+
+  // 处理节点选择逻辑
+  private handleNodeSelection(node: FlatFileNode, event?: MouseEvent): void {
+    const isCtrlPressed = event?.ctrlKey || event?.metaKey; // Mac 用 metaKey
+    const isShiftPressed = event?.shiftKey;
+
+    if (isShiftPressed && this.lastClickedNode) {
+      // Shift + 点击：范围选择
+      this.selectRange(this.lastClickedNode, node);
+    } else if (isCtrlPressed) {
+      // Ctrl + 点击：切换选择状态
+      this.nodeSelection.toggle(node);
+      this.lastClickedNode = node;
+    } else {
+      // 普通点击：清除其他选择，只选择当前节点
+      this.nodeSelection.clear();
+      this.nodeSelection.select(node);
+      this.lastClickedNode = node;
+    }
+  }
+
+  // 范围选择：选择两个节点之间的所有节点
+  private selectRange(startNode: FlatFileNode, endNode: FlatFileNode): void {
+    const allNodes = this.dataSource.getCurrentData();
+    const startIndex = allNodes.indexOf(startNode);
+    const endIndex = allNodes.indexOf(endNode);
+
+    if (startIndex === -1 || endIndex === -1) {
+      return;
+    }
+
+    // 确保 start <= end
+    const minIndex = Math.min(startIndex, endIndex);
+    const maxIndex = Math.max(startIndex, endIndex);
+
+    // 清除当前选择
+    this.nodeSelection.clear();
+
+    // 选择范围内的所有节点
+    for (let i = minIndex; i <= maxIndex; i++) {
+      this.nodeSelection.select(allNodes[i]);
     }
   }
 
@@ -374,18 +444,36 @@ export class FileTreeComponent implements OnInit {
       event.stopPropagation();
     }
 
-    if (!node) {
-      this.currentSelectedNode = this.createRootNode();
-      this.menuList = ROOT_RIGHTCLICK_MENU;
-    } else if (node.isLeaf) {
-      // 如果没有传入节点，则是点击了Root
-      this.menuList = FILE_RIGHTCLICK_MENU;
-    } else {
-      this.menuList = FOLDER_RIGHTCLICK_MENU;
+    // 处理右键点击时的选择逻辑
+    if (node) {
+      // 如果右键点击的节点没有被选中，则清除其他选择并选择当前节点
+      if (!this.nodeSelection.isSelected(node)) {
+        this.nodeSelection.clear();
+        this.nodeSelection.select(node);
+        this.lastClickedNode = node;
+      }
     }
 
-    // 设置当前选中的节点
-    this.currentSelectedNode = node;
+    const selectedNodes = this.nodeSelection.selected;
+    const selectedCount = selectedNodes.length;
+
+    if (!node) {
+      // 右键点击空白区域
+      this.currentSelectedNode = this.createRootNode();
+      this.menuList = ROOT_RIGHTCLICK_MENU;
+    } else if (selectedCount > 1) {
+      // 多选状态
+      this.currentSelectedNode = node;
+      this.menuList = MULTI_SELECT_MENU;
+    } else if (node.isLeaf) {
+      // 单个文件
+      this.currentSelectedNode = node;
+      this.menuList = FILE_RIGHTCLICK_MENU;
+    } else {
+      // 单个文件夹
+      this.currentSelectedNode = node;
+      this.menuList = FOLDER_RIGHTCLICK_MENU;
+    }
 
     // 获取当前鼠标点击位置
     this.rightClickMenuPosition.x = event.clientX;
@@ -415,68 +503,72 @@ export class FileTreeComponent implements OnInit {
   }
 
   private handleMenuAction(menuItem: IMenuItem) {
-    // 如果currentSelectedNode为null，则默认操作根目录
-    const node = this.currentSelectedNode || this.createRootNode();
     const selectedNodes = this.nodeSelection.selected;
+    // 如果currentSelectedNode为null，则默认操作根目录
+    const currentNode = this.currentSelectedNode || this.createRootNode();
 
     switch (menuItem.action) {
       case 'file-copy':
       case 'folder-copy':
       case 'multi-copy':
-        this.copyToClipboard(selectedNodes.length > 1 ? selectedNodes : [node]);
+        this.copyToClipboard(selectedNodes.length > 1 ? selectedNodes : [currentNode]);
         break;
 
       case 'file-cut':
       case 'folder-cut':
       case 'multi-cut':
-        this.cutToClipboard(selectedNodes.length > 1 ? selectedNodes : [node]);
+        this.cutToClipboard(selectedNodes.length > 1 ? selectedNodes : [currentNode]);
         break;
 
       case 'file-paste':
       case 'folder-paste':
-        this.pasteFromClipboard(node);
+        this.pasteFromClipboard(currentNode);
         break;
 
       case 'file-rename':
       case 'folder-rename':
-        this.renameNode(node);
+        this.renameNode(currentNode);
         break;
 
       case 'file-delete':
       case 'folder-delete':
       case 'multi-delete':
-        this.deleteNodes(selectedNodes.length > 1 ? selectedNodes : [node]);
+        this.deleteNodes(selectedNodes.length > 1 ? selectedNodes : [currentNode]);
         break;
 
       case 'folder-new-file':
-        this.createNewFile(node);
+        this.createNewFile(currentNode);
         break;
 
       case 'folder-new-folder':
-        this.createNewFolder(node);
+        this.createNewFolder(currentNode);
         break;
 
       case 'file-copy-path':
       case 'folder-copy-path':
-        this.copyPathToClipboard(node, false);
+        this.copyPathToClipboard(currentNode, false);
         break;
 
       case 'file-copy-relative-path':
       case 'folder-copy-relative-path':
-        this.copyPathToClipboard(node, true);
+        this.copyPathToClipboard(currentNode, true);
         break;
 
       case 'reveal-in-explorer':
-        this.revealInExplorer(node);
+        this.revealInExplorer(currentNode);
         break;
 
       case 'open-in-terminal':
-        this.openInTerminal(node);
+        this.openInTerminal(currentNode);
         break;
 
       case 'file-properties':
       case 'folder-properties':
-        this.showProperties(node);
+        this.showProperties(currentNode);
+        break;
+
+      case 'multi-compress':
+        this.compressMultipleFiles(selectedNodes);
         break;
 
       default:
@@ -514,15 +606,59 @@ export class FileTreeComponent implements OnInit {
     this.fileService.renameNode(node, (oldPath: string, newPath: string) => {
       // 使用增量更新重命名节点
       this.renameFileNode(oldPath, newPath);
+      
+      // 更新选择状态中的节点路径
+      if (this.nodeSelection.isSelected(node)) {
+        // 更新选中节点的路径信息
+        node.path = newPath;
+        node.key = newPath;
+        node.title = window['path'].basename(newPath);
+      }
     });
   }
 
   private deleteNodes(nodes: FlatFileNode[]) {
+    console.log('Starting delete operation for nodes:', nodes.map(n => n.path));
+    
     this.fileService.deleteNodes(nodes, (deletedPaths: string[]) => {
-      // 使用增量更新删除节点
-      deletedPaths.forEach(path => {
-        this.removeFileNode(path);
-      });
+      console.log('Delete callback received for paths:', deletedPaths);
+      
+      try {
+        // 使用增量更新删除节点
+        deletedPaths.forEach(path => {
+          console.log('Removing node from UI:', path);
+          this.removeFileNode(path);
+        });
+        
+        // 清除已删除节点的选择状态
+        const currentSelected = this.nodeSelection.selected.filter(
+          node => !deletedPaths.includes(node.path)
+        );
+        this.nodeSelection.clear();
+        currentSelected.forEach(node => {
+          this.nodeSelection.select(node);
+        });
+        
+        console.log('Delete operation completed, UI updated');
+        
+        // 验证删除是否成功反映在UI中
+        setTimeout(() => {
+          const currentData = this.dataSource.getCurrentData();
+          const stillExists = deletedPaths.some(path => 
+            currentData.some(node => node.path === path)
+          );
+          
+          if (stillExists) {
+            console.warn('Some deleted nodes still exist in UI, forcing refresh');
+            this.refresh();
+          }
+        }, 100);
+        
+      } catch (error) {
+        console.error('Error updating UI after delete:', error);
+        // 如果增量更新失败，强制刷新整个树
+        this.refresh();
+      }
     });
   }
 
@@ -572,6 +708,12 @@ export class FileTreeComponent implements OnInit {
     this.fileService.showProperties(node);
   }
 
+  private compressMultipleFiles(nodes: FlatFileNode[]) {
+    // TODO: 实现多文件压缩功能
+    console.log('Compress multiple files:', nodes.map(n => n.path));
+    // 这里可以调用 fileService 的压缩方法，或者显示压缩对话框
+  }
+
   // 获取当前数据
   getCurrentData(): FlatFileNode[] {
     return this.dataSource.getCurrentData();
@@ -609,8 +751,141 @@ export class FileTreeComponent implements OnInit {
   }
 
   refresh() {
+    // 保存当前选择的路径
+    const selectedPaths = this.nodeSelection.selected.map(node => node.path);
+    
     // 保存展开状态，然后重新加载
     this.loadRootPath();
+    
+    // 恢复选择状态
+    setTimeout(() => {
+      this.restoreSelection(selectedPaths);
+    }, 0);
+  }
+
+  // 获取选中节点的数量和类型信息
+  getSelectionInfo(): { count: number; files: number; folders: number } {
+    const selected = this.nodeSelection.selected;
+    return {
+      count: selected.length,
+      files: selected.filter(node => node.isLeaf).length,
+      folders: selected.filter(node => !node.isLeaf).length
+    };
+  }
+
+  // 清除所有选择
+  clearSelection(): void {
+    this.nodeSelection.clear();
+    this.lastClickedNode = null;
+  }
+
+  // 选择所有可见节点
+  selectAll(): void {
+    const allNodes = this.dataSource.getCurrentData();
+    this.nodeSelection.clear();
+    allNodes.forEach(node => {
+      this.nodeSelection.select(node);
+    });
+  }
+
+  // 反选当前选择
+  invertSelection(): void {
+    const allNodes = this.dataSource.getCurrentData();
+    const currentSelected = [...this.nodeSelection.selected];
+    
+    this.nodeSelection.clear();
+    allNodes.forEach(node => {
+      if (!currentSelected.includes(node)) {
+        this.nodeSelection.select(node);
+      }
+    });
+  }
+
+  // 恢复选择状态
+  private restoreSelection(selectedPaths: string[]): void {
+    this.nodeSelection.clear();
+    const allNodes = this.dataSource.getCurrentData();
+    
+    selectedPaths.forEach(path => {
+      const node = allNodes.find(n => n.path === path);
+      if (node) {
+        this.nodeSelection.select(node);
+      }
+    });
+  }
+
+  // 处理键盘事件
+  onKeyDown(event: KeyboardEvent): void {
+    const isCtrlPressed = event.ctrlKey || event.metaKey;
+    
+    switch (event.key) {
+      case 'a':
+      case 'A':
+        if (isCtrlPressed) {
+          event.preventDefault();
+          this.selectAll();
+        }
+        break;
+      
+      case 'Escape':
+        event.preventDefault();
+        this.clearSelection();
+        break;
+        
+      case 'Delete':
+        if (this.nodeSelection.selected.length > 0) {
+          event.preventDefault();
+          this.deleteNodes(this.nodeSelection.selected);
+        }
+        break;
+        
+      case 'F2':
+        if (this.nodeSelection.selected.length === 1) {
+          event.preventDefault();
+          this.renameNode(this.nodeSelection.selected[0]);
+        }
+        break;
+        
+      case 'c':
+      case 'C':
+        if (isCtrlPressed && this.nodeSelection.selected.length > 0) {
+          event.preventDefault();
+          this.copyToClipboard(this.nodeSelection.selected);
+        }
+        break;
+        
+      case 'x':
+      case 'X':
+        if (isCtrlPressed && this.nodeSelection.selected.length > 0) {
+          event.preventDefault();
+          this.cutToClipboard(this.nodeSelection.selected);
+        }
+        break;
+        
+      case 'v':
+      case 'V':
+        if (isCtrlPressed) {
+          event.preventDefault();
+          // 如果有选中的文件夹，粘贴到第一个文件夹；否则粘贴到根目录
+          const targetNode = this.nodeSelection.selected.find(node => !node.isLeaf) 
+                           || this.createRootNode();
+          this.pasteFromClipboard(targetNode);
+        }
+        break;
+    }
+  }
+
+  // 处理内容区域点击事件（用于在空白区域点击时清除选择）
+  onContentClick(event: MouseEvent): void {
+    // 检查点击的是否是空白区域（没有点击到树节点）
+    const target = event.target as HTMLElement;
+    if (target.classList.contains('file-explorer-content') || 
+        target.classList.contains('sscroll')) {
+      // 如果没有按住 Ctrl 或 Shift，清除选择
+      if (!event.ctrlKey && !event.metaKey && !event.shiftKey) {
+        this.clearSelection();
+      }
+    }
   }
 
   // 智能刷新 - 只刷新指定路径的内容
@@ -729,7 +1004,14 @@ export class FileTreeComponent implements OnInit {
 
   // 增量更新 - 删除文件/文件夹
   removeFileNode(nodePath: string) {
+    console.log('removeFileNode called for:', nodePath);
+    const currentData = this.dataSource.getCurrentData();
+    console.log('Current data before removal:', currentData.map(n => n.path));
+    
     this.dataSource.removeNode(nodePath);
+    
+    const updatedData = this.dataSource.getCurrentData();
+    console.log('Current data after removal:', updatedData.map(n => n.path));
   }
 
   // 增量更新 - 重命名文件/文件夹

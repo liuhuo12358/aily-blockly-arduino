@@ -12,6 +12,12 @@
         align-items: center;
         padding: 8px;
 
+        .selection-count {
+            font-size: 11px;
+            color: #888;
+            margin-left: 8px;
+        }
+
         .refresh-btn {
             background: none;
             border: none;
@@ -29,7 +35,7 @@
         position: relative;
         height: calc(100% - 30px);
         overflow-y: auto;
-        
+
         nz-tree-node {
             padding: 0;
             height: 24px;
@@ -40,8 +46,30 @@
             }
         }
 
-        .ant-tree-node-content-wrapper{
-            padding: 0;
+        // .ant-tree-treenode-selecte::before {
+        //     background-color: rgba(24, 143, 255, 0.6) !important;
+        // }
+
+        // .ant-tree-node-content-wrapper {
+        //     padding: 0;
+
+        //     &.ant-tree-node-selected {
+        //         background-color: rgba(24, 143, 255, 0.6) !important;
+
+        //         .file-item {
+        //             color: white;
+        //         }
+        //     }
+        // }
+
+        // 多选状态下的样式
+        .ant-tree-node-content-wrapper[aria-selected="true"] {
+            background-color: rgba(24, 144, 255, 0.1);
+            border-left: 2px solid #1890ff;
+
+            .file-item {
+                color: #1890ff;
+            }
         }
 
         .file-item {

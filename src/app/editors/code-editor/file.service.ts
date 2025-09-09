@@ -379,36 +379,58 @@ export class FileService {
       nzCancelText: '取消',
       nzOnOk: () => {
         const deletedPaths: string[] = [];
+        const failedPaths: string[] = [];
+        
         try {
           for (const node of nodes) {
-            if (node.isLeaf) {
-              // 删除文件
-              window['fs'].unlinkSync(node.path);
-            } else {
-              // 删除文件夹
-              window['fs'].rmdirSync(node.path);
-            }
-            deletedPaths.push(node.path);
-          }
-          
-          this.message.success(`成功删除 ${nodes.length} 个项目`);
-          
-          // 清空剪贴板中被删除的项目
-          if (this.clipboard.nodes.length > 0) {
-            const deletedPathsSet = new Set(deletedPaths);
-            this.clipboard.nodes = this.clipboard.nodes.filter(n => !deletedPathsSet.has(n.path));
-            if (this.clipboard.nodes.length === 0) {
-              this.clipboard.operation = null;
+            console.log('Deleting node:', node.path, 'isLeaf:', node.isLeaf);
+            
+            try {
+              if (node.isLeaf) {
+                // 删除文件
+                window['fs'].unlinkSync(node.path);
+                console.log('File deleted successfully:', node.path);
+              } else {
+                // 删除文件夹 - 需要递归删除
+                this.deleteFolderRecursive(node.path);
+                console.log('Folder deleted successfully:', node.path);
+              }
+              deletedPaths.push(node.path);
+            } catch (error) {
+              console.error('Failed to delete node:', node.path, error);
+              failedPaths.push(node.path);
             }
           }
           
-          // 调用成功回调，传递已删除的路径列表
-          if (onSuccess) {
-            onSuccess(deletedPaths);
+          console.log('Delete operation completed. Deleted:', deletedPaths, 'Failed:', failedPaths);
+          
+          if (deletedPaths.length > 0) {
+            this.message.success(`成功删除 ${deletedPaths.length} 个项目${failedPaths.length > 0 ? `，${failedPaths.length} 个项目删除失败` : ''}`);
+            
+            // 清空剪贴板中被删除的项目
+            if (this.clipboard.nodes.length > 0) {
+              const deletedPathsSet = new Set(deletedPaths);
+              this.clipboard.nodes = this.clipboard.nodes.filter(n => !deletedPathsSet.has(n.path));
+              if (this.clipboard.nodes.length === 0) {
+                this.clipboard.operation = null;
+              }
+            }
+            
+            // 调用成功回调，只传递成功删除的路径列表
+            if (onSuccess) {
+              console.log('Calling onSuccess callback with successfully deleted paths:', deletedPaths);
+              onSuccess(deletedPaths);
+            }
+          } else {
+            this.message.error('所有文件删除失败');
+          }
+          
+          if (failedPaths.length > 0) {
+            console.error('Failed to delete paths:', failedPaths);
           }
           
         } catch (error) {
-          console.error('删除失败:', error);
+          console.error('删除操作出现异常:', error);
           this.message.error(`删除失败: ${error.message}`);
         }
       }
@@ -861,5 +883,44 @@ export class FileService {
     permissions.push((mode & 0o001) ? 'x' : '-');
     
     return permissions.join('') + ` (${(mode & parseInt('777', 8)).toString(8)})`;
+  }
+
+  /**
+   * 递归删除文件夹
+   */
+  private deleteFolderRecursive(folderPath: string): void {
+    console.log('Recursively deleting folder:', folderPath);
+    
+    if (!window['fs'].existsSync(folderPath)) {
+      console.log('Folder does not exist:', folderPath);
+      return;
+    }
+    
+    const stats = window['fs'].statSync(folderPath);
+    if (!stats.isDirectory()) {
+      // 如果不是文件夹，直接删除文件
+      window['fs'].unlinkSync(folderPath);
+      return;
+    }
+    
+    // 读取文件夹内容
+    const entries = window['fs'].readDirSync(folderPath);
+    
+    for (const entry of entries) {
+      const fullPath = window['path'].join(folderPath, entry.name);
+      const entryStats = window['fs'].statSync(fullPath);
+      
+      if (entryStats.isDirectory()) {
+        // 递归删除子文件夹
+        this.deleteFolderRecursive(fullPath);
+      } else {
+        // 删除文件
+        window['fs'].unlinkSync(fullPath);
+      }
+    }
+    
+    // 删除空文件夹
+    window['fs'].rmdirSync(folderPath);
+    console.log('Folder deleted:', folderPath);
   }
 }
