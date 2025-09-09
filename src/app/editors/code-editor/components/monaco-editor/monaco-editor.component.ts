@@ -2,7 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, EventEmitter, Input, Output, SimpleChanges, ViewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { NzCodeEditorModule, NzCodeEditorComponent } from 'ng-zorro-antd/code-editor';
-import { CodeIntelligenceService } from '../../../services/code-intelligence.service';
+import { CodeIntelligenceService } from '../../../../services/code-intelligence.service';
 
 @Component({
   selector: 'app-monaco-editor',

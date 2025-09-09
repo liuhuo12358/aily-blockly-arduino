@@ -1,6 +1,6 @@
 import { Component } from '@angular/core';
 // import { InnerWindowComponent } from '../../components/inner-window/inner-window.component';
-import { MonacoEditorComponent } from '../../editors/code-editor/monaco-editor/monaco-editor.component';
+import { MonacoEditorComponent } from '../../editors/code-editor/components/monaco-editor/monaco-editor.component';
 import { BlocklyService } from '../../blockly/blockly.service';
 import { ToolContainerComponent } from '../../components/tool-container/tool-container.component';
 import { UiService } from '../../services/ui.service';

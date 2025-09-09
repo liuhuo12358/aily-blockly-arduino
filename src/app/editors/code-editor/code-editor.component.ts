@@ -4,7 +4,7 @@ import { NzTabsModule } from 'ng-zorro-antd/tabs';
 import { NzModalService } from 'ng-zorro-antd/modal';
 import { CommonModule } from '@angular/common';
 import { ProjectService } from '../../services/project.service';
-import { MonacoEditorComponent } from './monaco-editor/monaco-editor.component';
+import { MonacoEditorComponent } from './components/monaco-editor/monaco-editor.component';
 import { NoticeService } from '../../services/notice.service';
 import { NotificationComponent } from '../../components/notification/notification.component';
 import { ActivatedRoute } from '@angular/router';
