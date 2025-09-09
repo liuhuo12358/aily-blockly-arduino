@@ -1,9 +1,24 @@
-import { Injectable } from '@angular/core';
-import { NzTreeNodeOptions } from 'ng-zorro-antd/tree';
+import { Component, EventEmitter, Input, Output, OnInit } from '@angular/core';
+import { CollectionViewer, DataSource, SelectionChange } from '@angular/cdk/collections';
+import { FlatTreeControl } from '@angular/cdk/tree';
+import { SelectionModel } from '@angular/cdk/collections';
+import { NzTreeViewModule } from 'ng-zorro-antd/tree-view';
+import { FileService } from '../../file.service';
+import { CommonModule } from '@angular/common';
+import { BehaviorSubject, Observable, merge } from 'rxjs';
+import { map, tap } from 'rxjs/operators';
+import { MenuComponent } from '../../../../components/menu/menu.component';
+import {
+  FILE_RIGHTCLICK_MENU,
+  FOLDER_RIGHTCLICK_MENU,
+  ROOT_RIGHTCLICK_MENU
+} from './menu.config';
+import { IMenuItem } from '../../../../configs/menu.config';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { NzModalService } from 'ng-zorro-antd/modal';
+import { ElectronService } from '../../../../services/electron.service';
 
-// 文件节点接口
+// 文件节点接口定义
 interface FileNode {
   title: string;
   key: string;
@@ -12,95 +27,344 @@ interface FileNode {
   children?: FileNode[];
 }
 
-@Injectable({
-  providedIn: 'root'
-})
-export class FileService {
+// 原始文件节点接口
+interface FileNode {
+  title: string;
+  key: string;
+  isLeaf: boolean;
+  path: string;
+  children?: FileNode[];
+}
 
-  currentPath;
+// 扁平化的文件节点接口
+interface FlatFileNode extends FileNode {
+  expandable: boolean;
+  level: number;
+  loading?: boolean;
+}
 
-  // 剪贴板状态管理
-  private clipboard: { 
-    nodes: FileNode[], 
-    operation: 'copy' | 'cut' | null 
-  } = { nodes: [], operation: null };
+// 动态数据源类
+class DynamicFileDataSource implements DataSource<FlatFileNode> {
+  private flattenedData: BehaviorSubject<FlatFileNode[]>;
+  private childrenLoadedSet = new Set<FlatFileNode>();
 
   constructor(
-    private message: NzMessageService,
-    private modal: NzModalService
-  ) { }
-
-
-  readDir(path: string): NzTreeNodeOptions[] {
-    let entries = window['fs'].readDirSync(path);
-    let result = [];
-    let dirs = [];
-    let files = [];
-    for (const entry of entries) {
-      let path = entry.path + '\\' + entry.name;
-      let isDir = window['path'].isDir(path)
-      let item: NzTreeNodeOptions = {
-        title: entry.name,
-        key: path,
-        path,
-        isLeaf: !isDir,
-        expanded: false,
-        selectable: true
-      }
-      if (isDir) {
-        dirs.push(item);
-      } else {
-        files.push(item);
-      }
-    }
-    result = dirs.concat(files);
-    return result;
+    private treeControl: FlatTreeControl<FlatFileNode>,
+    private fileService: FileService,
+    initData: FlatFileNode[]
+  ) {
+    this.flattenedData = new BehaviorSubject<FlatFileNode[]>(initData);
+    treeControl.dataNodes = initData;
   }
 
-  readFile(path: string): string {
-    this.currentPath = path;
-    // 读取文件内容
-    return '';
+  connect(collectionViewer: CollectionViewer): Observable<FlatFileNode[]> {
+    const changes = [
+      collectionViewer.viewChange,
+      this.treeControl.expansionModel.changed.pipe(tap(change => this.handleExpansionChange(change))),
+      this.flattenedData.asObservable()
+    ];
+    return merge(...changes).pipe(map(() => this.expandFlattenedNodes(this.flattenedData.getValue())));
   }
 
-  // ==================== 剪贴板操作 ====================
-  
-  /**
-   * 复制文件/文件夹到剪贴板
-   */
-  copyToClipboard(nodes: FileNode[]): void {
-    console.log('Copy to clipboard:', nodes.map(n => n.path));
-    this.clipboard = { 
-      nodes: [...nodes], 
-      operation: 'copy' 
-    };
-    
-    // 使用系统剪贴板API复制路径
-    try {
-      const paths = nodes.map(n => n.path).join('\n');
-      navigator.clipboard.writeText(paths).then(() => {
-        this.message.success(`已复制 ${nodes.length} 个项目到剪贴板`);
-      }).catch(() => {
-        // 降级方案：如果clipboard API不可用，只保存到内部剪贴板
-        this.message.success(`已复制 ${nodes.length} 个项目（内部剪贴板）`);
-      });
-    } catch (error) {
-      console.error('复制到剪贴板失败:', error);
-      this.message.success(`已复制 ${nodes.length} 个项目（内部剪贴板）`);
+  expandFlattenedNodes(nodes: FlatFileNode[]): FlatFileNode[] {
+    const treeControl = this.treeControl;
+    const results: FlatFileNode[] = [];
+    const currentExpand: boolean[] = [];
+    currentExpand[0] = true;
+
+    nodes.forEach(node => {
+      let expand = true;
+      for (let i = 0; i <= treeControl.getLevel(node); i++) {
+        expand = expand && currentExpand[i];
+      }
+      if (expand) {
+        results.push(node);
+      }
+      if (treeControl.isExpandable(node)) {
+        currentExpand[treeControl.getLevel(node) + 1] = treeControl.isExpanded(node);
+      }
+    });
+    return results;
+  }
+
+  handleExpansionChange(change: SelectionChange<FlatFileNode>): void {
+    if (change.added) {
+      change.added.forEach(node => this.loadChildren(node));
     }
   }
 
-  /**
-   * 剪切文件/文件夹到剪贴板
-   */
-  cutToClipboard(nodes: FileNode[]): void {
+  loadChildren(node: FlatFileNode): void {
+    if (this.childrenLoadedSet.has(node)) {
+      return;
+    }
+    node.loading = true;
+
+    // 使用 fileService 加载子文件夹内容
+    const children = this.fileService.readDir(node.path);
+    const flatChildren: FlatFileNode[] = children.map(child => ({
+      expandable: !child.isLeaf,
+      title: child.title,
+      level: node.level + 1,
+      key: child.key,
+      isLeaf: child.isLeaf,
+      path: child['path']
+    }));
+
+    node.loading = false;
+    const flattenedData = this.flattenedData.getValue();
+    const index = flattenedData.indexOf(node);
+    if (index !== -1) {
+      flattenedData.splice(index + 1, 0, ...flatChildren);
+      this.childrenLoadedSet.add(node);
+    }
+    this.flattenedData.next(flattenedData);
+  }
+
+  disconnect(): void {
+    this.flattenedData.complete();
+  }
+
+  // 更新根数据
+  setRootData(data: FlatFileNode[]): void {
+    this.childrenLoadedSet.clear();
+    this.flattenedData.next(data);
+    this.treeControl.dataNodes = data;
+  }
+
+  // 获取当前数据
+  getCurrentData(): FlatFileNode[] {
+    return this.flattenedData.getValue();
+  }
+}
+
+@Component({
+  selector: 'app-file-tree',
+  imports: [
+    NzTreeViewModule,
+    CommonModule,
+    MenuComponent
+  ],
+  templateUrl: './file-tree.component.html',
+  styleUrl: './file-tree.component.scss'
+})
+export class FileTreeComponent implements OnInit {
+
+  @Input() rootPath: string;
+  @Input() selectedFile;
+  @Output() selectedFileChange = new EventEmitter();
+
+  isLoading = false;
+
+  options = {
+    autoHide: true,
+    clickOnTrack: true,
+    scrollbarMinSize: 50,
+  };
+
+  // 选择模型 - 用于跟踪选中的节点
+  nodeSelection = new SelectionModel<FlatFileNode>();
+
+  // 树控件 - 使用 FlatTreeControl
+  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+  // @ts-ignore - 已知的弃用警告，等待 ng-zorro-antd 更新
+  treeControl = new FlatTreeControl<FlatFileNode>(
+    node => node.level,
+    node => node.expandable
+  );
+
+  // 动态数据源
+  dataSource: DynamicFileDataSource;
+
+  // 显示右键菜单
+  showRightClickMenu = false;
+  rightClickMenuPosition = { x: null, y: null };
+  configList: IMenuItem[] = [];
+  currentSelectedNode: FlatFileNode | null = null;
+
+  constructor(
+    private fileService: FileService
+  ) {
+    // 初始化时创建空的数据源
+    this.dataSource = new DynamicFileDataSource(this.treeControl, this.fileService, []);
+  }
+
+  ngOnInit() {
+    this.loadRootPath();
+  }
+
+  ngAfterViewInit() {
+    setTimeout(() => {
+      const files = this.dataSource.getCurrentData();
+      const inoFile = files.find(f => f.isLeaf && f.title.endsWith('.ino'));
+      if (inoFile) {
+        this.openFile(inoFile);
+      }
+    }, 0);
+  }
+
+  loadRootPath(path = this.rootPath): void {
+    const files = this.fileService.readDir(path);
+    console.log('Loaded root path files:', files);
+
+    // 转换为扁平节点格式
+    const flatFiles: FlatFileNode[] = files.map(file => ({
+      expandable: !file.isLeaf,
+      title: file.title,
+      level: 0,
+      key: file.key,
+      isLeaf: file.isLeaf,
+      path: file['path']
+    }));
+
+    this.dataSource.setRootData(flatFiles);
+  }
+
+  // 判断节点是否有子节点
+  hasChild = (_: number, node: FlatFileNode): boolean => node.expandable;
+
+  // 当节点被点击时
+  nodeClick(node: FlatFileNode): void {
+    if (node.isLeaf) {
+      this.openFile(node);
+    } else {
+      this.openFolder(node);
+    }
+  }
+
+  menuList;
+  onRightClick(event: MouseEvent, node: FlatFileNode = null) {
+    event.preventDefault(); // 阻止浏览器默认右键菜单
+
+    // 如果是在文件或文件夹节点上右键，阻止事件冒泡
+    if (node) {
+      event.stopPropagation();
+    }
+
+    if (!node) {
+      const rootNode: FlatFileNode = {
+        expandable: true,
+        title: 'root',
+        level: 0,
+        key: 'root',
+        isLeaf: false,
+        path: this.rootPath
+      };
+      this.currentSelectedNode = rootNode;
+      this.menuList = ROOT_RIGHTCLICK_MENU;
+    } else if (node.isLeaf) {
+      // 如果没有传入节点，则是点击了Root
+      this.menuList = FILE_RIGHTCLICK_MENU;
+    } else {
+      this.menuList = FOLDER_RIGHTCLICK_MENU;
+    }
+
+    // 设置当前选中的节点
+    this.currentSelectedNode = node;
+
+    // 获取当前鼠标点击位置
+    this.rightClickMenuPosition.x = event.clientX;
+    this.rightClickMenuPosition.y = event.clientY;
+
+    // 根据节点类型和多选状态设置菜单
+    // this.setContextMenu(node);
+
+    this.showRightClickMenu = true;
+  }
+
+  onMenuItemClick(menuItem: IMenuItem) {
+    console.log('Menu item clicked:', menuItem, 'Node:', this.currentSelectedNode);
+
+    // 隐藏菜单
+    this.showRightClickMenu = false;
+
+    // 处理菜单项点击事件
+    this.handleMenuAction(menuItem);
+  }
+
+  private handleMenuAction(menuItem: IMenuItem) {
+    if (!this.currentSelectedNode) return;
+
+    const node = this.currentSelectedNode;
+    const selectedNodes = this.nodeSelection.selected;
+
+    switch (menuItem.action) {
+      case 'file-copy':
+      case 'folder-copy':
+      case 'multi-copy':
+        this.copyToClipboard(selectedNodes.length > 1 ? selectedNodes : [node]);
+        break;
+
+      case 'file-cut':
+      case 'folder-cut':
+      case 'multi-cut':
+        this.cutToClipboard(selectedNodes.length > 1 ? selectedNodes : [node]);
+        break;
+
+      case 'file-paste':
+      case 'folder-paste':
+        this.pasteFromClipboard(node);
+        break;
+
+      case 'file-rename':
+      case 'folder-rename':
+        this.renameNode(node);
+        break;
+
+      case 'file-delete':
+      case 'folder-delete':
+      case 'multi-delete':
+        this.deleteNodes(selectedNodes.length > 1 ? selectedNodes : [node]);
+        break;
+
+      case 'folder-new-file':
+        this.createNewFile(node);
+        break;
+
+      case 'folder-new-folder':
+        this.createNewFolder(node);
+        break;
+
+      case 'file-copy-path':
+      case 'folder-copy-path':
+        this.copyPathToClipboard(node, false);
+        break;
+
+      case 'file-copy-relative-path':
+      case 'folder-copy-relative-path':
+        this.copyPathToClipboard(node, true);
+        break;
+
+      case 'reveal-in-explorer':
+        this.revealInExplorer(node);
+        break;
+
+      case 'open-in-terminal':
+        this.openInTerminal(node);
+        break;
+
+      case 'file-properties':
+      case 'folder-properties':
+        this.showProperties(node);
+        break;
+
+      default:
+        console.log('Unhandled menu action:', menuItem.action);
+    }
+  }
+
+  // 菜单操作方法的实现
+  private copyToClipboard(nodes: FlatFileNode[]) {
+    this.fileService.copyToClipboard(nodes);
+  }
+
+  private cutToClipboard(nodes: FlatFileNode[]) {
     console.log('Cut to clipboard:', nodes.map(n => n.path));
     this.clipboard = { 
       nodes: [...nodes], 
       operation: 'cut' 
     };
     
-    // 使用系统剪贴板API复制路径
+    // 使用Electron的clipboard API复制路径到系统剪贴板
     try {
       const paths = nodes.map(n => n.path).join('\n');
       navigator.clipboard.writeText(paths).then(() => {
@@ -115,15 +379,12 @@ export class FileService {
     }
   }
 
-  /**
-   * 从剪贴板粘贴文件/文件夹
-   */
-  async pasteFromClipboard(targetNode: FileNode): Promise<boolean> {
+  private async pasteFromClipboard(targetNode: FlatFileNode) {
     console.log('Paste to:', targetNode.path);
     
     if (this.clipboard.nodes.length === 0 || !this.clipboard.operation) {
       this.message.warning('剪贴板为空');
-      return false;
+      return;
     }
 
     // 确保目标是文件夹
@@ -136,19 +397,12 @@ export class FileService {
     try {
       const promises = this.clipboard.nodes.map(async (sourceNode) => {
         const sourcePath = sourceNode.path;
-        const originalFileName = window['path'].basename(sourcePath);
-        let destinationPath: string;
+        const fileName = window['path'].basename(sourcePath);
+        const destinationPath = window['path'].join(targetPath, fileName);
 
-        if (this.clipboard.operation === 'copy') {
-          // 复制操作：生成唯一文件名
-          const uniqueFileName = this.generateUniqueFileName(targetPath, originalFileName, !sourceNode.isLeaf);
-          destinationPath = window['path'].join(targetPath, uniqueFileName);
-        } else {
-          // 移动操作：检查是否存在同名文件/文件夹
-          destinationPath = window['path'].join(targetPath, originalFileName);
-          if (window['fs'].existsSync(destinationPath)) {
-            throw new Error(`目标位置已存在同名项目: ${originalFileName}`);
-          }
+        // 检查是否存在同名文件/文件夹
+        if (window['fs'].existsSync(destinationPath)) {
+          throw new Error(`目标位置已存在同名项目: ${fileName}`);
         }
 
         if (this.clipboard.operation === 'copy') {
@@ -175,99 +429,17 @@ export class FileService {
       }
 
       this.message.success(`成功${this.clipboard.operation === 'copy' ? '复制' : '移动'} ${this.clipboard.nodes.length} 个项目`);
-      return true;
+      
+      // 刷新文件树
+      this.refresh();
       
     } catch (error) {
       console.error('粘贴操作失败:', error);
       this.message.error(`粘贴失败: ${error.message}`);
-      return false;
     }
   }
 
-  /**
-   * 获取剪贴板状态
-   */
-  getClipboardStatus() {
-    return { ...this.clipboard };
-  }
-
-  /**
-   * 清空剪贴板
-   */
-  clearClipboard(): void {
-    this.clipboard = { nodes: [], operation: null };
-  }
-
-  // ==================== 文件系统操作 ====================
-
-  /**
-   * 生成唯一的文件名/文件夹名，如果存在同名则添加 -copy 后缀
-   */
-  private generateUniqueFileName(targetDir: string, originalName: string, isFolder: boolean = false): string {
-    if (isFolder) {
-      // 文件夹处理
-      let newName = originalName;
-      let newPath = window['path'].join(targetDir, newName);
-      
-      // 如果原文件夹名不存在冲突，直接返回
-      if (!window['fs'].existsSync(newPath)) {
-        return newName;
-      }
-      
-      // 尝试 foldername-copy
-      newName = `${originalName}-copy`;
-      newPath = window['path'].join(targetDir, newName);
-      
-      if (!window['fs'].existsSync(newPath)) {
-        return newName;
-      }
-      
-      // 如果 foldername-copy 也存在，则尝试 foldername-copy1, foldername-copy2...
-      let counter = 1;
-      do {
-        newName = `${originalName}-copy${counter}`;
-        newPath = window['path'].join(targetDir, newName);
-        counter++;
-      } while (window['fs'].existsSync(newPath));
-      
-      return newName;
-    } else {
-      // 文件处理
-      const ext = window['path'].extname(originalName);
-      const nameWithoutExt = window['path'].basename(originalName, ext);
-      
-      let newName = originalName;
-      let newPath = window['path'].join(targetDir, newName);
-      
-      // 如果原文件名不存在冲突，直接返回
-      if (!window['fs'].existsSync(newPath)) {
-        return newName;
-      }
-      
-      // 尝试 filename-copy.ext
-      newName = `${nameWithoutExt}-copy${ext}`;
-      newPath = window['path'].join(targetDir, newName);
-      
-      if (!window['fs'].existsSync(newPath)) {
-        return newName;
-      }
-      
-      // 如果 filename-copy.ext 也存在，则尝试 filename-copy1.ext, filename-copy2.ext...
-      let counter = 1;
-      do {
-        newName = `${nameWithoutExt}-copy${counter}${ext}`;
-        newPath = window['path'].join(targetDir, newName);
-        counter++;
-      } while (window['fs'].existsSync(newPath));
-      
-      return newName;
-    }
-  }
-
-  /**
-   * 重命名文件/文件夹
-   */
-  renameNode(node: FileNode, onSuccess?: (oldPath: string, newPath: string) => void): void {
+  private renameNode(node: FlatFileNode) {
     console.log('Rename:', node.path);
     
     const currentName = window['path'].basename(node.path);
@@ -306,10 +478,8 @@ export class FileService {
           window['fs'].renameSync(node.path, newPath);
           this.message.success('重命名成功');
           
-          // 调用成功回调，传递旧路径和新路径
-          if (onSuccess) {
-            onSuccess(node.path, newPath);
-          }
+          // 刷新文件树
+          this.refresh();
           
           return true;
         } catch (error) {
@@ -341,10 +511,7 @@ export class FileService {
     }, 100);
   }
 
-  /**
-   * 删除文件/文件夹
-   */
-  deleteNodes(nodes: FileNode[], onSuccess?: (deletedPaths: string[]) => void): void {
+  private deleteNodes(nodes: FlatFileNode[]) {
     console.log('Delete:', nodes.map(n => n.path));
     
     const fileCount = nodes.filter(n => n.isLeaf).length;
@@ -367,7 +534,6 @@ export class FileService {
       nzOkDanger: true,
       nzCancelText: '取消',
       nzOnOk: () => {
-        const deletedPaths: string[] = [];
         try {
           for (const node of nodes) {
             if (node.isLeaf) {
@@ -377,24 +543,21 @@ export class FileService {
               // 删除文件夹
               window['fs'].rmdirSync(node.path);
             }
-            deletedPaths.push(node.path);
           }
           
           this.message.success(`成功删除 ${nodes.length} 个项目`);
           
           // 清空剪贴板中被删除的项目
           if (this.clipboard.nodes.length > 0) {
-            const deletedPathsSet = new Set(deletedPaths);
-            this.clipboard.nodes = this.clipboard.nodes.filter(n => !deletedPathsSet.has(n.path));
+            const deletedPaths = new Set(nodes.map(n => n.path));
+            this.clipboard.nodes = this.clipboard.nodes.filter(n => !deletedPaths.has(n.path));
             if (this.clipboard.nodes.length === 0) {
               this.clipboard.operation = null;
             }
           }
           
-          // 调用成功回调，传递已删除的路径列表
-          if (onSuccess) {
-            onSuccess(deletedPaths);
-          }
+          // 刷新文件树
+          this.refresh();
           
         } catch (error) {
           console.error('删除失败:', error);
@@ -404,12 +567,7 @@ export class FileService {
     });
   }
 
-  // ==================== 文件创建操作 ====================
-
-  /**
-   * 创建新文件
-   */
-  createNewFile(parentNode: FileNode, onSuccess?: (fileName: string) => void): void {
+  private createNewFile(parentNode: FlatFileNode) {
     console.log('Create new file in:', parentNode.path);
     
     // 确保父节点是文件夹
@@ -454,10 +612,8 @@ export class FileService {
           window['fs'].writeFileSync(filePath, '');
           this.message.success('文件创建成功');
           
-          // 调用成功回调，传递文件名
-          if (onSuccess) {
-            onSuccess(fileName);
-          }
+          // 刷新文件树
+          this.refresh();
           
           return true;
         } catch (error) {
@@ -477,10 +633,7 @@ export class FileService {
     }, 100);
   }
 
-  /**
-   * 创建新文件夹
-   */
-  createNewFolder(parentNode: FileNode, onSuccess?: (folderName: string) => void): void {
+  private createNewFolder(parentNode: FlatFileNode) {
     console.log('Create new folder in:', parentNode.path);
     
     // 确保父节点是文件夹
@@ -525,10 +678,8 @@ export class FileService {
           window['fs'].mkdirSync(folderPath);
           this.message.success('文件夹创建成功');
           
-          // 调用成功回调，传递文件夹名
-          if (onSuccess) {
-            onSuccess(folderName);
-          }
+          // 刷新文件树
+          this.refresh();
           
           return true;
         } catch (error) {
@@ -548,13 +699,8 @@ export class FileService {
     }, 100);
   }
 
-  // ==================== 路径操作 ====================
-
-  /**
-   * 复制路径到剪贴板
-   */
-  copyPathToClipboard(node: FileNode, relative: boolean, rootPath?: string): void {
-    const path = relative ? this.getRelativePath(node.path, rootPath) : node.path;
+  private copyPathToClipboard(node: FlatFileNode, relative: boolean) {
+    const path = relative ? this.getRelativePath(node.path) : node.path;
     console.log('Copy path to clipboard:', path);
     
     try {
@@ -576,16 +722,13 @@ export class FileService {
     }
   }
 
-  /**
-   * 计算相对路径
-   */
-  getRelativePath(absolutePath: string, rootPath?: string): string {
-    if (!rootPath || !absolutePath) {
+  private getRelativePath(absolutePath: string): string {
+    if (!this.rootPath || !absolutePath) {
       return absolutePath;
     }
     
     // 标准化路径，确保使用一致的分隔符
-    const normalizedRoot = window['path'].normalize(rootPath);
+    const normalizedRoot = window['path'].normalize(this.rootPath);
     const normalizedPath = window['path'].normalize(absolutePath);
     
     // 检查路径是否在根目录下
@@ -602,12 +745,7 @@ export class FileService {
     return relativePath || '.'; // 如果为空，返回当前目录
   }
 
-  // ==================== 系统集成操作 ====================
-
-  /**
-   * 在资源管理器中显示
-   */
-  revealInExplorer(node: FileNode): void {
+  private revealInExplorer(node: FlatFileNode) {
     console.log('Reveal in explorer:', node.path);
     
     try {
@@ -655,10 +793,7 @@ export class FileService {
     }
   }
 
-  /**
-   * 在终端中打开
-   */
-  openInTerminal(node: FileNode): void {
+  private openInTerminal(node: FlatFileNode) {
     console.log('Open in terminal:', node.path);
     
     // 确定要在终端中打开的目录
@@ -691,7 +826,7 @@ export class FileService {
     }
   }
 
-  private openTerminalFallback(targetPath: string): void {
+  private openTerminalFallback(targetPath: string) {
     try {
       // 降级方案：使用系统命令打开终端
       const platform = window['platform']?.type || 'win32';
@@ -699,7 +834,7 @@ export class FileService {
       
       if (platform === 'win32') {
         // Windows - 打开命令提示符
-        command = `start cmd /k "cd /d \\"${targetPath}\\""`;
+        command = `start cmd /k "cd /d \"${targetPath}\""`;
       } else if (platform === 'darwin') {
         // macOS - 打开Terminal.app
         command = `osascript -e 'tell application "Terminal" to do script "cd \\"${targetPath}\\""'`;
@@ -734,121 +869,118 @@ export class FileService {
     }
   }
 
-  // ==================== 属性信息 ====================
-
-  /**
-   * 显示文件/文件夹属性
-   */
-  showProperties(node: FileNode): void {
+  private showProperties(node: FlatFileNode) {
     console.log('Show properties:', node.path);
     
     try {
-      // 获取文件统计信息
+      // 获取文件/文件夹的统计信息
       const stats = window['fs'].statSync(node.path);
-      const size = this.formatFileSize(stats.size);
-      const created = new Date(stats.birthtime).toLocaleString();
-      const modified = new Date(stats.mtime).toLocaleString();
-      const accessed = new Date(stats.atime).toLocaleString();
-      
-      // 获取路径信息
       const fileName = window['path'].basename(node.path);
-      const directory = window['path'].dirname(node.path);
-      const extension = node.isLeaf ? window['path'].extname(node.path) : '';
+      const fileExtension = window['path'].extname(node.path);
+      const fileDir = window['path'].dirname(node.path);
+      const relativePath = this.getRelativePath(node.path);
       
-      // 构建属性信息HTML
-      const propertiesHtml = `
-        <div style="text-align: left;">
-          <h4 style="margin-bottom: 16px;">${node.isLeaf ? '文件' : '文件夹'}属性</h4>
-          
-          <div style="margin-bottom: 12px;">
-            <strong>名称:</strong> ${fileName}
-          </div>
-          
-          ${extension ? `
-          <div style="margin-bottom: 12px;">
-            <strong>类型:</strong> ${extension.substring(1).toUpperCase()} 文件
-          </div>
-          ` : ''}
-          
-          <div style="margin-bottom: 12px;">
-            <strong>位置:</strong> ${directory}
-          </div>
-          
-          <div style="margin-bottom: 12px;">
-            <strong>完整路径:</strong> ${node.path}
-          </div>
-          
-          ${node.isLeaf ? `
-          <div style="margin-bottom: 12px;">
-            <strong>大小:</strong> ${size}
-          </div>
-          ` : ''}
-          
-          <div style="margin-bottom: 12px;">
-            <strong>创建时间:</strong> ${created}
-          </div>
-          
-          <div style="margin-bottom: 12px;">
-            <strong>修改时间:</strong> ${modified}
-          </div>
-          
-          <div style="margin-bottom: 12px;">
-            <strong>访问时间:</strong> ${accessed}
-          </div>
-          
-          <div style="margin-bottom: 12px;">
-            <strong>权限:</strong> ${this.formatPermissions(stats.mode)}
-          </div>
+      // 格式化文件大小
+      const formatFileSize = (bytes: number): string => {
+        if (bytes === 0) return '0 B';
+        const k = 1024;
+        const sizes = ['B', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+      };
+      
+      // 格式化日期
+      const formatDate = (date: Date): string => {
+        return date.toLocaleString('zh-CN', {
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit'
+        });
+      };
+
+      const properties = [
+        { label: '名称', value: fileName },
+        { label: '类型', value: node.isLeaf ? `${fileExtension || '文件'}` : '文件夹' },
+        { label: '位置', value: fileDir },
+        { label: '相对路径', value: relativePath },
+        { label: '完整路径', value: node.path },
+        { label: '大小', value: node.isLeaf ? formatFileSize(stats.size) : '—' },
+        { label: '创建时间', value: formatDate(new Date(stats.birthtime || stats.ctime)) },
+        { label: '修改时间', value: formatDate(new Date(stats.mtime)) },
+        { label: '访问时间', value: formatDate(new Date(stats.atime)) }
+      ];
+
+      const contentHtml = `
+        <div style="max-height: 400px; overflow-y: auto;">
+          <table style="width: 100%; border-collapse: collapse;">
+            ${properties.map(prop => `
+              <tr style="border-bottom: 1px solid #f0f0f0;">
+                <td style="padding: 8px; font-weight: bold; width: 100px; vertical-align: top;">${prop.label}:</td>
+                <td style="padding: 8px; word-break: break-all;">${prop.value}</td>
+              </tr>
+            `).join('')}
+          </table>
         </div>
       `;
-      
+
       this.modal.create({
-        nzTitle: '属性',
-        nzContent: propertiesHtml,
+        nzTitle: `属性 - ${fileName}`,
+        nzContent: contentHtml,
         nzFooter: null,
-        nzWidth: 500
+        nzWidth: 600,
+        nzMaskClosable: true
       });
-      
+
     } catch (error) {
-      console.error('获取属性失败:', error);
-      this.message.error('获取属性失败');
+      console.error('获取文件属性失败:', error);
+      this.message.error(`获取文件属性失败: ${error.message}`);
     }
   }
 
-  /**
-   * 格式化文件大小
-   */
-  private formatFileSize(bytes: number): string {
-    if (bytes === 0) return '0 B';
-    
-    const k = 1024;
-    const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  // 获取当前数据
+  getCurrentData(): FlatFileNode[] {
+    return this.dataSource.getCurrentData();
   }
 
-  /**
-   * 格式化权限
-   */
-  private formatPermissions(mode: number): string {
-    const permissions = [];
-    
-    // 所有者权限
-    permissions.push((mode & 0o400) ? 'r' : '-');
-    permissions.push((mode & 0o200) ? 'w' : '-');
-    permissions.push((mode & 0o100) ? 'x' : '-');
-    
-    // 组权限
-    permissions.push((mode & 0o040) ? 'r' : '-');
-    permissions.push((mode & 0o020) ? 'w' : '-');
-    permissions.push((mode & 0o010) ? 'x' : '-');
-    
-    // 其他权限
-    permissions.push((mode & 0o004) ? 'r' : '-');
-    permissions.push((mode & 0o002) ? 'w' : '-');
-    permissions.push((mode & 0o001) ? 'x' : '-');
-    
-    return permissions.join('') + ` (${(mode & parseInt('777', 8)).toString(8)})`;
+  openFolder(folder: FlatFileNode) {
+    // 如果是文件夹，展开或收起
+    if (this.treeControl.isExpanded(folder)) {
+      this.treeControl.collapse(folder);
+    } else {
+      this.treeControl.expand(folder);
+      // 动态数据源会自动处理子文件夹的加载
+    }
+  }
+
+  openFile(file: FlatFileNode) {
+    this.selectedFile = file.path;
+    this.selectedFileChange.emit(file);
+  }
+
+  getFileIcon(filename: string): string {
+    // 根据文件扩展名返回不同的图标类
+    const ext = filename.split('.').pop()?.toLowerCase() || '';
+    switch (ext) {
+      case 'c': return 'fa-light fa-c';
+      case 'cpp': return 'fa-light fa-c';
+      case 'h': return 'fa-light fa-h';
+      default: return 'fa-light fa-file';
+    }
+  }
+
+  // 检查文件列表是否为空
+  isEmpty(): boolean {
+    return this.dataSource.getCurrentData().length === 0;
+  }
+
+  refresh() {
+    this.isLoading = true;
+    setTimeout(() => {
+      this.loadRootPath();
+      this.isLoading = false;
+    }, 1000);
   }
 }

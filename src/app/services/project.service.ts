@@ -87,7 +87,9 @@ export class ProjectService {
       });
 
       this.projectRootPath = (await window['env'].get("AILY_PROJECT_PATH")).replace('%HOMEPATH%\\Documents', window['path'].getUserDocuments());
-      this.currentProjectPath = this.projectRootPath;
+      if (!this.currentProjectPath) {
+        this.currentProjectPath = this.projectRootPath;
+      }
     }
   }
 
@@ -129,7 +131,7 @@ export class ProjectService {
     this.uiService.updateFooterState({ state: 'done', text: '项目创建成功' });
     // 此后就是打开项目(projectOpen)的逻辑，理论可复用，由于此时在新建项目窗口，因此要告知主窗口，进行打开项目操作
     await window['iWindow'].send({ to: 'main', data: { action: 'open-project', path: projectPath } });
-    
+
     if (closeWindow) {
       this.uiService.closeWindow();
     }

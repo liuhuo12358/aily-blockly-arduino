@@ -44,7 +44,6 @@ interface FlatFileNode extends FileNode {
 class DynamicFileDataSource implements DataSource<FlatFileNode> {
   private flattenedData: BehaviorSubject<FlatFileNode[]>;
   private childrenLoadedSet = new Set<FlatFileNode>();
-  private expandedPaths = new Set<string>(); // 保存展开的节点路径
 
   constructor(
     private treeControl: FlatTreeControl<FlatFileNode>,
@@ -133,133 +132,6 @@ class DynamicFileDataSource implements DataSource<FlatFileNode> {
   getCurrentData(): FlatFileNode[] {
     return this.flattenedData.getValue();
   }
-
-  // 保存当前展开状态
-  saveExpandedState(): void {
-    this.expandedPaths.clear();
-    const expandedNodes = this.treeControl.expansionModel.selected;
-    expandedNodes.forEach(node => {
-      this.expandedPaths.add(node.path);
-    });
-  }
-
-  // 恢复展开状态
-  restoreExpandedState(): void {
-    const allNodes = this.flattenedData.getValue();
-    setTimeout(() => {
-      allNodes.forEach(node => {
-        if (this.expandedPaths.has(node.path) && node.expandable) {
-          this.treeControl.expand(node);
-        }
-      });
-    }, 0);
-  }
-
-  // 增量更新节点
-  updateNode(path: string, updateFn: (node: FlatFileNode) => void): void {
-    const data = this.flattenedData.getValue();
-    const node = data.find(n => n.path === path);
-    if (node) {
-      updateFn(node);
-      this.flattenedData.next([...data]);
-    }
-  }
-
-  // 添加新节点
-  addNode(parentPath: string, newNode: FlatFileNode): void {
-    const data = this.flattenedData.getValue();
-    const parentIndex = data.findIndex(n => n.path === parentPath);
-    
-    if (parentIndex !== -1) {
-      // 找到插入位置（在同级节点的最后）
-      let insertIndex = parentIndex + 1;
-      const parentLevel = data[parentIndex].level;
-      
-      // 找到同级节点的最后位置
-      while (insertIndex < data.length && data[insertIndex].level > parentLevel) {
-        insertIndex++;
-      }
-      
-      data.splice(insertIndex, 0, newNode);
-      this.flattenedData.next([...data]);
-    }
-  }
-
-  // 删除节点（包括子节点）
-  removeNode(nodePath: string): void {
-    const data = this.flattenedData.getValue();
-    const nodeIndex = data.findIndex(n => n.path === nodePath);
-    
-    if (nodeIndex !== -1) {
-      const node = data[nodeIndex];
-      const nodesToRemove = [nodeIndex];
-      
-      // 如果是文件夹，也要删除所有子节点
-      if (node.expandable) {
-        for (let i = nodeIndex + 1; i < data.length; i++) {
-          if (data[i].level > node.level) {
-            nodesToRemove.push(i);
-          } else {
-            break;
-          }
-        }
-      }
-      
-      // 从后往前删除，避免索引问题
-      nodesToRemove.reverse().forEach(index => {
-        data.splice(index, 1);
-      });
-      
-      this.flattenedData.next([...data]);
-      
-      // 清除相关的展开状态
-      this.expandedPaths.delete(nodePath);
-      this.childrenLoadedSet.forEach(loadedNode => {
-        if (loadedNode.path === nodePath) {
-          this.childrenLoadedSet.delete(loadedNode);
-        }
-      });
-    }
-  }
-
-  // 智能刷新指定路径的内容
-  refreshPath(path: string): void {
-    const data = this.flattenedData.getValue();
-    const nodeIndex = data.findIndex(n => n.path === path);
-    
-    if (nodeIndex !== -1) {
-      const node = data[nodeIndex];
-      if (node.expandable) {
-        // 获取新的文件列表
-        const children = this.fileService.readDir(path);
-        const flatChildren: FlatFileNode[] = children.map(child => ({
-          expandable: !child.isLeaf,
-          title: child.title,
-          level: node.level + 1,
-          key: child.key,
-          isLeaf: child.isLeaf,
-          path: child['path']
-        }));
-
-        // 删除旧的子节点
-        let deleteCount = 0;
-        for (let i = nodeIndex + 1; i < data.length; i++) {
-          if (data[i].level > node.level) {
-            deleteCount++;
-          } else {
-            break;
-          }
-        }
-
-        // 用新的子节点替换
-        data.splice(nodeIndex + 1, deleteCount, ...flatChildren);
-        this.flattenedData.next([...data]);
-        
-        // 标记子节点已加载
-        this.childrenLoadedSet.add(node);
-      }
-    }
-  }
 }
 
 @Component({
@@ -328,11 +200,6 @@ export class FileTreeComponent implements OnInit {
   }
 
   loadRootPath(path = this.rootPath): void {
-    // 保存当前展开状态
-    if (this.dataSource) {
-      this.dataSource.saveExpandedState();
-    }
-
     const files = this.fileService.readDir(path);
     console.log('Loaded root path files:', files);
 
@@ -347,9 +214,6 @@ export class FileTreeComponent implements OnInit {
     }));
 
     this.dataSource.setRootData(flatFiles);
-    
-    // 恢复展开状态
-    this.dataSource.restoreExpandedState();
   }
 
   // 判断节点是否有子节点
@@ -494,38 +358,36 @@ export class FileTreeComponent implements OnInit {
   private async pasteFromClipboard(targetNode: FlatFileNode) {
     const success = await this.fileService.pasteFromClipboard(targetNode);
     if (success) {
-      // 智能刷新目标文件夹
-      this.smartRefresh(targetNode.path);
+      // 刷新文件树
+      this.refresh();
     }
   }
 
   private renameNode(node: FlatFileNode) {
-    this.fileService.renameNode(node, (oldPath: string, newPath: string) => {
-      // 使用增量更新重命名节点
-      this.renameFileNode(oldPath, newPath);
+    this.fileService.renameNode(node, () => {
+      // 刷新文件树
+      this.refresh();
     });
   }
 
   private deleteNodes(nodes: FlatFileNode[]) {
-    this.fileService.deleteNodes(nodes, (deletedPaths: string[]) => {
-      // 使用增量更新删除节点
-      deletedPaths.forEach(path => {
-        this.removeFileNode(path);
-      });
+    this.fileService.deleteNodes(nodes, () => {
+      // 刷新文件树
+      this.refresh();
     });
   }
 
   private createNewFile(parentNode: FlatFileNode) {
-    this.fileService.createNewFile(parentNode, (fileName: string) => {
-      // 使用增量更新添加新文件
-      this.addFileNode(parentNode.path, fileName, true);
+    this.fileService.createNewFile(parentNode, () => {
+      // 刷新文件树
+      this.refresh();
     });
   }
 
   private createNewFolder(parentNode: FlatFileNode) {
-    this.fileService.createNewFolder(parentNode, (folderName: string) => {
-      // 使用增量更新添加新文件夹
-      this.addFileNode(parentNode.path, folderName, false);
+    this.fileService.createNewFolder(parentNode, () => {
+      // 刷新文件树
+      this.refresh();
     });
   }
 
@@ -586,52 +448,10 @@ export class FileTreeComponent implements OnInit {
   }
 
   refresh() {
-    // 保存展开状态，然后重新加载
-    this.loadRootPath();
-  }
-
-  // 智能刷新 - 只刷新指定路径的内容
-  smartRefresh(targetPath?: string) {
-    if (!targetPath) {
-      // 如果没有指定路径，刷新根目录
-      this.refresh();
-      return;
-    }
-
-    // 刷新指定路径
-    this.dataSource.refreshPath(targetPath);
-  }
-
-  // 增量更新 - 添加新文件/文件夹
-  addFileNode(parentPath: string, newFileName: string, isLeaf: boolean) {
-    const fullPath = window['path'].join(parentPath, newFileName);
-    const parentNode = this.dataSource.getCurrentData().find(n => n.path === parentPath);
-    
-    if (parentNode) {
-      const newNode: FlatFileNode = {
-        expandable: !isLeaf,
-        title: newFileName,
-        level: parentNode.level + 1,
-        key: fullPath,
-        isLeaf: isLeaf,
-        path: fullPath
-      };
-      
-      this.dataSource.addNode(parentPath, newNode);
-    }
-  }
-
-  // 增量更新 - 删除文件/文件夹
-  removeFileNode(nodePath: string) {
-    this.dataSource.removeNode(nodePath);
-  }
-
-  // 增量更新 - 重命名文件/文件夹
-  renameFileNode(oldPath: string, newPath: string) {
-    this.dataSource.updateNode(oldPath, (node) => {
-      node.path = newPath;
-      node.key = newPath;
-      node.title = window['path'].basename(newPath);
-    });
+    this.isLoading = true;
+    setTimeout(() => {
+      this.loadRootPath();
+      this.isLoading = false;
+    }, 1000);
   }
 }
