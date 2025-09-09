@@ -377,7 +377,7 @@ export class BuilderService {
         // 将buildProperties添加到compilerParam中
         compilerParam += buildProperties;
 
-        const compileCommand = `aily-arduino-cli.exe ${compilerParam} --jobs 0 --libraries '${librariesPath}' --board-path '${this.sdkPath}' --compile-path '${this.compilerPath}' --tools-path '${this.toolsPath}' --output-dir '${this.buildPath}' --log-level debug '${sketchFilePath}'${buildProperties} --verbose`;
+        const compileCommand = `aily-arduino-cli.exe ${compilerParam} --libraries '${librariesPath}' --board-path '${this.sdkPath}' --compile-path '${this.compilerPath}' --tools-path '${this.toolsPath}' --output-dir '${this.buildPath}' --log-level debug '${sketchFilePath}'${buildProperties} --verbose`;
 
         const title = `编译 ${boardJson.name}`;
         const completeTitle = `编译完成`;
