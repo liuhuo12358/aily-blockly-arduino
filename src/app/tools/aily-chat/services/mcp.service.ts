@@ -78,7 +78,7 @@ export class McpService {
       // 获取配置文件内容
       const appDataPath = this.configService.data.appdata_path[this.configService.data.platform].replace('%HOMEPATH%', window['path'].getUserHome());
       const primaryConfigFilePath = `${appDataPath}/mcp/${this.mcpConfigName}`;
-      const fallbackConfigFilePath = `../mcp/${this.mcpConfigName}`;
+      const fallbackConfigFilePath = `./src/app/tools/aily-chat/mcp/${this.mcpConfigName}`;
       
       let configFilePath = primaryConfigFilePath;
       
