@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { ElectronService } from './electron.service';
+import { ElectronService } from '../../../services/electron.service';
 
 export interface ArduinoSymbol {
     name: string;
@@ -15,7 +15,7 @@ export interface ArduinoSymbol {
 @Injectable({
     providedIn: 'root'
 })
-export class ArduinoParserService {
+export class CppParserService {
     private symbols: ArduinoSymbol[] = [];
 
     constructor(private electronService: ElectronService) { }

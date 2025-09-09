@@ -3,7 +3,7 @@ import { CollectionViewer, DataSource, SelectionChange } from '@angular/cdk/coll
 import { FlatTreeControl } from '@angular/cdk/tree';
 import { SelectionModel } from '@angular/cdk/collections';
 import { NzTreeViewModule } from 'ng-zorro-antd/tree-view';
-import { FileService } from '../../file.service';
+import { FileService } from '../../services/file.service';
 import { CommonModule } from '@angular/common';
 import { BehaviorSubject, Observable, merge } from 'rxjs';
 import { map, tap } from 'rxjs/operators';

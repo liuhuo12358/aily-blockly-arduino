@@ -15,8 +15,8 @@ import { CmdService } from '../../services/cmd.service';
 import { BuilderService } from '../../services/builder.service';
 import { UploaderService } from '../../services/uploader.service';
 import { ElectronService } from '../../services/electron.service';
-import { CodeService } from './code.service';
-import { ShortcutService, ShortcutAction, ShortcutKeyMapping } from './shortcut.service';
+import { CodeService } from './services/code.service';
+import { ShortcutService, ShortcutAction, ShortcutKeyMapping } from './services/shortcut.service';
 import { Subscription } from 'rxjs';
 
 export interface OpenedFile {

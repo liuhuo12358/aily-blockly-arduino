@@ -3,8 +3,8 @@ import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Observable, BehaviorSubject } from 'rxjs';
 import { timeout, catchError } from 'rxjs/operators';
 import { of } from 'rxjs';
-import { ArduinoParserService, ArduinoSymbol } from './arduino-parser.service';
-import { AIConfig, DEFAULT_AI_CONFIG, AI_PROMPTS } from '../configs/ai-config';
+import { CppParserService, ArduinoSymbol } from './cpp-parser.service';
+import { AIConfig, DEFAULT_AI_CONFIG, AI_PROMPTS } from '../../../configs/ai-config';
 
 export interface CompletionItem {
   label: string;
@@ -77,13 +77,13 @@ export class CodeIntelligenceService {
   private localSymbols: ArduinoSymbol[] = [];
   private aiCompletionsCache = new Map<string, { completions: CompletionItem[], timestamp: number }>();
   private config: AIConfig = { ...DEFAULT_AI_CONFIG };
-  
+
   // 用于实时AI补全状态
   private aiCompletionSubject = new BehaviorSubject<CompletionItem[]>([]);
   public aiCompletions$ = this.aiCompletionSubject.asObservable();
 
   constructor(
-    private arduinoParserService: ArduinoParserService,
+    private arduinoParserService: CppParserService,
     private http: HttpClient
   ) {
     // 定期清理过期缓存
@@ -136,7 +136,7 @@ export class CodeIntelligenceService {
       // 本地符号优先级更高
       if (a.source === 'local' && b.source === 'ai') return -1;
       if (a.source === 'ai' && b.source === 'local') return 1;
-      
+
       // 按字母顺序排序
       return a.label.localeCompare(b.label);
     });
@@ -197,7 +197,7 @@ export class CodeIntelligenceService {
       });
 
       const cacheKey = this.generateCacheKey(beforeCursor, position);
-      
+
       // 检查缓存
       const cached = this.aiCompletionsCache.get(cacheKey);
       if (cached && (Date.now() - cached.timestamp < 30000)) { // 30秒缓存
@@ -225,7 +225,7 @@ export class CodeIntelligenceService {
         completions: aiCompletions,
         timestamp: Date.now()
       });
-      
+
       // 更新AI补全状态
       this.aiCompletionSubject.next(aiCompletions);
 
@@ -239,21 +239,22 @@ export class CodeIntelligenceService {
   /**
    * 调用AI API
    */
-  private async callAIAPI(request: AICompletionRequest): Promise<AICompletionResponse> {
+  private async callAIAPI(request: AICompletionRequest): Promise<any> {
     try {
-      const response = await this.http.post<AICompletionResponse>(
-        this.config.apiEndpoint,
-        request,
-        {
-          headers: new HttpHeaders({
-            'Content-Type': 'application/json',
-            ...(this.config.apiKey ? { 'Authorization': `Bearer ${this.config.apiKey}` } : {})
-          })
-        }
-      ).pipe(
-        timeout(this.config.timeout),
-        catchError(() => of({ suggestions: [] }))
-      ).toPromise();
+      const response=''
+      //  = await this.http.post<AICompletionResponse>(
+      //   this.config.apiEndpoint,
+      //   request,
+      //   {
+      //     headers: new HttpHeaders({
+      //       'Content-Type': 'application/json',
+      //       ...(this.config.apiKey ? { 'Authorization': `Bearer ${this.config.apiKey}` } : {})
+      //     })
+      //   }
+      // ).pipe(
+      //   timeout(this.config.timeout),
+      //   catchError(() => of({ suggestions: [] }))
+      // ).toPromise() as Promise<AICompletionResponse>;
 
       return response || { suggestions: [] };
     } catch (error) {
@@ -547,7 +548,7 @@ export class CodeIntelligenceService {
     if (this.aiCompletionsCache.size > this.config.maxCacheSize) {
       const entries = Array.from(this.aiCompletionsCache.entries());
       entries.sort((a, b) => a[1].timestamp - b[1].timestamp);
-      
+
       const toDelete = entries.slice(0, entries.length - this.config.maxCacheSize);
       toDelete.forEach(([key]) => this.aiCompletionsCache.delete(key));
     }

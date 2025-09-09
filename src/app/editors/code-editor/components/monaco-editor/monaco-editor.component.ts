@@ -2,7 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, EventEmitter, Input, Output, SimpleChanges, ViewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { NzCodeEditorModule, NzCodeEditorComponent } from 'ng-zorro-antd/code-editor';
-import { CodeIntelligenceService } from '../../../../services/code-intelligence.service';
+import { CodeIntelligenceService } from '../../services/code-intelligence.service';
 
 @Component({
   selector: 'app-monaco-editor',
@@ -69,19 +69,14 @@ export class MonacoEditorComponent {
 
   editorInitialized(editor: any): void {
     this.monacoInstance = (window as any).monaco;
-    
+
     // 在编辑器初始化后设置Tab键处理
     if (editor && this.monacoInstance) {
-      const tabDisposable = editor.addCommand(this.monacoInstance.KeyCode.Tab, () => {
-        this.acceptInlineCompletion(editor);
-      });
-      this.disposables.push(tabDisposable);
+      //   const tabDisposable = editor.addCommand(this.monacoInstance.KeyCode.Tab, () => {
+      //     return this.handleTabKey(editor);
+      //   });
+      //   this.disposables.push(tabDisposable);
     }
-    
-    // console.log(editor);
-    // setTimeout(() => {
-    //   editor.getAction('editor.action.formatDocument').run();
-    // }, 3000);
   }
 
   /**
@@ -119,7 +114,7 @@ export class MonacoEditorComponent {
 
       // 注册键盘快捷键处理器（Tab键接受AI建议）
       // 注意：由于editorInstance是私有的，我们在editorInitialized回调中处理
-      
+
       this.disposables.push(completionDisposable, inlineCompletionDisposable);
 
       console.log('代码智能补全功能已初始化');
@@ -157,6 +152,51 @@ export class MonacoEditorComponent {
       console.error('获取内联补全失败:', error);
       return { items: [] };
     }
+  }
+
+  /**
+   * 处理Tab键按下事件
+   */
+  private handleTabKey(editor: any): boolean {
+    // 检查是否有活跃的内联补全建议
+    const inlineCompletions = editor.getModel()?.getInlineCompletions?.();
+
+    // 如果有内联补全建议，则接受它
+    if (inlineCompletions && inlineCompletions.items && inlineCompletions.items.length > 0) {
+      this.acceptInlineCompletion(editor);
+      return true; // 阻止默认Tab行为
+    }
+
+    // 检查是否有活跃的建议小部件
+    const suggestWidget = editor.getContribution('editor.contrib.suggestController');
+    if (suggestWidget && suggestWidget.widget && suggestWidget.widget.getValue()) {
+      // 有建议小部件显示，让默认行为处理
+      return false;
+    }
+
+    // 没有补全建议，插入Tab字符
+    const selection = editor.getSelection();
+    const model = editor.getModel();
+
+    if (selection && model) {
+      const tabSize = editor.getModel().getOptions().tabSize;
+      const useSpaces = editor.getModel().getOptions().insertSpaces;
+      const tabString = useSpaces ? ' '.repeat(tabSize) : '\t';
+
+      editor.executeEdits('tab-insert', [{
+        range: selection,
+        text: tabString
+      }]);
+
+      // 移动光标到插入位置之后
+      const newPosition = {
+        lineNumber: selection.startLineNumber,
+        column: selection.startColumn + tabString.length
+      };
+      editor.setPosition(newPosition);
+    }
+
+    return true; // 阻止默认Tab行为，因为我们已经处理了
   }
 
   /**
