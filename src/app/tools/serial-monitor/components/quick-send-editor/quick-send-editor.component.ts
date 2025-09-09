@@ -1,12 +1,18 @@
 import { Component } from '@angular/core';
 import { NzButtonModule } from 'ng-zorro-antd/button';
-import { MonacoEditorComponent } from '../../../../components/monaco-editor/monaco-editor.component';
+import { MonacoEditorComponent } from '../../../../editors/code-editor/monaco-editor/monaco-editor.component';
 import { SerialMonitorService } from '../../serial-monitor.service';
 import { NzMessageService } from 'ng-zorro-antd/message';
+import { FormsModule } from '@angular/forms';
+import { NzCodeEditorModule } from 'ng-zorro-antd/code-editor';
 
 @Component({
   selector: 'app-quick-send-editor',
-  imports: [NzButtonModule, MonacoEditorComponent],
+  imports: [
+    NzButtonModule,
+    FormsModule,
+    NzCodeEditorModule
+  ],
   templateUrl: './quick-send-editor.component.html',
   styleUrl: './quick-send-editor.component.scss'
 })

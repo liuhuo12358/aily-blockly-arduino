@@ -5,7 +5,7 @@ import { FormsModule } from '@angular/forms';
 import { ElectronService } from '../../../services/electron.service';
 import { NzToolTipModule } from 'ng-zorro-antd/tooltip';
 import { NzTabsModule } from 'ng-zorro-antd/tabs';
-import { MonacoEditorComponent } from '../../../components/monaco-editor/monaco-editor.component';
+import { MonacoEditorComponent } from '../../../editors/code-editor/monaco-editor/monaco-editor.component';
 import { SimplebarAngularModule } from 'simplebar-angular';
 import { BlockTestComponent } from '../block-test/block-test.component';
 // import { BlockVisualEditorComponent } from '../block-visual-editor/block-visual-editor.component';

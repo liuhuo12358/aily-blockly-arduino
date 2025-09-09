@@ -8,14 +8,14 @@ import { CommonModule } from '@angular/common';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { NzTagModule } from 'ng-zorro-antd/tag';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
-import { NpmService } from '../../services/npm.service';
-import { ConfigService } from '../../services/config.service';
-import { ProjectService } from '../../services/project.service';
-import { BlocklyService } from '../../blockly/blockly.service';
+import { NpmService } from '../../../../services/npm.service';
+import { ConfigService } from '../../../../services/config.service';
+import { ProjectService } from '../../../../services/project.service';
+import { BlocklyService } from '../../../../blockly/blockly.service';
 import { NzModalService } from 'ng-zorro-antd/modal';
-import { CompatibleDialogComponent } from './components/compatible-dialog/compatible-dialog.component';
-import { CmdOutput, CmdService } from '../../services/cmd.service';
-import { ElectronService } from '../../services/electron.service';
+import { CompatibleDialogComponent } from '../compatible-dialog/compatible-dialog.component';
+import { CmdOutput, CmdService } from '../../../../services/cmd.service';
+import { ElectronService } from '../../../../services/electron.service';
 
 @Component({
   selector: 'app-lib-manager',
