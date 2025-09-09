@@ -259,6 +259,7 @@ class DynamicFileDataSource implements DataSource<FlatFileNode> {
         this.childrenLoadedSet.add(node);
       }
     }
+    // 注意：如果节点不在当前数据中，调用者应该处理刷新逻辑
   }
 }
 
@@ -374,15 +375,7 @@ export class FileTreeComponent implements OnInit {
     }
 
     if (!node) {
-      const rootNode: FlatFileNode = {
-        expandable: true,
-        title: 'root',
-        level: 0,
-        key: 'root',
-        isLeaf: false,
-        path: this.rootPath
-      };
-      this.currentSelectedNode = rootNode;
+      this.currentSelectedNode = this.createRootNode();
       this.menuList = ROOT_RIGHTCLICK_MENU;
     } else if (node.isLeaf) {
       // 如果没有传入节点，则是点击了Root
@@ -403,18 +396,27 @@ export class FileTreeComponent implements OnInit {
 
   onMenuItemClick(menuItem: IMenuItem) {
     console.log('Menu item clicked:', menuItem, 'Node:', this.currentSelectedNode);
-
     // 隐藏菜单
     this.showRightClickMenu = false;
-
     // 处理菜单项点击事件
     this.handleMenuAction(menuItem);
   }
 
-  private handleMenuAction(menuItem: IMenuItem) {
-    if (!this.currentSelectedNode) return;
+  // 创建根节点
+  private createRootNode(): FlatFileNode {
+    return {
+      expandable: true,
+      title: 'root',
+      level: 0,
+      key: 'root',
+      isLeaf: false,
+      path: this.rootPath
+    };
+  }
 
-    const node = this.currentSelectedNode;
+  private handleMenuAction(menuItem: IMenuItem) {
+    // 如果currentSelectedNode为null，则默认操作根目录
+    const node = this.currentSelectedNode || this.createRootNode();
     const selectedNodes = this.nodeSelection.selected;
 
     switch (menuItem.action) {
@@ -492,10 +494,19 @@ export class FileTreeComponent implements OnInit {
   }
 
   private async pasteFromClipboard(targetNode: FlatFileNode) {
-    const success = await this.fileService.pasteFromClipboard(targetNode);
-    if (success) {
-      // 智能刷新目标文件夹
-      this.smartRefresh(targetNode.path);
+    const result = await this.fileService.pasteFromClipboard(targetNode);
+    if (result.success && result.newFiles) {
+      // 确定实际的目标路径
+      let targetPath = targetNode.path;
+      if (targetNode.isLeaf) {
+        // 如果是文件，使用其父目录
+        targetPath = window['path'].dirname(targetPath);
+      }
+      
+      // 增量添加新文件，避免全量刷新
+      for (const newFile of result.newFiles) {
+        this.addFileNodeDirect(targetPath, newFile.name, newFile.isLeaf);
+      }
     }
   }
 
@@ -517,15 +528,27 @@ export class FileTreeComponent implements OnInit {
 
   private createNewFile(parentNode: FlatFileNode) {
     this.fileService.createNewFile(parentNode, (fileName: string) => {
-      // 使用增量更新添加新文件
-      this.addFileNode(parentNode.path, fileName, true);
+      // 确定实际的父路径
+      let parentPath = parentNode.path;
+      if (parentNode.isLeaf) {
+        parentPath = window['path'].dirname(parentPath);
+      }
+      
+      // 直接增量添加新文件，避免刷新
+      this.addFileNodeDirect(parentPath, fileName, true);
     });
   }
 
   private createNewFolder(parentNode: FlatFileNode) {
     this.fileService.createNewFolder(parentNode, (folderName: string) => {
-      // 使用增量更新添加新文件夹
-      this.addFileNode(parentNode.path, folderName, false);
+      // 确定实际的父路径
+      let parentPath = parentNode.path;
+      if (parentNode.isLeaf) {
+        parentPath = window['path'].dirname(parentPath);
+      }
+      
+      // 直接增量添加新文件夹，避免刷新
+      this.addFileNodeDirect(parentPath, folderName, false);
     });
   }
 
@@ -619,6 +642,89 @@ export class FileTreeComponent implements OnInit {
       
       this.dataSource.addNode(parentPath, newNode);
     }
+  }
+
+  // 直接添加文件节点（不依赖父节点存在）
+  addFileNodeDirect(parentPath: string, newFileName: string, isLeaf: boolean) {
+    const fullPath = window['path'].join(parentPath, newFileName);
+    const data = this.dataSource.getCurrentData();
+    
+    // 检查文件是否已存在
+    const existingNode = data.find(n => n.path === fullPath);
+    if (existingNode) {
+      return; // 文件已存在，不重复添加
+    }
+    
+    // 寻找合适的插入位置
+    let insertLevel = 0;
+    let insertIndex = data.length; // 默认插入到末尾
+    
+    // 如果是根目录，直接插入到顶层
+    if (parentPath === this.rootPath) {
+      insertLevel = 0;
+      // 按文件类型和字母顺序排序：文件夹在前，文件在后
+      for (let i = 0; i < data.length; i++) {
+        if (data[i].level === 0) {
+          if (isLeaf && !data[i].isLeaf) {
+            // 新文件，当前是文件夹，继续查找
+            continue;
+          } else if (!isLeaf && data[i].isLeaf) {
+            // 新文件夹，当前是文件，插入这里
+            insertIndex = i;
+            break;
+          } else if (data[i].title > newFileName) {
+            // 同类型，按字母顺序
+            insertIndex = i;
+            break;
+          }
+        } else if (data[i].level < 0) {
+          // 已经到了下一层，停止
+          break;
+        }
+      }
+    } else {
+      // 寻找父节点
+      const parentNodeIndex = data.findIndex(n => n.path === parentPath);
+      if (parentNodeIndex !== -1) {
+        const parentNode = data[parentNodeIndex];
+        insertLevel = parentNode.level + 1;
+        
+        // 找到同级节点的末尾位置，并按照文件类型和字母顺序排序
+        insertIndex = parentNodeIndex + 1;
+        while (insertIndex < data.length && data[insertIndex].level > parentNode.level) {
+          if (data[insertIndex].level === insertLevel) {
+            if (isLeaf && !data[insertIndex].isLeaf) {
+              // 新文件，当前是文件夹，继续查找
+            } else if (!isLeaf && data[insertIndex].isLeaf) {
+              // 新文件夹，当前是文件，插入这里
+              break;
+            } else if (data[insertIndex].title > newFileName) {
+              // 同类型，按字母顺序
+              break;
+            }
+          }
+          insertIndex++;
+        }
+      } else {
+        // 父节点不存在，可能需要先展开父节点
+        console.warn('Parent node not found:', parentPath);
+        return;
+      }
+    }
+    
+    const newNode: FlatFileNode = {
+      expandable: !isLeaf,
+      title: newFileName,
+      level: insertLevel,
+      key: fullPath,
+      isLeaf: isLeaf,
+      path: fullPath
+    };
+    
+    // 直接插入到数据中
+    data.splice(insertIndex, 0, newNode);
+    // 使用flattenedData.next来触发更新，避免完全重置
+    this.dataSource['flattenedData'].next([...data]);
   }
 
   // 增量更新 - 删除文件/文件夹

@@ -118,12 +118,12 @@ export class FileService {
   /**
    * 从剪贴板粘贴文件/文件夹
    */
-  async pasteFromClipboard(targetNode: FileNode): Promise<boolean> {
+  async pasteFromClipboard(targetNode: FileNode): Promise<{ success: boolean, newFiles?: Array<{ name: string, isLeaf: boolean, path: string }> }> {
     console.log('Paste to:', targetNode.path);
     
     if (this.clipboard.nodes.length === 0 || !this.clipboard.operation) {
       this.message.warning('剪贴板为空');
-      return false;
+      return { success: false };
     }
 
     // 确保目标是文件夹
@@ -133,19 +133,23 @@ export class FileService {
       targetPath = window['path'].dirname(targetPath);
     }
 
+    const newFiles: Array<{ name: string, isLeaf: boolean, path: string }> = [];
+
     try {
       const promises = this.clipboard.nodes.map(async (sourceNode) => {
         const sourcePath = sourceNode.path;
         const originalFileName = window['path'].basename(sourcePath);
         let destinationPath: string;
+        let finalFileName: string;
 
         if (this.clipboard.operation === 'copy') {
           // 复制操作：生成唯一文件名
-          const uniqueFileName = this.generateUniqueFileName(targetPath, originalFileName, !sourceNode.isLeaf);
-          destinationPath = window['path'].join(targetPath, uniqueFileName);
+          finalFileName = this.generateUniqueFileName(targetPath, originalFileName, !sourceNode.isLeaf);
+          destinationPath = window['path'].join(targetPath, finalFileName);
         } else {
           // 移动操作：检查是否存在同名文件/文件夹
-          destinationPath = window['path'].join(targetPath, originalFileName);
+          finalFileName = originalFileName;
+          destinationPath = window['path'].join(targetPath, finalFileName);
           if (window['fs'].existsSync(destinationPath)) {
             throw new Error(`目标位置已存在同名项目: ${originalFileName}`);
           }
@@ -165,6 +169,13 @@ export class FileService {
           // 移动操作
           window['fs'].renameSync(sourcePath, destinationPath);
         }
+
+        // 记录新创建的文件/文件夹信息
+        newFiles.push({
+          name: finalFileName,
+          isLeaf: sourceNode.isLeaf,
+          path: destinationPath
+        });
       });
 
       await Promise.all(promises);
@@ -175,12 +186,12 @@ export class FileService {
       }
 
       this.message.success(`成功${this.clipboard.operation === 'copy' ? '复制' : '移动'} ${this.clipboard.nodes.length} 个项目`);
-      return true;
+      return { success: true, newFiles };
       
     } catch (error) {
       console.error('粘贴操作失败:', error);
       this.message.error(`粘贴失败: ${error.message}`);
-      return false;
+      return { success: false };
     }
   }
 
