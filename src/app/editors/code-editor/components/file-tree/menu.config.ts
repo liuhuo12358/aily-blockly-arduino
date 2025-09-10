@@ -15,12 +15,6 @@ export const FILE_RIGHTCLICK_MENU: IMenuItem[] = [
         type: 'file'
     },
     {
-        name: 'MENU.FILE_PASTE',
-        action: 'file-paste',
-        icon: 'fa-light fa-paste',
-        type: 'file'
-    },
-    {
         sep: true
     },
     {

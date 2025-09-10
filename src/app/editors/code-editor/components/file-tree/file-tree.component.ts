@@ -521,7 +521,6 @@ export class FileTreeComponent implements OnInit {
         this.cutToClipboard(selectedNodes.length > 1 ? selectedNodes : [currentNode]);
         break;
 
-      case 'file-paste':
       case 'folder-paste':
         this.pasteFromClipboard(currentNode);
         break;
