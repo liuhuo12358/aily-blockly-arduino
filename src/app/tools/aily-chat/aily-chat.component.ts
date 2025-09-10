@@ -502,7 +502,7 @@ export class AilyChatComponent implements OnDestroy {
             this.isSessionStarting = false;
             resolve();
           } else {
-            this.appendMessage('错误', `
+            this.appendMessage('error', `
 \`\`\`aily-error
 {
   "message": ${res.message || '启动会话失败，请稍后重试。'}
@@ -640,7 +640,7 @@ ${JSON.stringify(errData)}
             errorMessage = error.message;
           }
           
-          this.appendMessage('错误', `
+          this.appendMessage('error', `
 \`\`\`aily-error
 {
   "message": "${errorMessage}",
@@ -729,7 +729,7 @@ ${JSON.stringify(errData)}
             if (this.list.length > 0 && this.list[this.list.length - 1].role === 'aily') {
               this.list[this.list.length - 1].state = 'done';
             }
-            this.appendMessage('错误', `
+            this.appendMessage('error', `
 
 \`\`\`aily-error
 {
@@ -1549,8 +1549,8 @@ ${JSON.stringify(errData)}
           }
           this.scrollToBottom();
         } catch (e) {
-          console.error('处理流数据时出错:', e);
-          this.appendMessage('错误', `
+          console.log('处理流数据时出错:', e);
+          this.appendMessage('error', `
 
 \`\`\`aily-error
 {
@@ -1559,11 +1559,8 @@ ${JSON.stringify(errData)}
 \`\`\`\n\n
 
           `);
-          // 设置最后一条AI消息状态为done（如果存在）
-          if (this.list.length > 1 && this.list[this.list.length - 2].role === 'aily') {
-            this.list[this.list.length - 2].state = 'done';
-          }
-          this.isWaiting = false;
+          // 调用取消函数
+          this.stop();
         }
       },
       complete: () => {
@@ -1583,7 +1580,7 @@ ${JSON.stringify(errData)}
         if (this.list.length > 0 && this.list[this.list.length - 1].role === 'aily') {
           this.list[this.list.length - 1].state = 'done';
         }
-        this.appendMessage('错误', `
+        this.appendMessage('error', `
 
 \`\`\`aily-error
 {
@@ -1618,7 +1615,7 @@ ${JSON.stringify(errData)}
 
         this.scrollToBottom();
       } else {
-        this.appendMessage('错误', res.message);
+        this.appendMessage('error', res.message);
       }
     });
   }
@@ -1870,7 +1867,7 @@ ${JSON.stringify(errData)}
       this.isSessionStarting = false;
       
       // 显示错误消息
-      this.appendMessage('错误', `
+      this.appendMessage('error', `
 \`\`\`aily-error
 {
   "message": "新会话启动失败，请重试",
