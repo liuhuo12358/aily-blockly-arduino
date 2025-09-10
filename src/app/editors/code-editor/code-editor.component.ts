@@ -18,12 +18,20 @@ import { ElectronService } from '../../services/electron.service';
 import { CodeService } from './services/code.service';
 import { ShortcutService, ShortcutAction, ShortcutKeyMapping } from './services/shortcut.service';
 import { Subscription } from 'rxjs';
+import { ViewChild, AfterViewInit, OnInit, OnDestroy } from '@angular/core';
 
 export interface OpenedFile {
   path: string;      // 文件路径
   title: string;     // 显示的文件名
   content: string;   // 文件内容
   isDirty: boolean;  // 是否有未保存的更改
+  editorState?: {    // 编辑器状态
+    scrollTop?: number;       // 滚动位置
+    scrollLeft?: number;      // 水平滚动位置
+    cursorPosition?: any;     // 光标位置
+    selections?: any[];       // 选择区域
+    viewState?: any;          // Monaco编辑器视图状态
+  };
 }
 
 @Component({
@@ -40,7 +48,10 @@ export interface OpenedFile {
   templateUrl: './code-editor.component.html',
   styleUrl: './code-editor.component.scss'
 })
-export class CodeEditorComponent {
+export class CodeEditorComponent implements OnInit, AfterViewInit, OnDestroy {
+  // Monaco编辑器组件引用
+  @ViewChild(MonacoEditorComponent) monacoEditorRef!: MonacoEditorComponent;
+
   // 当前编辑器内容
   code: string = '';
   // 当前选中的文件路径
@@ -55,6 +66,9 @@ export class CodeEditorComponent {
   // 快捷键订阅
   private shortcutSubscription?: Subscription;
   private keydownListener?: (event: KeyboardEvent) => void;
+  
+  // 定期保存状态的定时器
+  private saveStateTimer?: any;
 
   get projectPath() {
     return this.projectService.currentProjectPath
@@ -94,11 +108,24 @@ export class CodeEditorComponent {
     // 初始化快捷键监听
     this.initShortcutListeners();
 
+    // 启动定期保存编辑器状态的定时器（每5秒保存一次）
+    this.saveStateTimer = setInterval(() => {
+      this.saveCurrentTabState();
+    }, 5000);
+
     window.history.replaceState(null, '', window.location.href);
     window.history.pushState(null, '', window.location.href);
   }
 
   ngOnDestroy(): void {
+    // 保存当前标签页状态
+    this.saveCurrentTabState();
+    
+    // 清理定时器
+    if (this.saveStateTimer) {
+      clearInterval(this.saveStateTimer);
+    }
+    
     this.builderService.cancel();
     this.uploadService.cancel();
     this.cmdService.killArduinoCli();
@@ -152,6 +179,9 @@ export class CodeEditorComponent {
 
   // 从文件树选择文件时触发
   selectedFileChange(file: any) {
+    // 先保存当前标签页的状态
+    this.saveCurrentTabState();
+
     const filePath = file.path;
     // 检查文件是否已经打开
     const existingFileIndex = this.openedFiles.findIndex(f => f.path === filePath);
@@ -166,7 +196,8 @@ export class CodeEditorComponent {
         path: filePath,
         title: file.title,
         content: content,
-        isDirty: false
+        isDirty: false,
+        editorState: {} // 初始化编辑器状态
       };
 
       this.openedFiles.push(newFile);
@@ -179,8 +210,15 @@ export class CodeEditorComponent {
   // 更新当前编辑器内容
   updateCurrentCode() {
     if (this.selectedIndex >= 0 && this.selectedIndex < this.openedFiles.length) {
-      this.code = this.openedFiles[this.selectedIndex].content;
-      this.selectedFile = this.openedFiles[this.selectedIndex].path;
+      const currentFile = this.openedFiles[this.selectedIndex];
+      console.log('更新编辑器内容:', currentFile.title, '存储的状态:', currentFile.editorState);
+      this.code = currentFile.content;
+      this.selectedFile = currentFile.path;
+      
+      // 恢复编辑器状态
+      if (currentFile.editorState) {
+        this.restoreEditorState(currentFile.editorState);
+      }
     } else {
       this.code = '';
       this.selectedFile = '';
@@ -245,8 +283,71 @@ export class CodeEditorComponent {
 
   // 标签页切换事件
   onTabChange(index: number): void {
+    console.log('切换标签页:', index, '当前选中:', this.selectedIndex);
+    
+    // 先保存当前标签页的状态
+    this.saveCurrentTabState();
+    
     this.selectedIndex = index;
     this.updateCurrentCode();
+  }
+
+  // 保存当前标签页的编辑器状态
+  private saveCurrentTabState(): void {
+    if (this.selectedIndex >= 0 && this.selectedIndex < this.openedFiles.length) {
+      const currentFile = this.openedFiles[this.selectedIndex];
+      const editorState = this.getEditorState();
+      console.log('保存标签页状态:', currentFile.title, editorState);
+      if (editorState) {
+        currentFile.editorState = editorState;
+      }
+    }
+  }
+
+  // 获取编辑器状态
+  private getEditorState(): any {
+    try {
+      const monacoComponent = this.getMonacoEditorComponent();
+      if (monacoComponent) {
+        const viewState = monacoComponent.getViewState();
+        if (viewState) {
+          return { viewState };
+        }
+      }
+    } catch (error) {
+      console.warn('获取编辑器状态失败:', error);
+    }
+    return null;
+  }
+
+  // 恢复编辑器状态
+  private restoreEditorState(editorState: any): void {
+    if (!editorState || !editorState.viewState) {
+      console.log('没有需要恢复的编辑器状态');
+      return;
+    }
+
+    console.log('恢复编辑器状态:', editorState);
+
+    try {
+      // 延迟执行，确保编辑器已经完全加载新内容
+      setTimeout(() => {
+        const monacoComponent = this.getMonacoEditorComponent();
+        if (monacoComponent) {
+          console.log('正在恢复视图状态...');
+          monacoComponent.restoreViewState(editorState.viewState);
+        } else {
+          console.warn('Monaco编辑器组件未找到');
+        }
+      }, 100); // 延迟100ms确保编辑器内容已更新
+    } catch (error) {
+      console.warn('恢复编辑器状态失败:', error);
+    }
+  }
+
+  // 获取Monaco编辑器组件引用
+  private getMonacoEditorComponent(): MonacoEditorComponent | null {
+    return this.monacoEditorRef || null;
   }
 
   // 编辑器内容变更事件

@@ -251,4 +251,31 @@ export class MonacoEditorComponent {
     this.codeIntelligenceService.clearAICache();
   }
 
+  /**
+   * 获取Monaco编辑器实例
+   */
+  public getEditorInstance(): any {
+    return this.codeEditor?.['editorInstance'] || null;
+  }
+
+  /**
+   * 获取编辑器的视图状态（包含滚动位置、光标位置等）
+   */
+  public getViewState(): any {
+    const editor = this.getEditorInstance();
+    return editor ? editor.saveViewState() : null;
+  }
+
+  /**
+   * 恢复编辑器的视图状态
+   */
+  public restoreViewState(viewState: any): void {
+    if (!viewState) return;
+    
+    const editor = this.getEditorInstance();
+    if (editor) {
+      editor.restoreViewState(viewState);
+    }
+  }
+
 }
