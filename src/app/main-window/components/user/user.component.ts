@@ -5,9 +5,15 @@ import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzInputModule } from 'ng-zorro-antd/input';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
+import { NzDividerModule } from 'ng-zorro-antd/divider';
+import { NzIconModule } from 'ng-zorro-antd/icon';
 import { AuthService, LoginRequest, RegisterRequest } from '../../../services/auth.service';
+import { ElectronService } from '../../../services/electron.service';
 import { Subject, takeUntil } from 'rxjs';
 import sha256 from 'crypto-js/sha256';
+
+// 声明 electronAPI 类型
+declare const window: any;
 
 @Component({
   selector: 'app-user',
@@ -16,7 +22,9 @@ import sha256 from 'crypto-js/sha256';
     FormsModule,
     NzButtonModule,
     NzInputModule,
-    NzSpinModule
+    NzSpinModule,
+    NzDividerModule,
+    NzIconModule
   ],
   templateUrl: './user.component.html',
   styleUrl: './user.component.scss'
@@ -37,6 +45,7 @@ export class UserComponent implements OnInit, OnDestroy, AfterViewInit {
   private destroy$ = new Subject<void>();
   private message = inject(NzMessageService);
   private authService = inject(AuthService);
+  private electronService = inject(ElectronService);
 
   userInfo = {
     username: '',
@@ -48,6 +57,9 @@ export class UserComponent implements OnInit, OnDestroy, AfterViewInit {
   isRegistering = false;
   isLoggedIn = false;
   currentUser: any = null;
+  isGitHubAuthWaiting = false;
+  
+  private oauthResultListener: (() => void) | null = null;
 
   ngOnInit() {
     // 监听登录状态
@@ -63,6 +75,9 @@ export class UserComponent implements OnInit, OnDestroy, AfterViewInit {
       .subscribe(userInfo => {
         this.currentUser = userInfo;
       });
+
+    // 设置 GitHub OAuth 结果监听
+    this.setupGitHubOAuthListener();
   }
 
   ngAfterViewInit(): void {
@@ -75,6 +90,11 @@ export class UserComponent implements OnInit, OnDestroy, AfterViewInit {
     this.destroy$.complete();
     document.removeEventListener('click', this.handleDocumentClick);
     document.removeEventListener('contextmenu', this.handleDocumentClick);
+    
+    // 清理 OAuth 监听器
+    if (this.oauthResultListener) {
+      this.oauthResultListener();
+    }
   }
 
   handleDocumentClick = (event: MouseEvent) => {
@@ -197,6 +217,90 @@ export class UserComponent implements OnInit, OnDestroy, AfterViewInit {
 
   more() {
     this.message.warning('服务暂不可用');
+  }
+
+  /**
+   * 设置 GitHub OAuth 协议回调监听
+   */
+  private setupGitHubOAuthListener() {
+    if (window.electronAPI?.oauth?.onCallback) {
+      this.oauthResultListener = window.electronAPI.oauth.onCallback(async (callbackData: any) => {
+        this.isGitHubAuthWaiting = false;
+        
+        try {
+          // 使用 AuthService 处理协议回调
+          const result = await this.authService.handleOAuthCallback(callbackData);
+          
+          if (result.success) {
+            console.log('GitHub OAuth 成功:', result.data);
+            this.message.success('GitHub 登录成功');
+            this.closeEvent.emit();
+          } else {
+            // OAuth 失败
+            console.error('GitHub OAuth 失败:', result);
+            let errorMessage = 'GitHub 登录失败';
+            
+            switch (result.error) {
+              case 'timeout':
+              case 'invalid_state':
+                errorMessage = '登录状态无效或已超时，请重试';
+                break;
+              case 'missing_parameters':
+                errorMessage = '授权参数缺失，请重试';
+                break;
+              case 'access_denied':
+                errorMessage = '您取消了授权';
+                break;
+              case 'callback_processing_failed':
+                errorMessage = result.message || '处理授权回调失败';
+                break;
+              default:
+                errorMessage = result.message || 'GitHub 登录失败';
+            }
+            
+            this.message.error(errorMessage);
+          }
+        } catch (error) {
+          console.error('处理 OAuth 回调异常:', error);
+          this.message.error('登录处理失败，请重试');
+        }
+      });
+    }
+  }
+
+  /**
+   * 开始 GitHub 浏览器 OAuth 登录
+   */
+  async onGitHubLogin() {
+    if (this.isGitHubAuthWaiting) return;
+
+    this.isGitHubAuthWaiting = true;
+
+    try {
+      // 直接通过 HTTP 请求启动 GitHub OAuth 流程
+      this.authService.startGitHubOAuth().subscribe({
+        next: (response) => {
+          // 使用 ElectronService 在系统浏览器中打开授权页面
+          if (this.electronService.isElectron) {
+            this.electronService.openUrl(response.authorization_url);
+            this.message.info('正在跳转到 GitHub 授权页面...');
+          } else {
+            // 如果不在 Electron 环境中，使用 window.open 作为降级方案
+            window.open(response.authorization_url, '_blank');
+            this.message.info('正在跳转到 GitHub 授权页面...');
+          }
+        },
+        error: (error) => {
+          console.error('启动 GitHub OAuth 失败:', error);
+          this.message.error('启动 GitHub 登录失败，请检查网络连接');
+          this.isGitHubAuthWaiting = false;
+        }
+      });
+    } catch (error) {
+      console.error('GitHub 登录出错:', error);
+      this.message.error('GitHub 登录失败');
+      this.isGitHubAuthWaiting = false;
+    }
   }
 
 }

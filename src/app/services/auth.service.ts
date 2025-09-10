@@ -5,9 +5,6 @@ import { catchError, map } from 'rxjs/operators';
 import { API } from '../configs/api.config';
 import { ElectronService } from './electron.service';
 
-// 声明 electronAPI 类型
-declare const electronAPI: any;
-
 export interface CommonResponse {
   status: number;
   message: string;
@@ -521,6 +518,172 @@ export class AuthService {
    */
   get currentUser(): any {
     return this.userInfoSubject.value;
+  }
+
+  /**
+   * 启动 GitHub OAuth 流程
+   */
+  startGitHubOAuth(): Observable<{ authorization_url: string; state: string }> {
+    // 生成并存储 state 参数
+    const state = this.generateOAuthState();
+    
+    const requestData = {
+      redirect_uri: 'ailyblockly://auth/callback',
+      state: state
+    };
+
+    return this.http.post<CommonResponse>(API.githubBrowserAuthorize, requestData).pipe(
+      map(response => {
+        if (response.status === 200 && response.data?.authorization_url) {
+          return {
+            authorization_url: response.data.authorization_url,
+            state: state
+          };
+        }
+        throw new Error(response.message || '获取授权URL失败');
+      }),
+      catchError(this.handleError)
+    );
+  }
+
+  /**
+   * GitHub OAuth 状态管理
+   */
+  private oauthState: { state: string; timestamp: number } | null = null;
+  private readonly OAUTH_TIMEOUT = 5 * 60 * 1000; // 5分钟超时
+
+  /**
+   * 生成并存储 OAuth state
+   */
+  generateOAuthState(): string {
+    const state = Math.random().toString(36).substring(2) + Date.now().toString(36);
+    this.oauthState = { state, timestamp: Date.now() };
+    return state;
+  }
+
+  /**
+   * 验证 OAuth state
+   */
+  validateOAuthState(state: string): boolean {
+    if (!this.oauthState || this.oauthState.state !== state) {
+      return false;
+    }
+    
+    // 检查超时
+    if (Date.now() - this.oauthState.timestamp > this.OAUTH_TIMEOUT) {
+      this.clearOAuthState();
+      return false;
+    }
+    
+    return true;
+  }
+
+  /**
+   * 清理 OAuth state
+   */
+  clearOAuthState(): void {
+    this.oauthState = null;
+  }
+
+  /**
+   * GitHub Token 交换
+   */
+  exchangeGitHubToken(code: string, state: string): Observable<any> {
+    const requestData = {
+      code: code,
+      state: state
+    };
+
+    return this.http.post<CommonResponse>(API.githubTokenExchange, requestData).pipe(
+      map(response => {
+        if (response.status === 200 && response.data) {
+          return response.data;
+        }
+        throw new Error(response.message || 'Token 交换失败');
+      }),
+      catchError(this.handleError)
+    );
+  }
+
+  /**
+   * 处理协议回调
+   */
+  async handleOAuthCallback(callbackData: {
+    code?: string;
+    state?: string;
+    error?: string;
+    error_description?: string;
+  }): Promise<{ success: boolean; data?: any; error?: string; message?: string }> {
+    try {
+      // 检查是否有错误
+      if (callbackData.error) {
+        this.clearOAuthState();
+        return {
+          success: false,
+          error: callbackData.error,
+          message: callbackData.error_description || '授权失败'
+        };
+      }
+
+      // 检查必需参数
+      if (!callbackData.code || !callbackData.state) {
+        this.clearOAuthState();
+        return {
+          success: false,
+          error: 'missing_parameters',
+          message: '缺少必需的参数'
+        };
+      }
+
+      // 验证 state
+      if (!this.validateOAuthState(callbackData.state)) {
+        return {
+          success: false,
+          error: 'invalid_state',
+          message: '无效的状态参数或请求已超时'
+        };
+      }
+
+      // 交换 token
+      const tokenData = await this.exchangeGitHubToken(callbackData.code, callbackData.state).toPromise();
+      
+      // 清理状态
+      this.clearOAuthState();
+
+      // 处理成功结果
+      await this.handleGitHubOAuthSuccess(tokenData);
+
+      return {
+        success: true,
+        data: tokenData
+      };
+
+    } catch (error) {
+      console.error('处理 OAuth 回调失败:', error);
+      this.clearOAuthState();
+      return {
+        success: false,
+        error: 'callback_processing_failed',
+        message: error instanceof Error ? error.message : '处理回调失败'
+      };
+    }
+  }
+
+  /**
+   * GitHub OAuth 登录成功处理
+   */
+  async handleGitHubOAuthSuccess(data: { access_token: string; user?: any }): Promise<void> {
+    try {
+      await this.saveToken2(data.access_token);
+      if (data.user) {
+        await this.saveUserInfo(data.user);
+        this.userInfoSubject.next(data.user);
+      }
+      this.isLoggedInSubject.next(true);
+    } catch (error) {
+      console.error('处理 GitHub OAuth 成功数据失败:', error);
+      throw error;
+    }
   }
 
   /**

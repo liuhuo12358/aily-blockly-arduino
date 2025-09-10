@@ -274,5 +274,16 @@ contextBridge.exposeInMainWorld("electronAPI", {
     getZoomLevel: () => webFrame.getZoomLevel(),
     setZoomFactor: (factor) => webFrame.setZoomFactor(factor),
     getZoomFactor: () => webFrame.getZoomFactor()
+  },
+  // GitHub OAuth API (简化版，只处理协议回调)
+  oauth: {
+    onCallback: (callback) => {
+      const listener = (event, data) => callback(data);
+      ipcRenderer.on('oauth-callback', listener);
+      // 返回解除监听函数
+      return () => {
+        ipcRenderer.removeListener('oauth-callback', listener);
+      };
+    }
   }
 });
