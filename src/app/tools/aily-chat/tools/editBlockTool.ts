@@ -1302,61 +1302,272 @@ async function connectToParent(
 }
 
 /**
+ * 应用动态扩展到块
+ * 这个函数检查块是否需要动态输入，并根据配置添加所需的输入
+ */
+async function applyDynamicExtensions(block: any, config: any): Promise<void> {
+  console.log('🔧 applyDynamicExtensions 开始执行');
+  console.log('🧱 块类型:', block.type);
+  console.log('📦 配置:', JSON.stringify(config, null, 2));
+  
+  try {
+    // 首先处理 extraState（如果存在）
+    if (config.extraState) {
+      console.log('🎛️ 应用 extraState 配置:', JSON.stringify(config.extraState));
+      
+      // 特殊处理需要动态输入的块
+      if (block.type === 'blinker_widget_print' && config.inputs) {
+        console.log('🔢 blinker_widget_print 块特殊处理，扩展动态输入');
+        await extendBlockWithDynamicInputs(block, config.inputs);
+      } else if (block.loadExtraState && typeof block.loadExtraState === 'function') {
+        console.log('🔄 使用 loadExtraState 方法');
+        block.loadExtraState(config.extraState);
+      }
+    }
+    
+    // 处理需要动态输入的块类型
+    if (config.inputs) {
+      const inputNames = Object.keys(config.inputs);
+      
+      // 检查是否需要动态扩展输入
+      if (block.type === 'blinker_widget_print' || block.type.includes('_print')) {
+        console.log('🔧 检测到需要动态输入的块类型，准备扩展');
+        await extendBlockWithDynamicInputs(block, config.inputs);
+      }
+    }
+    
+  } catch (error) {
+    console.warn('⚠️ 应用动态扩展时出错:', error);
+  }
+}
+
+/**
+ * 扩展块的动态输入
+ */
+async function extendBlockWithDynamicInputs(block: any, inputsConfig: any): Promise<void> {
+  console.log('🔧 extendBlockWithDynamicInputs 开始');
+  console.log('🧱 块类型:', block.type);
+  console.log('📦 输入配置:', JSON.stringify(inputsConfig, null, 2));
+  
+  try {
+    const inputNames = Object.keys(inputsConfig);
+    console.log('🔍 需要的输入名称:', inputNames);
+    
+    // 检查当前块有哪些输入
+    const currentInputs = [];
+    if (block.inputList) {
+      for (let i = 0; i < block.inputList.length; i++) {
+        const input = block.inputList[i];
+        if (input.name) {
+          currentInputs.push(input.name);
+        }
+      }
+    }
+    console.log('📋 当前块的输入:', currentInputs);
+    
+    // 找出缺少的输入
+    const missingInputs = inputNames.filter(name => !currentInputs.includes(name));
+    console.log('❌ 缺少的输入:', missingInputs);
+    
+    if (missingInputs.length > 0) {
+      console.log('🔧 尝试添加缺少的输入...');
+      
+      // 使用 custom_dynamic_extension 如果可用
+      if (block.custom_dynamic_extension && typeof block.custom_dynamic_extension === 'function') {
+        console.log('🎯 使用 custom_dynamic_extension 扩展块');
+        const maxInputNumber = Math.max(...inputNames
+          .filter(name => name.startsWith('INPUT'))
+          .map(name => parseInt(name.replace('INPUT', '')) || 0));
+        
+        if (maxInputNumber >= 0) {
+          block.custom_dynamic_extension(maxInputNumber + 1);
+          console.log(`✅ 块已扩展到 ${maxInputNumber + 1} 个输入`);
+        }
+      } else {
+        console.log('⚠️ 块没有 custom_dynamic_extension 方法，尝试标准方法');
+        
+        // 尝试手动添加输入
+        for (const inputName of missingInputs) {
+          try {
+            if (inputName.startsWith('INPUT') && !block.getInput(inputName)) {
+              const input = block.appendValueInput(inputName);
+              if (input) {
+                console.log(`✅ 成功添加输入: ${inputName}`);
+              }
+            }
+          } catch (addError) {
+            console.warn(`⚠️ 添加输入 ${inputName} 失败:`, addError);
+          }
+        }
+      }
+    }
+    
+  } catch (error) {
+    console.error('❌ 扩展动态输入时出错:', error);
+  }
+}
+
+/**
+ * 配置块的输入
+ */
+async function configureBlockInputs(workspace: any, block: any, inputs: InputConfig): Promise<string[]> {
+  const updatedInputs: string[] = [];
+
+  console.log('🔌 configureBlockInputs 开始执行');
+  console.log('� 输入配置数据:', JSON.stringify(inputs, null, 2));
+  console.log('🧱 目标块信息:', { id: block.id, type: block.type });
+
+  try {
+    for (const [inputName, inputConfig] of Object.entries(inputs)) {
+      console.log(`\n🔍 处理输入: ${inputName}`);
+      console.log('输入配置:', JSON.stringify(inputConfig, null, 2));
+      
+      const input = block.getInput(inputName);
+      if (input) {
+        console.log(`✅ 找到输入 "${inputName}"`);
+        console.log('输入类型:', input.type);
+        console.log('是否有连接点:', !!input.connection);
+        
+        if (inputConfig.block) {
+          console.log('🏗️ 创建子块...');
+          // 创建并连接块
+          const childResult = await createBlockFromConfig(workspace, inputConfig.block);
+          const childBlock = childResult?.block;
+          if (childBlock && input.connection) {
+            console.log(`✅ 子块创建成功: ${childBlock.type} (ID: ${childBlock.id})`);
+            const connectionToUse = childBlock.outputConnection || childBlock.previousConnection;
+            if (connectionToUse) {
+              input.connection.connect(connectionToUse);
+              console.log(`🔗 成功连接子块到输入 "${inputName}"`);
+              updatedInputs.push(inputName);
+            } else {
+              console.warn(`⚠️ 子块 ${childBlock.type} 没有可用的连接点`);
+            }
+          } else {
+            console.error(`❌ 子块创建失败或输入没有连接点`);
+          }
+        } else if (inputConfig.shadow) {
+          console.log('👤 创建影子块...');
+          // 创建影子块
+          const shadowResult = await createBlockFromConfig(workspace, inputConfig.shadow);
+          const shadowBlock = shadowResult?.block;
+          if (shadowBlock && input.connection) {
+            console.log(`✅ 影子块创建成功: ${shadowBlock.type} (ID: ${shadowBlock.id})`);
+            
+            // 正确设置影子块
+            const connectionToUse = shadowBlock.outputConnection || shadowBlock.previousConnection;
+            if (connectionToUse) {
+              // 先设置为影子块
+              shadowBlock.setShadow(true);
+              // 然后连接到输入
+              input.connection.connect(connectionToUse);
+              console.log(`🔗 成功设置影子块到输入 "${inputName}"`);
+              updatedInputs.push(inputName);
+            } else {
+              console.warn(`⚠️ 影子块 ${shadowBlock.type} 没有可用的连接点`);
+            }
+          } else {
+            console.error(`❌ 影子块创建失败或输入没有连接点`);
+          }
+        } else {
+          console.log(`ℹ️ 输入 "${inputName}" 没有块或影子配置`);
+        }
+      } else {
+        console.error(`❌ 输入 "${inputName}" 在块 ${block.type} 中不存在`);
+        // 列出可用的输入
+        const availableInputs = [];
+        if (block.inputList) {
+          for (let i = 0; i < block.inputList.length; i++) {
+            const inp = block.inputList[i];
+            if (inp.name) {
+              availableInputs.push(inp.name);
+            }
+          }
+        }
+        console.log('可用的输入列表:', availableInputs);
+      }
+    }
+    
+    console.log(`✅ configureBlockInputs 完成，更新了 ${updatedInputs.length} 个输入: ${updatedInputs.join(', ')}`);
+  } catch (error) {
+    console.error('❌ 配置块输入时出错:', error);
+  }
+
+  return updatedInputs;
+}
+
+/**
  * 从配置创建块 - 增强版本，支持嵌套输入处理
  * @returns 包含主块和总块数的结果对象
  */
-async function createBlockFromConfig(workspace: any, config: BlockConfig): Promise<{ block: any, totalBlocks: number }> {
-  const block = await createBlockSafely(workspace, config.type, config.position || {}, true);
-  let totalBlocks = 1; // 主块计数
+async function createBlockFromConfig(workspace: any, config: BlockConfig | string): Promise<{ block: any, totalBlocks: number }> {
+  console.log('🏗️ createBlockFromConfig 开始');
+  console.log('📦 块配置:', JSON.stringify(config, null, 2));
   
-  if (config.fields) {
-    configureBlockFields(block, config.fields);
-  }
-  
-  // 处理嵌套输入块
-  if (config.inputs) {
-    console.log(`🔗 处理 ${block.type} 的输入配置...`);
+  try {
+    // 如果是字符串，创建一个文本块
+    if (typeof config === 'string') {
+      console.log(`🔨 创建文本块: ${config}`);
+      const textBlock = await createBlockSafely(workspace, 'text', { x: 100, y: 100 }, false);
+      if (textBlock) {
+        textBlock.setFieldValue(config, 'TEXT');
+        console.log(`✅ 文本块创建成功: ${config}`);
+        return { block: textBlock, totalBlocks: 1 };
+      }
+      return { block: null, totalBlocks: 0 };
+    }
     
-    for (const [inputName, inputConfig] of Object.entries(config.inputs)) {
-      try {
-        console.log(`🔍 处理输入: ${inputName}`, inputConfig);
-        
-        if (inputConfig.block) {
-          console.log(`📦 为输入 ${inputName} 创建嵌套块: ${inputConfig.block.type}`);
-          
-          // 递归创建嵌套块
-          const inputResult = await createBlockFromConfig(workspace, inputConfig.block);
-          const inputBlock = inputResult.block;
-          totalBlocks += inputResult.totalBlocks; // 累计嵌套块数量
-          
-          if (inputBlock && block.getInput(inputName)) {
-            const connection = block.getInput(inputName).connection;
-            if (connection && inputBlock.outputConnection) {
-              console.log(`🔗 连接嵌套块到输入 ${inputName}`);
-              connection.connect(inputBlock.outputConnection);
-              console.log(`✅ 输入连接成功: ${block.type}.${inputName} ← ${inputBlock.type}`);
-            } else {
-              console.warn(`⚠️ 连接失败 - 连接点不匹配: ${block.type}.${inputName} ← ${inputBlock.type}`);
-              console.warn(`  - 输入连接: ${!!connection}`);
-              console.warn(`  - 输出连接: ${!!inputBlock.outputConnection}`);
-            }
-          } else {
-            console.error(`❌ 嵌套块创建失败或输入不存在: ${inputName}`);
-          }
+    console.log(`🔨 创建块类型: ${config.type}`);
+    const position = config.position || { x: 0, y: 0 };
+    const block = await createBlockSafely(workspace, config.type, position, false);
+    
+    if (!block) {
+      console.error(`❌ 块创建失败: ${config.type}`);
+      return { block: null, totalBlocks: 0 };
+    }
+    
+    console.log(`✅ 块创建成功: ${config.type} (ID: ${block.id})`);
+    let totalBlocks = 1;
+    
+    // 检查并应用动态扩展
+    await applyDynamicExtensions(block, config);
+    
+    if (config.fields) {
+      console.log('🏷️ 配置块字段...');
+      configureBlockFields(block, config.fields);
+      console.log('✅ 字段配置完成');
+    }
+    
+    if (config.inputs) {
+      console.log('🔌 配置块输入...');
+      await configureBlockInputs(workspace, block, config.inputs);
+      console.log('✅ 块输入配置完成');
+    }
+    
+    // 处理next连接
+    if (config.next) {
+      console.log('🔗 配置next连接...');
+      const nextResult = await createBlockFromConfig(workspace, config.next.block);
+      const nextBlock = nextResult?.block;
+      if (nextBlock && block.nextConnection && nextBlock.previousConnection) {
+        try {
+          block.nextConnection.connect(nextBlock.previousConnection);
+          console.log(`✅ next连接成功: ${block.type} -> ${nextBlock.type}`);
+          totalBlocks += nextResult.totalBlocks;
+        } catch (connectionError) {
+          console.warn(`⚠️ next连接失败: ${connectionError}`);
         }
-        
-        if (inputConfig.shadow) {
-          console.log(`🌫️ 处理影子块: ${inputConfig.shadow.type}`);
-          // 如果需要，可以在这里添加影子块处理逻辑
-        }
-      } catch (inputError) {
-        console.error(`❌ 处理输入 ${inputName} 时出错:`, inputError);
+      } else {
+        console.warn('⚠️ next连接失败: 连接点不可用');
       }
     }
+    
+    console.log(`🎉 createBlockFromConfig 完成: ${config.type}`);
+    return { block, totalBlocks };
+  } catch (error) {
+    console.error('❌ 从配置创建块时出错:', error);
+    return { block: null, totalBlocks: 0 };
   }
-  
-  console.log(`✅ ${config.type} 创建完成，总共创建了 ${totalBlocks} 个块（包括嵌套块）`);
-  return { block, totalBlocks };
 }
 
 /**
@@ -2461,481 +2672,6 @@ export async function getWorkspaceOverviewTool(args?: any): Promise<ToolUseResul
     const allBlocks = workspace.getAllBlocks();
     console.log(`📊 工作区包含 ${allBlocks.length} 个块`);
     
-    // 辅助函数：判断字段是否应该包含在概览中
-    function shouldIncludeField(fieldName: string, fieldValue: any): boolean {
-      // 过滤掉空值
-      if (fieldValue === null || fieldValue === undefined || fieldValue === '') {
-        return false;
-      }
-      
-      // 过滤掉图标和UI相关的字段
-      const excludedFields = [
-        'PLUS', 'MINUS', 'ICON', 'IMAGE', 'BUTTON',
-        'DROPDOWN_ARROW', 'CHEVRON_DOWN', 'CHEVRON_UP',
-        'EXPAND', 'COLLAPSE', 'MUTATOR'
-      ];
-      
-      if (excludedFields.includes(fieldName)) {
-        return false;
-      }
-      
-      // 过滤掉包含base64图片数据的字段
-      if (typeof fieldValue === 'string' && 
-          (fieldValue.startsWith('data:image/') || 
-           fieldValue.includes('base64') ||
-           fieldValue.length > 100)) {
-        return false;
-      }
-      
-      // 过滤掉SVG数据
-      if (typeof fieldValue === 'string' && 
-          fieldValue.includes('<svg') && fieldValue.includes('</svg>')) {
-        return false;
-      }
-      
-      return true;
-    }
-    
-    // 辅助函数：从块定义角度判断字段是否有意义
-    function shouldIncludeFieldFromDefinition(fieldName: string, fieldValue: any): boolean {
-      // 基于块定义的有意义字段白名单
-      const meaningfulFields = [
-        // 逻辑操作
-        'OP', 'BOOL', 'IF0', 'CONDITION',
-        // 数学运算  
-        'NUM', 'A', 'B', 'MIN', 'MAX', 'VALUE',
-        // 文本相关
-        'TEXT', 'VAR', 'NAME', 'MSG', 'KEY',
-        // 控制结构
-        'TIMES', 'FROM', 'TO', 'STEP', 'MODE',
-        // Arduino特定
-        'PIN', 'SPEED', 'BAUD', 'STATE', 'SERIAL',
-        // Blinker特定  
-        'AUTH', 'DEVICE', 'TYPE'
-      ];
-      
-      // 检查是否在白名单中
-      if (!meaningfulFields.includes(fieldName)) {
-        return false;
-      }
-      
-      // 基本值检查
-      if (fieldValue === null || fieldValue === undefined || fieldValue === '') {
-        return false;
-      }
-      
-      // 避免过长的值（可能是编码数据）
-      if (typeof fieldValue === 'string' && fieldValue.length > 50) {
-        return false;
-      }
-      
-      return true;
-    }
-    
-    // 🔍 从Blockly内部获取块定义信息
-    function getBlockDefinitionInfo(blockType: string): any {
-      try {
-        // 尝试从Blockly注册系统获取块定义
-        if (typeof window !== 'undefined' && (window as any).Blockly) {
-          const Blockly = (window as any).Blockly;
-          
-          // 方法1: 从块实例获取JSON定义（最准确的方法）
-          const workspace = getActiveWorkspace();
-          if (workspace) {
-            const allBlocks = workspace.getAllBlocks();
-            const sampleBlock = allBlocks.find((b: any) => b.type === blockType);
-            if (sampleBlock) {
-              // 尝试获取块的完整定义信息
-              let blockDef = null;
-              
-              // 子方法1: 从块实例的jsonInit获取
-              if (sampleBlock.jsonInit) {
-                console.log(`📋 从块实例的jsonInit获取定义: ${blockType}`);
-                blockDef = sampleBlock.jsonInit;
-              }
-              
-              // 子方法2: 从块类型的静态定义获取
-              if (!blockDef && Blockly.Blocks && Blockly.Blocks[blockType]) {
-                const blockConstructor = Blockly.Blocks[blockType];
-                // 检查构造函数是否有原始JSON定义
-                if (blockConstructor.jsonDef) {
-                  console.log(`📋 从块构造函数的jsonDef获取定义: ${blockType}`);
-                  blockDef = blockConstructor.jsonDef;
-                } else if (blockConstructor.definition) {
-                  console.log(`📋 从块构造函数的definition获取定义: ${blockType}`);  
-                  blockDef = blockConstructor.definition;
-                }
-              }
-              
-              // 子方法3: 尝试从块的inputList重构定义
-              if (!blockDef && sampleBlock.inputList) {
-                console.log(`📋 从块的inputList重构定义: ${blockType}`);
-                blockDef = reconstructBlockDefinition(sampleBlock);
-              }
-              
-              if (blockDef) {
-                return {
-                  source: 'block.instance',
-                  definition: blockDef
-                };
-              }
-            }
-          }
-          
-          // 方法2: 从 Blockly.Blocks 获取（块构造函数）
-          if (Blockly.Blocks && Blockly.Blocks[blockType]) {
-            console.log(`📋 从 Blockly.Blocks 获取构造函数: ${blockType}`);
-            const blockConstructor = Blockly.Blocks[blockType];
-            
-            // 尝试从构造函数获取原始定义
-            if (blockConstructor.jsonDef) {
-              return {
-                source: 'Blockly.Blocks.jsonDef',
-                definition: blockConstructor.jsonDef
-              };
-            }
-            
-            // 作为后备，返回构造函数本身（但这不太有用）
-            return {
-              source: 'Blockly.Blocks',
-              definition: blockConstructor
-            };
-          }
-          
-          // 方法3: 尝试从全局块定义获取
-          if ((window as any).blockDefinitions && (window as any).blockDefinitions[blockType]) {
-            console.log(`📋 从全局块定义获取: ${blockType}`);
-            return {
-              source: 'window.blockDefinitions',
-              definition: (window as any).blockDefinitions[blockType]
-            };
-          }
-        }
-        
-        console.log(`⚠️ 无法获取块定义: ${blockType}`);
-        return null;
-        
-      } catch (error) {
-        console.warn(`❌ 获取块定义时出错 ${blockType}:`, error);
-        return null;
-      }
-    }
-    
-    // 🔧 从块实例重构定义信息
-    function reconstructBlockDefinition(block: any): any {
-      try {
-        const def: any = {
-          type: block.type,
-          reconstructed: true
-        };
-        
-        // 分析输入列表，重构args信息
-        if (block.inputList && block.inputList.length > 0) {
-          let argIndex = 0;
-          
-          for (const input of block.inputList) {
-            const argsKey = `args${argIndex}`;
-            def[argsKey] = [];
-            
-            // 添加字段信息
-            if (input.fieldRow && input.fieldRow.length > 0) {
-              for (const field of input.fieldRow) {
-                if (field.name) {
-                  const fieldInfo: any = {
-                    name: field.name
-                  };
-                  
-                  // 根据字段类型确定type
-                  if (field.constructor) {
-                    const fieldType = field.constructor.name;
-                    switch (fieldType) {
-                      case 'FieldDropdown':
-                        fieldInfo.type = 'field_dropdown';
-                        break;
-                      case 'FieldTextInput':
-                        fieldInfo.type = 'field_input';
-                        break;
-                      case 'FieldNumber':
-                        fieldInfo.type = 'field_number';
-                        break;
-                      case 'FieldVariable':
-                        fieldInfo.type = 'field_variable';
-                        break;
-                      case 'FieldCheckbox':
-                        fieldInfo.type = 'field_checkbox';
-                        break;
-                      default:
-                        fieldInfo.type = 'field_unknown';
-                    }
-                  }
-                  
-                  def[argsKey].push(fieldInfo);
-                }
-              }
-            }
-            
-            // 添加输入连接信息
-            if (input.name && input.connection) {
-              const inputInfo: any = {
-                name: input.name
-              };
-              
-              // 根据输入类型确定type
-              switch (input.type) {
-                case 1: // VALUE input
-                  inputInfo.type = 'input_value';
-                  break;
-                case 3: // STATEMENT input
-                  inputInfo.type = 'input_statement';
-                  break;
-                default:
-                  inputInfo.type = 'input_unknown';
-              }
-              
-              def[argsKey].push(inputInfo);
-            }
-            
-            argIndex++;
-          }
-        }
-        
-        console.log(`🔧 重构块定义完成: ${block.type}`, def);
-        return def;
-        
-      } catch (error) {
-        console.warn(`❌ 重构块定义失败: ${block.type}`, error);
-        return null;
-      }
-    }
-    
-    // 🧠 智能字段识别系统：基于Blockly内部机制动态识别有意义字段
-    function isFieldMeaningful(field: any, fieldName: string, fieldValue: any, blockType: string): boolean {
-      try {
-        // 1. 基本过滤：排除空值和过长值
-        if (fieldValue === null || fieldValue === undefined || fieldValue === '') {
-          return false;
-        }
-        
-        // if (typeof fieldValue === 'string' && fieldValue.length > 100) {
-        //   return false;
-        // }
-        
-        // // 2. 通过字段类型识别（Blockly内部机制）
-        // if (field.constructor) {
-        //   const fieldType = field.constructor.name;
-        //   console.log(`🔍 检查字段 ${fieldName}，类型：${fieldType}，值：${fieldValue}`);
-          
-        //   // 有意义的字段类型
-        //   const meaningfulFieldTypes = [
-        //     'FieldDropdown',     // 下拉菜单（如操作符选择）
-        //     'FieldTextInput',    // 文本输入
-        //     'FieldNumber',       // 数字输入  
-        //     'FieldVariable',     // 变量选择
-        //     'FieldCheckbox',     // 复选框
-        //     'FieldColour',       // 颜色选择
-        //     'FieldDate',         // 日期选择
-        //     'FieldSlider',       // 滑动条
-        //     'FieldGrid',         // 网格选择
-        //     'FieldSerialDropdown', // 串口下拉菜单（Arduino特定）
-        //     'FieldPin'           // 引脚选择（Arduino特定）
-        //   ];
-          
-        //   if (meaningfulFieldTypes.includes(fieldType)) {
-        //     console.log(`✅ 字段 ${fieldName} 类型 ${fieldType} 被识别为有意义`);
-        //     return true;
-        //   }
-          
-        //   // 排除装饰性字段类型
-        //   const decorativeFieldTypes = [
-        //     'FieldImage',        // 图片字段
-        //     'FieldLabel',        // 标签字段（纯显示）
-        //     'FieldLabelSerializable', // 可序列化标签
-        //     'FieldButton',       // 按钮字段
-        //     'FieldIcon'          // 图标字段
-        //   ];
-          
-        //   if (decorativeFieldTypes.includes(fieldType)) {
-        //     console.log(`❌ 字段 ${fieldName} 类型 ${fieldType} 被识别为装饰性`);
-        //     return false;
-        //   }
-        // }
-        
-        // // 3. 通过字段功能检查
-        // if (field.isSerializable && !field.isSerializable()) {
-        //   console.log(`❌ 字段 ${fieldName} 不可序列化，可能是装饰性字段`);
-        //   return false;
-        // }
-        
-        // 5. 通过块定义检查（如果可能）- 优先级最高
-        const blockDefInfo = getBlockDefinitionInfo(blockType);
-        if (blockDefInfo && blockDefInfo.definition) {
-          console.log(`📋 使用块定义信息检查字段 ${fieldName}`);
-          
-          // 如果块定义中包含这个字段的定义，说明它是有意义的
-          const def = blockDefInfo.definition;
-          
-          // 检查args0, args1等参数定义
-          for (let i = 0; i < 10; i++) {
-            const argsKey = `args${i}`;
-            if (def[argsKey] && Array.isArray(def[argsKey])) {
-              const fieldDef = def[argsKey].find((arg: any) => arg.name === fieldName);
-              if (fieldDef) {
-                console.log(`✅ 字段 ${fieldName} 在块定义 ${argsKey} 中找到，类型: ${fieldDef.type}`);
-                
-                // 根据定义类型判断
-                const meaningfulTypes = [
-                  'field_dropdown', 'field_number', 'field_variable', 
-                  'field_input', 'field_checkbox', 'field_colour',
-                  'input_value', 'input_statement'
-                ];
-                
-                if (meaningfulTypes.includes(fieldDef.type)) {
-                  console.log(`🎯 字段 ${fieldName} 被块定义确认为有意义字段，忽略内容格式检查`);
-                  return true;
-                }
-              }
-            }
-          }
-        }
-        
-        // 6. 通过字段值类型和内容判断（仅当块定义未确认时）
-        if (typeof fieldValue === 'string') {
-          // 排除base64和SVG数据
-          if (fieldValue.startsWith('data:image/') || 
-              fieldValue.includes('base64') ||
-              fieldValue.includes('<svg')) {
-            console.log(`❌ 字段 ${fieldName} 包含图片/SVG数据，且未在块定义中确认`);
-            return false;
-          }
-          
-          // 排除URL和路径
-          if (fieldValue.startsWith('http://') || 
-              fieldValue.startsWith('https://') ||
-              fieldValue.includes('helpUrl')) {
-            console.log(`❌ 字段 ${fieldName} 包含URL数据，且未在块定义中确认`);
-            return false;
-          }
-        }
-        
-        // 7. 白名单作为后备方案
-        const meaningfulFieldNames = [
-          'OP', 'BOOL', 'IF0', 'CONDITION', 'NUM', 'A', 'B', 'MIN', 'MAX', 'VALUE',
-          'TEXT', 'VAR', 'NAME', 'MSG', 'KEY', 'TIMES', 'FROM', 'TO', 'STEP', 'MODE',
-          'PIN', 'SPEED', 'BAUD', 'STATE', 'SERIAL', 'AUTH', 'DEVICE', 'TYPE',
-          // 添加更多可能的字段名
-          'URL', 'PORT', 'HOST', 'PATH', 'METHOD', 'DATA', 'TIMEOUT', 'RETRY',
-          'ANGLE', 'DISTANCE', 'FREQUENCY', 'DURATION', 'DELAY', 'COUNT'
-        ];
-        
-        if (meaningfulFieldNames.includes(fieldName)) {
-          console.log(`✅ 字段 ${fieldName} 在白名单中`);
-          return true;
-        }
-        
-        // 8. 默认策略：对于未知字段，检查值的合理性
-        if (typeof fieldValue === 'string' && fieldValue.length <= 50) {
-          // 简单字符串可能是有意义的
-          console.log(`🤔 字段 ${fieldName} 未确定，但值合理，标记为可能有意义`);
-          return true;
-        }
-        
-        if (typeof fieldValue === 'number' && isFinite(fieldValue)) {
-          // 有限数字通常是有意义的
-          console.log(`✅ 字段 ${fieldName} 是有限数字，标记为有意义`);
-          return true;
-        }
-        
-        if (typeof fieldValue === 'boolean') {
-          // 布尔值通常是有意义的
-          console.log(`✅ 字段 ${fieldName} 是布尔值，标记为有意义`);
-          return true;
-        }
-        
-        console.log(`❓ 字段 ${fieldName} 无法确定意义，默认排除`);
-        return false;
-        
-      } catch (error) {
-        console.warn(`⚠️ 检查字段 ${fieldName} 时出错:`, error);
-        // 出错时使用保守策略
-        return typeof fieldValue === 'string' && fieldValue.length <= 50 && !fieldValue.includes('base64');
-      }
-    }
-    
-    // 辅助函数：判断是否显示空输入
-    function shouldShowEmptyInput(inputType: number, blockType: string): boolean {
-      // 对重要的控制结构和功能块显示空输入
-      const importantBlocks = [
-        'controls_if', 'controls_ifelse', 'controls_for', 
-        'controls_while', 'controls_repeat_ext', 'controls_forEach',
-        'procedures_defnoreturn', 'procedures_defreturn',
-        'procedures_callnoreturn', 'procedures_callreturn'
-      ];
-      
-      if (!importantBlocks.includes(blockType)) {
-        return false;
-      }
-      
-      // 1 = VALUE, 3 = STATEMENT - 都是重要的输入类型
-      return inputType === 1 || inputType === 3;
-    }
-    
-    // 辅助函数：获取输入类型描述
-    function getInputTypeDescription(inputType: number): string {
-      switch (inputType) {
-        case 1: return 'value';        // VALUE input
-        case 2: return 'dummy';        // DUMMY input  
-        case 3: return 'statement';    // STATEMENT input
-        case 4: return 'end_row';      // END_ROW input
-        case 5: return 'next';         // NEXT connection
-        default: return `type_${inputType}`;
-      }
-    }
-    
-    // 🚀 新增：递归收集连接块的详细参数
-    function collectConnectedBlockParams(connectedBlock: any, depth: number = 0): any {
-      if (!connectedBlock || depth > 3) return null; // 防止无限递归，最深3层
-      
-      const blockParams: any = {
-        type: connectedBlock.type,
-        id: connectedBlock.id,
-        fields: {},
-        inputs: {}
-      };
-      
-      // 收集连接块的字段
-      if (connectedBlock.inputList) {
-        for (const input of connectedBlock.inputList) {
-          // 收集字段值
-          if (input.fieldRow) {
-            for (const field of input.fieldRow) {
-              if (field.name && field.getValue) {
-                const fieldValue = field.getValue();
-                
-                // 使用智能字段识别系统
-                if (isFieldMeaningful(field, field.name, fieldValue, connectedBlock.type)) {
-                  blockParams.fields[field.name] = fieldValue;
-                  console.log(`🔗 连接块参数: ${connectedBlock.type}.${field.name} = ${fieldValue}`);
-                }
-              }
-            }
-          }
-          
-          // 递归收集更深层的连接
-          if (input.name && input.connection) {
-            const deeperBlock = input.connection.targetBlock();
-            if (deeperBlock) {
-              const deeperParams = collectConnectedBlockParams(deeperBlock, depth + 1);
-              if (deeperParams) {
-                blockParams.inputs[input.name] = deeperParams;
-              }
-            }
-          }
-        }
-      }
-      
-      return blockParams;
-    }
-    
     // 统计数据
     const statistics = {
       totalBlocks: allBlocks.length,
@@ -2975,51 +2711,35 @@ export async function getWorkspaceOverviewTool(args?: any): Promise<ToolUseResul
             if (field.name && field.getValue) {
               const fieldValue = field.getValue();
               
-              // 🧠 使用智能字段识别系统
-              if (isFieldMeaningful(field, field.name, fieldValue, block.type)) {
+              // 使用简化的字段识别
+              if (isValidField(field.name, fieldValue)) {
                 fields[field.name] = fieldValue;
-                console.log(`📝 收集字段: ${field.name} = ${fieldValue} (块类型: ${block.type})`);
-              } else {
-                console.log(`🚫 跳过字段: ${field.name} = ${fieldValue} (块类型: ${block.type})`);
               }
             }
           }
         }
         
-        // 🔗 收集输入连接信息 - 只要有名称的输入都要处理
+        // 收集输入连接
         if (input.name) {
-          console.log(`🔍 检查输入连接: ${input.name}`);
-          
           if (input.connection) {
             const connectedBlock = input.connection.targetBlock();
             if (connectedBlock) {
-              // 🚀 使用递归函数深度收集连接块参数
-              const detailedParams = collectConnectedBlockParams(connectedBlock);
-              if (detailedParams && (Object.keys(detailedParams.fields || {}).length > 0 || Object.keys(detailedParams.inputs || {}).length > 0)) {
-                inputs[input.name] = detailedParams;
-                console.log(`🔗 深度分析输入 ${input.name}: ${connectedBlock.type} 及其参数`);
-              } else {
-                // 降级处理：如果递归收集失败，使用原来的简单方式
-                inputs[input.name] = {
-                  type: connectedBlock.type,
-                  id: connectedBlock.id
-                };
-                console.log(`🔗 基础连接: ${input.name} -> ${connectedBlock.type} (${connectedBlock.id})`);
-              }
+              inputs[input.name] = {
+                type: connectedBlock.type,
+                id: connectedBlock.id
+              };
               statistics.connectedBlocks++;
             } else {
-              // 🔄 记录所有空输入 - 不做任何预判，都记录下来
               inputs[input.name] = {
                 type: 'empty',
-                inputType: getInputTypeDescription(input.type)
+                inputType: getInputType(input)
               };
-              console.log(`📦 发现空输入: ${input.name} (类型: ${getInputTypeDescription(input.type)})`);
             }
           } else {
             // 即使没有connection，也要记录这个输入的存在
             inputs[input.name] = {
               type: 'no_connection',
-              inputType: getInputTypeDescription(input.type)
+              inputType: getInputType(input)
             };
             console.log(`� 发现无连接输入: ${input.name} (类型: ${getInputTypeDescription(input.type)})`);
           }
@@ -3336,109 +3056,46 @@ function formatBlockInfo(block: any): string {
   return `${block.type} [${blockId}] ${position}${fieldsStr}`;
 }
 
-// 辅助函数：从Blockly块定义获取真实的输入类型
-function getRealInputType(blockType: string, inputName: string): string {
-  try {
-    // 1. 尝试从当前workspace获取块定义
-    const workspace = (window as any).currentWorkspace || (window as any).Blockly?.getMainWorkspace?.();
-    if (workspace && workspace.blockDB_ && workspace.blockDB_[blockType]) {
-      const blockDef = workspace.blockDB_[blockType];
-      if (blockDef.inputList) {
-        for (const input of blockDef.inputList) {
-          if (input.name === inputName) {
-            // Blockly连接类型常量: 1=OUTPUT, 2=VALUE, 3=STATEMENT, 4=NEXT
-            if (input.type === 3 || input.connection?.type === 3) {
-              return 'input_statement';
-            } else if (input.type === 2 || input.connection?.type === 2) {
-              return 'input_value';
-            }
-          }
-        }
-      }
-    }
-    
-    // 2. 尝试从Blockly.Blocks获取块定义
-    if ((window as any).Blockly?.Blocks?.[blockType]) {
-      const blockClass = (window as any).Blockly.Blocks[blockType];
-      // 创建临时块实例来检查输入定义
-      const tempBlock = {
-        inputList: [],
-        appendStatementInput: function(name: string) {
-          this.inputList.push({name, type: 3, inputType: 'input_statement'});
-          return this;
-        },
-        appendValueInput: function(name: string) {
-          this.inputList.push({name, type: 2, inputType: 'input_value'});
-          return this;
-        },
-        appendDummyInput: function(name?: string) {
-          this.inputList.push({name: name || '', type: 0, inputType: 'input_dummy'});
-          return this;
-        },
-        setOutput: function() { return this; },
-        setPreviousStatement: function() { return this; },
-        setNextStatement: function() { return this; },
-        setColour: function() { return this; },
-        setTooltip: function() { return this; },
-        setHelpUrl: function() { return this; }
-      };
-      
-      // 执行块的init函数来构建输入定义
-      if (typeof blockClass.init === 'function') {
-        try {
-          blockClass.init.call(tempBlock);
-          // 查找匹配的输入
-          for (const input of tempBlock.inputList) {
-            if (input.name === inputName) {
-              return input.inputType || (input.type === 3 ? 'input_statement' : 'input_value');
-            }
-          }
-        } catch (e) {
-          console.warn(`执行${blockType}的init函数时出错:`, e);
-        }
-      }
-    }
-    
-    // 3. 备用：尝试从工作区获取活动块示例
-    try {
-      const workspace = (window as any).currentWorkspace || (window as any).Blockly?.getMainWorkspace?.();
-      if (workspace && workspace.getAllBlocks) {
-        const allBlocks = workspace.getAllBlocks();
-        const sampleBlock = allBlocks.find((b: any) => b.type === blockType);
-        if (sampleBlock && sampleBlock.inputList) {
-          for (const input of sampleBlock.inputList) {
-            if (input.name === inputName) {
-              if (input.type === 3 || (input.connection && input.connection.type === 3)) {
-                return 'input_statement';
-              } else if (input.type === 2 || (input.connection && input.connection.type === 2)) {
-                return 'input_value';
-              }
-            }
-          }
-        }
-      }
-    } catch (error) {
-      console.warn(`从工作区获取${blockType}的${inputName}输入类型时出错:`, error);
-    }
-    
-  } catch (error) {
-    console.warn(`获取${blockType}的${inputName}输入类型时出错:`, error);
-  }
+// 简化的字段过滤函数
+function isValidField(name: string, value: any): boolean {
+  if (!name || value === undefined || value === null || value === '') return false;
   
-  return 'unknown';
+  // 过滤UI元素
+  if (name.includes('ICON') || name.includes('IMAGE') || name.includes('BUTTON')) return false;
+  
+  // 过滤长文本/base64
+  if (typeof value === 'string' && value.length > 100) return false;
+  
+  return true;
+}
+
+// 简化的输入类型获取
+function getInputType(input: any): string {
+  if (!input) return 'unknown';
+  if (input.type === 3) return 'input_statement';
+  if (input.type === 2) return 'input_value'; 
+  if (input.type === 1) return 'input_dummy';
+  return 'input_value'; // 默认
+}
+
+// 兼容性函数
+function getInputTypeDescription(inputType: number): string {
+  const types = { 1: 'value', 2: 'dummy', 3: 'statement', 4: 'end_row', 5: 'next' };
+  return types[inputType as keyof typeof types] || `type_${inputType}`;
 }
 
 // 辅助函数：判断是否为statement类型输入 - 增强版本
 function isStatementInput(inputType: string, inputName: string, blockType?: string): boolean {
-  // 1. 如果提供了blockType，直接从Blockly定义获取真实类型
-  if (blockType) {
-    const realType = getRealInputType(blockType, inputName);
-    if (realType === 'input_statement') {
+  // 1. 优先从输入的实际类型判断
+  if (blockType && inputName) {
+    // 简化判断：直接通过常见名称和类型判断
+    if (inputType.includes('statement') || 
+        inputName.match(/^(DO|ELSE|STACK|SUBSTACK|BODY|LOOP|THEN|CATCH|FINALLY)\d*$/)) {
       return true;
-    } else if (realType === 'input_value') {
+    }
+    if (inputType.includes('value') || inputType.includes('input')) {
       return false;
     }
-    // 如果获取失败，继续使用下面的备用方法
   }
   
   // 2. 检查inputType中是否包含statement关键字
@@ -3532,8 +3189,7 @@ function displayBlockStructureRecursiveSimple(
     // 🎯 改进的分层显示格式 - 更便于大模型理解结构
     if (child.category === 'statement') {
       // statement输入：先显示输入类型，再在下层显示实际块
-      const realInputType = getRealInputType(block.type, child.inputName);
-      const inputTypeDesc = `[${child.inputName}:${realInputType}]`;
+      const inputTypeDesc = `[${child.inputName}:statement]`;
       lines.push(`${parentPrefix}${currentPrefix}${inputTypeDesc}`);
       
       if (child.isEmpty !== true && child.block) {
@@ -3552,8 +3208,7 @@ function displayBlockStructureRecursiveSimple(
       }
     } else if (child.category === 'value') {
       // value输入：直接显示块，但用更准确的术语
-      const realInputType = getRealInputType(block.type, child.inputName);
-      const inputTypeDesc = `[${child.inputName}:${realInputType}]`;
+      const inputTypeDesc = `[${child.inputName}:input]`;
       
       if (child.isEmpty !== true && child.block) {
         const childInfo = formatBlockInfo(child.block);
