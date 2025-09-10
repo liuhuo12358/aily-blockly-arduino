@@ -74,6 +74,26 @@
 
   .todo-panel-content {
     background: var(--vscode-sideBar-background, #252526);
+    max-height: 270px; /* 为header留出30px，限制内容最大高度 */
+    overflow-y: auto; /* 内容超出时显示滚动条 */
+
+    /* 滚动条样式 */
+    &::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    &::-webkit-scrollbar-track {
+      background: var(--vscode-scrollbar-shadow, transparent);
+    }
+
+    &::-webkit-scrollbar-thumb {
+      background: var(--vscode-scrollbarSlider-background, #424242);
+      border-radius: 3px;
+    }
+
+    &::-webkit-scrollbar-thumb:hover {
+      background: var(--vscode-scrollbarSlider-hoverBackground, #4f4f4f);
+    }
 
     .todo-list {
       .todo-item {
