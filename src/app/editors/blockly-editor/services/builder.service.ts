@@ -1,14 +1,12 @@
 import { Injectable } from '@angular/core';
-import { ProjectService } from './project.service';
-import { ActionState, UiService } from './ui.service';
+import { ProjectService } from '../../../services/project.service';
+import { CmdService } from '../../../services/cmd.service';
 import { NzMessageService } from 'ng-zorro-antd/message';
-import { NoticeService } from '../services/notice.service';
-import { CmdOutput, CmdService } from './cmd.service';
-import { NpmService } from './npm.service';
-import { LogService } from './log.service';
-import { ConfigService } from './config.service';
-import { BlocklyService } from '../editors/blockly-editor/services/blockly.service';
-import { arduinoGenerator } from '../editors/blockly-editor/components/blockly/generators/arduino/arduino';
+import { NoticeService } from '../../../services/notice.service';
+import { LogService } from '../../../services/log.service';
+import { NpmService } from '../../../services/npm.service';
+import { ConfigService } from '../../../services/config.service';
+import { BlocklyService } from './blockly.service';
 
 @Injectable({
   providedIn: 'root'

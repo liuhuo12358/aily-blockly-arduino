@@ -10,7 +10,7 @@ import { SimplebarAngularModule } from 'simplebar-angular';
 import { BlockTestComponent } from '../block-test/block-test.component';
 // import { BlockVisualEditorComponent } from '../block-visual-editor/block-visual-editor.component';
 import { NzButtonModule } from 'ng-zorro-antd/button';
-import { BlocklyService } from '../../../blockly/blockly.service';
+import { BlocklyService } from '../../../editors/blockly-editor/services/blockly.service';
 
 @Component({
   selector: 'app-lib-content',

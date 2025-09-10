@@ -5,8 +5,8 @@
  */
 
 import * as Blockly from 'blockly/core';
-import { BitmapUploadRequest } from '../bitmap-upload.service';
-import { GlobalServiceManager } from '../global-service-manager';
+import { BitmapUploadRequest } from '../../../services/bitmap-upload.service';
+import { GlobalServiceManager } from '../../../services/global-service-manager';
 
 Blockly.Msg['BUTTON_LABEL_CLEAR'] = 'Clear';
 Blockly.Msg['BUTTON_LABEL_UPLOAD'] = 'Upload';

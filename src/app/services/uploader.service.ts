@@ -1,17 +1,17 @@
 import { Injectable } from '@angular/core';
 import { ProjectService } from './project.service';
 import { SerialService } from './serial.service';
-import { arduinoGenerator } from '../blockly/generators/arduino/arduino';
-import { ActionState, UiService } from './ui.service';
+import { ActionState } from './ui.service';
 import { BuilderService } from './builder.service';
 import { NzMessageService } from 'ng-zorro-antd/message';
-import { BlocklyService } from '../blockly/blockly.service';
 import { NoticeService } from '../services/notice.service';
 import { NzModalService } from 'ng-zorro-antd/modal';
 import { SerialDialogComponent } from '../main-window/components/serial-dialog/serial-dialog.component';
 import { CmdOutput, CmdService } from './cmd.service';
 import { LogService } from './log.service';
 import { NpmService } from './npm.service';
+import { BlocklyService } from '../editors/blockly-editor/services/blockly.service';
+import { arduinoGenerator } from '../editors/blockly-editor/components/blockly/generators/arduino/arduino';
 
 @Injectable({
   providedIn: 'root'

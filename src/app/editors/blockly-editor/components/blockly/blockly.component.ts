@@ -9,8 +9,8 @@ import * as zhHans from 'blockly/msg/zh-hans';
 import './plugins/toolbox-search/src/index';
 import './plugins/block-plus-minus/src/index.js';
 import { arduinoGenerator } from './generators/arduino/arduino';
-import { BlocklyService } from './blockly.service';
-import { BitmapUploadResponse } from './bitmap-upload.service';
+import { BlocklyService } from '../../services/blockly.service';
+import { BitmapUploadResponse } from '../../services/bitmap-upload.service';
 
 import './custom-category';
 import './custom-field/field-bitmap';
@@ -29,14 +29,14 @@ import '@blockly/field-colour-hsv-sliders';
 import { Multiselect } from './plugins/workspace-multiselect/index.js';
 import { PromptDialogComponent } from './components/prompt-dialog/prompt-dialog.component.js';
 import { NzModalModule, NzModalService } from 'ng-zorro-antd/modal';
-import { ConfigService } from '../services/config.service';
 import * as BlockDynamicConnection from '@blockly/block-dynamic-connection';
 import { CommonModule } from '@angular/common';
-import { BitmapUploadService } from './bitmap-upload.service';
-import { GlobalServiceManager } from './global-service-manager';
+import { BitmapUploadService } from '../../services/bitmap-upload.service';
+import { GlobalServiceManager } from '../../services/global-service-manager';
 import { ImageUploadDialogComponent } from './components/image-upload-dialog/image-upload-dialog.component';
-import { NoticeService } from '../services/notice.service';
 import { HttpErrorResponse } from '@angular/common/http';
+import { ConfigService } from '../../../../services/config.service';
+import { NoticeService } from '../../../../services/notice.service';
 
 @Component({
   selector: 'blockly-main',

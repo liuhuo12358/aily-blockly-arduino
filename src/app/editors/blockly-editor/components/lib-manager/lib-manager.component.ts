@@ -11,11 +11,11 @@ import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { NpmService } from '../../../../services/npm.service';
 import { ConfigService } from '../../../../services/config.service';
 import { ProjectService } from '../../../../services/project.service';
-import { BlocklyService } from '../../../../blockly/blockly.service';
 import { NzModalService } from 'ng-zorro-antd/modal';
 import { CompatibleDialogComponent } from '../compatible-dialog/compatible-dialog.component';
 import { CmdOutput, CmdService } from '../../../../services/cmd.service';
 import { ElectronService } from '../../../../services/electron.service';
+import { BlocklyService } from '../../services/blockly.service';
 
 @Component({
   selector: 'app-lib-manager',

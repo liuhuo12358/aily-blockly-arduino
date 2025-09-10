@@ -9,16 +9,14 @@ import { NzResizableModule, NzResizeEvent } from 'ng-zorro-antd/resizable';
 import { SubWindowComponent } from '../../components/sub-window/sub-window.component';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
-import { Observable, tap, Subscription } from 'rxjs';
+import { Subscription } from 'rxjs';
 import { ChatService, ChatTextOptions } from './services/chat.service';
 import { NzToolTipModule } from 'ng-zorro-antd/tooltip';
-import { SimplebarAngularComponent, SimplebarAngularModule } from 'simplebar-angular';
 import { MenuComponent } from '../../components/menu/menu.component';
 import { IMenuItem } from '../../configs/menu.config';
 import { McpService } from './services/mcp.service';
 import { ProjectService } from '../../services/project.service';
-import { CmdOutput, CmdService } from '../../services/cmd.service';
-import { BlocklyService } from '../../blockly/blockly.service';
+import { CmdService } from '../../services/cmd.service';
 import { newProjectTool } from './tools/createProjectTool';
 import { executeCommandTool } from './tools/executeCommandTool';
 import { askApprovalTool } from './tools/askApprovalTool';
@@ -63,6 +61,7 @@ import { TOOLS } from './tools/tools';
 import { AuthService } from '../../services/auth.service';
 import { resolveObjectURL } from 'buffer';
 import { reloadAbiJsonTool, reloadAbiJsonToolSimple } from './tools';
+import { BlocklyService } from '../../editors/blockly-editor/services/blockly.service';
 
 @Component({
   selector: 'app-aily-chat',
@@ -76,7 +75,6 @@ import { reloadAbiJsonTool, reloadAbiJsonToolSimple } from './tools';
     ToolContainerComponent,
     NzResizableModule,
     NzToolTipModule,
-    SimplebarAngularModule,
     MenuComponent
   ],
   templateUrl: './aily-chat.component.html',
@@ -286,7 +284,7 @@ export class AilyChatComponent implements OnDestroy {
     // 订阅登录状态变化
     this.loginStatusSubscription = this.authService.isLoggedIn$.subscribe(
       isLoggedIn => {
-        this.list = [...this.defaultList.map(item => ({...item}))]; // 重置消息列表
+        this.list = [...this.defaultList.map(item => ({ ...item }))]; // 重置消息列表
         this.startSession().then(() => {
           this.getHistory();
         });
@@ -588,11 +586,11 @@ ${JSON.stringify(errData)}
       },
       error: (error) => {
         console.error('发送消息失败:', error);
-        
+
         // 检查是否是502错误且还有重试次数
         if (error.status === 502 && retryCount > 0) {
           console.log(`遇到502错误，还有${retryCount}次重试机会，正在重试...`);
-          
+
           // 延迟1秒后重试
           setTimeout(() => {
             this.sendMessageWithRetry(sessionId, text, sender, clear, retryCount - 1);
@@ -600,14 +598,14 @@ ${JSON.stringify(errData)}
         } else {
           // 重试次数用完或非502错误，显示错误信息
           this.isWaiting = false;
-          
+
           let errorMessage = '发送消息失败';
           if (error.status === 502) {
             errorMessage = '服务器暂时无法响应，请稍后重试';
           } else if (error.message) {
             errorMessage = error.message;
           }
-          
+
           this.appendMessage('错误', `
 \`\`\`aily-error
 {
@@ -1105,7 +1103,7 @@ ${JSON.stringify(errData)}
                     break;
                   case 'edit_abi_file':
                     console.log('[编辑ABI文件工具被调用]', toolArgs);
-                    
+
                     // 根据操作模式生成不同的状态文本
                     let abiOperationText = "正在编辑ABI文件...";
                     if (toolArgs.replaceStartLine !== undefined) {
@@ -1119,7 +1117,7 @@ ${JSON.stringify(errData)}
                     } else if (toolArgs.replaceMode === false) {
                       abiOperationText = "正在向ABI文件末尾追加内容...";
                     }
-                    
+
                     this.appendMessage('aily', `
 
 \`\`\`aily-state
@@ -1535,7 +1533,7 @@ ${JSON.stringify(errData)}
 
   async newChat() {
     console.log('启动新会话');
-    this.list = [...this.defaultList.map(item => ({...item}))];
+    this.list = [...this.defaultList.map(item => ({ ...item }))];
 
     console.log("CurrentList: ", this.list);
     // 新会话时重新启用自动滚动

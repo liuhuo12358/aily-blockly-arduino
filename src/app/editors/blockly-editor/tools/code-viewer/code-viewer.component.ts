@@ -1,14 +1,12 @@
 import { Component } from '@angular/core';
-// import { InnerWindowComponent } from '../../components/inner-window/inner-window.component';
-import { MonacoEditorComponent } from '../../editors/code-editor/components/monaco-editor/monaco-editor.component';
-import { BlocklyService } from '../../blockly/blockly.service';
-import { ToolContainerComponent } from '../../components/tool-container/tool-container.component';
-import { UiService } from '../../services/ui.service';
-import { SubWindowComponent } from '../../components/sub-window/sub-window.component';
+import { ToolContainerComponent } from '../../../../components/tool-container/tool-container.component';
+import { UiService } from '../../../../services/ui.service';
+import { SubWindowComponent } from '../../../../components/sub-window/sub-window.component';
 import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { NzCodeEditorModule } from 'ng-zorro-antd/code-editor';
 import { FormsModule } from '@angular/forms';
+import { BlocklyService } from '../../services/blockly.service';
 
 @Component({
   selector: 'app-code-viewer',

@@ -1,12 +1,10 @@
 import { ChangeDetectorRef, Component } from '@angular/core';
-import { BlocklyComponent } from '../../blockly/blockly.component';
 import { LibManagerComponent } from './components/lib-manager/lib-manager.component';
 import { NotificationComponent } from '../../components/notification/notification.component';
 import { ProjectService } from '../../services/project.service';
 import { UiService } from '../../services/ui.service';
 import { TranslateModule } from '@ngx-translate/core';
 import { ActivatedRoute } from '@angular/router';
-import { BlocklyService } from '../../blockly/blockly.service';
 import { ElectronService } from '../../services/electron.service';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { ConfigService } from '../../services/config.service';
@@ -15,6 +13,8 @@ import { LibEditorComponent } from '../../pages/lib-editor/lib-editor.component'
 import { CmdService } from '../../services/cmd.service';
 import { UploaderService } from '../../services/uploader.service';
 import { BuilderService } from '../../services/builder.service';
+import { BlocklyService } from './services/blockly.service';
+import { BlocklyComponent } from './components/blockly/blockly.component';
 
 @Component({
   selector: 'app-blockly-editor',

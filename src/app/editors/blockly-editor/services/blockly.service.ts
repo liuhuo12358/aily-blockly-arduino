@@ -1,11 +1,10 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { BehaviorSubject, lastValueFrom } from 'rxjs';
+import { BehaviorSubject } from 'rxjs';
 import * as Blockly from 'blockly';
-import { processI18n, processJsonVar } from './abf';
-import { NoticeService } from '../services/notice.service';
+import { processI18n, processJsonVar } from '../components/blockly/abf';
 import { TranslateService } from '@ngx-translate/core';
-import { ElectronService } from '../services/electron.service';
+import { ElectronService } from '../../../services/electron.service';
 
 @Injectable({
   providedIn: 'root',
@@ -33,8 +32,6 @@ export class BlocklyService {
   offsetY: number = 0;
 
   constructor(
-    private http: HttpClient,
-    private notice: NoticeService,
     private translateService: TranslateService,
     private electronService: ElectronService
   ) { }

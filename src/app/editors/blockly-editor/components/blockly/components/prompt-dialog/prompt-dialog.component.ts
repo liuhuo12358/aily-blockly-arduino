@@ -4,7 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzInputModule } from 'ng-zorro-antd/input';
 import { NZ_MODAL_DATA, NzModalRef } from 'ng-zorro-antd/modal';
-import { BlocklyService } from '../../blockly.service';
+import { BlocklyService } from '../../../../services/blockly.service';
 import * as Blockly from 'blockly';
 import { NzMessageService } from 'ng-zorro-antd/message';
 

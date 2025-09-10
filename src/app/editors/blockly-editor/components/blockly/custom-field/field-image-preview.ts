@@ -5,7 +5,7 @@
  */
 
 import * as Blockly from 'blockly/core';
-import { GlobalServiceManager } from '../global-service-manager';
+import { GlobalServiceManager } from '../../../services/global-service-manager';
 
 Blockly.Msg['BUTTON_LABEL_BROWSE'] = '打开';
 Blockly.Msg['BUTTON_LABEL_CLEAR'] = '清除';

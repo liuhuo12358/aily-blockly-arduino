@@ -1,7 +1,6 @@
 import { Component, EventEmitter, Output } from '@angular/core';
 import { TranslateModule } from '@ngx-translate/core';
 import { NzToolTipModule } from 'ng-zorro-antd/tooltip';
-import { BlockItemComponent } from './block-item/block-item.component';
 import { CommonModule } from '@angular/common';
 import { ElectronService } from '../../services/electron.service';
 import { ProjectService } from '../../services/project.service';

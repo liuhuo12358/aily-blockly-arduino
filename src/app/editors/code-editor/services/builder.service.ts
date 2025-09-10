@@ -1,14 +1,12 @@
 import { Injectable } from '@angular/core';
-import { ProjectService } from './project.service';
-import { ActionState, UiService } from './ui.service';
 import { NzMessageService } from 'ng-zorro-antd/message';
-import { NoticeService } from '../services/notice.service';
-import { CmdOutput, CmdService } from './cmd.service';
-import { NpmService } from './npm.service';
-import { LogService } from './log.service';
-import { ConfigService } from './config.service';
-import { BlocklyService } from '../editors/blockly-editor/services/blockly.service';
-import { arduinoGenerator } from '../editors/blockly-editor/components/blockly/generators/arduino/arduino';
+import { NpmService } from '../../../services/npm.service';
+import { ConfigService } from '../../../services/config.service';
+import { LogService } from '../../../services/log.service';
+import { NoticeService } from '../../../services/notice.service';
+import { CmdService } from '../../../services/cmd.service';
+import { ProjectService } from '../../../services/project.service';
+import { ActionState } from '../../../services/ui.service';
 
 @Injectable({
   providedIn: 'root'
@@ -16,7 +14,6 @@ import { arduinoGenerator } from '../editors/blockly-editor/components/blockly/g
 export class BuilderService {
 
   constructor(
-    private blocklyService: BlocklyService,
     private projectService: ProjectService,
     private cmdService: CmdService,
     private message: NzMessageService,
@@ -118,8 +115,7 @@ export class BuilderService {
         }
 
         // 生成sketch文件
-        const code = arduinoGenerator.workspaceToCode(this.blocklyService.workspace);
-        this.lastCode = code;
+        const code = ``;
         await window['fs'].writeFileSync(sketchFilePath, code);
 
         // 加载项目package.json
@@ -396,7 +392,7 @@ export class BuilderService {
         this.buildStartTime = Date.now(); // 记录编译开始时间
 
         this.cmdService.run(compileCommand, null, false).subscribe({
-          next: (output: CmdOutput) => {
+          next: (output: any) => {
             console.log('编译命令输出:', output);
             this.streamId = output.streamId;
 
