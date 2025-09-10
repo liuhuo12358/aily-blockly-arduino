@@ -687,6 +687,8 @@ ${JSON.stringify(errData)}
           return; // 如果不在等待状态，直接返回
         }
 
+        console.log("Recv: ", data);
+
         try {
           if (data.type === 'ModelClientStreamingChunkEvent') {
             // 处理流式数据
@@ -695,8 +697,6 @@ ${JSON.stringify(errData)}
             }
           } else if (data.type === 'TextMessage') {
             // 每条完整的对话信息
-          } else if (data.type === 'ToolCallRequestEvent') {
-            // 处理工具调用请求
           } else if (data.type === 'ToolCallExecutionEvent') {
             // 处理工具执行完成事件
             if (data.content && Array.isArray(data.content)) {
@@ -709,7 +709,7 @@ ${JSON.stringify(errData)}
                     this.appendMessage('aily', `
   \`\`\`aily-state
   {
-    "state": "${resultState}",
+    "state": "done",
     "text": "${this.makeJsonSafe(resultText)}",
     "id": "${result.call_id}"
   }
@@ -723,6 +723,29 @@ ${JSON.stringify(errData)}
                   this.appendMessage('aily', "\n\n");
                 }
               }
+            }
+          } else if (data.type.startsWith('context_compression_')) {
+            // 上下文压缩触发消息
+            if (data.type.startsWith('context_compression_start')) {
+              this.appendMessage('aily', `\n\n
+\`\`\`aily-state
+{ 
+  "state": "doing", 
+  "text": "${data.content}",
+  "id": "${data.id}"
+}
+\`\`\`\n\n
+`);
+            } else {
+              this.appendMessage('aily', `\n\n
+\`\`\`aily-state
+{ 
+  "state": "done",
+  "text": "${data.content}",
+  "id": "${data.id}"
+}
+\`\`\`\n\n
+`);
             }
           } else if (data.type === 'error') {
             // 设置最后一条AI消息状态为done（如果存在）
@@ -814,9 +837,9 @@ ${JSON.stringify(errData)}
                     `);
                     toolResult = await newProjectTool(this.prjRootPath, toolArgs, this.projectService, this.configService);
                     if (toolResult.is_error) {
-                      this.uiService.updateFooterState({ state: 'error', text: '项目创建失败' });
-                      resultState = "error"
-                      resultText = '项目创建失败: ' + (toolResult.content || '未知错误');
+                      this.uiService.updateFooterState({ state: 'warn', text: '项目创建失败' });
+                      resultState = "warn"
+                      resultText = '项目创建异常,即将重试';
                     } else {
                       resultText = `项目创建成功`;
                     }
@@ -883,8 +906,8 @@ ${JSON.stringify(errData)}
                       }
                       resultText = `命令${displayCommand}执行成功`
                     } else {
-                      resultState = "error";
-                      resultText = `命令${displayCommand}执行失败: ` + (toolResult.content || '未知错误');
+                      resultState = "warn";
+                      resultText = `命令${displayCommand}执行异常, 即将重试`;
                     }
                     break;
                   case 'get_context':
@@ -901,8 +924,8 @@ ${JSON.stringify(errData)}
                     `);
                     toolResult = await getContextTool(this.projectService, toolArgs);
                     if (toolResult.is_error) {
-                      resultState = "error"
-                      resultText = '获取上下文信息失败: ' + (toolResult.content || '未知错误');
+                      resultState = "warn";
+                      resultText = '获取上下文信息异常, 即将重试';
                     } else {
                       resultText = `上下文信息获取成功`;
                     }
@@ -922,8 +945,8 @@ ${JSON.stringify(errData)}
                     `);
                     toolResult = await listDirectoryTool(toolArgs);
                     if (toolResult.is_error) {
-                      resultState = "error";
-                      resultText = `获取${distFolderName}目录内容失败: ` + (toolResult.content || '未知错误');
+                      resultState = "warn";
+                      resultText = `获取${distFolderName}目录内容异常, 即将重试`;
                     } else {
                       resultText = `获取${distFolderName}目录内容成功`;
                     }
@@ -943,8 +966,8 @@ ${JSON.stringify(errData)}
                     `);
                     toolResult = await readFileTool(toolArgs);
                     if (toolResult.is_error) {
-                      resultState = "error";
-                      resultText = `读取${readFileName}文件失败: ` + (toolResult.content || '未知错误');
+                      resultState = "warn";
+                      resultText = `读取异常, 即将重试`;
                     } else {
                       resultText = `读取${readFileName}文件成功`;
                     }
@@ -964,8 +987,8 @@ ${JSON.stringify(errData)}
                     `);
                     toolResult = await createFileTool(toolArgs);
                     if (toolResult.is_error) {
-                      resultState = "error";
-                      resultText = `创建${createFileName}文件失败: ` + (toolResult.content || '未知错误');
+                      resultState = "warn";
+                      resultText = `创建${createFileName}文件异常, 即将重试`;
                     } else {
                       resultText = `创建${createFileName}文件成功`;
                     }
@@ -985,8 +1008,8 @@ ${JSON.stringify(errData)}
                     `);
                     toolResult = await createFolderTool(toolArgs);
                     if (toolResult.is_error) {
-                      resultState = "error";
-                      resultText = `创建${createFolderName}文件夹失败: ` + (toolResult.content || '未知错误');
+                      resultState = "warn";
+                      resultText = `创建${createFolderName}文件夹异常, 即将重试`;
                     } else {
                       resultText = `创建${createFolderName}文件夹成功`;
                     }
@@ -1006,8 +1029,8 @@ ${JSON.stringify(errData)}
                     `);
                     toolResult = await editFileTool(toolArgs);
                     if (toolResult.is_error) {
-                      resultState = "error";
-                      resultText = `编辑${editFileName}文件失败: ` + (toolResult.content || '未知错误');
+                      resultState = "warn";
+                      resultText = `编辑${editFileName}文件异常, 即将重试`;
                     } else {
                       resultText = `编辑${editFileName}文件成功`;
                     }
@@ -1026,8 +1049,8 @@ ${JSON.stringify(errData)}
                     `);
                     toolResult = await deleteFileTool(toolArgs);
                     if (toolResult.is_error) {
-                      resultState = "error";
-                      resultText = `删除${deleteFileName}文件失败: ` + (toolResult.content || '未知错误');
+                      resultState = "warn";
+                      resultText = `删除${deleteFileName}文件异常, 即将重试`;
                     } else {
                       resultText = `删除${deleteFileName}文件成功`;
                     }
@@ -1047,8 +1070,8 @@ ${JSON.stringify(errData)}
                     `);
                     toolResult = await deleteFolderTool(toolArgs);
                     if (toolResult.is_error) {
-                      resultState = "error";
-                      resultText = `删除${deleteFolderName}文件夹失败: ` + (toolResult.content || '未知错误');
+                      resultState = "warn";
+                      resultText = `删除${deleteFolderName}文件夹异常, 即将重试`;
                     } else {
                       resultText = `删除${deleteFolderName}文件夹成功`;
                     }
@@ -1076,8 +1099,8 @@ ${JSON.stringify(errData)}
                     `);
                     toolResult = await checkExistsTool(toolArgs);
                     if (toolResult.is_error) {
-                      resultState = "error";
-                      resultText = errText + (toolResult.content || '未知错误');
+                      resultState = "warn";
+                      resultText = errText;
                     } else {
                       resultText = successText;
                     }
@@ -1119,6 +1142,7 @@ ${JSON.stringify(errData)}
                     toolResult = await fetchTool(this.fetchToolService, toolArgs);
                     if (toolResult.is_error) {
                       resultState = "error";
+                      resultText = `网络请求异常，即将重试`;
                     } else {
                       resultText = `网络请求 ${fetchUrl} 成功`;
                     }
@@ -1173,7 +1197,7 @@ ${JSON.stringify(errData)}
                     const currentProjectPath = this.getCurrentProjectPath();
                     if (!currentProjectPath) {
                       console.warn('当前未打开项目');
-                      resultState = "error";
+                      resultState = "warn";
                       resultText = "当前未打开项目";
                     } else {
                       // 构建editAbiFileTool的参数，传递所有可能的参数
@@ -1208,8 +1232,8 @@ ${JSON.stringify(errData)}
                         "is_error": editAbiResult.is_error
                       }
                       if (toolResult.is_error) {
-                        resultState = "error";
-                        resultText = 'ABI文件编辑失败: ' + (toolResult.content || '未知错误');
+                        resultState = "warn";
+                        resultText = `ABI文件编辑异常, 即将重试`;
                       } else {
                         // 根据操作模式生成不同的成功文本
                         if (toolArgs.insertLine !== undefined) {
@@ -1258,8 +1282,8 @@ ${JSON.stringify(errData)}
                       is_error: reloadResult.is_error
                     };
                     if (toolResult.is_error) {
-                      resultState = "error";
-                      resultText = 'ABI数据重新加载失败: ' + (toolResult.content || '未知错误');
+                      resultState = "warn";
+                      resultText = 'ABI数据重新加载异常';
                     } else {
                       resultText = 'ABI数据重新加载成功';
                     }
@@ -1288,8 +1312,8 @@ ${JSON.stringify(errData)}
                     toolResult = await smartBlockTool(toolArgs);
                     console.log('✅ 智能块工具执行结果:', toolResult);
                     if (toolResult.is_error) {
-                      resultState = "error";
-                      resultText = '智能块操作失败: ' + (toolResult.content || '未知错误');
+                      resultState = "warn";
+                      resultText = '智能块操作异常';
                     } else {
                       resultText = `智能块操作成功: ${toolArgs.type}`;
                     }
@@ -1308,8 +1332,8 @@ ${JSON.stringify(errData)}
                     `);
                     toolResult = await connectBlocksTool(toolArgs);
                     if (toolResult.is_error) {
-                      resultState = "error";
-                      resultText = '块连接失败: ' + (toolResult.content || '未知错误');
+                      resultState = "warn";
+                      resultText = '块连接异常';
                     } else {
                       resultText = `块连接成功: ${toolArgs.connectionType}连接`;
                     }
@@ -1328,8 +1352,8 @@ ${JSON.stringify(errData)}
                     `);
                     toolResult = await createCodeStructureTool(toolArgs);
                     if (toolResult.is_error) {
-                      resultState = "error";
-                      resultText = '代码结构创建失败: ' + (toolResult.content || '未知错误');
+                      resultState = "warn";
+                      resultText = '代码结构创建异常';
                     } else {
                       resultText = `代码结构创建成功: ${toolArgs.structure}`;
                     }
@@ -1348,8 +1372,8 @@ ${JSON.stringify(errData)}
                     `);
                     toolResult = await configureBlockTool(toolArgs);
                     if (toolResult.is_error) {
-                      resultState = "error";
-                      resultText = '块配置失败: ' + (toolResult.content || '未知错误');
+                      resultState = "warn";
+                      resultText = '块配置异常, 即将重试';
                     } else {
                       resultText = `块配置成功: ID ${toolArgs.blockId}`;
                     }
@@ -1368,8 +1392,8 @@ ${JSON.stringify(errData)}
                     `);
                     toolResult = await variableManagerTool(toolArgs);
                     if (toolResult.is_error) {
-                      resultState = "error";
-                      resultText = '变量操作失败: ' + (toolResult.content || '未知错误');
+                      resultState = "warn";
+                      resultText = '变量操作异常,即将重试';
                     } else {
                       resultText = `变量操作成功: ${toolArgs.operation}${toolArgs.variableName ? ' ' + toolArgs.variableName : ''}`;
                     }
@@ -1388,8 +1412,8 @@ ${JSON.stringify(errData)}
                     `);
                     toolResult = await findBlockTool(toolArgs);
                     if (toolResult.is_error) {
-                      resultState = "error";
-                      resultText = '块查找失败: ' + (toolResult.content || '未知错误');
+                      resultState = "warn";
+                      resultText = '块查找异常,即将重试';
                     } else {
                       resultText = '块查找完成';
                     }
@@ -1408,8 +1432,8 @@ ${JSON.stringify(errData)}
                     `);
                     toolResult = await deleteBlockTool(toolArgs);
                     if (toolResult.is_error) {
-                      resultState = "error";
-                      resultText = '块删除失败: ' + (toolResult.content || '未知错误');
+                      resultState = "warn";
+                      resultText = '块删除异常, 即将重试';
                     } else {
                       resultText = `块删除成功: ${toolResult.content}`;
                     }
@@ -1428,8 +1452,8 @@ ${JSON.stringify(errData)}
                     `);
                     toolResult = await getWorkspaceOverviewTool(toolArgs);
                     if (toolResult.is_error) {
-                      resultState = "error";
-                      resultText = '工作区分析失败: ' + (toolResult.content || '未知错误');
+                      resultState = "warn";
+                      resultText = '工作区分析异常, 即将重试';
                     } else {
                       // 从 metadata 中提取关键统计信息用于显示
                       const stats = toolResult.metadata?.statistics;
@@ -1456,8 +1480,8 @@ ${JSON.stringify(errData)}
                     const todoArgs = { ...toolArgs, sessionId: this.sessionId };
                     toolResult = await todoWriteTool(todoArgs);
                     if (toolResult.is_error) {
-                      resultState = "error";
-                      resultText = 'TODO操作失败: ' + (toolResult.content || '未知错误');
+                      resultState = "warn";
+                      resultText = 'TODO操作异常,即将重试';
                     } else {
                       // 根据操作类型显示不同的成功消息
                       const operation = toolArgs.operation || 'unknown';
@@ -1524,7 +1548,7 @@ ${JSON.stringify(errData)}
               }
             } catch (error) {
               console.error('工具执行出错:', error);
-              resultState = "error";
+              resultState = "warn";
               toolResult = {
                 is_error: true,
                 content: `工具执行出错: ${error.message || '未知错误'}`
