@@ -204,21 +204,26 @@ export class CodeEditorComponent implements OnInit, AfterViewInit, OnDestroy {
       this.selectedIndex = this.openedFiles.length - 1;
     }
 
-    this.updateCurrentCode();
+    // 延迟更新代码，确保界面已更新
+    setTimeout(() => {
+      this.updateCurrentCode();
+    }, 0);
   }
 
   // 更新当前编辑器内容
-  updateCurrentCode() {
+  async updateCurrentCode() {
     if (this.selectedIndex >= 0 && this.selectedIndex < this.openedFiles.length) {
       const currentFile = this.openedFiles[this.selectedIndex];
       console.log('更新编辑器内容:', currentFile.title, '存储的状态:', currentFile.editorState);
       this.code = currentFile.content;
       this.selectedFile = currentFile.path;
       
-      // 恢复编辑器状态
-      if (currentFile.editorState) {
-        this.restoreEditorState(currentFile.editorState);
-      }
+      // 延迟恢复编辑器状态，确保内容已经更新
+      setTimeout(async () => {
+        if (currentFile.editorState) {
+          await this.restoreEditorState(currentFile.editorState);
+        }
+      }, 0);
     } else {
       this.code = '';
       this.selectedFile = '';
@@ -285,11 +290,20 @@ export class CodeEditorComponent implements OnInit, AfterViewInit, OnDestroy {
   onTabChange(index: number): void {
     console.log('切换标签页:', index, '当前选中:', this.selectedIndex);
     
+    // 如果切换到的是当前标签页，不需要处理
+    if (index === this.selectedIndex) {
+      return;
+    }
+    
     // 先保存当前标签页的状态
     this.saveCurrentTabState();
     
     this.selectedIndex = index;
-    this.updateCurrentCode();
+    
+    // 延迟更新代码，确保标签页切换动画完成
+    setTimeout(() => {
+      this.updateCurrentCode();
+    }, 0);
   }
 
   // 保存当前标签页的编辑器状态
@@ -297,9 +311,12 @@ export class CodeEditorComponent implements OnInit, AfterViewInit, OnDestroy {
     if (this.selectedIndex >= 0 && this.selectedIndex < this.openedFiles.length) {
       const currentFile = this.openedFiles[this.selectedIndex];
       const editorState = this.getEditorState();
-      console.log('保存标签页状态:', currentFile.title, editorState);
+      console.log('保存标签页状态:', currentFile.title, 'selectedIndex:', this.selectedIndex, 'editorState:', editorState);
       if (editorState) {
         currentFile.editorState = editorState;
+        console.log('状态保存成功，视图状态:', editorState.viewState);
+      } else {
+        console.log('获取编辑器状态失败');
       }
     }
   }
@@ -309,9 +326,12 @@ export class CodeEditorComponent implements OnInit, AfterViewInit, OnDestroy {
     try {
       const monacoComponent = this.getMonacoEditorComponent();
       if (monacoComponent) {
-        const viewState = monacoComponent.getViewState();
-        if (viewState) {
-          return { viewState };
+        const editor = monacoComponent.getEditorInstance();
+        if (editor && editor.getModel()) {
+          const viewState = monacoComponent.getViewState();
+          if (viewState) {
+            return { viewState };
+          }
         }
       }
     } catch (error) {
@@ -321,7 +341,7 @@ export class CodeEditorComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   // 恢复编辑器状态
-  private restoreEditorState(editorState: any): void {
+  private async restoreEditorState(editorState: any): Promise<void> {
     if (!editorState || !editorState.viewState) {
       console.log('没有需要恢复的编辑器状态');
       return;
@@ -330,18 +350,19 @@ export class CodeEditorComponent implements OnInit, AfterViewInit, OnDestroy {
     console.log('恢复编辑器状态:', editorState);
 
     try {
-      // 延迟执行，确保编辑器已经完全加载新内容
-      setTimeout(() => {
-        const monacoComponent = this.getMonacoEditorComponent();
-        if (monacoComponent) {
-          console.log('正在恢复视图状态...');
-          monacoComponent.restoreViewState(editorState.viewState);
+      const monacoComponent = this.getMonacoEditorComponent();
+      if (monacoComponent) {
+        const success = await monacoComponent.restoreViewStateSafely(editorState.viewState);
+        if (success) {
+          console.log('编辑器状态恢复成功');
         } else {
-          console.warn('Monaco编辑器组件未找到');
+          console.warn('编辑器状态恢复失败');
         }
-      }, 100); // 延迟100ms确保编辑器内容已更新
+      } else {
+        console.warn('Monaco编辑器组件未找到');
+      }
     } catch (error) {
-      console.warn('恢复编辑器状态失败:', error);
+      console.warn('恢复编辑器状态异常:', error);
     }
   }
 

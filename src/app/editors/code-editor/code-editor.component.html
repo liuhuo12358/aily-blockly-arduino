@@ -14,7 +14,7 @@
         <nz-content>
             <div class="right-box">
                 @if (openedFiles.length > 0) {
-                <nz-tabset [nzSize]="'small'" [(nzSelectedIndex)]="selectedIndex"
+                <nz-tabset [nzSize]="'small'" [nzSelectedIndex]="selectedIndex"
                     (nzSelectedIndexChange)="onTabChange($event)" nzType="editable-card" [nzHideAdd]="true"
                     (nzClose)="closeTab($event)">
                     @for (file of openedFiles; track file.path; let i = $index) {

@@ -263,7 +263,19 @@ export class MonacoEditorComponent {
    */
   public getViewState(): any {
     const editor = this.getEditorInstance();
-    return editor ? editor.saveViewState() : null;
+    if (editor && editor.getModel()) {
+      try {
+        const viewState = editor.saveViewState();
+        console.log('获取视图状态成功:', viewState);
+        return viewState;
+      } catch (error) {
+        console.warn('获取视图状态失败:', error);
+        return null;
+      }
+    } else {
+      console.warn('编辑器实例或模型未准备好，无法获取视图状态');
+      return null;
+    }
   }
 
   /**
@@ -273,9 +285,52 @@ export class MonacoEditorComponent {
     if (!viewState) return;
     
     const editor = this.getEditorInstance();
-    if (editor) {
-      editor.restoreViewState(viewState);
+    if (editor && editor.getModel()) {
+      try {
+        editor.restoreViewState(viewState);
+        console.log('视图状态恢复成功');
+      } catch (error) {
+        console.warn('恢复视图状态失败:', error);
+      }
+    } else {
+      console.warn('编辑器实例或模型未准备好，无法恢复视图状态');
     }
+  }
+
+  /**
+   * 安全地恢复编辑器状态，会等待编辑器准备就绪
+   */
+  public async restoreViewStateSafely(viewState: any): Promise<boolean> {
+    if (!viewState) return false;
+    
+    return new Promise((resolve) => {
+      const maxAttempts = 20;
+      let attempts = 0;
+      
+      const tryRestore = () => {
+        const editor = this.getEditorInstance();
+        if (editor && editor.getModel()) {
+          try {
+            editor.restoreViewState(viewState);
+            console.log('视图状态安全恢复成功');
+            resolve(true);
+            return;
+          } catch (error) {
+            console.warn('恢复视图状态失败:', error);
+          }
+        }
+        
+        attempts++;
+        if (attempts < maxAttempts) {
+          setTimeout(tryRestore, 50);
+        } else {
+          console.warn('视图状态恢复超时');
+          resolve(false);
+        }
+      };
+      
+      tryRestore();
+    });
   }
 
 }
