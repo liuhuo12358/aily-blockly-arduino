@@ -26,14 +26,14 @@
 
 !macro customInstall
   
-  ; 使用7za.exe解压node-v18.20.8-win-x64到node目录
-  nsExec::ExecToStack '"$INSTDIR\resources\app\child\7za.exe" x "$INSTDIR\resources\app\child\node-v18.20.8-win-x64.7z" -o"$INSTDIR\resources\app\child\node" -y'
+  ; 使用7za.exe解压node-v22.19.0-win-x64到node目录
+  nsExec::ExecToStack '"$INSTDIR\resources\app\child\7za.exe" x "$INSTDIR\resources\app\child\node-v22.19.0-win-x64.7z" -o"$INSTDIR\resources\app\child\node" -y'
   
   ; 等待解压完成
   Sleep 2000
 
   ; 删除解压后的压缩包，节省磁盘空间
-  Delete "$INSTDIR\resources\app\child\node-v18.20.8-win-x64.7z"
+  Delete "$INSTDIR\resources\app\child\node-v22.19.0-win-x64.7z"
 
 !macroend
 
