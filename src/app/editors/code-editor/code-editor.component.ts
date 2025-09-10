@@ -260,6 +260,97 @@ export class CodeEditorComponent {
     }
   }
 
+  // 处理文件删除事件
+  onFilesDeleted(deletedPaths: string[]): void {
+    console.log('Files deleted:', deletedPaths);
+    
+    if (deletedPaths.length === 0) {
+      return;
+    }
+    
+    // 记录需要关闭的标签页索引，从后往前删除以避免索引变化问题
+    const tabsToClose: number[] = [];
+    
+    // 查找需要关闭的标签页
+    for (let i = this.openedFiles.length - 1; i >= 0; i--) {
+      const file = this.openedFiles[i];
+      if (deletedPaths.includes(file.path)) {
+        tabsToClose.push(i);
+        console.log('Found tab to close:', file.title, 'at index', i);
+      }
+    }
+    
+    if (tabsToClose.length === 0) {
+      return;
+    }
+    
+    // 检查被删除的文件中是否有未保存的更改
+    const unsavedFiles = tabsToClose
+      .map(index => this.openedFiles[index])
+      .filter(file => file.isDirty);
+    
+    if (unsavedFiles.length > 0) {
+      // 如果有未保存的文件，显示确认对话框
+      const fileNames = unsavedFiles.map(f => f.title).join(', ');
+      this.modal.confirm({
+        nzTitle: '文件已被删除',
+        nzContent: `以下文件已被删除但有未保存的更改：${fileNames}。是否关闭这些标签页？`,
+        nzOkText: '关闭',
+        nzCancelText: '保留',
+        nzOnOk: () => {
+          this.closeDeletedTabs(tabsToClose);
+        }
+      });
+    } else {
+      // 没有未保存的更改，直接关闭
+      this.closeDeletedTabs(tabsToClose);
+    }
+  }
+
+  // 关闭被删除文件的标签页
+  private closeDeletedTabs(tabIndices: number[]): void {
+    console.log('Closing deleted tabs:', tabIndices);
+    
+    // 从后往前删除，避免索引变化问题
+    for (const index of tabIndices) {
+      const file = this.openedFiles[index];
+      console.log('Closing tab:', file.title, 'at index', index);
+      
+      // 直接删除，不需要保存确认（文件已经被删除了）
+      this.openedFiles.splice(index, 1);
+    }
+    
+    // 调整当前选中的标签索引
+    this.adjustSelectedIndexAfterClose(tabIndices);
+    
+    // 更新编辑器内容
+    this.updateCurrentCode();
+    
+    // 显示提示信息
+    this.message.info(`已关闭 ${tabIndices.length} 个已删除文件的标签页`);
+  }
+
+  // 在删除多个标签页后调整选中索引
+  private adjustSelectedIndexAfterClose(closedIndices: number[]): void {
+    if (this.openedFiles.length === 0) {
+      this.selectedIndex = 0;
+      return;
+    }
+    
+    // 计算有多少个在当前选中索引之前的标签被关闭了
+    const closedBeforeCurrent = closedIndices.filter(index => index < this.selectedIndex).length;
+    
+    // 调整选中索引
+    this.selectedIndex = Math.max(0, this.selectedIndex - closedBeforeCurrent);
+    
+    // 确保索引不超出范围
+    if (this.selectedIndex >= this.openedFiles.length) {
+      this.selectedIndex = Math.max(0, this.openedFiles.length - 1);
+    }
+    
+    console.log('Adjusted selected index to:', this.selectedIndex);
+  }
+
   // 处理鼠标中键点击事件
   handleMiddleClick(event: MouseEvent, index: number): void {
     // 鼠标中键的button值为1

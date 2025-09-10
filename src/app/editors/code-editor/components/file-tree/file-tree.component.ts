@@ -297,6 +297,7 @@ export class FileTreeComponent implements OnInit {
   @Input() rootPath: string;
   @Input() selectedFile;
   @Output() selectedFileChange = new EventEmitter();
+  @Output() filesDeleted = new EventEmitter<string[]>();
 
   isLoading = false;
 
@@ -635,6 +636,9 @@ export class FileTreeComponent implements OnInit {
       console.log('Delete callback received for paths:', deletedPaths);
       
       try {
+        // 发出文件删除事件，通知父组件
+        this.filesDeleted.emit(deletedPaths);
+        
         // 使用增量更新删除节点
         deletedPaths.forEach(path => {
           console.log('Removing node from UI:', path);

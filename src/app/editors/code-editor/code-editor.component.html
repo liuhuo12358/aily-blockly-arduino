@@ -7,7 +7,8 @@
             </nz-resize-handle>
             <div class="left-box">
                 <app-file-tree [rootPath]="projectPath" [(selectedFile)]="selectedFile"
-                    (selectedFileChange)="selectedFileChange($event)"></app-file-tree>
+                    (selectedFileChange)="selectedFileChange($event)"
+                    (filesDeleted)="onFilesDeleted($event)"></app-file-tree>
             </div>
         </nz-sider>
         <nz-content>
