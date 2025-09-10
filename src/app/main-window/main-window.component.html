@@ -24,7 +24,12 @@
                   <nz-tab nzTitle="终端"></nz-tab>
                 </nz-tabset>
                 <div class="tool-btns">
-                  <div class="btn ccenter" (click)="clearCurrentComponent()">
+                  @if(selectedTabIndex === 0) {
+                  <div class="btn ccenter" (click)="exportLog()" nz-tooltip nzTooltipTitle="导出">
+                    <i class="fa-light fa-download"></i>
+                  </div>
+                  }
+                  <div class="btn ccenter" (click)="clearCurrentComponent()" nz-tooltip nzTooltipTitle="清除">
                     <i class="fa-light fa-broom-wide"></i>
                   </div>
                   <div class="btn ccenter" (click)="closeBottomPanel()">

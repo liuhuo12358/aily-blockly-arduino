@@ -26,33 +26,50 @@ export class McpService {
   clients: string[] = [];
   tools: MCPTool[] = [];
   mcpConfigName: string = "mcp.json";
+  private isInitialized = false; // 添加初始化标志位
 
   constructor(
     private configService: ConfigService
   ) {}
 
   async init() {
-    await this.connectToServer();
-
-    // 使用Map基于name属性进行去重
-    const toolMap = new Map<string, MCPTool>();
-
-    // 先添加已有工具
-    this.tools.forEach(tool => {
-      toolMap.set(tool.name, tool);
-    });
-
-    // 获取所有工具
-    for (const serverName of this.clients) {
-      const tempTools = await this.getTools(serverName);
-      // 添加新工具，同名工具会被覆盖
-      tempTools.forEach(tool => {
-        toolMap.set(tool.name, tool);
-      });
+    // 防止重复初始化
+    if (this.isInitialized) {
+      console.log('MCP服务已经初始化过，跳过重复初始化');
+      return;
     }
 
-    // 转换回数组
-    this.tools = Array.from(toolMap.values());
+    console.log('开始初始化MCP服务...');
+    this.isInitialized = true;
+    
+    try {
+      await this.connectToServer();
+
+      // 使用Map基于name属性进行去重
+      const toolMap = new Map<string, MCPTool>();
+
+      // 先添加已有工具
+      this.tools.forEach(tool => {
+        toolMap.set(tool.name, tool);
+      });
+
+      // 获取所有工具
+      for (const serverName of this.clients) {
+        const tempTools = await this.getTools(serverName);
+        // 添加新工具，同名工具会被覆盖
+        tempTools.forEach(tool => {
+          toolMap.set(tool.name, tool);
+        });
+      }
+
+      // 转换回数组
+      this.tools = Array.from(toolMap.values());
+      console.log('MCP服务初始化完成，加载工具数量:', this.tools.length);
+    } catch (error) {
+      console.error('MCP服务初始化失败:', error);
+      this.isInitialized = false; // 初始化失败时重置标志位
+      throw error;
+    }
   }
 
   // 读取mcp.json配置文件
@@ -60,13 +77,27 @@ export class McpService {
     try {
       // 获取配置文件内容
       const appDataPath = this.configService.data.appdata_path[this.configService.data.platform].replace('%HOMEPATH%', window['path'].getUserHome());
-      const configFilePath = `${appDataPath}/mcp/${this.mcpConfigName}`;
-      // 判断是否存在
-      const fileExists = await window['path'].isExists(configFilePath);
-      if (!fileExists) {
-        console.warn(`MCP配置文件 ${configFilePath} 不存在，使用默认配置`);
-        return { mcpServers: {} };
+      const primaryConfigFilePath = `${appDataPath}/mcp/${this.mcpConfigName}`;
+      const fallbackConfigFilePath = `./src/app/tools/aily-chat/mcp/${this.mcpConfigName}`;
+      
+      let configFilePath = primaryConfigFilePath;
+      
+      // 优先检查appDataPath下的配置文件
+      const primaryExists = await window['path'].isExists(primaryConfigFilePath);
+      if (!primaryExists) {
+        // 如果主配置文件不存在，检查备用配置文件
+        const fallbackExists = await window['path'].isExists(fallbackConfigFilePath);
+        if (fallbackExists) {
+          configFilePath = fallbackConfigFilePath;
+          console.log(`使用备用MCP配置文件: ${fallbackConfigFilePath}`);
+        } else {
+          console.warn(`MCP配置文件 ${primaryConfigFilePath} 和 ${fallbackConfigFilePath} 都不存在，使用默认配置`);
+          return { mcpServers: {} };
+        }
+      } else {
+        console.log(`使用主MCP配置文件: ${primaryConfigFilePath}`);
       }
+      
       const configContent = await window['fs'].readFileSync(configFilePath, 'utf-8');
       // console.log("configContent: ", configContent);
       
@@ -105,6 +136,12 @@ export class McpService {
           continue;
         }
 
+        // 检查是否已经连接过
+        if (this.clients.includes(serverName)) {
+          console.log(`MCP服务 ${serverName} 已经连接过，跳过重复连接`);
+          continue;
+        }
+
         this.clients.push(serverName)
 
         // 处理参数中的路径变量
@@ -112,14 +149,25 @@ export class McpService {
 
         // 连接到服务器
         try {
+          console.log(`正在连接到MCP服务 ${serverName}...`);
           const Connect = await window["mcp"].connect(serverName, serverConfig.command, processedArgs);
           if (Connect.success === true) {
             console.log(`成功连接到MCP服务 ${serverName}`);
           } else {
             console.error(`连接到MCP服务 ${serverName} 失败:`, Connect.error);
+            // 连接失败时从clients中移除
+            const index = this.clients.indexOf(serverName);
+            if (index > -1) {
+              this.clients.splice(index, 1);
+            }
           }
         } catch (e) {
           console.error(`连接到MCP服务 ${serverName} 时发生错误:`, e);
+          // 连接失败时从clients中移除
+          const index = this.clients.indexOf(serverName);
+          if (index > -1) {
+            this.clients.splice(index, 1);
+          }
         }
       }
     } catch (e) {
@@ -142,6 +190,23 @@ export class McpService {
       console.error("获取工具时发生错误:", e);
       return [];
     }
+  }
+
+  /**
+   * 重置MCP服务，清理所有连接和工具
+   */
+  reset() {
+    console.log('重置MCP服务...');
+    this.isInitialized = false;
+    this.clients = [];
+    this.tools = [];
+  }
+
+  /**
+   * 获取初始化状态
+   */
+  get initialized(): boolean {
+    return this.isInitialized;
   }
 
   async use_tool(toolName: string, args: { [key: string]: unknown }) {

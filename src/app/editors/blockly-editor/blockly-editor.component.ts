@@ -65,6 +65,10 @@ export class BlocklyEditorComponent {
         this.message.error('没有找到项目路径');
       }
     });
+
+    // 阻止鼠标按键前进后退
+    window.history.replaceState(null, '', window.location.href);
+    window.history.pushState(null, '', window.location.href);
   }
 
   ngOnDestroy(): void {

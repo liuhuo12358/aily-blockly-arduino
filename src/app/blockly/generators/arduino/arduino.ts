@@ -203,6 +203,7 @@ export class ArduinoGenerator extends Blockly.CodeGenerator {
     this.isInitialized = false;
 
     let newcode =
+      `#include <Arduino.h>\n\n` +
       (macros.length > 0 ? `${macros.join('\n')}\n\n` : '') +
       (libraries.length > 0 ? `${libraries.join('\n')}\n\n` : '') +
       (variables.length > 0 ? `${variables.join('\n')}\n\n` : '') +

@@ -30,6 +30,7 @@ export class BuilderService {
   private streamId: string | null = null;
   private buildCompleted = false;
   private isErrored = false; // 标识是否为错误状态
+  private buildStartTime: number = 0; // 编译开始时间
 
   currentProjectPath = "";
   lastCode = "";
@@ -45,9 +46,14 @@ export class BuilderService {
   // 添加这个错误处理方法
   private handleCompileError(errorMessage: string) {
     console.error("handle errror: ", errorMessage);
+    // 计算编译耗时
+    const buildEndTime = Date.now();
+    const buildDuration = this.buildStartTime > 0 ? ((buildEndTime - this.buildStartTime) / 1000).toFixed(2) : '0.00';
+    console.log(`编译错误，耗时: ${buildDuration} 秒`);
+
     this.noticeService.update({
       title: "编译失败",
-      text: errorMessage,
+      text: `${errorMessage} (耗时: ${buildDuration}s)`,
       detail: errorMessage,
       state: 'error',
       setTimeout: 600000
@@ -98,6 +104,7 @@ export class BuilderService {
         this.streamId = "";
         this.isErrored = false; // 重置错误状态
         this.cancelled = false; // 重置取消状态
+        this.buildStartTime = Date.now(); // 记录编译开始时间
 
         // 创建临时文件夹
         if (!window['path'].isExists(tempPath)) {
@@ -139,7 +146,7 @@ export class BuilderService {
         // 解压libraries到临时文件夹
         // 用于记录已复制的库文件夹名称
         const copiedLibraries: string[] = [];
-        
+
         for (let lib of libsPath) {
           let sourcePath = `${this.currentProjectPath}/node_modules/${lib}/src`;
           if (!window['path'].isExists(sourcePath)) {
@@ -152,12 +159,16 @@ export class BuilderService {
           // 判断src目录下是否有且仅有一个src目录，没有别的文件或文件夹
           if (window['fs'].existsSync(sourcePath)) {
             const srcContents = window['fs'].readDirSync(sourcePath);
-            if (srcContents.length === 1 &&
-              srcContents[0].name === 'src' &&
-              window['fs'].isDirectory(`${sourcePath}/${srcContents[0].name}`)) {
-              // 如果有且仅有一个src目录，则将复制源路径定位到src/src
-              console.log(`库 ${lib} 检测到嵌套src目录，使用 ${sourcePath}/src 作为源路径`);
-              sourcePath = `${sourcePath}/src`;
+            if (srcContents.length === 1) {
+              // 兼容处理文件对象和字符串
+              const firstItem = srcContents[0];
+              const itemName = typeof firstItem === 'object' && firstItem !== null ? firstItem.name : firstItem;
+
+              if (itemName === 'src' && window['fs'].isDirectory(`${sourcePath}/${itemName}`)) {
+                // 如果有且仅有一个src目录，则将复制源路径定位到src/src
+                console.log(`库 ${lib} 检测到嵌套src目录，使用 ${sourcePath}/src 作为源路径`);
+                sourcePath = `${sourcePath}/src`;
+              }
             }
           }
 
@@ -180,16 +191,22 @@ export class BuilderService {
               let targetName = lib.split('@aily-project/')[1];
               let targetPath = `${librariesPath}/${targetName}`;
 
+              let shouldCopy = true;
               if (window['path'].isExists(targetPath)) {
                 if (this.configService.data.devmode || false) {
                   await this.cmdService.runAsync(`Remove-Item -Path "${targetPath}" -Recurse -Force`);
                 } else {
-                  continue
+                  // 非开发模式下，仍然记录为已复制，避免被清理
+                  console.log(`库 ${lib} 目标路径已存在，跳过复制但保留记录`);
+                  shouldCopy = false;
                 }
               }
-              // 直接复制src到targetPath
-              await this.cmdService.runAsync(`Copy-Item -Path "${sourcePath}" -Destination "${targetPath}" -Recurse -Force`);
-              // 记录已复制的文件夹名称
+
+              if (shouldCopy) {
+                // 直接复制src到targetPath
+                await this.cmdService.runAsync(`Copy-Item -Path "${sourcePath}" -Destination "${targetPath}" -Recurse -Force`);
+              }
+              // 无论是否复制，都记录已处理的文件夹名称
               copiedLibraries.push(targetName);
             } else {
               // For libraries without header files, copy each directory individually
@@ -201,27 +218,33 @@ export class BuilderService {
                 // Process each directory
                 for (const item of items) {
                   console.log("item: ", item);
-                  const fullSourcePath = `${sourcePath}/${item.name}`;
+                  // 兼容处理文件对象和字符串
+                  const itemName = typeof item === 'object' && item !== null ? item.name : item;
+                  const fullSourcePath = `${sourcePath}/${itemName}`;
 
                   // Check if it's a directory
                   if (window['fs'].isDirectory(fullSourcePath)) {
-                    const targetPath = `${librariesPath}/${item.name}`;
+                    const targetPath = `${librariesPath}/${itemName}`;
 
+                    let shouldCopy = true;
                     // Delete target directory if it exists
                     if (window['path'].isExists(targetPath)) {
                       if (this.configService.data.devmode || false) {
                         await this.cmdService.runAsync(`Remove-Item -Path "${targetPath}" -Recurse -Force`);
                       } else {
-                        // 如果不是debug模式，则跳过删除
-                        continue;
+                        // 如果不是debug模式，仍然记录但跳过复制
+                        console.log(`目录 ${itemName} 已存在，跳过复制但保留记录`);
+                        shouldCopy = false;
                       }
                     }
 
-                    // Copy directory
-                    await this.cmdService.runAsync(`Copy-Item -Path "${fullSourcePath}" -Destination "${targetPath}" -Recurse -Force`);
-                    // 记录已复制的文件夹名称
-                    copiedLibraries.push(item.name);
-                    // console.log(`目录 ${item.name} 已复制到 ${targetPath}`);
+                    if (shouldCopy) {
+                      // Copy directory
+                      await this.cmdService.runAsync(`Copy-Item -Path "${fullSourcePath}" -Destination "${targetPath}" -Recurse -Force`);
+                    }
+                    // 无论是否复制，都记录已处理的文件夹名称
+                    copiedLibraries.push(itemName);
+                    // console.log(`目录 ${itemName} 已处理`);
                   }
                 }
               }
@@ -232,28 +255,28 @@ export class BuilderService {
         // 检查和清理libraries文件夹
         // 输出已复制的库文件夹名称
         console.log(`已复制的库文件夹: ${copiedLibraries.join(', ')}`);
-        
+
         // 获取libraries文件夹中的所有文件夹
         let existingFolders: string[] = [];
-        
+
         if (window['fs'].existsSync(librariesPath)) {
           const librariesItems = window['fs'].readDirSync(librariesPath);
           existingFolders = librariesItems
             .filter(item => window['fs'].isDirectory(`${librariesPath}/${item.name || item}`))
             .map(item => item.name || item);
-          
+
           console.log(`libraries文件夹中现有文件夹: ${existingFolders.join(', ')}`);
-          
+
           // 直接清理不在copiedLibraries列表中的文件夹
           if (existingFolders.length > 0) {
             console.log('开始清理未使用的库文件夹');
-            
+
             for (const folder of existingFolders) {
               // 检查文件夹是否在已复制的列表中
               const shouldKeep = copiedLibraries.some(copiedLib => {
                 return folder === copiedLib || folder.startsWith(copiedLib);
               });
-              
+
               if (!shouldKeep) {
                 const folderToDelete = `${librariesPath}/${folder}`;
                 console.log(`删除未使用的库文件夹: ${folder}`);
@@ -324,7 +347,7 @@ export class BuilderService {
           const projectConfig = await this.projectService.getProjectConfig();
           if (projectConfig) {
             const buildPropertyParams: string[] = [];
-            
+
             // 遍历配置对象，解析编译参数
             Object.values(projectConfig).forEach((configSection: any) => {
               if (configSection && typeof configSection === 'object') {
@@ -341,7 +364,7 @@ export class BuilderService {
                 });
               }
             });
-            
+
             buildProperties = buildPropertyParams.join(' ');
             if (buildProperties) {
               buildProperties = ' ' + buildProperties; // 在前面添加空格
@@ -355,7 +378,7 @@ export class BuilderService {
         compilerParam += buildProperties;
 
         const compileCommand = `aily-arduino-cli.exe ${compilerParam} --jobs 0 --libraries '${librariesPath}' --board-path '${this.sdkPath}' --compile-path '${this.compilerPath}' --tools-path '${this.toolsPath}' --output-dir '${this.buildPath}' --log-level debug '${sketchFilePath}'${buildProperties} --verbose`;
-        
+
         const title = `编译 ${boardJson.name}`;
         const completeTitle = `编译完成`;
 
@@ -369,6 +392,8 @@ export class BuilderService {
         let flashInfo = '';
         let ramInfo = '';
         let lastLogLines: string[] = [];
+
+        this.buildStartTime = Date.now(); // 记录编译开始时间
 
         this.cmdService.run(compileCommand, null, false).subscribe({
           next: (output: CmdOutput) => {
@@ -469,7 +494,7 @@ export class BuilderService {
                     this.buildCompleted = true;
                   }
 
-                  if (!isProgress && !isBuildText) { 
+                  if (!isProgress && !isBuildText) {
                     // 如果不是进度信息，则直接更新日志
                     // 判断是否包含:Global variables use 9 bytes (0%) of dynamic memory, leaving 2039 bytes for local variables. Maximum is 2048 bytes.
                     if (trimmedLine.includes('Global variables use')) {
@@ -480,7 +505,7 @@ export class BuilderService {
                         this.logService.update({ "detail": trimmedLine, "state": "doing" });
                       }
                     }
-                    
+
                     // 收集最后的几行日志用于提取固件信息
                     lastLogLines.push(trimmedLine);
                     if (lastLogLines.length > 30) {
@@ -502,12 +527,17 @@ export class BuilderService {
             reject({ state: 'error', text: error.message });
           },
           complete: () => {
-            console.log('编译命令执行完成'); 
+            console.log('编译命令执行完成');
             if (this.isErrored) {
               console.error('编译过程中发生错误，编译未完成');
+              // 计算编译耗时
+              const buildEndTime = Date.now();
+              const buildDuration = ((buildEndTime - this.buildStartTime) / 1000).toFixed(2);
+              console.log(`编译失败，耗时: ${buildDuration} 秒`);
+
               this.noticeService.update({
                 title: "编译失败",
-                text: '编译失败',
+                text: `编译失败 (耗时: ${buildDuration}s)`,
                 detail: lastStdErr,
                 state: 'error',
                 setTimeout: 600000
@@ -517,20 +547,31 @@ export class BuilderService {
               this.passed = false;
               // 终止Arduino CLI进程
               this.cmdService.killArduinoCli();
-              reject({ state: 'error', text: '编译失败' });
+              reject({ state: 'error', text: `编译失败 (耗时: ${buildDuration}s)` });
             } else if (this.buildCompleted) {
               console.log('编译命令执行完成');
+              // 计算编译耗时
+              const buildEndTime = Date.now();
+              const buildDuration = ((buildEndTime - this.buildStartTime) / 1000).toFixed(2);
+              console.log(`编译耗时: ${buildDuration} 秒`);
+
               // 提取flash和ram信息
               const displayText = this.extractFirmwareInfo(lastLogLines);
-              this.noticeService.update({ title: completeTitle, text: displayText, state: 'done', setTimeout: 600000 });
+              const displayTextWithTime = `${displayText} (耗时: ${buildDuration}s)`;
+              this.noticeService.update({ title: completeTitle, text: displayTextWithTime, state: 'done', setTimeout: 600000 });
               this.buildInProgress = false;
               this.passed = true;
-              resolve({ state: 'done', text: '编译完成' });
+              resolve({ state: 'done', text: `编译完成 (耗时: ${buildDuration}s)` });
             } else if (this.cancelled) {
               console.warn("编译中断")
+              // 计算编译耗时
+              const buildEndTime = Date.now();
+              const buildDuration = ((buildEndTime - this.buildStartTime) / 1000).toFixed(2);
+              console.log(`编译已取消，耗时: ${buildDuration} 秒`);
+
               this.noticeService.update({
                 title: "编译已取消",
-                text: '编译已取消',
+                text: `编译已取消 (耗时: ${buildDuration}s)`,
                 state: 'warn',
                 setTimeout: 55000
               });
@@ -538,12 +579,17 @@ export class BuilderService {
               this.passed = false;
               // 终止Arduino CLI进程
               this.cmdService.killArduinoCli();
-              reject({ state: 'warn', text: '编译已取消' });
+              reject({ state: 'warn', text: `编译已取消 (耗时: ${buildDuration}s)` });
             } else {
               console.warn('编译命令未完成，可能是由于超时或其他原因');
+              // 计算编译耗时
+              const buildEndTime = Date.now();
+              const buildDuration = ((buildEndTime - this.buildStartTime) / 1000).toFixed(2);
+              console.log(`编译未完成，耗时: ${buildDuration} 秒`);
+
               this.noticeService.update({
                 title: "编译失败",
-                text: lastStdErr.slice(0, 30) + "..." || '编译未完成',
+                text: `${lastStdErr.slice(0, 30) + "..." || '编译未完成'} (耗时: ${buildDuration}s)`,
                 detail: lastStdErr,
                 state: 'error',
                 setTimeout: 600000
@@ -552,7 +598,7 @@ export class BuilderService {
               this.passed = false;
               // 终止Arduino CLI进程
               this.cmdService.killArduinoCli();
-              reject({ state: 'warn', text: '编译未完成' });
+              reject({ state: 'warn', text: `编译未完成 (耗时: ${buildDuration}s)` });
             }
           }
         })
@@ -571,24 +617,24 @@ export class BuilderService {
    */
   private extractFirmwareInfo(logLines: string[]): string {
     // console.log("logLines: ", logLines);
-    const logText = logLines.join(' ');    
+    const logText = logLines.join(' ');
     // 提取flash信息：Sketch uses 2706878 bytes (86%) of program storage space. Maximum is 3145728 bytes.
     const flashMatch = logText.match(/Sketch uses (\d+) bytes \((\d+)%\) of program storage space\.\s*Maximum is (\d+) bytes/);
     // 提取ram信息：Global variables use 47628 bytes (14%) of dynamic memory, leaving 280052 bytes for local variables. Maximum is 327680 bytes.
     const ramMatch = logText.match(/Global variables use (\d+) bytes \((\d+)%\) of dynamic memory.*?Maximum is (\d+) bytes/);
-    
+
     if (flashMatch && ramMatch) {
       const flashUsed = flashMatch[1];
       const flashPercent = flashMatch[2];
       const flashMax = flashMatch[3];
-      
+
       const ramUsed = ramMatch[1];
       const ramPercent = ramMatch[2];
       const ramMax = ramMatch[3];
-      
+
       return `Flash use ${flashPercent}%   Ram use ${ramPercent}%`;
     }
-    
+
     return "编译完成";
   }
 
