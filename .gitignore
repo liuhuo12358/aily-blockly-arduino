@@ -12,6 +12,7 @@
 npm-debug.log
 yarn-error.log
 /child/node
+/child/clangd
 
 # IDEs and editors
 .idea/
