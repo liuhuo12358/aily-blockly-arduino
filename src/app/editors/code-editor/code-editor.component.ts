@@ -93,6 +93,12 @@ export class CodeEditorComponent implements OnInit, AfterViewInit, OnDestroy {
   ) { }
 
   async ngOnInit() {
+    // 初始化 _ProjectService
+    this._ProjectService.init();
+    
+    // 注册当前组件到 _ProjectService
+    this._ProjectService.registerCodeEditor(this);
+    
     this.activatedRoute.queryParams.subscribe(params => {
       if (params['path']) {
         console.log('project path', params['path']);
@@ -120,6 +126,9 @@ export class CodeEditorComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    // 注销当前组件
+    this._ProjectService.unregisterCodeEditor();
+    
     // 保存当前标签页状态
     this.saveCurrentTabState();
 
