@@ -218,9 +218,15 @@ class CompileCommandsGenerator {
    */
   saveToFile() {
     const commands = this.generateCompileCommands();
-    const outputPath = path.join(this.projectPath, 'compile_commands.json');
+    const tempDir = path.join(this.projectPath, '.temp');
+    const outputPath = path.join(tempDir, 'compile_commands.json');
     
     try {
+      // 确保.temp目录存在
+      if (!fs.existsSync(tempDir)) {
+        fs.mkdirSync(tempDir, { recursive: true });
+      }
+      
       fs.writeFileSync(outputPath, JSON.stringify(commands, null, 2));
       console.log(`Generated compile_commands.json with ${commands.length} entries`);
       return outputPath;

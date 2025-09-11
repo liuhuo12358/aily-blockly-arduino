@@ -39,7 +39,8 @@ class ClangdService extends EventEmitter {
       '--header-insertion=iwyu',
       '--pch-storage=memory',
       '--log=verbose',
-      '--pretty'
+      '--pretty',
+      `--compile-commands-dir=${path.join(workspaceRoot, '.temp')}`
     ];
 
     console.log(`Starting clangd at ${clangdPath} with args:`, args);
