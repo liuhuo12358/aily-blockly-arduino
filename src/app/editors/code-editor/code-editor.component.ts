@@ -19,6 +19,7 @@ import { ShortcutService, ShortcutAction, ShortcutKeyMapping } from './services/
 import { CodeIntelligenceService } from './services/code-intelligence.service';
 import { Subscription } from 'rxjs';
 import { ViewChild, AfterViewInit, OnInit, OnDestroy } from '@angular/core';
+import { _ProjectService } from './services/project.service';
 
 export interface OpenedFile {
   path: string;      // 文件路径
@@ -80,6 +81,7 @@ export class CodeEditorComponent implements OnInit, AfterViewInit, OnDestroy {
   constructor(
     private modal: NzModalService,
     private projectService: ProjectService,
+    private _ProjectService:_ProjectService,
     private activatedRoute: ActivatedRoute,
     private message: NzMessageService,
     private cmdService: CmdService,

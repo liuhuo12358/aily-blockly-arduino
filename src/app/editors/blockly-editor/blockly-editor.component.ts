@@ -15,6 +15,7 @@ import { UploaderService } from '../../services/uploader.service';
 import { BuilderService } from '../../services/builder.service';
 import { BlocklyService } from './services/blockly.service';
 import { BlocklyComponent } from './components/blockly/blockly.component';
+import { _ProjectService } from './services/project.service';
 
 @Component({
   selector: 'app-blockly-editor',
@@ -39,6 +40,7 @@ export class BlocklyEditorComponent {
   constructor(
     private cd: ChangeDetectorRef,
     private projectService: ProjectService,
+    private _projectService: _ProjectService,
     private uiService: UiService,
     private activatedRoute: ActivatedRoute,
     private blocklyService: BlocklyService,
@@ -52,6 +54,7 @@ export class BlocklyEditorComponent {
   ) { }
 
   ngOnInit(): void {
+    this._projectService.init();
     this.activatedRoute.queryParams.subscribe(params => {
       if (params['path']) {
         console.log('project path', params['path']);
@@ -90,6 +93,9 @@ export class BlocklyEditorComponent {
     // 设置当前项目路径和package.json数据
     this.projectService.currentPackageData = packageJson;
     this.projectService.currentProjectPath = projectPath;
+
+    this._projectService.currentProjectPath = projectPath;
+
     // 检查是否有node_modules目录，没有则安装依赖，有则跳过
     const nodeModulesExist = this.electronService.exists(projectPath + '/node_modules');
     if (!nodeModulesExist) {
