@@ -10,7 +10,6 @@ import { CmdService } from './cmd.service';
 import { generateDateString } from '../func/func';
 import { ConfigService } from './config.service';
 import { ESP32_CONFIG_MENU } from '../configs/esp32.config';
-import { BlocklyService } from '../editors/blockly-editor/services/blockly.service';
 import { ActionService } from './action.service';
 
 const { pt } = (window as any)['electronAPI'].platform;
