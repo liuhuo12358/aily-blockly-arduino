@@ -530,6 +530,113 @@ export class CodeEditorComponent implements OnInit, AfterViewInit, OnDestroy {
     }
   }
 
+  /**
+   * 处理打开文件请求（从Monaco编辑器的跳转到定义功能触发）
+   */
+  onOpenFileRequest(event: {filePath: string, position: any}): void {
+    console.log('收到打开文件请求:', event);
+    
+    // 检查文件是否存在
+    if (!this.electronService.exists(event.filePath)) {
+      this.message.error(`文件不存在: ${event.filePath}`);
+      return;
+    }
+
+    // 检查文件是否已经打开
+    const existingFileIndex = this.openedFiles.findIndex(f => f.path === event.filePath);
+    
+    if (existingFileIndex >= 0) {
+      // 如果已经打开，切换到该标签页
+      this.selectedIndex = existingFileIndex;
+    } else {
+      try {
+        // 否则新建标签页
+        const content = window['fs'].readFileSync(event.filePath);
+        const fileName = event.filePath.split(/[\/\\]/).pop() || '';
+        
+        const newFile: OpenedFile = {
+          path: event.filePath,
+          title: fileName,
+          content: content,
+          isDirty: false,
+          editorState: {} 
+        };
+
+        this.openedFiles.push(newFile);
+        this.selectedIndex = this.openedFiles.length - 1;
+      } catch (error) {
+        console.error('读取文件失败:', error);
+        this.message.error(`无法打开文件: ${event.filePath}`);
+        return;
+      }
+    }
+
+    // 延迟更新代码并跳转到指定位置
+    setTimeout(async () => {
+      this.updateCurrentCode();
+      
+      // 等待编辑器准备就绪后跳转到指定位置
+      setTimeout(() => {
+        this.jumpToPosition(event.position);
+      }, 100);
+    }, 0);
+  }
+
+  /**
+   * 跳转到指定位置
+   */
+  private jumpToPosition(position: any): void {
+    try {
+      const monacoComponent = this.getMonacoEditorComponent();
+      const editor = monacoComponent?.getEditorInstance();
+      
+      if (editor && position) {
+        const targetPosition = {
+          lineNumber: position.lineNumber || (position.line + 1), // 兼容不同的位置格式
+          column: position.column || (position.character + 1)
+        };
+        
+        // 跳转到指定位置
+        editor.setPosition(targetPosition);
+        editor.revealLineInCenter(targetPosition.lineNumber);
+        
+        // 高亮显示目标行
+        this.highlightLineInEditor(editor, targetPosition.lineNumber);
+        
+        this.message.success(`已跳转到第 ${targetPosition.lineNumber} 行`);
+      }
+    } catch (error) {
+      console.error('跳转到位置失败:', error);
+      this.message.error('跳转失败');
+    }
+  }
+
+  /**
+   * 在编辑器中高亮指定行
+   */
+  private highlightLineInEditor(editor: any, lineNumber: number): void {
+    try {
+      const monaco = (window as any).monaco;
+      if (!monaco) return;
+
+      const decorations = editor.deltaDecorations([], [{
+        range: new monaco.Range(lineNumber, 1, lineNumber, 1),
+        options: {
+          isWholeLine: true,
+          className: 'line-highlight',
+          linesDecorationsClassName: 'line-highlight-decoration'
+        }
+      }]);
+
+      // 2秒后清除高亮
+      setTimeout(() => {
+        editor.deltaDecorations(decorations, []);
+      }, 2000);
+    } catch (error) {
+      console.warn('高亮行失败:', error);
+    }
+  }
+
   // 处理文件删除事件
   onFilesDeleted(deletedPaths: string[]): void {
     console.log('Files deleted:', deletedPaths);

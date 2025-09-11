@@ -1,7 +1,8 @@
 import { CommonModule } from '@angular/common';
-import { Component, EventEmitter, Input, Output, SimpleChanges, ViewChild } from '@angular/core';
+import { Component, EventEmitter, Input, Output, SimpleChanges, ViewChild, Inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { NzCodeEditorModule, NzCodeEditorComponent } from 'ng-zorro-antd/code-editor';
+import { NzMessageService } from 'ng-zorro-antd/message';
 import { CodeIntelligenceService } from '../../services/code-intelligence.service';
 
 @Component({
@@ -29,6 +30,7 @@ export class MonacoEditorComponent {
   @Input() filePath = ''; // 当前文件路径
 
   @Output() codeChange = new EventEmitter<string>();
+  @Output() openFileRequest = new EventEmitter<{filePath: string, position: any}>();
 
   @Input() sdkPath: string;
   @Input() librariesPath: string;
@@ -37,7 +39,8 @@ export class MonacoEditorComponent {
   private monacoInstance: any;
 
   constructor(
-    private codeIntelligenceService: CodeIntelligenceService
+    private codeIntelligenceService: CodeIntelligenceService,
+    private message: NzMessageService
   ) { }
 
   ngOnInit() {
@@ -77,6 +80,9 @@ export class MonacoEditorComponent {
       //     return this.handleTabKey(editor);
       //   });
       //   this.disposables.push(tabDisposable);
+
+      // 添加自定义右键菜单项
+      this.setupContextMenu(editor);
     }
   }
 
@@ -207,6 +213,307 @@ export class MonacoEditorComponent {
     // 这里可以添加接受内联补全的逻辑
     // Monaco Editor会自动处理大部分情况
     editor.trigger('keyboard', 'acceptAlternativeSelectedSuggestion', {});
+  }
+
+  /**
+   * 设置自定义右键菜单
+   */
+  private setupContextMenu(editor: any): void {
+    if (!this.monacoInstance) return;
+
+    // 添加自定义菜单项
+    const contextMenuAction = {
+      id: 'go-to-definition',
+      label: '跳转到定义位置',
+      contextMenuGroupId: 'navigation',
+      contextMenuOrder: 1.5,
+      run: (editor: any) => {
+        this.goToDefinition(editor);
+      }
+    };
+
+    // 注册菜单项动作
+    editor.addAction(contextMenuAction);
+
+    // 添加更多菜单项
+    const findReferencesAction = {
+      id: 'find-references',
+      label: '查找引用',
+      contextMenuGroupId: 'navigation',
+      contextMenuOrder: 1.6,
+      run: (editor: any) => {
+        this.findReferences(editor);
+      }
+    };
+
+    editor.addAction(findReferencesAction);
+
+    const showHoverAction = {
+      id: 'show-hover',
+      label: '显示详情',
+      contextMenuGroupId: 'navigation',
+      contextMenuOrder: 1.7,
+      run: (editor: any) => {
+        this.showHoverInfo(editor);
+      }
+    };
+
+    editor.addAction(showHoverAction);
+  }
+
+  /**
+   * 跳转到定义位置
+   */
+  private async goToDefinition(editor: any): Promise<void> {
+    try {
+      const position = editor.getPosition();
+      const model = editor.getModel();
+      
+      if (!position || !model || !this.filePath) {
+        console.warn('无法获取当前位置或文件路径');
+        return;
+      }
+
+      // 调用代码智能服务获取定义位置
+      const definitions = await this.codeIntelligenceService.getDefinition(
+        this.filePath,
+        {
+          line: position.lineNumber - 1, // LSP使用0基行号
+          character: position.column - 1  // LSP使用0基列号
+        }
+      );
+
+      if (!definitions || definitions.length === 0) {
+        this.showMessage('未找到定义位置', 'info');
+        return;
+      }
+
+      // 处理定义结果
+      const definition = Array.isArray(definitions) ? definitions[0] : definitions;
+      await this.navigateToDefinition(definition);
+
+    } catch (error) {
+      console.error('跳转到定义位置失败:', error);
+      this.showMessage('跳转到定义位置失败', 'error');
+    }
+  }
+
+  /**
+   * 导航到定义位置
+   */
+  private async navigateToDefinition(definition: any): Promise<void> {
+    if (!definition || !definition.uri) {
+      console.warn('定义信息无效');
+      return;
+    }
+
+    try {
+      // 解析URI，获取文件路径
+      const uri = definition.uri;
+      let filePath = uri;
+      
+      // 处理file://协议的URI
+      if (uri.startsWith('file://')) {
+        filePath = uri.substring(7); // 移除 'file://' 前缀
+        // 在Windows上处理路径格式
+        if (process.platform === 'win32') {
+          filePath = filePath.replace(/\//g, '\\');
+        }
+      }
+
+      const range = definition.range;
+      const targetPosition = {
+        lineNumber: range.start.line + 1, // Monaco使用1基行号
+        column: range.start.character + 1  // Monaco使用1基列号
+      };
+
+      // 检查是否是当前文件
+      if (filePath === this.filePath) {
+        // 在当前编辑器中跳转
+        const editor = this.getEditorInstance();
+        if (editor) {
+          // 跳转到指定位置
+          editor.setPosition(targetPosition);
+          editor.revealLineInCenter(targetPosition.lineNumber);
+          
+          // 高亮显示目标行
+          this.highlightLine(editor, targetPosition.lineNumber);
+          
+          this.showMessage(`已跳转到第 ${targetPosition.lineNumber} 行`, 'success');
+        }
+      } else {
+        // 需要打开其他文件，通知父组件
+        this.requestOpenFile(filePath, targetPosition);
+      }
+
+    } catch (error) {
+      console.error('导航到定义位置失败:', error);
+      this.showMessage('导航失败', 'error');
+    }
+  }
+
+  /**
+   * 查找引用
+   */
+  private async findReferences(editor: any): Promise<void> {
+    try {
+      const position = editor.getPosition();
+      
+      if (!position || !this.filePath) {
+        console.warn('无法获取当前位置或文件路径');
+        return;
+      }
+
+      const references = await this.codeIntelligenceService.getReferences(
+        this.filePath,
+        {
+          line: position.lineNumber - 1,
+          character: position.column - 1
+        }
+      );
+
+      if (!references || references.length === 0) {
+        this.showMessage('未找到引用', 'info');
+        return;
+      }
+
+      // 显示引用列表
+      this.showReferences(references);
+
+    } catch (error) {
+      console.error('查找引用失败:', error);
+      this.showMessage('查找引用失败', 'error');
+    }
+  }
+
+  /**
+   * 显示悬停信息
+   */
+  private async showHoverInfo(editor: any): Promise<void> {
+    try {
+      const position = editor.getPosition();
+      
+      if (!position || !this.filePath) {
+        console.warn('无法获取当前位置或文件路径');
+        return;
+      }
+
+      const hoverInfo = await this.codeIntelligenceService.getHoverInfo(
+        this.filePath,
+        {
+          line: position.lineNumber - 1,
+          character: position.column - 1
+        }
+      );
+
+      if (!hoverInfo || !hoverInfo.contents) {
+        this.showMessage('无详细信息', 'info');
+        return;
+      }
+
+      // 显示悬停信息
+      this.displayHoverInfo(hoverInfo);
+
+    } catch (error) {
+      console.error('显示详情失败:', error);
+      this.showMessage('显示详情失败', 'error');
+    }
+  }
+
+  /**
+   * 高亮显示指定行
+   */
+  private highlightLine(editor: any, lineNumber: number): void {
+    const decorations = editor.deltaDecorations([], [{
+      range: new this.monacoInstance.Range(lineNumber, 1, lineNumber, 1),
+      options: {
+        isWholeLine: true,
+        className: 'line-highlight',
+        linesDecorationsClassName: 'line-highlight-decoration'
+      }
+    }]);
+
+    // 2秒后清除高亮
+    setTimeout(() => {
+      editor.deltaDecorations(decorations, []);
+    }, 2000);
+  }
+
+  /**
+   * 显示引用列表
+   */
+  private showReferences(references: any[]): void {
+    // 这里可以显示一个引用列表对话框
+    console.log('References found:', references);
+    
+    // 简单的实现：显示第一个引用的位置信息
+    if (references.length > 0) {
+      const ref = references[0];
+      const message = `找到 ${references.length} 个引用，第一个在第 ${ref.range.start.line + 1} 行`;
+      this.showMessage(message, 'success');
+    }
+  }
+
+  /**
+   * 显示悬停信息
+   */
+  private displayHoverInfo(hoverInfo: any): void {
+    let content = '';
+    
+    if (hoverInfo.contents) {
+      if (Array.isArray(hoverInfo.contents)) {
+        content = hoverInfo.contents.map((item: any) => {
+          if (typeof item === 'string') {
+            return item;
+          } else if (item.value) {
+            return item.value;
+          }
+          return JSON.stringify(item);
+        }).join('\n');
+      } else if (typeof hoverInfo.contents === 'string') {
+        content = hoverInfo.contents;
+      } else if (hoverInfo.contents.value) {
+        content = hoverInfo.contents.value;
+      }
+    }
+
+    if (content) {
+      // 这里可以显示一个信息对话框或工具提示
+      this.showMessage(content, 'info');
+      console.log('Hover info:', content);
+    }
+  }
+
+  /**
+   * 请求打开文件（通知父组件）
+   */
+  private requestOpenFile(filePath: string, position: any): void {
+    // 发出事件通知父组件打开文件并跳转到指定位置
+    this.openFileRequest.emit({
+      filePath,
+      position
+    });
+  }
+
+  /**
+   * 显示消息
+   */
+  private showMessage(message: string, type: 'success' | 'info' | 'warning' | 'error'): void {
+    // 使用ng-zorro的消息服务
+    switch (type) {
+      case 'success':
+        this.message.success(message);
+        break;
+      case 'info':
+        this.message.info(message);
+        break;
+      case 'warning':
+        this.message.warning(message);
+        break;
+      case 'error':
+        this.message.error(message);
+        break;
+    }
   }
 
 
