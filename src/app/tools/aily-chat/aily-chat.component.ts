@@ -122,6 +122,7 @@ export class AilyChatComponent implements OnDestroy {
 
   isCompleted = false;
   private isSessionStarting = false; // 防止重复启动会话的标志位
+  private hasInitializedForThisLogin = false; // 标记是否已为当前登录状态初始化过
 
   private textMessageSubscription: Subscription;
   private loginStatusSubscription: Subscription;
@@ -283,6 +284,8 @@ export class AilyChatComponent implements OnDestroy {
     this.prjPath = this.projectService.currentProjectPath === this.projectService.projectRootPath ? "" : this.projectService.currentProjectPath;
     this.prjRootPath = this.projectService.projectRootPath;
 
+
+
     // 订阅消息
     this.currentUrl = this.router.url;
     // 订阅外部文本消息
@@ -299,17 +302,76 @@ export class AilyChatComponent implements OnDestroy {
     // 订阅登录状态变化
     this.loginStatusSubscription = this.authService.isLoggedIn$.subscribe(
       async isLoggedIn => {
-        this.list = [...this.defaultList.map(item => ({...item}))]; // 重置消息列表
+        console.log('登录状态变化:', isLoggedIn, {
+          hasInitializedForThisLogin: this.hasInitializedForThisLogin,
+          isSessionStarting: this.isSessionStarting,
+          currentSessionId: this.sessionId
+        });
         
-        // 只在登录状态且未初始化过MCP时才初始化
-        if (isLoggedIn && !this.mcpInitialized) {
-          this.mcpInitialized = true;
-          await this.mcpService.init();
+        // 只在登录状态下调用startSession，避免登出时重复显示登录按钮
+        if (!this.hasInitializedForThisLogin && !this.isSessionStarting && isLoggedIn) {
+          this.hasInitializedForThisLogin = true;
+          this.list = [...this.defaultList.map(item => ({...item}))]; // 重置消息列表
+          
+          this.startSession().then((res) => {
+            console.log("startSession result: ", res);
+            // 获取历史记录
+            this.getHistory();
+          }).catch((err) => {
+            console.error("startSession error: ", err);
+          });
         }
         
-        this.startSession().then(() => {
-          this.getHistory();
-        });
+        if (isLoggedIn) {
+          // 只在登录状态且未初始化过MCP时才初始化
+          if (!this.mcpInitialized) {
+            this.mcpInitialized = true;
+            await this.mcpService.init();
+          }
+        } else {
+          // 用户登出时的处理
+          console.log('用户已登出，清理会话和状态');
+          
+          // 停止并关闭当前会话（如果存在）
+          try {
+            await this.stopAndCloseSession();
+          } catch (error) {
+            console.error('清理会话时出错:', error);
+          }
+          
+          // 重置所有相关状态
+          this.hasInitializedForThisLogin = false;
+          this.mcpInitialized = false;
+          this.isWaiting = false;
+          this.isCompleted = false;
+          this.isSessionStarting = false;
+          
+          // 清空会话ID
+          this.chatService.currentSessionId = '';
+          
+          // 重置消息列表为默认状态
+          this.list = [...this.defaultList.map(item => ({...item}))];
+
+          let errData = {
+            status: 422,
+            message: "用户已登出，需要重新登录才能继续使用AI助手功能"
+          }
+          this.appendMessage('error', `
+\`\`\`aily-error
+${JSON.stringify(errData)}
+\`\`\`\n\n`)
+          
+          // 清理工具调用状态
+          this.toolCallStates = {};
+          
+          // 断开流连接
+          if (this.messageSubscription) {
+            this.messageSubscription.unsubscribe();
+            this.messageSubscription = null;
+          }
+          
+          console.log('用户登出状态清理完成');
+        }
       }
     );
   }
@@ -475,9 +537,14 @@ export class AilyChatComponent implements OnDestroy {
   startSession(): Promise<void> {
     // 如果会话正在启动中，直接返回
     if (this.isSessionStarting) {
+      console.log('startSession 被跳过: 会话正在启动中');
       return Promise.resolve();
     }
     
+    console.log('开始启动会话...', { 
+      currentSessionId: this.sessionId,
+      isSessionStarting: this.isSessionStarting 
+    });
     this.isSessionStarting = true;
     
     // tools + mcp tools
@@ -498,10 +565,12 @@ export class AilyChatComponent implements OnDestroy {
         next: (res: any) => {
           if (res.status === 'success') {
             this.chatService.currentSessionId = res.data;
+            console.log('会话启动成功, sessionId:', res.data);
             this.streamConnect();
             this.isSessionStarting = false;
             resolve();
           } else {
+            console.log("startSession failed: ", res);
             this.appendMessage('error', `
 \`\`\`aily-error
 {
@@ -545,6 +614,8 @@ ${JSON.stringify(errData)}
       this.stop();
       return;
     }
+    
+
 
     // 发送消息时重新启用自动滚动
     this.autoScrollEnabled = true;
@@ -566,6 +637,8 @@ ${JSON.stringify(errData)}
   send(sender: string, content: string, clear: boolean = true): void {
     let text = content.trim();
     if (!this.sessionId || !text) return;
+    
+
 
     if (sender === 'user') {
       if (this.isWaiting) {
@@ -1633,7 +1706,13 @@ ${JSON.stringify(errData)}
           return item;
         });
         // 合并历史消息和当前消息列表
-        this.list = [...this.list, ...historyData];
+        // this.list = [...this.list, ...historyData];
+        // 将历史记录逐条添加到消息列表中
+        if (historyData && historyData.length > 0) {
+          historyData.forEach(message => {
+            this.appendMessage(message.role, message.content);
+          });
+        }
 
         // console.log('历史消息:', this.list);
 
@@ -1861,6 +1940,13 @@ ${JSON.stringify(errData)}
 
   async newChat() {
     console.log('启动新会话');
+    
+    // 防止重复创建新会话
+    if (this.isSessionStarting) {
+      console.log('新会话正在创建中，跳过重复调用');
+      return;
+    }
+    
     this.list = [...this.defaultList.map(item => ({...item}))];
 
     console.log("CurrentList: ", this.list);
@@ -1875,8 +1961,9 @@ ${JSON.stringify(errData)}
       // 确保会话完全关闭后再清空ID
       this.chatService.currentSessionId = '';
       
-      // 重置会话启动标志
+      // 重置会话启动标志和初始化标志
       this.isSessionStarting = false;
+      this.hasInitializedForThisLogin = false;
       
       // 等待一小段时间确保所有异步操作完成
       await new Promise(resolve => setTimeout(resolve, 100));
@@ -1889,15 +1976,6 @@ ${JSON.stringify(errData)}
       
       // 即使失败也要确保标志位重置
       this.isSessionStarting = false;
-      
-      // 显示错误消息
-      this.appendMessage('error', `
-\`\`\`aily-error
-{
-  "message": "新会话启动失败，请重试",
-  "error": "${error.message || '未知错误'}"
-}
-\`\`\`\n\n`);
     }
   }
 
@@ -2171,22 +2249,28 @@ ${JSON.stringify(errData)}
    * 清理订阅
    */
   ngOnDestroy() {
+    console.log('AilyChatComponent 正在销毁...');
+    
     // 清理消息订阅
     if (this.messageSubscription) {
       this.messageSubscription.unsubscribe();
+      this.messageSubscription = null;
     }
     if (this.textMessageSubscription) {
       this.textMessageSubscription.unsubscribe();
+      this.textMessageSubscription = null;
     }
 
     // 清理登录状态订阅
     if (this.loginStatusSubscription) {
       this.loginStatusSubscription.unsubscribe();
+      this.loginStatusSubscription = null;
     }
 
     // 重置会话启动标志和MCP初始化标志
     this.isSessionStarting = false;
     this.mcpInitialized = false;
+    this.hasInitializedForThisLogin = false;
 
     this.disconnect();
   }
