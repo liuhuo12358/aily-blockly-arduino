@@ -1706,7 +1706,13 @@ ${JSON.stringify(errData)}
           return item;
         });
         // 合并历史消息和当前消息列表
-        this.list = [...this.list, ...historyData];
+        // this.list = [...this.list, ...historyData];
+        // 将历史记录逐条添加到消息列表中
+        if (historyData && historyData.length > 0) {
+          historyData.forEach(message => {
+            this.appendMessage(message.role, message.content);
+          });
+        }
 
         // console.log('历史消息:', this.list);
 
