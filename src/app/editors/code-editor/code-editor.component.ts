@@ -15,7 +15,6 @@ import { CmdService } from '../../services/cmd.service';
 import { BuilderService } from '../../services/builder.service';
 import { UploaderService } from '../../services/uploader.service';
 import { ElectronService } from '../../services/electron.service';
-import { CodeService } from './services/code.service';
 import { ShortcutService, ShortcutAction, ShortcutKeyMapping } from './services/shortcut.service';
 import { CodeIntelligenceService } from './services/code-intelligence.service';
 import { Subscription } from 'rxjs';
@@ -67,7 +66,7 @@ export class CodeEditorComponent implements OnInit, AfterViewInit, OnDestroy {
   // 快捷键订阅
   private shortcutSubscription?: Subscription;
   private keydownListener?: (event: KeyboardEvent) => void;
-  
+
   // 定期保存状态的定时器
   private saveStateTimer?: any;
 
@@ -87,7 +86,6 @@ export class CodeEditorComponent implements OnInit, AfterViewInit, OnDestroy {
     private builderService: BuilderService,
     private uploadService: UploaderService,
     private electronService: ElectronService,
-    private codeService: CodeService,
     private shortcutService: ShortcutService,
     private codeIntelligenceService: CodeIntelligenceService,
   ) { }
@@ -122,20 +120,20 @@ export class CodeEditorComponent implements OnInit, AfterViewInit, OnDestroy {
   ngOnDestroy(): void {
     // 保存当前标签页状态
     this.saveCurrentTabState();
-    
+
     // 清理定时器
     if (this.saveStateTimer) {
       clearInterval(this.saveStateTimer);
     }
-    
+
     // 清理clangd资源
     this.cleanupClangdResources();
-    
+
     this.builderService.cancel();
     this.uploadService.cancel();
     this.cmdService.killArduinoCli();
     this.electronService.setTitle('aily blockly');
-    
+
     // 清理快捷键监听器
     this.cleanupShortcutListeners();
   }
@@ -151,10 +149,10 @@ export class CodeEditorComponent implements OnInit, AfterViewInit, OnDestroy {
           await this.codeIntelligenceService.closeDocument(file.path);
         }
       }
-      
+
       // 停止clangd服务
       await this.codeIntelligenceService.stopClangd();
-      
+
       console.log('clangd resources cleaned up');
     } catch (error) {
       console.warn('Failed to cleanup clangd resources:', error);
@@ -163,9 +161,9 @@ export class CodeEditorComponent implements OnInit, AfterViewInit, OnDestroy {
 
   ngAfterViewInit(): void {
     setTimeout(() => {
-      this.sdkPath = "D:\\Git\\aily-project-lod\\packages\\sdk\\avr\\avr@1.8.6";
-      this.librariesPath = "C:\\Users\\coloz\\Documents\\Arduino\\sketch_mar16a\\libraries";
-      
+      this.sdkPath = "C:\\Users\\coloz\\AppData\\Local\\Arduino15\\packages\\arduino\\hardware\\avr\\1.8.6\\cores\\arduino";
+      this.librariesPath = "C:\\Users\\coloz\\Documents\\Arduino\\libraries";
+
       // 初始化代码智能服务（包括clangd）
       this.initializeCodeIntelligence();
     }, 2000);
@@ -178,14 +176,14 @@ export class CodeEditorComponent implements OnInit, AfterViewInit, OnDestroy {
     try {
       // 生成compile_commands.json以改善clangd补全效果
       await this.generateCompileCommands();
-      
+
       // 初始化代码智能补全服务
       await this.codeIntelligenceService.initialize(
-        this.sdkPath, 
-        this.librariesPath, 
+        this.sdkPath,
+        this.librariesPath,
         this.projectPath
       );
-      
+
       console.log('Code intelligence service initialized successfully');
     } catch (error) {
       console.error('Failed to initialize code intelligence service:', error);
@@ -205,7 +203,7 @@ export class CodeEditorComponent implements OnInit, AfterViewInit, OnDestroy {
           this.sdkPath,
           this.librariesPath
         );
-        
+
         if (result.success) {
           console.log('Generated compile_commands.json at:', result.outputPath);
         } else {
@@ -277,7 +275,7 @@ export class CodeEditorComponent implements OnInit, AfterViewInit, OnDestroy {
 
       this.openedFiles.push(newFile);
       this.selectedIndex = this.openedFiles.length - 1;
-      
+
       // 在clangd中打开文档
       await this.openDocumentInClangd(filePath, content);
     }
@@ -314,10 +312,10 @@ export class CodeEditorComponent implements OnInit, AfterViewInit, OnDestroy {
   async updateCurrentCode() {
     if (this.selectedIndex >= 0 && this.selectedIndex < this.openedFiles.length) {
       const currentFile = this.openedFiles[this.selectedIndex];
-      console.log('更新编辑器内容:', currentFile.title, '存储的状态:', currentFile.editorState);
+      // console.log('更新编辑器内容:', currentFile.title, '存储的状态:', currentFile.editorState);
       this.code = currentFile.content;
       this.selectedFile = currentFile.path;
-      
+
       // 延迟恢复编辑器状态，确保内容已经更新
       setTimeout(async () => {
         if (currentFile.editorState) {
@@ -358,10 +356,10 @@ export class CodeEditorComponent implements OnInit, AfterViewInit, OnDestroy {
   // 实际执行关闭标签页的操作
   private async doCloseTab(index: number): Promise<void> {
     const file = this.openedFiles[index];
-    
+
     // 在clangd中关闭文档
     await this.closeDocumentInClangd(file.path);
-    
+
     this.openedFiles.splice(index, 1);
 
     // 如果关闭的是当前选中的标签页，需要调整选中索引
@@ -396,7 +394,7 @@ export class CodeEditorComponent implements OnInit, AfterViewInit, OnDestroy {
     const file = this.openedFiles[index];
     window['fs'].writeFileSync(file.path, file.content);
     file.isDirty = false;
-    
+
     // 通知clangd文档已保存
     await this.saveDocumentInClangd(file.path, file.content);
   }
@@ -424,17 +422,17 @@ export class CodeEditorComponent implements OnInit, AfterViewInit, OnDestroy {
   // 标签页切换事件
   onTabChange(index: number): void {
     console.log('切换标签页:', index, '当前选中:', this.selectedIndex);
-    
+
     // 如果切换到的是当前标签页，不需要处理
     if (index === this.selectedIndex) {
       return;
     }
-    
+
     // 先保存当前标签页的状态
     this.saveCurrentTabState();
-    
+
     this.selectedIndex = index;
-    
+
     // 延迟更新代码，确保标签页切换动画完成
     setTimeout(() => {
       this.updateCurrentCode();
@@ -446,12 +444,12 @@ export class CodeEditorComponent implements OnInit, AfterViewInit, OnDestroy {
     if (this.selectedIndex >= 0 && this.selectedIndex < this.openedFiles.length) {
       const currentFile = this.openedFiles[this.selectedIndex];
       const editorState = this.getEditorState();
-      console.log('保存标签页状态:', currentFile.title, 'selectedIndex:', this.selectedIndex, 'editorState:', editorState);
+      // console.log('保存标签页状态:', currentFile.title, 'selectedIndex:', this.selectedIndex, 'editorState:', editorState);
       if (editorState) {
         currentFile.editorState = editorState;
-        console.log('状态保存成功，视图状态:', editorState.viewState);
+        // console.log('状态保存成功，视图状态:', editorState.viewState);
       } else {
-        console.log('获取编辑器状态失败');
+        console.warn('获取编辑器状态失败');
       }
     }
   }
@@ -478,18 +476,17 @@ export class CodeEditorComponent implements OnInit, AfterViewInit, OnDestroy {
   // 恢复编辑器状态
   private async restoreEditorState(editorState: any): Promise<void> {
     if (!editorState || !editorState.viewState) {
-      console.log('没有需要恢复的编辑器状态');
+      // console.log('没有需要恢复的编辑器状态');
       return;
     }
-
-    console.log('恢复编辑器状态:', editorState);
+    // console.log('恢复编辑器状态:', editorState);
 
     try {
       const monacoComponent = this.getMonacoEditorComponent();
       if (monacoComponent) {
         const success = await monacoComponent.restoreViewStateSafely(editorState.viewState);
         if (success) {
-          console.log('编辑器状态恢复成功');
+          // console.log('编辑器状态恢复成功');
         } else {
           console.warn('编辑器状态恢复失败');
         }
@@ -513,7 +510,7 @@ export class CodeEditorComponent implements OnInit, AfterViewInit, OnDestroy {
       if (currentFile.content !== newContent) {
         currentFile.content = newContent;
         currentFile.isDirty = true;
-        
+
         // 异步更新clangd中的文档内容，不等待完成
         this.updateDocumentInClangd(currentFile.path, newContent);
       }
@@ -536,14 +533,14 @@ export class CodeEditorComponent implements OnInit, AfterViewInit, OnDestroy {
   // 处理文件删除事件
   onFilesDeleted(deletedPaths: string[]): void {
     console.log('Files deleted:', deletedPaths);
-    
+
     if (deletedPaths.length === 0) {
       return;
     }
-    
+
     // 记录需要关闭的标签页索引，从后往前删除以避免索引变化问题
     const tabsToClose: number[] = [];
-    
+
     // 查找需要关闭的标签页
     for (let i = this.openedFiles.length - 1; i >= 0; i--) {
       const file = this.openedFiles[i];
@@ -552,16 +549,16 @@ export class CodeEditorComponent implements OnInit, AfterViewInit, OnDestroy {
         console.log('Found tab to close:', file.title, 'at index', i);
       }
     }
-    
+
     if (tabsToClose.length === 0) {
       return;
     }
-    
+
     // 检查被删除的文件中是否有未保存的更改
     const unsavedFiles = tabsToClose
       .map(index => this.openedFiles[index])
       .filter(file => file.isDirty);
-    
+
     if (unsavedFiles.length > 0) {
       // 如果有未保存的文件，显示确认对话框
       const fileNames = unsavedFiles.map(f => f.title).join(', ');
@@ -583,22 +580,22 @@ export class CodeEditorComponent implements OnInit, AfterViewInit, OnDestroy {
   // 关闭被删除文件的标签页
   private closeDeletedTabs(tabIndices: number[]): void {
     console.log('Closing deleted tabs:', tabIndices);
-    
+
     // 从后往前删除，避免索引变化问题
     for (const index of tabIndices) {
       const file = this.openedFiles[index];
       console.log('Closing tab:', file.title, 'at index', index);
-      
+
       // 直接删除，不需要保存确认（文件已经被删除了）
       this.openedFiles.splice(index, 1);
     }
-    
+
     // 调整当前选中的标签索引
     this.adjustSelectedIndexAfterClose(tabIndices);
-    
+
     // 更新编辑器内容
     this.updateCurrentCode();
-    
+
     // 显示提示信息
     this.message.info(`已关闭 ${tabIndices.length} 个已删除文件的标签页`);
   }
@@ -609,18 +606,18 @@ export class CodeEditorComponent implements OnInit, AfterViewInit, OnDestroy {
       this.selectedIndex = 0;
       return;
     }
-    
+
     // 计算有多少个在当前选中索引之前的标签被关闭了
     const closedBeforeCurrent = closedIndices.filter(index => index < this.selectedIndex).length;
-    
+
     // 调整选中索引
     this.selectedIndex = Math.max(0, this.selectedIndex - closedBeforeCurrent);
-    
+
     // 确保索引不超出范围
     if (this.selectedIndex >= this.openedFiles.length) {
       this.selectedIndex = Math.max(0, this.openedFiles.length - 1);
     }
-    
+
     console.log('Adjusted selected index to:', this.selectedIndex);
   }
 
@@ -695,7 +692,7 @@ export class CodeEditorComponent implements OnInit, AfterViewInit, OnDestroy {
 
     const shortcutKey = this.shortcutService.getShortcutFromEvent(event);
     const action = this.shortcutService.getShortcutAction(shortcutKey, 'editor');
-    
+
     if (action) {
       event.preventDefault();
       this.handleShortcutAction(action);
@@ -781,7 +778,7 @@ export class CodeEditorComponent implements OnInit, AfterViewInit, OnDestroy {
    * @returns 快捷键列表
    */
   getAvailableShortcuts(): ShortcutKeyMapping[] {
-    return this.shortcutService.getAllShortcuts().filter(shortcut => 
+    return this.shortcutService.getAllShortcuts().filter(shortcut =>
       shortcut.context === 'editor' || shortcut.context === 'global'
     );
   }
@@ -791,10 +788,10 @@ export class CodeEditorComponent implements OnInit, AfterViewInit, OnDestroy {
    */
   showShortcutHelp(): void {
     const shortcuts = this.getAvailableShortcuts();
-    const helpText = shortcuts.map(shortcut => 
+    const helpText = shortcuts.map(shortcut =>
       `${shortcut.key.toUpperCase()} - ${shortcut.description}`
     ).join('\n');
-    
+
     this.modal.info({
       nzTitle: '快捷键帮助',
       nzContent: `<pre style="white-space: pre-wrap;">${helpText}</pre>`,

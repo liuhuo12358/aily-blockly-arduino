@@ -267,7 +267,7 @@ export class MonacoEditorComponent {
     if (editor && editor.getModel()) {
       try {
         const viewState = editor.saveViewState();
-        console.log('获取视图状态成功:', viewState);
+        // console.log('获取视图状态成功:', viewState);
         return viewState;
       } catch (error) {
         console.warn('获取视图状态失败:', error);
