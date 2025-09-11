@@ -3,7 +3,7 @@ import { Component, EventEmitter, Input, Output, SimpleChanges, ViewChild, Injec
 import { FormsModule } from '@angular/forms';
 import { NzCodeEditorModule, NzCodeEditorComponent } from 'ng-zorro-antd/code-editor';
 import { NzMessageService } from 'ng-zorro-antd/message';
-import { CodeIntelligenceService } from '../../services/code-intelligence.service';
+import { ClangdService } from '../../services/clangd.service';
 
 @Component({
   selector: 'app-monaco-editor',
@@ -39,7 +39,7 @@ export class MonacoEditorComponent {
   private monacoInstance: any;
 
   constructor(
-    private codeIntelligenceService: CodeIntelligenceService,
+    private clangdService: ClangdService,
     private message: NzMessageService
   ) { }
 
@@ -91,8 +91,8 @@ export class MonacoEditorComponent {
    */
   async initializeIntelligence(): Promise<void> {
     try {
-      // 初始化代码智能补全服务
-      await this.codeIntelligenceService.initialize(this.sdkPath, this.librariesPath);
+      // 初始化代码智能补全服务（不再需要 SDK 和库路径）
+      await this.clangdService.initialize();
 
       // 获取Monaco实例
       const monaco = (window as any).monaco;
@@ -104,7 +104,7 @@ export class MonacoEditorComponent {
       // 注册智能补全提供器
       const completionDisposable = monaco.languages.registerCompletionItemProvider('cpp', {
         provideCompletionItems: async (model: any, position: any, context: any, token: any) => {
-          return await this.codeIntelligenceService.getCompletionItems(model, position, context, token, this.filePath);
+          return await this.clangdService.getCompletionItems(model, position, context, token, this.filePath);
         },
         triggerCharacters: ['.', '->', '::', '(', ' ']
       });
@@ -136,7 +136,7 @@ export class MonacoEditorComponent {
    */
   private async provideInlineCompletions(model: any, position: any, context: any, token: any): Promise<any> {
     try {
-      const completionResult = await this.codeIntelligenceService.getCompletionItems(model, position, context, token);
+      const completionResult = await this.clangdService.getCompletionItems(model, position, context, token);
       const aiCompletions = completionResult.suggestions.filter(item => item.source === 'ai');
 
       if (aiCompletions.length > 0) {
@@ -275,7 +275,7 @@ export class MonacoEditorComponent {
       }
 
       // 调用代码智能服务获取定义位置
-      const definitions = await this.codeIntelligenceService.getDefinition(
+      const definitions = await this.clangdService.getDefinition(
         this.filePath,
         {
           line: position.lineNumber - 1, // LSP使用0基行号
@@ -364,7 +364,7 @@ export class MonacoEditorComponent {
         return;
       }
 
-      const references = await this.codeIntelligenceService.getReferences(
+      const references = await this.clangdService.getReferences(
         this.filePath,
         {
           line: position.lineNumber - 1,
@@ -398,7 +398,7 @@ export class MonacoEditorComponent {
         return;
       }
 
-      const hoverInfo = await this.codeIntelligenceService.getHoverInfo(
+      const hoverInfo = await this.clangdService.getHoverInfo(
         this.filePath,
         {
           line: position.lineNumber - 1,
@@ -538,25 +538,28 @@ export class MonacoEditorComponent {
    */
   public getIntelligenceStatus(): any {
     return {
-      symbolsCount: this.codeIntelligenceService.getSymbolsCount(),
+      clangdReady: this.clangdService.isClangdReady(),
       aiEnabled: true, // 可以添加配置
-      sdkPath: this.sdkPath,
-      librariesPath: this.librariesPath
+      cacheSize: this.clangdService.getCacheSize()
     };
   }
 
   /**
-   * 搜索符号
+   * 搜索符号（现在使用 clangd 功能）
+   * 注意：这个方法现在返回空数组，因为符号搜索现在通过 clangd 的文档符号功能实现
    */
   public searchSymbols(query: string): any[] {
-    return this.codeIntelligenceService.searchSymbols(query);
+    // 由于移除了本地符号解析，现在返回空数组
+    // 实际的符号搜索现在通过 clangd 的文档符号功能在编辑器中实现
+    console.warn('符号搜索功能已迁移到 clangd，请使用编辑器的"转到符号"功能');
+    return [];
   }
 
   /**
    * 清除AI补全缓存
    */
   public clearAICache(): void {
-    this.codeIntelligenceService.clearAICache();
+    this.clangdService.clearAICache();
   }
 
   /**

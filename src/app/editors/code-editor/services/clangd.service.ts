@@ -3,7 +3,6 @@ import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Observable, BehaviorSubject } from 'rxjs';
 import { timeout, catchError } from 'rxjs/operators';
 import { of } from 'rxjs';
-import { CppParserService, ArduinoSymbol } from './cpp-parser.service';
 import { AIConfig, DEFAULT_AI_CONFIG, AI_PROMPTS } from '../../../configs/ai-config';
 
 // LSP诊断信息接口
@@ -92,8 +91,7 @@ export interface AICompletionResponse {
 @Injectable({
   providedIn: 'root'
 })
-export class CodeIntelligenceService {
-  private localSymbols: ArduinoSymbol[] = [];
+export class ClangdService {
   private aiCompletionsCache = new Map<string, { completions: CompletionItem[], timestamp: number }>();
   private config: AIConfig = { ...DEFAULT_AI_CONFIG };
   
@@ -112,7 +110,6 @@ export class CodeIntelligenceService {
   public diagnostics$ = this.diagnosticsSubject.asObservable();
 
   constructor(
-    private arduinoParserService: CppParserService,
     private http: HttpClient
   ) {
     // 定期清理过期缓存
@@ -163,11 +160,9 @@ export class CodeIntelligenceService {
   /**
    * 初始化代码智能补全服务
    */
-  async initialize(sdkPath: string, librariesPath: string, workspaceRoot?: string): Promise<void> {
+  async initialize(workspaceRoot?: string): Promise<void> {
     try {
-      // 加载本地符号
-      await this.loadLocalSymbols(sdkPath, librariesPath);
-      console.log(`代码智能补全服务已初始化，加载了 ${this.localSymbols.length} 个本地符号`);
+      console.log('代码智能补全服务已初始化，使用 clangd 进行代码补全');
       
       // 初始化clangd
       if (workspaceRoot) {
@@ -208,13 +203,6 @@ export class CodeIntelligenceService {
   }
 
   /**
-   * 加载本地符号（从Arduino SDK和库文件）
-   */
-  private async loadLocalSymbols(sdkPath: string, librariesPath: string): Promise<void> {
-    this.localSymbols = await this.arduinoParserService.parseSDKAndLibraries(sdkPath, librariesPath);
-  }
-
-  /**
    * 获取代码补全建议
    */
   async getCompletionItems(
@@ -226,7 +214,7 @@ export class CodeIntelligenceService {
   ): Promise<{ suggestions: CompletionItem[] }> {
     const suggestions: CompletionItem[] = [];
 
-    // 1. 优先获取clangd补全
+    // 1. 获取clangd补全
     if (this.clangdReady && filePath) {
       try {
         const clangdCompletions = await this.getClangdCompletions(filePath, position);
@@ -236,23 +224,16 @@ export class CodeIntelligenceService {
       }
     }
 
-    // 2. 获取本地补全（作为后备）
-    const localCompletions = this.getLocalCompletions(model, position);
-    suggestions.push(...localCompletions);
-
-    // 3. 获取AI补全（异步）
+    // 2. 获取AI补全（如果启用）
     if (this.config.enabled) {
       const aiCompletions = await this.getAICompletions(model, position, context);
       suggestions.push(...aiCompletions);
     }
 
-    // 按相关性排序
+    // 按相关性排序：clangd补全优先级最高
     suggestions.sort((a, b) => {
-      // clangd补全优先级最高
       if (a.source === 'local' && b.source === 'ai') return -1;
       if (a.source === 'ai' && b.source === 'local') return 1;
-
-      // 按字母顺序排序
       return a.label.localeCompare(b.label);
     });
 
@@ -305,39 +286,6 @@ export class CodeIntelligenceService {
       console.error('Failed to get clangd completions:', error);
       return [];
     }
-  }
-
-  /**
-   * 获取本地代码补全
-   */
-  private getLocalCompletions(model: any, position: any): CompletionItem[] {
-    const word = model.getWordUntilPosition(position);
-    const range = {
-      startLineNumber: position.lineNumber,
-      endLineNumber: position.lineNumber,
-      startColumn: word.startColumn,
-      endColumn: word.endColumn
-    };
-
-    const completions: CompletionItem[] = [];
-
-    for (const symbol of this.localSymbols) {
-      // 基于前缀匹配
-      if (symbol.name.toLowerCase().startsWith(word.word.toLowerCase())) {
-        completions.push({
-          label: symbol.name,
-          kind: this.mapSymbolKindToCompletionKind(symbol.kind),
-          detail: symbol.detail,
-          documentation: symbol.documentation || `来自: ${symbol.filePath}`,
-          insertText: symbol.insertText,
-          insertTextRules: symbol.kind === 'function' ? 4 : 0, // InsertAsSnippet
-          sortText: symbol.name,
-          source: 'local'
-        });
-      }
-    }
-
-    return completions;
   }
 
   /**
@@ -635,22 +583,6 @@ export class CodeIntelligenceService {
   }
 
   /**
-   * 映射符号类型到补全类型
-   */
-  private mapSymbolKindToCompletionKind(symbolKind: string): CompletionItemKind {
-    switch (symbolKind) {
-      case 'function':
-        return CompletionItemKind.Function;
-      case 'class':
-        return CompletionItemKind.Class;
-      case 'variable':
-        return CompletionItemKind.Variable;
-      default:
-        return CompletionItemKind.Text;
-    }
-  }
-
-  /**
    * 获取AI补全类型
    */
   private getAICompletionKind(type: string): CompletionItemKind {
@@ -746,34 +678,10 @@ export class CodeIntelligenceService {
   }
 
   /**
-   * 更新本地符号
-   */
-  public async updateLocalSymbols(sdkPath: string, librariesPath: string): Promise<void> {
-    await this.loadLocalSymbols(sdkPath, librariesPath);
-  }
-
-  /**
-   * 获取当前加载的符号数量
-   */
-  public getSymbolsCount(): number {
-    return this.localSymbols.length;
-  }
-
-  /**
    * 获取当前缓存大小
    */
   public getCacheSize(): number {
     return this.aiCompletionsCache.size;
-  }
-
-  /**
-   * 搜索符号
-   */
-  public searchSymbols(query: string): ArduinoSymbol[] {
-    return this.localSymbols.filter(symbol =>
-      symbol.name.toLowerCase().includes(query.toLowerCase()) ||
-      (symbol.detail && symbol.detail.toLowerCase().includes(query.toLowerCase()))
-    );
   }
 
   /**

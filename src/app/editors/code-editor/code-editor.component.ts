@@ -16,7 +16,7 @@ import { BuilderService } from '../../services/builder.service';
 import { UploaderService } from '../../services/uploader.service';
 import { ElectronService } from '../../services/electron.service';
 import { ShortcutService, ShortcutAction, ShortcutKeyMapping } from './services/shortcut.service';
-import { CodeIntelligenceService } from './services/code-intelligence.service';
+import { ClangdService } from './services/clangd.service';
 import { Subscription } from 'rxjs';
 import { ViewChild, AfterViewInit, OnInit, OnDestroy } from '@angular/core';
 import { _ProjectService } from './services/project.service';
@@ -89,7 +89,7 @@ export class CodeEditorComponent implements OnInit, AfterViewInit, OnDestroy {
     private uploadService: UploaderService,
     private electronService: ElectronService,
     private shortcutService: ShortcutService,
-    private codeIntelligenceService: CodeIntelligenceService,
+    private clangdService: ClangdService,
   ) { }
 
   async ngOnInit() {
@@ -157,12 +157,12 @@ export class CodeEditorComponent implements OnInit, AfterViewInit, OnDestroy {
       // 关闭所有打开的文档
       for (const file of this.openedFiles) {
         if (this.isCppFile(file.path)) {
-          await this.codeIntelligenceService.closeDocument(file.path);
+          await this.clangdService.closeDocument(file.path);
         }
       }
 
       // 停止clangd服务
-      await this.codeIntelligenceService.stopClangd();
+      await this.clangdService.stopClangd();
 
       console.log('clangd resources cleaned up');
     } catch (error) {
@@ -189,9 +189,7 @@ export class CodeEditorComponent implements OnInit, AfterViewInit, OnDestroy {
       await this.generateCompileCommands();
 
       // 初始化代码智能补全服务
-      await this.codeIntelligenceService.initialize(
-        this.sdkPath,
-        this.librariesPath,
+      await this.clangdService.initialize(
         this.projectPath
       );
 
@@ -304,7 +302,7 @@ export class CodeEditorComponent implements OnInit, AfterViewInit, OnDestroy {
     try {
       // 只处理C/C++/Arduino文件
       if (this.isCppFile(filePath)) {
-        await this.codeIntelligenceService.openDocument(filePath, content);
+        await this.clangdService.openDocument(filePath, content);
       }
     } catch (error) {
       console.warn('Failed to open document in clangd:', error);
@@ -393,7 +391,7 @@ export class CodeEditorComponent implements OnInit, AfterViewInit, OnDestroy {
   private async closeDocumentInClangd(filePath: string): Promise<void> {
     try {
       if (this.isCppFile(filePath)) {
-        await this.codeIntelligenceService.closeDocument(filePath);
+        await this.clangdService.closeDocument(filePath);
       }
     } catch (error) {
       console.warn('Failed to close document in clangd:', error);
@@ -423,7 +421,7 @@ export class CodeEditorComponent implements OnInit, AfterViewInit, OnDestroy {
   private async saveDocumentInClangd(filePath: string, content: string): Promise<void> {
     try {
       if (this.isCppFile(filePath)) {
-        await this.codeIntelligenceService.saveDocument(filePath, content);
+        await this.clangdService.saveDocument(filePath, content);
       }
     } catch (error) {
       console.warn('Failed to save document in clangd:', error);
@@ -534,7 +532,7 @@ export class CodeEditorComponent implements OnInit, AfterViewInit, OnDestroy {
   private async updateDocumentInClangd(filePath: string, content: string): Promise<void> {
     try {
       if (this.isCppFile(filePath)) {
-        await this.codeIntelligenceService.updateDocument(filePath, content);
+        await this.clangdService.updateDocument(filePath, content);
       }
     } catch (error) {
       console.warn('Failed to update document in clangd:', error);
