@@ -933,4 +933,37 @@ export class ClangdService {
       this.diagnostics.clear();
     }
   }
+
+  /**
+   * 诊断clangd状态
+   */
+  public diagnoseClangdStatus(): void {
+    console.log('=== Clangd 诊断信息 ===');
+    console.log('isClangdInitialized:', this.isClangdInitialized);
+    console.log('clangdReady:', this.clangdReady);
+    console.log('documentStates count:', this.documentStates.size);
+    console.log('diagnostics count:', this.diagnostics.size);
+    console.log('AI config enabled:', this.config.enabled);
+    console.log('AI completions cache size:', this.aiCompletionsCache.size);
+    
+    // 检查electronAPI是否可用
+    if (typeof window !== 'undefined' && (window as any).electronAPI?.clangd) {
+      console.log('electronAPI.clangd is available');
+    } else {
+      console.log('electronAPI.clangd is NOT available');
+    }
+    
+    // 列出已打开的文档
+    console.log('Open documents:');
+    for (const [uri, state] of this.documentStates.entries()) {
+      console.log(`  ${uri}: version=${state.version}, language=${state.languageId}, isOpen=${state.isOpen}`);
+    }
+    
+    // 列出诊断信息
+    console.log('Diagnostics:');
+    for (const [uri, diagnostics] of this.diagnostics.entries()) {
+      console.log(`  ${uri}: ${diagnostics.length} diagnostics`);
+    }
+    console.log('=== 诊断结束 ===');
+  }
 }

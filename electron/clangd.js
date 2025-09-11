@@ -22,14 +22,22 @@ class ClangdService extends EventEmitter {
   async start(workspaceRoot, options = {}) {
     if (this.clangdProcess) {
       console.log('clangd process already running');
-      return;
+      return { success: true, message: 'clangd already running' };
     }
 
     this.workspaceRoot = workspaceRoot;
     const clangdPath = path.join(__dirname, '..', 'child', 'clangd', 'bin', 'clangd.exe');
     
     if (!fs.existsSync(clangdPath)) {
-      throw new Error(`clangd executable not found at ${clangdPath}`);
+      const error = `clangd executable not found at ${clangdPath}`;
+      console.error(error);
+      return { success: false, error };
+    }
+
+    // 确保.temp目录存在
+    const tempDir = path.join(workspaceRoot, '.temp');
+    if (!fs.existsSync(tempDir)) {
+      fs.mkdirSync(tempDir, { recursive: true });
     }
 
     const args = [
@@ -38,40 +46,64 @@ class ClangdService extends EventEmitter {
       '--completion-style=detailed',
       '--header-insertion=iwyu',
       '--pch-storage=memory',
-      '--log=verbose',
+      '--log=error', // 减少日志输出，只显示错误
       '--pretty',
-      `--compile-commands-dir=${path.join(workspaceRoot, '.temp')}`
+      `--compile-commands-dir=${tempDir}`,
+      '--fallback-style=Google',
+      '--limit-results=50', // 限制补全结果数量
+      '--cross-file-rename=false' // 禁用跨文件重命名以提高性能
     ];
 
     console.log(`Starting clangd at ${clangdPath} with args:`, args);
+    console.log(`Workspace root: ${workspaceRoot}`);
+    console.log(`Compile commands directory: ${tempDir}`);
 
-    this.clangdProcess = spawn(clangdPath, args, {
-      stdio: ['pipe', 'pipe', 'pipe'],
-      cwd: workspaceRoot
-    });
+    try {
+      this.clangdProcess = spawn(clangdPath, args, {
+        stdio: ['pipe', 'pipe', 'pipe'],
+        cwd: workspaceRoot,
+        env: {
+          ...process.env,
+          // 设置一些环境变量优化clangd性能
+          CLANGD_BACKGROUND_INDEXING: '1',
+          CLANGD_LIMIT_MEMORY: '1024' // 限制内存使用
+        }
+      });
 
-    this.clangdProcess.on('error', (error) => {
-      console.error('clangd process error:', error);
-      this.emit('error', error);
-    });
+      this.clangdProcess.on('error', (error) => {
+        console.error('clangd process error:', error);
+        this.emit('error', error);
+      });
 
-    this.clangdProcess.on('exit', (code, signal) => {
-      console.log(`clangd process exited with code ${code}, signal ${signal}`);
-      this.clangdProcess = null;
-      this.isInitialized = false;
-      this.emit('exit', { code, signal });
-    });
+      this.clangdProcess.on('exit', (code, signal) => {
+        console.log(`clangd process exited with code ${code}, signal ${signal}`);
+        this.clangdProcess = null;
+        this.isInitialized = false;
+        this.emit('exit', { code, signal });
+      });
 
-    this.clangdProcess.stdout.on('data', (data) => {
-      this.handleStdout(data);
-    });
+      this.clangdProcess.stdout.on('data', (data) => {
+        this.handleStdout(data);
+      });
 
-    this.clangdProcess.stderr.on('data', (data) => {
-      console.log('clangd stderr:', data.toString());
-    });
+      this.clangdProcess.stderr.on('data', (data) => {
+        const stderr = data.toString();
+        // 只记录重要错误，忽略一些常见的警告
+        if (!stderr.includes('unknown warning option') && 
+            !stderr.includes('optimization flag') &&
+            !stderr.includes('Background index is not enabled')) {
+          console.log('clangd stderr:', stderr);
+        }
+      });
 
-    // 初始化LSP连接
-    await this.initialize();
+      // 初始化LSP连接
+      await this.initialize();
+      
+      return { success: true, message: 'clangd started successfully' };
+    } catch (error) {
+      console.error('Failed to start clangd:', error);
+      return { success: false, error: error.message };
+    }
   }
 
   /**

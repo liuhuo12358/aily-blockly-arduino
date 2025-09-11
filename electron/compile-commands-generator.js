@@ -93,18 +93,51 @@ class CompileCommandsGenerator {
     
     // Arduino核心库路径
     if (this.sdkPath && fs.existsSync(this.sdkPath)) {
-      includes.push(path.join(this.sdkPath, 'cores', 'arduino'));
-      includes.push(path.join(this.sdkPath, 'variants', 'standard'));
-      
-      // 查找其他核心目录
-      const coresDir = path.join(this.sdkPath, 'cores');
-      if (fs.existsSync(coresDir)) {
-        const cores = fs.readdirSync(coresDir, { withFileTypes: true });
-        for (const core of cores) {
-          if (core.isDirectory()) {
-            includes.push(path.join(coresDir, core.name));
+      // 检查是否是直接的cores/arduino路径
+      if (this.sdkPath.includes('cores')) {
+        includes.push(this.sdkPath);
+        
+        // 查找variants路径
+        const variantsPath = this.sdkPath.replace(/cores.*$/, 'variants/standard');
+        if (fs.existsSync(variantsPath)) {
+          includes.push(variantsPath);
+        }
+      } else {
+        // 如果是SDK根目录，添加子目录
+        const possiblePaths = [
+          path.join(this.sdkPath, 'cores', 'arduino'),
+          path.join(this.sdkPath, 'variants', 'standard'),
+          path.join(this.sdkPath, 'variants', 'mega'),
+          path.join(this.sdkPath, 'variants', 'micro'),
+          path.join(this.sdkPath, 'variants', 'leonardo')
+        ];
+        
+        for (const possiblePath of possiblePaths) {
+          if (fs.existsSync(possiblePath)) {
+            includes.push(possiblePath);
           }
         }
+      }
+      
+      // 查找其他核心目录
+      try {
+        const sdkRoot = this.sdkPath.includes('cores') ? 
+          this.sdkPath.split('cores')[0] : this.sdkPath;
+        const coresDir = path.join(sdkRoot, 'cores');
+        
+        if (fs.existsSync(coresDir)) {
+          const cores = fs.readdirSync(coresDir, { withFileTypes: true });
+          for (const core of cores) {
+            if (core.isDirectory()) {
+              const corePath = path.join(coresDir, core.name);
+              if (!includes.includes(corePath)) {
+                includes.push(corePath);
+              }
+            }
+          }
+        }
+      } catch (error) {
+        console.warn('Failed to scan cores directory:', error.message);
       }
     }
     
@@ -113,10 +146,15 @@ class CompileCommandsGenerator {
       this.addLibraryIncludes(this.librariesPath, includes);
     }
     
-    // 项目本地头文件
+    // 添加常见的系统include路径
+    const systemIncludes = this.getSystemIncludes();
+    includes.push(...systemIncludes);
+    
+    // 项目本地头文件（放在最后，优先级最高）
     includes.push(this.projectPath);
     
-    return includes;
+    // 去重
+    return [...new Set(includes)];
   }
 
   /**
@@ -135,12 +173,67 @@ class CompileCommandsGenerator {
           const srcDir = path.join(libDir, 'src');
           if (fs.existsSync(srcDir)) {
             includes.push(srcDir);
+            
+            // 递归添加src下的子目录
+            this.addSubDirectories(srcDir, includes);
+          }
+          
+          // 检查utility子目录
+          const utilityDir = path.join(libDir, 'utility');
+          if (fs.existsSync(utilityDir)) {
+            includes.push(utilityDir);
           }
         }
       }
     } catch (error) {
       console.warn(`Failed to read libraries directory ${libPath}:`, error.message);
     }
+  }
+
+  /**
+   * 递归添加子目录
+   */
+  addSubDirectories(dir, includes, maxDepth = 3, currentDepth = 0) {
+    if (currentDepth >= maxDepth) return;
+    
+    try {
+      const items = fs.readdirSync(dir, { withFileTypes: true });
+      
+      for (const item of items) {
+        if (item.isDirectory()) {
+          const subDir = path.join(dir, item.name);
+          includes.push(subDir);
+          this.addSubDirectories(subDir, includes, maxDepth, currentDepth + 1);
+        }
+      }
+    } catch (error) {
+      // 忽略无法访问的目录
+    }
+  }
+
+  /**
+   * 获取系统包含路径
+   */
+  getSystemIncludes() {
+    const includes = [];
+    
+    // 常见的Arduino系统路径
+    const commonPaths = [
+      // AVR toolchain 路径
+      'C:\\Users\\%USERNAME%\\AppData\\Local\\Arduino15\\packages\\arduino\\tools\\avr-gcc\\*\\avr\\include',
+      'C:\\Program Files (x86)\\Arduino\\hardware\\tools\\avr\\avr\\include',
+      'C:\\Program Files\\Arduino\\hardware\\tools\\avr\\avr\\include',
+      
+      // 标准C库路径
+      'C:\\Users\\%USERNAME%\\AppData\\Local\\Arduino15\\packages\\arduino\\tools\\avr-gcc\\*\\lib\\gcc\\avr\\*\\include',
+      'C:\\Program Files (x86)\\Arduino\\hardware\\tools\\avr\\lib\\gcc\\avr\\*\\include',
+      'C:\\Program Files\\Arduino\\hardware\\tools\\avr\\lib\\gcc\\avr\\*\\include'
+    ];
+    
+    // 这里暂时不添加系统路径，因为需要动态解析
+    // 在实际应用中可以根据检测到的工具链路径来添加
+    
+    return includes;
   }
 
   /**
@@ -153,7 +246,14 @@ class CompileCommandsGenerator {
       'ARDUINO_ARCH_AVR',
       '__AVR__',
       '__AVR_ATmega328P__',
-      'F_CPU=16000000L'
+      'F_CPU=16000000L',
+      '__PROG_TYPES_COMPAT__',
+      '__AVR_LIBC_VERSION__=20800UL',
+      'ARDUINO_MAIN',
+      // 添加一些常用的Arduino宏
+      'TWI_FREQ=100000L',
+      'BUFFER_LENGTH=32',
+      'SERIAL_BUFFER_SIZE=64'
     ];
   }
 

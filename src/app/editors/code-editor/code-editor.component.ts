@@ -5,7 +5,6 @@ import { NzModalService } from 'ng-zorro-antd/modal';
 import { CommonModule } from '@angular/common';
 import { ProjectService } from '../../services/project.service';
 import { MonacoEditorComponent } from './components/monaco-editor/monaco-editor.component';
-import { NoticeService } from '../../services/notice.service';
 import { NotificationComponent } from '../../components/notification/notification.component';
 import { ActivatedRoute } from '@angular/router';
 import { NzLayoutComponent, NzLayoutModule } from "ng-zorro-antd/layout";
@@ -37,7 +36,8 @@ export interface OpenedFile {
 
 @Component({
   selector: 'app-code-editor',
-  imports: [FileTreeComponent,
+  imports: [
+    FileTreeComponent,
     NzTabsModule,
     MonacoEditorComponent,
     CommonModule,
@@ -75,13 +75,10 @@ export class CodeEditorComponent implements OnInit, AfterViewInit, OnDestroy {
     return this.projectService.currentProjectPath
   }
 
-  sdkPath;
-  librariesPath;
-
   constructor(
     private modal: NzModalService,
     private projectService: ProjectService,
-    private _ProjectService:_ProjectService,
+    private _ProjectService: _ProjectService,
     private activatedRoute: ActivatedRoute,
     private message: NzMessageService,
     private cmdService: CmdService,
@@ -89,16 +86,25 @@ export class CodeEditorComponent implements OnInit, AfterViewInit, OnDestroy {
     private uploadService: UploaderService,
     private electronService: ElectronService,
     private shortcutService: ShortcutService,
-    private clangdService: ClangdService,
-  ) { }
+    private clangdService: ClangdService
+  ) { 
+    // 添加全局调试访问
+    if (typeof window !== 'undefined') {
+      (window as any).angular = {
+        ...(window as any).angular,
+        clangdService: this.clangdService,
+        codeEditor: this
+      };
+    }
+  }
 
   async ngOnInit() {
     // 初始化 _ProjectService
     this._ProjectService.init();
-    
+
     // 注册当前组件到 _ProjectService
     this._ProjectService.registerCodeEditor(this);
-    
+
     this.activatedRoute.queryParams.subscribe(params => {
       if (params['path']) {
         console.log('project path', params['path']);
@@ -128,7 +134,7 @@ export class CodeEditorComponent implements OnInit, AfterViewInit, OnDestroy {
   ngOnDestroy(): void {
     // 注销当前组件
     this._ProjectService.unregisterCodeEditor();
-    
+
     // 保存当前标签页状态
     this.saveCurrentTabState();
 
@@ -171,10 +177,7 @@ export class CodeEditorComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   ngAfterViewInit(): void {
-    setTimeout(() => {
-      this.sdkPath = "C:\\Users\\coloz\\AppData\\Local\\Arduino15\\packages\\arduino\\hardware\\avr\\1.8.6\\cores\\arduino";
-      this.librariesPath = "C:\\Users\\coloz\\Documents\\Arduino\\libraries";
-
+    setTimeout(async () => {
       // 初始化代码智能服务（包括clangd）
       this.initializeCodeIntelligence();
     }, 2000);
@@ -209,8 +212,8 @@ export class CodeEditorComponent implements OnInit, AfterViewInit, OnDestroy {
         const clangdAPI = (window as any).electronAPI.clangd;
         const result = await clangdAPI.generateCompileCommands(
           this.projectPath,
-          this.sdkPath,
-          this.librariesPath
+          `C:\\Users\\coloz\\AppData\\Local\\Arduino15\\packages\\arduino\\hardware\\avr\\1.8.6\\cores\\arduino`,
+          `C:\\Users\\coloz\\Documents\\Arduino\\libraries`
         );
 
         if (result.success) {
@@ -542,9 +545,9 @@ export class CodeEditorComponent implements OnInit, AfterViewInit, OnDestroy {
   /**
    * 处理打开文件请求（从Monaco编辑器的跳转到定义功能触发）
    */
-  onOpenFileRequest(event: {filePath: string, position: any}): void {
+  onOpenFileRequest(event: { filePath: string, position: any }): void {
     console.log('收到打开文件请求:', event);
-    
+
     // 检查文件是否存在
     if (!this.electronService.exists(event.filePath)) {
       this.message.error(`文件不存在: ${event.filePath}`);
@@ -553,7 +556,7 @@ export class CodeEditorComponent implements OnInit, AfterViewInit, OnDestroy {
 
     // 检查文件是否已经打开
     const existingFileIndex = this.openedFiles.findIndex(f => f.path === event.filePath);
-    
+
     if (existingFileIndex >= 0) {
       // 如果已经打开，切换到该标签页
       this.selectedIndex = existingFileIndex;
@@ -562,13 +565,13 @@ export class CodeEditorComponent implements OnInit, AfterViewInit, OnDestroy {
         // 否则新建标签页
         const content = window['fs'].readFileSync(event.filePath);
         const fileName = event.filePath.split(/[\/\\]/).pop() || '';
-        
+
         const newFile: OpenedFile = {
           path: event.filePath,
           title: fileName,
           content: content,
           isDirty: false,
-          editorState: {} 
+          editorState: {}
         };
 
         this.openedFiles.push(newFile);
@@ -583,7 +586,7 @@ export class CodeEditorComponent implements OnInit, AfterViewInit, OnDestroy {
     // 延迟更新代码并跳转到指定位置
     setTimeout(async () => {
       this.updateCurrentCode();
-      
+
       // 等待编辑器准备就绪后跳转到指定位置
       setTimeout(() => {
         this.jumpToPosition(event.position);
@@ -598,20 +601,20 @@ export class CodeEditorComponent implements OnInit, AfterViewInit, OnDestroy {
     try {
       const monacoComponent = this.getMonacoEditorComponent();
       const editor = monacoComponent?.getEditorInstance();
-      
+
       if (editor && position) {
         const targetPosition = {
           lineNumber: position.lineNumber || (position.line + 1), // 兼容不同的位置格式
           column: position.column || (position.character + 1)
         };
-        
+
         // 跳转到指定位置
         editor.setPosition(targetPosition);
         editor.revealLineInCenter(targetPosition.lineNumber);
-        
+
         // 高亮显示目标行
         this.highlightLineInEditor(editor, targetPosition.lineNumber);
-        
+
         this.message.success(`已跳转到第 ${targetPosition.lineNumber} 行`);
       }
     } catch (error) {

@@ -104,9 +104,16 @@ export class MonacoEditorComponent {
       // 注册智能补全提供器
       const completionDisposable = monaco.languages.registerCompletionItemProvider('cpp', {
         provideCompletionItems: async (model: any, position: any, context: any, token: any) => {
-          return await this.clangdService.getCompletionItems(model, position, context, token, this.filePath);
+          console.log('Monaco requesting completions at:', position, 'context:', context);
+          const result = await this.clangdService.getCompletionItems(model, position, context, token, this.filePath);
+          console.log('Completion results:', result);
+          return result;
         },
-        triggerCharacters: ['.', '->', '::', '(', ' ']
+        triggerCharacters: ['.', '->', '::', '(', ' ', '#'],
+        resolveCompletionItem: (item: any, token: any) => {
+          // 提供更详细的补全信息
+          return item;
+        }
       });
 
       // 注册内联建议提供器（用于AI实时补全）
@@ -119,12 +126,35 @@ export class MonacoEditorComponent {
         }
       });
 
-      // 注册键盘快捷键处理器（Tab键接受AI建议）
-      // 注意：由于editorInstance是私有的，我们在editorInitialized回调中处理
+      // 注册悬停提供器
+      const hoverDisposable = monaco.languages.registerHoverProvider('cpp', {
+        provideHover: async (model: any, position: any, token: any) => {
+          if (this.clangdService.isClangdReady() && this.filePath) {
+            const lspPosition = {
+              line: position.lineNumber - 1,
+              character: position.column - 1
+            };
+            const hoverInfo = await this.clangdService.getHoverInfo(this.filePath, lspPosition);
+            if (hoverInfo) {
+              return {
+                contents: [
+                  { value: hoverInfo.contents || '暂无信息' }
+                ]
+              };
+            }
+          }
+          return null;
+        }
+      });
 
-      this.disposables.push(completionDisposable, inlineCompletionDisposable);
+      this.disposables.push(completionDisposable, inlineCompletionDisposable, hoverDisposable);
 
       console.log('代码智能补全功能已初始化');
+
+      // 添加调试信息
+      setTimeout(() => {
+        this.clangdService.diagnoseClangdStatus();
+      }, 3000);
 
     } catch (error) {
       console.error('初始化代码智能补全功能失败:', error);
