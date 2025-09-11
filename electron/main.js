@@ -109,11 +109,14 @@ const { registerNpmHandlers } = require("./npm");
 const { registerUpdaterHandlers } = require("./updater");
 const { registerCmdHandlers } = require("./cmd");
 const { registerMCPHandlers } = require("./mcp");
+const ClangdService = require("./clangd");
+const CompileCommandsGenerator = require("./compile-commands-generator");
 // debug模块
 const { initLogger } = require("./logger");
 
 let mainWindow;
 let userConf;
+let clangdService = null;
 
 // 环境变量加载
 function loadEnv() {
@@ -305,6 +308,7 @@ function createWindow() {
   registerNpmHandlers(mainWindow);
   registerCmdHandlers(mainWindow);
   registerMCPHandlers(mainWindow);
+  registerClangdHandlers(mainWindow);
 }
 
 app.on("ready", () => {
@@ -641,5 +645,250 @@ function cleanupOldInstances() {
     console.error('清理实例目录时出错:', error);
   }
 }
+
+// clangd IPC处理器
+function registerClangdHandlers(mainWindow) {
+  // 启动clangd服务
+  ipcMain.handle('clangd:start', async (event, workspaceRoot) => {
+    try {
+      if (!clangdService) {
+        clangdService = new ClangdService();
+      }
+      
+      if (clangdService.isRunning()) {
+        console.log('clangd is already running');
+        return { success: true, message: 'clangd is already running' };
+      }
+
+      await clangdService.start(workspaceRoot);
+      
+      // 监听clangd事件并转发给前端
+      clangdService.on('notification', (message) => {
+        mainWindow.webContents.send('clangd:notification', message);
+      });
+
+      clangdService.on('error', (error) => {
+        mainWindow.webContents.send('clangd:error', { error: error.message });
+      });
+
+      clangdService.on('exit', (exitInfo) => {
+        mainWindow.webContents.send('clangd:exit', exitInfo);
+      });
+
+      return { success: true };
+    } catch (error) {
+      console.error('Failed to start clangd:', error);
+      return { success: false, error: error.message };
+    }
+  });
+
+  // 停止clangd服务
+  ipcMain.handle('clangd:stop', async (event) => {
+    try {
+      if (clangdService) {
+        clangdService.stop();
+        clangdService = null;
+      }
+      return { success: true };
+    } catch (error) {
+      console.error('Failed to stop clangd:', error);
+      return { success: false, error: error.message };
+    }
+  });
+
+  // 文档打开
+  ipcMain.handle('clangd:didOpen', async (event, { uri, languageId, version, text }) => {
+    try {
+      if (!clangdService || !clangdService.isReady()) {
+        throw new Error('clangd is not ready');
+      }
+      await clangdService.didOpen(uri, languageId, version, text);
+      return { success: true };
+    } catch (error) {
+      console.error('clangd didOpen failed:', error);
+      return { success: false, error: error.message };
+    }
+  });
+
+  // 文档变更
+  ipcMain.handle('clangd:didChange', async (event, { uri, version, changes }) => {
+    try {
+      if (!clangdService || !clangdService.isReady()) {
+        throw new Error('clangd is not ready');
+      }
+      await clangdService.didChange(uri, version, changes);
+      return { success: true };
+    } catch (error) {
+      console.error('clangd didChange failed:', error);
+      return { success: false, error: error.message };
+    }
+  });
+
+  // 文档关闭
+  ipcMain.handle('clangd:didClose', async (event, { uri }) => {
+    try {
+      if (!clangdService || !clangdService.isReady()) {
+        throw new Error('clangd is not ready');
+      }
+      await clangdService.didClose(uri);
+      return { success: true };
+    } catch (error) {
+      console.error('clangd didClose failed:', error);
+      return { success: false, error: error.message };
+    }
+  });
+
+  // 文档保存
+  ipcMain.handle('clangd:didSave', async (event, { uri, text }) => {
+    try {
+      if (!clangdService || !clangdService.isReady()) {
+        throw new Error('clangd is not ready');
+      }
+      await clangdService.didSave(uri, text);
+      return { success: true };
+    } catch (error) {
+      console.error('clangd didSave failed:', error);
+      return { success: false, error: error.message };
+    }
+  });
+
+  // 获取代码补全
+  ipcMain.handle('clangd:completion', async (event, { uri, position }) => {
+    try {
+      if (!clangdService || !clangdService.isReady()) {
+        throw new Error('clangd is not ready');
+      }
+      const result = await clangdService.getCompletion(uri, position);
+      return { success: true, result };
+    } catch (error) {
+      console.error('clangd completion failed:', error);
+      return { success: false, error: error.message };
+    }
+  });
+
+  // 获取悬停信息
+  ipcMain.handle('clangd:hover', async (event, { uri, position }) => {
+    try {
+      if (!clangdService || !clangdService.isReady()) {
+        throw new Error('clangd is not ready');
+      }
+      const result = await clangdService.getHover(uri, position);
+      return { success: true, result };
+    } catch (error) {
+      console.error('clangd hover failed:', error);
+      return { success: false, error: error.message };
+    }
+  });
+
+  // 获取定义
+  ipcMain.handle('clangd:definition', async (event, { uri, position }) => {
+    try {
+      if (!clangdService || !clangdService.isReady()) {
+        throw new Error('clangd is not ready');
+      }
+      const result = await clangdService.getDefinition(uri, position);
+      return { success: true, result };
+    } catch (error) {
+      console.error('clangd definition failed:', error);
+      return { success: false, error: error.message };
+    }
+  });
+
+  // 获取引用
+  ipcMain.handle('clangd:references', async (event, { uri, position, includeDeclaration }) => {
+    try {
+      if (!clangdService || !clangdService.isReady()) {
+        throw new Error('clangd is not ready');
+      }
+      const result = await clangdService.getReferences(uri, position, includeDeclaration);
+      return { success: true, result };
+    } catch (error) {
+      console.error('clangd references failed:', error);
+      return { success: false, error: error.message };
+    }
+  });
+
+  // 获取文档符号
+  ipcMain.handle('clangd:documentSymbols', async (event, { uri }) => {
+    try {
+      if (!clangdService || !clangdService.isReady()) {
+        throw new Error('clangd is not ready');
+      }
+      const result = await clangdService.getDocumentSymbols(uri);
+      return { success: true, result };
+    } catch (error) {
+      console.error('clangd documentSymbols failed:', error);
+      return { success: false, error: error.message };
+    }
+  });
+
+  // 获取签名帮助
+  ipcMain.handle('clangd:signatureHelp', async (event, { uri, position }) => {
+    try {
+      if (!clangdService || !clangdService.isReady()) {
+        throw new Error('clangd is not ready');
+      }
+      const result = await clangdService.getSignatureHelp(uri, position);
+      return { success: true, result };
+    } catch (error) {
+      console.error('clangd signatureHelp failed:', error);
+      return { success: false, error: error.message };
+    }
+  });
+
+  // 格式化文档
+  ipcMain.handle('clangd:format', async (event, { uri, options }) => {
+    try {
+      if (!clangdService || !clangdService.isReady()) {
+        throw new Error('clangd is not ready');
+      }
+      const result = await clangdService.formatDocument(uri, options);
+      return { success: true, result };
+    } catch (error) {
+      console.error('clangd format failed:', error);
+      return { success: false, error: error.message };
+    }
+  });
+
+  // 检查clangd状态
+  ipcMain.handle('clangd:status', async (event) => {
+    try {
+      const isRunning = clangdService ? clangdService.isRunning() : false;
+      const isReady = clangdService ? clangdService.isReady() : false;
+      return { 
+        success: true, 
+        status: { 
+          isRunning, 
+          isReady, 
+          hasService: !!clangdService 
+        } 
+      };
+    } catch (error) {
+      console.error('clangd status check failed:', error);
+      return { success: false, error: error.message };
+    }
+  });
+
+  // 生成compile_commands.json
+  ipcMain.handle('clangd:generateCompileCommands', async (event, { projectPath, sdkPath, librariesPath }) => {
+    try {
+      const generator = new CompileCommandsGenerator(projectPath, sdkPath, librariesPath);
+      const outputPath = generator.saveToFile();
+      return { success: true, outputPath };
+    } catch (error) {
+      console.error('Failed to generate compile_commands.json:', error);
+      return { success: false, error: error.message };
+    }
+  });
+}
+
+// 在应用退出时清理clangd服务
+app.on('before-quit', () => {
+  if (clangdService) {
+    console.log('Stopping clangd service before quit...');
+    clangdService.stop();
+    clangdService = null;
+  }
+});
 
 cleanupOldInstances();

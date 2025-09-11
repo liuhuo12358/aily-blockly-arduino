@@ -28,7 +28,7 @@
                     }
                 </nz-tabset>
                 <app-monaco-editor [code]="code" (codeChange)="onCodeChange($event)" [sdkPath]="sdkPath"
-                    [librariesPath]="librariesPath"></app-monaco-editor>
+                    [librariesPath]="librariesPath" [filePath]="selectedFile"></app-monaco-editor>
                 } @else {
                 <div class="empty-editor" style="padding: 15px;">
                     <div>这是代码编辑器，是一个测试功能，还不能正常使用</div>

@@ -26,6 +26,7 @@ export class MonacoEditorComponent {
   }
 
   @Input() code = '';
+  @Input() filePath = ''; // 当前文件路径
 
   @Output() codeChange = new EventEmitter<string>();
 
@@ -97,7 +98,7 @@ export class MonacoEditorComponent {
       // 注册智能补全提供器
       const completionDisposable = monaco.languages.registerCompletionItemProvider('cpp', {
         provideCompletionItems: async (model: any, position: any, context: any, token: any) => {
-          return await this.codeIntelligenceService.getCompletionItems(model, position, context, token);
+          return await this.codeIntelligenceService.getCompletionItems(model, position, context, token, this.filePath);
         },
         triggerCharacters: ['.', '->', '::', '(', ' ']
       });

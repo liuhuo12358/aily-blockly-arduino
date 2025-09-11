@@ -303,5 +303,75 @@ contextBridge.exposeInMainWorld("electronAPI", {
     getZoomLevel: () => webFrame.getZoomLevel(),
     setZoomFactor: (factor) => webFrame.setZoomFactor(factor),
     getZoomFactor: () => webFrame.getZoomFactor()
+  },
+  // clangd LSP API
+  clangd: {
+    // 启动clangd服务
+    start: (workspaceRoot) => ipcRenderer.invoke('clangd:start', workspaceRoot),
+    
+    // 停止clangd服务
+    stop: () => ipcRenderer.invoke('clangd:stop'),
+    
+    // 检查clangd状态
+    getStatus: () => ipcRenderer.invoke('clangd:status'),
+    
+    // 文档生命周期管理
+    didOpen: (uri, languageId, version, text) => 
+      ipcRenderer.invoke('clangd:didOpen', { uri, languageId, version, text }),
+    
+    didChange: (uri, version, changes) => 
+      ipcRenderer.invoke('clangd:didChange', { uri, version, changes }),
+    
+    didClose: (uri) => 
+      ipcRenderer.invoke('clangd:didClose', { uri }),
+    
+    didSave: (uri, text) => 
+      ipcRenderer.invoke('clangd:didSave', { uri, text }),
+    
+    // 代码智能功能
+    getCompletion: (uri, position) => 
+      ipcRenderer.invoke('clangd:completion', { uri, position }),
+    
+    getHover: (uri, position) => 
+      ipcRenderer.invoke('clangd:hover', { uri, position }),
+    
+    getDefinition: (uri, position) => 
+      ipcRenderer.invoke('clangd:definition', { uri, position }),
+    
+    getReferences: (uri, position, includeDeclaration = true) => 
+      ipcRenderer.invoke('clangd:references', { uri, position, includeDeclaration }),
+    
+    getDocumentSymbols: (uri) => 
+      ipcRenderer.invoke('clangd:documentSymbols', { uri }),
+    
+    getSignatureHelp: (uri, position) => 
+      ipcRenderer.invoke('clangd:signatureHelp', { uri, position }),
+    
+    formatDocument: (uri, options) => 
+      ipcRenderer.invoke('clangd:format', { uri, options }),
+    
+    // 事件监听
+    onNotification: (callback) => {
+      ipcRenderer.on('clangd:notification', (event, data) => callback(data));
+    },
+    
+    onError: (callback) => {
+      ipcRenderer.on('clangd:error', (event, data) => callback(data));
+    },
+    
+    onExit: (callback) => {
+      ipcRenderer.on('clangd:exit', (event, data) => callback(data));
+    },
+    
+    // 移除事件监听
+    removeAllListeners: () => {
+      ipcRenderer.removeAllListeners('clangd:notification');
+      ipcRenderer.removeAllListeners('clangd:error');
+      ipcRenderer.removeAllListeners('clangd:exit');
+    },
+
+    // 生成compile_commands.json
+    generateCompileCommands: (projectPath, sdkPath, librariesPath) =>
+      ipcRenderer.invoke('clangd:generateCompileCommands', { projectPath, sdkPath, librariesPath })
   }
 });
