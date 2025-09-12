@@ -870,10 +870,21 @@ function registerClangdHandlers(mainWindow) {
   });
 
   // 生成compile_commands.json
-  ipcMain.handle('clangd:generateCompileCommands', async (event, { projectPath, sdkPath, librariesPath }) => {
+  ipcMain.handle('clangd:generateCompileCommands', async (event, { projectPaths, sdkPaths, librariesPaths }) => {
     try {
-      const generator = new CompileCommandsGenerator(projectPath, sdkPath, librariesPath);
-      const outputPath = generator.saveToFile();
+      // 确保所有参数都是数组
+      const projects = Array.isArray(projectPaths) ? projectPaths : [projectPaths];
+      const sdks = Array.isArray(sdkPaths) ? sdkPaths : [sdkPaths];
+      const libraries = Array.isArray(librariesPaths) ? librariesPaths : [librariesPaths];
+
+      // 使用第一个项目路径作为主要工作目录
+      const mainProjectPath = projects[0];
+      if (!mainProjectPath) {
+        throw new Error('至少需要一个项目路径');
+      }
+
+      const generator = new CompileCommandsGenerator(projects, sdks, libraries);
+      const outputPath = generator.saveToFile(mainProjectPath);
       return { success: true, outputPath };
     } catch (error) {
       console.error('Failed to generate compile_commands.json:', error);

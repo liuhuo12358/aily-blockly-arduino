@@ -50,8 +50,13 @@ class ClangdService extends EventEmitter {
       '--pretty',
       `--compile-commands-dir=${tempDir}`,
       '--fallback-style=Google',
-      '--limit-results=50', // 限制补全结果数量
-      '--cross-file-rename=false' // 禁用跨文件重命名以提高性能
+      '--limit-results=30', // 进一步限制补全结果数量
+      '--cross-file-rename=false', // 禁用跨文件重命名以提高性能
+      '--all-scopes-completion=false', // 限制补全范围
+      '--header-insertion-decorators=false', // 禁用头文件插入装饰器
+      '--function-arg-placeholders=false', // 禁用函数参数占位符
+      '--completion-parse=auto', // 自动解析补全
+      '--ranking-model=heuristics' // 使用启发式排序模型
     ];
 
     console.log(`Starting clangd at ${clangdPath} with args:`, args);
@@ -393,14 +398,14 @@ class ClangdService extends EventEmitter {
   }
 
   /**
-   * 获取代码补全
+   * 获取代码补全（带过滤）
    */
-  async getCompletion(uri, position) {
+  async getCompletion(uri, position, filterInternal = true) {
     if (!this.isInitialized) {
       throw new Error('clangd is not initialized');
     }
 
-    return await this.sendRequest('textDocument/completion', {
+    const result = await this.sendRequest('textDocument/completion', {
       textDocument: {
         uri
       },
@@ -408,6 +413,96 @@ class ClangdService extends EventEmitter {
       context: {
         triggerKind: 1 // 手动触发
       }
+    });
+
+    // 如果启用过滤，移除内部函数
+    if (filterInternal && result && result.items) {
+      result.items = this.filterInternalSymbols(result.items);
+    }
+
+    return result;
+  }
+
+  /**
+   * 过滤内部符号，只保留用户需要的函数
+   */
+  filterInternalSymbols(items) {
+    const filtered = items.filter(item => {
+      const label = item.label || '';
+      const detail = item.detail || '';
+      const documentation = item.documentation?.value || item.documentation || '';
+      
+      // 过滤掉以下模式的内部函数：
+      // 1. 以下划线开头的函数（通常是内部函数）
+      if (label.startsWith('_') || label.startsWith('__')) {
+        return false;
+      }
+      
+      // 2. AVR寄存器和内部宏
+      if (label.match(/^(DDR|PORT|PIN)[A-Z]$/) || 
+          label.match(/^(TCCR|TCNT|OCR|ICR|TIMSK|TIFR)\d*[A-Z]*$/) ||
+          label.match(/^(UCSR|UDR|UBRR|USART)\d*[A-Z]*$/) ||
+          label.match(/^(ADCSRA|ADCSRB|ADMUX|ADCL|ADCH)$/)) {
+        return false;
+      }
+      
+      // 3. GCC内部函数
+      if (label.startsWith('__builtin_') || 
+          label.startsWith('__sync_') || 
+          label.startsWith('__atomic_')) {
+        return false;
+      }
+      
+      // 4. AVR-libc内部函数
+      if (label.match(/^(cli|sei|wdt_|eeprom_|pgm_|PROGMEM)/) && 
+          !['cli', 'sei'].includes(label)) {
+        return false;
+      }
+      
+      // 5. 编译器内部类型和常量
+      if (label.match(/^(__flash|__memx|__farflash)/) ||
+          label.match(/^(FSTR|PSTR)$/)) {
+        return false;
+      }
+      
+      // 6. 过滤内部结构体成员
+      if (detail.includes('(anonymous') || 
+          detail.includes('__attribute__')) {
+        return false;
+      }
+      
+      // 7. 过滤一些不常用的Arduino内部函数
+      const internalArduinoFunctions = [
+        'serialEvent', 'serialEvent1', 'serialEvent2', 'serialEvent3',
+        'yield', 'serialEventRun', 'main',
+        'timer0_overflow_count', 'timer0_millis', 'timer0_fract'
+      ];
+      
+      if (internalArduinoFunctions.includes(label)) {
+        return false;
+      }
+      
+      return true;
+    });
+    
+    // 按类型排序：函数 > 变量 > 宏 > 其他
+    return filtered.sort((a, b) => {
+      const getTypePriority = (item) => {
+        const kind = item.kind;
+        if (kind === 3) return 1; // Function
+        if (kind === 6) return 2; // Variable  
+        if (kind === 14) return 3; // Macro
+        return 4; // Others
+      };
+      
+      const priorityA = getTypePriority(a);
+      const priorityB = getTypePriority(b);
+      
+      if (priorityA !== priorityB) {
+        return priorityA - priorityB;
+      }
+      
+      return a.label.localeCompare(b.label);
     });
   }
 
@@ -463,17 +558,54 @@ class ClangdService extends EventEmitter {
   }
 
   /**
-   * 获取文档符号
+   * 获取文档符号（带过滤）
    */
-  async getDocumentSymbols(uri) {
+  async getDocumentSymbols(uri, filterInternal = true) {
     if (!this.isInitialized) {
       throw new Error('clangd is not initialized');
     }
 
-    return await this.sendRequest('textDocument/documentSymbol', {
+    const result = await this.sendRequest('textDocument/documentSymbol', {
       textDocument: {
         uri
       }
+    });
+
+    // 如果启用过滤，移除内部符号
+    if (filterInternal && result) {
+      return this.filterDocumentSymbols(result);
+    }
+
+    return result;
+  }
+
+  /**
+   * 过滤文档符号
+   */
+  filterDocumentSymbols(symbols) {
+    if (!Array.isArray(symbols)) {
+      return symbols;
+    }
+    
+    return symbols.filter(symbol => {
+      const name = symbol.name || '';
+      
+      // 过滤内部符号
+      if (name.startsWith('_') || name.startsWith('__')) {
+        return false;
+      }
+      
+      // 过滤编译器生成的符号
+      if (name.includes('anonymous') || name.includes('$')) {
+        return false;
+      }
+      
+      // 递归过滤子符号
+      if (symbol.children) {
+        symbol.children = this.filterDocumentSymbols(symbol.children);
+      }
+      
+      return true;
     });
   }
 

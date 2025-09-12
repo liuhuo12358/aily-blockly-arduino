@@ -47,20 +47,21 @@ export class MonacoEditorComponent {
   }
 
   ngAfterViewInit() {
-
+    // 编辑器初始化后，尝试启动智能补全服务
+    setTimeout(async () => {
+      if (this.codeEditor) {
+        await this.initializeIntelligence();
+      }
+    }, 1000); // 给编辑器更多时间初始化
   }
 
   ngOnChanges(changes: SimpleChanges): void {
-    if (changes['sdkPath'] || changes['librariesPath']) {
-      setTimeout(async () => {
-        if (this.codeEditor) {
-          // 初始化代码智能补全服务
-          if (this.sdkPath && this.librariesPath) {
-            await this.initializeIntelligence();
-          }
-        }
-      }, 500);
-    }
+    setTimeout(async () => {
+      if (this.codeEditor) {
+        // 重新初始化代码智能补全服务
+        await this.initializeIntelligence();
+      }
+    }, 500);
   }
 
   ngOnDestroy() {
@@ -69,6 +70,13 @@ export class MonacoEditorComponent {
 
   onCodeChange(newCode: string): void {
     this.codeChange.emit(newCode);
+
+    // 同步代码变化到 clangd
+    if (this.filePath && this.clangdService.isClangdReady()) {
+      this.clangdService.updateDocument(this.filePath, newCode).catch(error => {
+        console.warn('更新 clangd 文档失败:', error);
+      });
+    }
   }
 
   editorInitialized(editor: any): void {
@@ -87,12 +95,126 @@ export class MonacoEditorComponent {
   }
 
   /**
+   * 获取工作空间根目录
+   */
+  private getWorkspaceRoot(): string | null {
+    if (!this.filePath) return null;
+
+    // 获取文件所在的目录作为工作空间根目录
+    const path = require('path');
+    return path.dirname(this.filePath);
+  }
+
+  /**
+   * 生成 compile_commands.json (支持数组路径)
+   */
+  public async generateCompileCommandsWithArrays(
+    projectPaths: string[], 
+    sdkPaths: string[], 
+    librariesPaths: string[]
+  ): Promise<any> {
+    if (typeof window !== 'undefined' && (window as any).electronAPI?.clangd) {
+      const clangdAPI = (window as any).electronAPI.clangd;
+      
+      console.log('Generating compile_commands.json with array paths:');
+      console.log('Project paths:', projectPaths);
+      console.log('SDK paths:', sdkPaths);
+      console.log('Libraries paths:', librariesPaths);
+      
+      return await clangdAPI.generateCompileCommands(projectPaths, sdkPaths, librariesPaths);
+    }
+    throw new Error('electronAPI.clangd is not available');
+  }
+
+  /**
+   * 生成 compile_commands.json
+   */
+  private async generateCompileCommands(projectPath: string, sdkPath: string, librariesPath: string): Promise<any> {
+    if (typeof window !== 'undefined' && (window as any).electronAPI?.clangd) {
+      const clangdAPI = (window as any).electronAPI.clangd;
+      
+      // 将路径转换为数组格式
+      const projectPaths = [projectPath];
+      const sdkPaths = sdkPath ? [sdkPath] : [];
+      const librariesPaths = librariesPath ? [librariesPath] : [];
+      
+      console.log('Generating compile_commands.json with paths:');
+      console.log('Project paths:', projectPaths);
+      console.log('SDK paths:', sdkPaths);
+      console.log('Libraries paths:', librariesPaths);
+      
+      return await clangdAPI.generateCompileCommands(projectPaths, sdkPaths, librariesPaths);
+    }
+    throw new Error('electronAPI.clangd is not available');
+  }
+
+  /**
+   * 等待 clangd 服务准备就绪
+   */
+  private async waitForClangdReady(timeout: number = 5000): Promise<boolean> {
+    const startTime = Date.now();
+
+    while (Date.now() - startTime < timeout) {
+      if (this.clangdService.isClangdReady()) {
+        console.log('clangd 服务已准备就绪');
+        return true;
+      }
+
+      // 等待100ms后重试
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+
+    console.warn('等待 clangd 服务准备就绪超时');
+    return false;
+  }
+
+  /**
+   * 同步当前文档到 clangd
+   */
+  private async syncDocumentToClangd(): Promise<void> {
+    if (!this.filePath || !this.code) {
+      console.warn('文件路径或内容为空，无法同步文档');
+      return;
+    }
+
+    try {
+      // 确保文档已在 clangd 中打开
+      await this.clangdService.openDocument(this.filePath, this.code);
+      console.log('文档已同步到 clangd:', this.filePath);
+    } catch (error) {
+      console.error('同步文档到 clangd 失败:', error);
+    }
+  }
+
+  /**
    * 初始化代码智能补全功能
    */
   async initializeIntelligence(): Promise<void> {
     try {
-      // 初始化代码智能补全服务（不再需要 SDK 和库路径）
-      await this.clangdService.initialize();
+      console.log('开始初始化代码智能补全功能...');
+      console.log('filePath:', this.filePath);
+
+      // 首先初始化 clangd 服务
+      const workspaceRoot = this.getWorkspaceRoot();
+      console.log('workspaceRoot:', workspaceRoot);
+
+      if (workspaceRoot) {
+        await this.clangdService.initialize(workspaceRoot);
+
+        // 生成 compile_commands.json
+        if (this.sdkPath && this.librariesPath) {
+          console.log('生成 compile_commands.json...');
+          try {
+            const result = await this.generateCompileCommands(workspaceRoot, this.sdkPath, this.librariesPath);
+            console.log('compile_commands.json 生成结果:', result);
+          } catch (error) {
+            console.warn('生成 compile_commands.json 失败，但继续初始化:', error);
+          }
+        }
+
+        // 等待 clangd 服务准备就绪
+        await this.waitForClangdReady(5000); // 等待最多5秒
+      }
 
       // 获取Monaco实例
       const monaco = (window as any).monaco;
@@ -100,6 +222,10 @@ export class MonacoEditorComponent {
         console.error('Monaco实例未找到');
         return;
       }
+
+      // 如果已有注册的提供器，先清理
+      this.disposables.forEach(d => d.dispose());
+      this.disposables = [];
 
       // 注册智能补全提供器
       const completionDisposable = monaco.languages.registerCompletionItemProvider('cpp', {
@@ -113,16 +239,6 @@ export class MonacoEditorComponent {
         resolveCompletionItem: (item: any, token: any) => {
           // 提供更详细的补全信息
           return item;
-        }
-      });
-
-      // 注册内联建议提供器（用于AI实时补全）
-      const inlineCompletionDisposable = monaco.languages.registerInlineCompletionsProvider('cpp', {
-        provideInlineCompletions: async (model: any, position: any, context: any, token: any) => {
-          return await this.provideInlineCompletions(model, position, context, token);
-        },
-        freeInlineCompletions: (completions: any) => {
-          // 释放资源
         }
       });
 
@@ -149,6 +265,11 @@ export class MonacoEditorComponent {
 
       this.disposables.push(completionDisposable, inlineCompletionDisposable, hoverDisposable);
 
+      // 同步当前文档到 clangd
+      if (this.filePath && this.code) {
+        await this.syncDocumentToClangd();
+      }
+
       console.log('代码智能补全功能已初始化');
 
       // 添加调试信息
@@ -158,36 +279,6 @@ export class MonacoEditorComponent {
 
     } catch (error) {
       console.error('初始化代码智能补全功能失败:', error);
-    }
-  }
-
-  /**
-   * 提供内联补全建议（AI实时补全）
-   */
-  private async provideInlineCompletions(model: any, position: any, context: any, token: any): Promise<any> {
-    try {
-      const completionResult = await this.clangdService.getCompletionItems(model, position, context, token);
-      const aiCompletions = completionResult.suggestions.filter(item => item.source === 'ai');
-
-      if (aiCompletions.length > 0) {
-        const bestCompletion = aiCompletions[0];
-        return {
-          items: [{
-            insertText: bestCompletion.insertText,
-            range: {
-              startLineNumber: position.lineNumber,
-              startColumn: position.column,
-              endLineNumber: position.lineNumber,
-              endColumn: position.column
-            }
-          }]
-        };
-      }
-
-      return { items: [] };
-    } catch (error) {
-      console.error('获取内联补全失败:', error);
-      return { items: [] };
     }
   }
 
@@ -298,7 +389,7 @@ export class MonacoEditorComponent {
     try {
       const position = editor.getPosition();
       const model = editor.getModel();
-      
+
       if (!position || !model || !this.filePath) {
         console.warn('无法获取当前位置或文件路径');
         return;
@@ -341,7 +432,7 @@ export class MonacoEditorComponent {
       // 解析URI，获取文件路径
       const uri = definition.uri;
       let filePath = uri;
-      
+
       // 处理file://协议的URI
       if (uri.startsWith('file://')) {
         filePath = uri.substring(7); // 移除 'file://' 前缀
@@ -365,10 +456,10 @@ export class MonacoEditorComponent {
           // 跳转到指定位置
           editor.setPosition(targetPosition);
           editor.revealLineInCenter(targetPosition.lineNumber);
-          
+
           // 高亮显示目标行
           this.highlightLine(editor, targetPosition.lineNumber);
-          
+
           this.showMessage(`已跳转到第 ${targetPosition.lineNumber} 行`, 'success');
         }
       } else {
@@ -388,7 +479,7 @@ export class MonacoEditorComponent {
   private async findReferences(editor: any): Promise<void> {
     try {
       const position = editor.getPosition();
-      
+
       if (!position || !this.filePath) {
         console.warn('无法获取当前位置或文件路径');
         return;
@@ -422,7 +513,7 @@ export class MonacoEditorComponent {
   private async showHoverInfo(editor: any): Promise<void> {
     try {
       const position = editor.getPosition();
-      
+
       if (!position || !this.filePath) {
         console.warn('无法获取当前位置或文件路径');
         return;
@@ -475,7 +566,7 @@ export class MonacoEditorComponent {
   private showReferences(references: any[]): void {
     // 这里可以显示一个引用列表对话框
     console.log('References found:', references);
-    
+
     // 简单的实现：显示第一个引用的位置信息
     if (references.length > 0) {
       const ref = references[0];
@@ -489,7 +580,7 @@ export class MonacoEditorComponent {
    */
   private displayHoverInfo(hoverInfo: any): void {
     let content = '';
-    
+
     if (hoverInfo.contents) {
       if (Array.isArray(hoverInfo.contents)) {
         content = hoverInfo.contents.map((item: any) => {
@@ -552,8 +643,8 @@ export class MonacoEditorComponent {
    * 更新SDK和库文件路径，重新加载补全
    */
   public async updatePaths(sdkPath: string, librariesPath: string): Promise<void> {
-    this.sdkPath = sdkPath;
-    this.librariesPath = librariesPath;
+    // this.sdkPath = sdkPath;
+    // this.librariesPath = librariesPath;
 
     // 清理旧的注册
     this.disposables.forEach(d => d.dispose());
@@ -561,17 +652,6 @@ export class MonacoEditorComponent {
 
     // 重新初始化智能补全
     await this.initializeIntelligence();
-  }
-
-  /**
-   * 获取代码智能补全服务的状态信息
-   */
-  public getIntelligenceStatus(): any {
-    return {
-      clangdReady: this.clangdService.isClangdReady(),
-      aiEnabled: true, // 可以添加配置
-      cacheSize: this.clangdService.getCacheSize()
-    };
   }
 
   /**
@@ -586,15 +666,87 @@ export class MonacoEditorComponent {
   }
 
   /**
-   * 清除AI补全缓存
+   * 测试代码补全功能
    */
-  public clearAICache(): void {
-    this.clangdService.clearAICache();
+  public async testCompletion(): Promise<void> {
+    console.log('=== 测试代码补全功能 ===');
+
+    const editor = this.getEditorInstance();
+    if (!editor) {
+      console.error('编辑器实例未找到');
+      return;
+    }
+
+    const model = editor.getModel();
+    const position = editor.getPosition();
+
+    if (!model || !position) {
+      console.error('无法获取编辑器模型或位置');
+      return;
+    }
+
+    console.log('当前位置:', position);
+    console.log('文件路径:', this.filePath);
+
+    try {
+      // 直接调用 clangd 服务获取补全
+      const result = await this.clangdService.getCompletionItems(model, position, {}, null, this.filePath);
+      console.log('补全结果:', result);
+
+      if (result.suggestions.length > 0) {
+        console.log(`获取到 ${result.suggestions.length} 个补全建议:`);
+        result.suggestions.slice(0, 5).forEach((item, index) => {
+          console.log(`${index + 1}. ${item.label} (${item.source})`);
+        });
+      } else {
+        console.log('没有获取到补全建议');
+      }
+    } catch (error) {
+      console.error('测试补全失败:', error);
+    }
+
+    console.log('=== 测试结束 ===');
   }
 
   /**
-   * 获取Monaco编辑器实例
+   * 调试：检查 clangd 状态和补全功能
    */
+  public async debugClangdStatus(): Promise<void> {
+    console.log('=== Monaco Editor clangd 调试信息 ===');
+
+    // 检查编辑器状态
+    const editor = this.getEditorInstance();
+    console.log('editor instance:', !!editor);
+    console.log('monaco instance:', !!(window as any).monaco);
+
+    // 检查 clangd 服务状态
+    console.log('clangd ready:', this.clangdService.isClangdReady());
+
+    // 检查 electronAPI
+    const hasElectronAPI = typeof window !== 'undefined' && !!(window as any).electronAPI?.clangd;
+    console.log('electronAPI.clangd available:', hasElectronAPI);
+
+    if (hasElectronAPI) {
+      try {
+        const clangdAPI = (window as any).electronAPI.clangd;
+        const status = await clangdAPI.getStatus();
+        console.log('clangd status from electron:', status);
+      } catch (error) {
+        console.error('获取 clangd 状态失败:', error);
+      }
+    }
+
+    // 检查注册的提供器数量
+    console.log('disposables count:', this.disposables.length);
+
+    // 如果有文件路径，测试文档是否已同步
+    if (this.filePath) {
+      const diagnostics = this.clangdService.getDocumentDiagnostics(this.filePath);
+      console.log('document diagnostics count:', diagnostics.length);
+    }
+
+    console.log('=== 调试信息结束 ===');
+  }
   public getEditorInstance(): any {
     return this.codeEditor?.['editorInstance'] || null;
   }
@@ -624,7 +776,7 @@ export class MonacoEditorComponent {
    */
   public restoreViewState(viewState: any): void {
     if (!viewState) return;
-    
+
     const editor = this.getEditorInstance();
     if (editor && editor.getModel()) {
       try {
@@ -643,11 +795,11 @@ export class MonacoEditorComponent {
    */
   public async restoreViewStateSafely(viewState: any): Promise<boolean> {
     if (!viewState) return false;
-    
+
     return new Promise((resolve) => {
       const maxAttempts = 20;
       let attempts = 0;
-      
+
       const tryRestore = () => {
         const editor = this.getEditorInstance();
         if (editor && editor.getModel()) {
@@ -660,7 +812,7 @@ export class MonacoEditorComponent {
             console.warn('恢复视图状态失败:', error);
           }
         }
-        
+
         attempts++;
         if (attempts < maxAttempts) {
           setTimeout(tryRestore, 50);
@@ -669,7 +821,7 @@ export class MonacoEditorComponent {
           resolve(false);
         }
       };
-      
+
       tryRestore();
     });
   }

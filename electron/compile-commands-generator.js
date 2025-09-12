@@ -6,10 +6,16 @@ const fs = require('fs');
  * 这将帮助clangd更好地理解项目结构和依赖关系
  */
 class CompileCommandsGenerator {
-  constructor(projectPath, sdkPath, librariesPath) {
-    this.projectPath = projectPath;
-    this.sdkPath = sdkPath;
-    this.librariesPath = librariesPath;
+  constructor(projectPaths, sdkPaths, librariesPaths) {
+    // 确保所有参数都是数组
+    this.projectPaths = Array.isArray(projectPaths) ? projectPaths : [projectPaths].filter(Boolean);
+    this.sdkPaths = Array.isArray(sdkPaths) ? sdkPaths : [sdkPaths].filter(Boolean);
+    this.librariesPaths = Array.isArray(librariesPaths) ? librariesPaths : [librariesPaths].filter(Boolean);
+    
+    console.log('CompileCommandsGenerator initialized with:');
+    console.log('Project paths:', this.projectPaths);
+    console.log('SDK paths:', this.sdkPaths);
+    console.log('Libraries paths:', this.librariesPaths);
   }
 
   /**
@@ -18,16 +24,26 @@ class CompileCommandsGenerator {
   generateCompileCommands() {
     const commands = [];
     
-    // 获取项目中的所有源文件
-    const sourceFiles = this.findSourceFiles(this.projectPath);
-    
-    for (const file of sourceFiles) {
-      const command = this.generateCommandForFile(file);
-      if (command) {
-        commands.push(command);
+    // 遍历所有项目路径，获取源文件
+    for (const projectPath of this.projectPaths) {
+      if (!projectPath || !fs.existsSync(projectPath)) {
+        console.warn(`Project path does not exist: ${projectPath}`);
+        continue;
+      }
+      
+      console.log(`Processing project path: ${projectPath}`);
+      const sourceFiles = this.findSourceFiles(projectPath);
+      console.log(`Found ${sourceFiles.length} source files in ${projectPath}`);
+      
+      for (const file of sourceFiles) {
+        const command = this.generateCommandForFile(file, projectPath);
+        if (command) {
+          commands.push(command);
+        }
       }
     }
     
+    console.log(`Generated ${commands.length} compile commands total`);
     return commands;
   }
 
@@ -69,7 +85,7 @@ class CompileCommandsGenerator {
   /**
    * 为单个文件生成编译命令
    */
-  generateCommandForFile(filePath) {
+  generateCommandForFile(filePath, projectPath) {
     const includes = this.getIncludePaths();
     const defines = this.getDefines();
     
@@ -77,7 +93,7 @@ class CompileCommandsGenerator {
     const compiler = this.getCompiler(filePath);
     
     const command = {
-      directory: this.projectPath,
+      directory: projectPath, // 使用传入的项目路径
       file: filePath,
       command: this.buildCommandLine(compiler, filePath, includes, defines)
     };
@@ -91,70 +107,114 @@ class CompileCommandsGenerator {
   getIncludePaths() {
     const includes = [];
     
-    // Arduino核心库路径
-    if (this.sdkPath && fs.existsSync(this.sdkPath)) {
-      // 检查是否是直接的cores/arduino路径
-      if (this.sdkPath.includes('cores')) {
-        includes.push(this.sdkPath);
+    // 首先添加项目路径（最高优先级）
+    includes.push(...this.projectPaths);
+    
+    // 只添加核心Arduino路径，减少不必要的内部头文件
+    for (const sdkPath of this.sdkPaths) {
+      if (!sdkPath || !fs.existsSync(sdkPath)) {
+        console.warn(`SDK path does not exist: ${sdkPath}`);
+        continue;
+      }
+      
+      console.log(`Processing SDK path: ${sdkPath}`);
+      
+      // 只添加核心Arduino路径
+      if (sdkPath.includes('cores')) {
+        includes.push(sdkPath);
         
         // 查找variants路径
-        const variantsPath = this.sdkPath.replace(/cores.*$/, 'variants/standard');
+        const variantsPath = sdkPath.replace(/cores.*$/, 'variants/standard');
         if (fs.existsSync(variantsPath)) {
           includes.push(variantsPath);
         }
       } else {
-        // 如果是SDK根目录，添加子目录
-        const possiblePaths = [
-          path.join(this.sdkPath, 'cores', 'arduino'),
-          path.join(this.sdkPath, 'variants', 'standard'),
-          path.join(this.sdkPath, 'variants', 'mega'),
-          path.join(this.sdkPath, 'variants', 'micro'),
-          path.join(this.sdkPath, 'variants', 'leonardo')
+        // 如果是SDK根目录，只添加必要的核心路径
+        const essentialPaths = [
+          path.join(sdkPath, 'cores', 'arduino'),
+          path.join(sdkPath, 'variants', 'standard')
         ];
         
-        for (const possiblePath of possiblePaths) {
-          if (fs.existsSync(possiblePath)) {
-            includes.push(possiblePath);
+        for (const essentialPath of essentialPaths) {
+          if (fs.existsSync(essentialPath)) {
+            includes.push(essentialPath);
           }
         }
       }
+    }
+    
+    // 有选择地添加用户库，避免添加所有系统库
+    for (const librariesPath of this.librariesPaths) {
+      if (!librariesPath || !fs.existsSync(librariesPath)) {
+        console.warn(`Libraries path does not exist: ${librariesPath}`);
+        continue;
+      }
       
-      // 查找其他核心目录
-      try {
-        const sdkRoot = this.sdkPath.includes('cores') ? 
-          this.sdkPath.split('cores')[0] : this.sdkPath;
-        const coresDir = path.join(sdkRoot, 'cores');
-        
-        if (fs.existsSync(coresDir)) {
-          const cores = fs.readdirSync(coresDir, { withFileTypes: true });
-          for (const core of cores) {
-            if (core.isDirectory()) {
-              const corePath = path.join(coresDir, core.name);
-              if (!includes.includes(corePath)) {
-                includes.push(corePath);
-              }
+      console.log(`Processing libraries path: ${librariesPath}`);
+      this.addSelectiveLibraryIncludes(librariesPath, includes);
+    }
+    
+    // 不添加系统路径，减少内部函数暴露
+    // const systemIncludes = this.getSystemIncludes();
+    // includes.push(...systemIncludes);
+    
+    // 去重
+    const uniqueIncludes = [...new Set(includes)];
+    console.log(`Total include paths (filtered): ${uniqueIncludes.length}`);
+    
+    return uniqueIncludes;
+  }
+
+  /**
+   * 有选择地添加库包含路径，避免包含太多内部库
+   */
+  addSelectiveLibraryIncludes(libPath, includes) {
+    try {
+      const libraries = fs.readdirSync(libPath, { withFileTypes: true });
+      
+      // 定义常用的Arduino库白名单
+      const commonLibraries = [
+        'Servo', 'SoftwareSerial', 'LiquidCrystal', 'SD', 'Ethernet', 'WiFi',
+        'SPI', 'Wire', 'EEPROM', 'Stepper', 'WiFi101', 'WiFiNINA',
+        'Adafruit_Sensor', 'DHT', 'OneWire', 'DallasTemperature',
+        'NewPing', 'IRremote', 'FastLED', 'AccelStepper'
+      ];
+      
+      for (const lib of libraries) {
+        if (lib.isDirectory()) {
+          const libDir = path.join(libPath, lib.name);
+          
+          // 只包含白名单中的库或者用户自定义库（不以内部前缀开头）
+          const isCommonLib = commonLibraries.some(commonLib => 
+            lib.name.toLowerCase().includes(commonLib.toLowerCase())
+          );
+          const isUserLib = !lib.name.startsWith('__') && 
+                           !lib.name.startsWith('_') && 
+                           !lib.name.includes('internal');
+          
+          if (isCommonLib || isUserLib) {
+            includes.push(libDir);
+            
+            // 检查src子目录
+            const srcDir = path.join(libDir, 'src');
+            if (fs.existsSync(srcDir)) {
+              includes.push(srcDir);
+              
+              // 只添加一级子目录，避免深层内部目录
+              this.addSubDirectories(srcDir, includes, 1);
+            }
+            
+            // 检查utility子目录
+            const utilityDir = path.join(libDir, 'utility');
+            if (fs.existsSync(utilityDir)) {
+              includes.push(utilityDir);
             }
           }
         }
-      } catch (error) {
-        console.warn('Failed to scan cores directory:', error.message);
       }
+    } catch (error) {
+      console.warn(`Failed to read libraries directory ${libPath}:`, error.message);
     }
-    
-    // 库文件路径
-    if (this.librariesPath && fs.existsSync(this.librariesPath)) {
-      this.addLibraryIncludes(this.librariesPath, includes);
-    }
-    
-    // 添加常见的系统include路径
-    const systemIncludes = this.getSystemIncludes();
-    includes.push(...systemIncludes);
-    
-    // 项目本地头文件（放在最后，优先级最高）
-    includes.push(this.projectPath);
-    
-    // 去重
-    return [...new Set(includes)];
   }
 
   /**
@@ -316,9 +376,17 @@ class CompileCommandsGenerator {
   /**
    * 保存编译命令到文件
    */
-  saveToFile() {
+  saveToFile(outputProjectPath = null) {
     const commands = this.generateCompileCommands();
-    const tempDir = path.join(this.projectPath, '.temp');
+    
+    // 使用指定的输出路径，或者第一个项目路径作为默认输出位置
+    const targetProjectPath = outputProjectPath || this.projectPaths[0];
+    
+    if (!targetProjectPath) {
+      throw new Error('No valid project path available for output');
+    }
+    
+    const tempDir = path.join(targetProjectPath, '.temp');
     const outputPath = path.join(tempDir, 'compile_commands.json');
     
     try {
@@ -328,7 +396,7 @@ class CompileCommandsGenerator {
       }
       
       fs.writeFileSync(outputPath, JSON.stringify(commands, null, 2));
-      console.log(`Generated compile_commands.json with ${commands.length} entries`);
+      console.log(`Generated compile_commands.json with ${commands.length} entries at: ${outputPath}`);
       return outputPath;
     } catch (error) {
       console.error('Failed to save compile_commands.json:', error);
