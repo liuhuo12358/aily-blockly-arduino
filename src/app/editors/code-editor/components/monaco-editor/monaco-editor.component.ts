@@ -84,11 +84,6 @@ export class MonacoEditorComponent {
 
     // 在编辑器初始化后设置Tab键处理
     if (editor && this.monacoInstance) {
-      //   const tabDisposable = editor.addCommand(this.monacoInstance.KeyCode.Tab, () => {
-      //     return this.handleTabKey(editor);
-      //   });
-      //   this.disposables.push(tabDisposable);
-
       // 添加自定义右键菜单项
       this.setupContextMenu(editor);
     }
@@ -263,7 +258,7 @@ export class MonacoEditorComponent {
         }
       });
 
-      this.disposables.push(completionDisposable, inlineCompletionDisposable, hoverDisposable);
+      this.disposables.push(completionDisposable, hoverDisposable);
 
       // 同步当前文档到 clangd
       if (this.filePath && this.code) {
@@ -280,60 +275,6 @@ export class MonacoEditorComponent {
     } catch (error) {
       console.error('初始化代码智能补全功能失败:', error);
     }
-  }
-
-  /**
-   * 处理Tab键按下事件
-   */
-  private handleTabKey(editor: any): boolean {
-    // 检查是否有活跃的内联补全建议
-    const inlineCompletions = editor.getModel()?.getInlineCompletions?.();
-
-    // 如果有内联补全建议，则接受它
-    if (inlineCompletions && inlineCompletions.items && inlineCompletions.items.length > 0) {
-      this.acceptInlineCompletion(editor);
-      return true; // 阻止默认Tab行为
-    }
-
-    // 检查是否有活跃的建议小部件
-    const suggestWidget = editor.getContribution('editor.contrib.suggestController');
-    if (suggestWidget && suggestWidget.widget && suggestWidget.widget.getValue()) {
-      // 有建议小部件显示，让默认行为处理
-      return false;
-    }
-
-    // 没有补全建议，插入Tab字符
-    const selection = editor.getSelection();
-    const model = editor.getModel();
-
-    if (selection && model) {
-      const tabSize = editor.getModel().getOptions().tabSize;
-      const useSpaces = editor.getModel().getOptions().insertSpaces;
-      const tabString = useSpaces ? ' '.repeat(tabSize) : '\t';
-
-      editor.executeEdits('tab-insert', [{
-        range: selection,
-        text: tabString
-      }]);
-
-      // 移动光标到插入位置之后
-      const newPosition = {
-        lineNumber: selection.startLineNumber,
-        column: selection.startColumn + tabString.length
-      };
-      editor.setPosition(newPosition);
-    }
-
-    return true; // 阻止默认Tab行为，因为我们已经处理了
-  }
-
-  /**
-   * 接受内联补全建议
-   */
-  private acceptInlineCompletion(editor: any): void {
-    // 这里可以添加接受内联补全的逻辑
-    // Monaco Editor会自动处理大部分情况
-    editor.trigger('keyboard', 'acceptAlternativeSelectedSuggestion', {});
   }
 
   /**
