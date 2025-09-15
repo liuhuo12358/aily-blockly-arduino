@@ -45,3 +45,5 @@ Thumbs.db
 temp
 child/node*
 !child/node-*.*
+child/aily-builder
+!child/aily-builder-*.*
