@@ -10,12 +10,10 @@ import { ActivatedRoute } from '@angular/router';
 import { NzLayoutComponent, NzLayoutModule } from "ng-zorro-antd/layout";
 import { NzResizableModule, NzResizeEvent } from 'ng-zorro-antd/resizable';
 import { NzMessageService } from 'ng-zorro-antd/message';
-import { CmdService } from '../../services/cmd.service';
 import { BuilderService } from '../../services/builder.service';
 import { UploaderService } from '../../services/uploader.service';
 import { ElectronService } from '../../services/electron.service';
 import { ShortcutService, ShortcutAction, ShortcutKeyMapping } from './services/shortcut.service';
-import { ClangdService } from './services/clangd.service';
 import { Subscription } from 'rxjs';
 import { ViewChild, AfterViewInit, OnInit, OnDestroy } from '@angular/core';
 import { _ProjectService } from './services/project.service';
@@ -81,21 +79,11 @@ export class CodeEditorComponent implements OnInit, AfterViewInit, OnDestroy {
     private _ProjectService: _ProjectService,
     private activatedRoute: ActivatedRoute,
     private message: NzMessageService,
-    private cmdService: CmdService,
     private builderService: BuilderService,
     private uploadService: UploaderService,
     private electronService: ElectronService,
     private shortcutService: ShortcutService,
-    private clangdService: ClangdService
-  ) { 
-    // 添加全局调试访问
-    if (typeof window !== 'undefined') {
-      (window as any).angular = {
-        ...(window as any).angular,
-        clangdService: this.clangdService,
-        codeEditor: this
-      };
-    }
+  ) {
   }
 
   async ngOnInit() {
@@ -143,88 +131,17 @@ export class CodeEditorComponent implements OnInit, AfterViewInit, OnDestroy {
       clearInterval(this.saveStateTimer);
     }
 
-    // 清理clangd资源
-    this.cleanupClangdResources();
-
     this.builderService.cancel();
     this.uploadService.cancel();
-    
+
     this.electronService.setTitle('aily blockly');
 
     // 清理快捷键监听器
     this.cleanupShortcutListeners();
   }
 
-  /**
-   * 清理clangd资源
-   */
-  private async cleanupClangdResources(): Promise<void> {
-    try {
-      // 关闭所有打开的文档
-      for (const file of this.openedFiles) {
-        if (this.isCppFile(file.path)) {
-          await this.clangdService.closeDocument(file.path);
-        }
-      }
-
-      // 停止clangd服务
-      await this.clangdService.stopClangd();
-
-      console.log('clangd resources cleaned up');
-    } catch (error) {
-      console.warn('Failed to cleanup clangd resources:', error);
-    }
-  }
-
   ngAfterViewInit(): void {
-    setTimeout(async () => {
-      // 初始化代码智能服务（包括clangd）
-      this.initializeCodeIntelligence();
-    }, 2000);
-  }
 
-  /**
-   * 初始化代码智能服务
-   */
-  private async initializeCodeIntelligence(): Promise<void> {
-    try {
-      // 生成compile_commands.json以改善clangd补全效果
-      await this.generateCompileCommands();
-
-      // 初始化代码智能补全服务
-      await this.clangdService.initialize(
-        this.projectPath
-      );
-
-      console.log('Code intelligence service initialized successfully');
-    } catch (error) {
-      console.error('Failed to initialize code intelligence service:', error);
-      this.message.warning('代码智能功能初始化失败，部分功能可能不可用');
-    }
-  }
-
-  /**
-   * 生成compile_commands.json文件
-   */
-  private async generateCompileCommands(): Promise<void> {
-    try {
-      if (typeof window !== 'undefined' && (window as any).electronAPI?.clangd) {
-        const clangdAPI = (window as any).electronAPI.clangd;
-        const result = await clangdAPI.generateCompileCommands(
-          this.projectPath,
-          `C:\\Users\\coloz\\AppData\\Local\\Arduino15\\packages\\arduino\\hardware\\avr\\1.8.6\\cores\\arduino`,
-          `C:\\Users\\coloz\\Documents\\Arduino\\libraries`
-        );
-
-        if (result.success) {
-          console.log('Generated compile_commands.json at:', result.outputPath);
-        } else {
-          console.warn('Failed to generate compile_commands.json:', result.error);
-        }
-      }
-    } catch (error) {
-      console.warn('Failed to generate compile_commands.json:', error);
-    }
   }
 
   async loadProject(projectPath: string) {
@@ -287,29 +204,12 @@ export class CodeEditorComponent implements OnInit, AfterViewInit, OnDestroy {
 
       this.openedFiles.push(newFile);
       this.selectedIndex = this.openedFiles.length - 1;
-
-      // 在clangd中打开文档
-      await this.openDocumentInClangd(filePath, content);
     }
 
     // 延迟更新代码，确保界面已更新
     setTimeout(() => {
       this.updateCurrentCode();
     }, 0);
-  }
-
-  /**
-   * 在clangd中打开文档
-   */
-  private async openDocumentInClangd(filePath: string, content: string): Promise<void> {
-    try {
-      // 只处理C/C++/Arduino文件
-      if (this.isCppFile(filePath)) {
-        await this.clangdService.openDocument(filePath, content);
-      }
-    } catch (error) {
-      console.warn('Failed to open document in clangd:', error);
-    }
   }
 
   /**
@@ -369,9 +269,6 @@ export class CodeEditorComponent implements OnInit, AfterViewInit, OnDestroy {
   private async doCloseTab(index: number): Promise<void> {
     const file = this.openedFiles[index];
 
-    // 在clangd中关闭文档
-    await this.closeDocumentInClangd(file.path);
-
     this.openedFiles.splice(index, 1);
 
     // 如果关闭的是当前选中的标签页，需要调整选中索引
@@ -388,46 +285,17 @@ export class CodeEditorComponent implements OnInit, AfterViewInit, OnDestroy {
     }
   }
 
-  /**
-   * 在clangd中关闭文档
-   */
-  private async closeDocumentInClangd(filePath: string): Promise<void> {
-    try {
-      if (this.isCppFile(filePath)) {
-        await this.clangdService.closeDocument(filePath);
-      }
-    } catch (error) {
-      console.warn('Failed to close document in clangd:', error);
-    }
-  }
-
   // 保存文件
   async saveFile(index: number): Promise<void> {
     const file = this.openedFiles[index];
     window['fs'].writeFileSync(file.path, file.content);
     file.isDirty = false;
-
-    // 通知clangd文档已保存
-    await this.saveDocumentInClangd(file.path, file.content);
   }
 
   // 保存当前文件
   async saveCurrentFile(): Promise<void> {
     if (this.selectedIndex >= 0 && this.selectedIndex < this.openedFiles.length) {
       await this.saveFile(this.selectedIndex);
-    }
-  }
-
-  /**
-   * 在clangd中保存文档
-   */
-  private async saveDocumentInClangd(filePath: string, content: string): Promise<void> {
-    try {
-      if (this.isCppFile(filePath)) {
-        await this.clangdService.saveDocument(filePath, content);
-      }
-    } catch (error) {
-      console.warn('Failed to save document in clangd:', error);
     }
   }
 
@@ -471,7 +339,7 @@ export class CodeEditorComponent implements OnInit, AfterViewInit, OnDestroy {
     try {
       const monacoComponent = this.getMonacoEditorComponent();
       if (monacoComponent) {
-        const editor = monacoComponent.getEditorInstance();
+        const editor = monacoComponent.monacoInstance;
         if (editor && editor.getModel()) {
           const viewState = monacoComponent.getViewState();
           if (viewState) {
@@ -522,23 +390,7 @@ export class CodeEditorComponent implements OnInit, AfterViewInit, OnDestroy {
       if (currentFile.content !== newContent) {
         currentFile.content = newContent;
         currentFile.isDirty = true;
-
-        // 异步更新clangd中的文档内容，不等待完成
-        this.updateDocumentInClangd(currentFile.path, newContent);
       }
-    }
-  }
-
-  /**
-   * 在clangd中更新文档内容
-   */
-  private async updateDocumentInClangd(filePath: string, content: string): Promise<void> {
-    try {
-      if (this.isCppFile(filePath)) {
-        await this.clangdService.updateDocument(filePath, content);
-      }
-    } catch (error) {
-      console.warn('Failed to update document in clangd:', error);
     }
   }
 
@@ -600,7 +452,7 @@ export class CodeEditorComponent implements OnInit, AfterViewInit, OnDestroy {
   private jumpToPosition(position: any): void {
     try {
       const monacoComponent = this.getMonacoEditorComponent();
-      const editor = monacoComponent?.getEditorInstance();
+      const editor = monacoComponent?.monacoInstance;
 
       if (editor && position) {
         const targetPosition = {
