@@ -199,6 +199,8 @@ function loadEnv() {
   process.env.AILY_NPM_REGISTRY = conf["npm_registry"][0];
   // 7za path
   process.env.AILY_7ZA_PATH = path.join(childPath, "7za.exe")
+  // aily builder path
+  process.env.AILY_BUILDER_PATH = path.join(childPath, "aily-builder");
   // 全局npm包路径
   process.env.AILY_NPM_PREFIX = process.env.AILY_APPDATA_PATH;
   // 默认全局编译器路径
@@ -214,6 +216,16 @@ function loadEnv() {
   process.env.AILY_ZIP_URL = conf["resource"][0];
 
   process.env.AILY_PROJECT_PATH = conf["project_path"];
+
+  // 将aily builder以及其中的ninja添加到PATH中
+  const ailyBuilderPath = path.join(process.env.AILY_BUILDER_PATH);
+  if (fs.existsSync(ailyBuilderPath)) {
+    process.env.PATH = `${process.env.PATH}${path.delimiter}${ailyBuilderPath}`;
+  }
+  const ninjaPath = path.join(process.env.AILY_BUILDER_PATH, 'ninja');
+  if (fs.existsSync(ninjaPath)) {
+    process.env.PATH = `${process.env.PATH}${path.delimiter}${ninjaPath}`;
+  }
 }
 
 

@@ -13,6 +13,10 @@ npm-debug.log
 yarn-error.log
 /child/node
 /child/clangd
+<<<<<<< HEAD
+=======
+/child/aily-builder
+>>>>>>> stao
 
 # IDEs and editors
 .idea/
@@ -46,3 +50,5 @@ Thumbs.db
 temp
 child/node*
 !child/node-*.*
+child/aily-builder
+!child/aily-builder-*.*

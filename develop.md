@@ -13,7 +13,7 @@ npm i
 cd electron
 npm i
 cd child
-.\7za.exe x node-v18.20.8-win-x64.7z -onode
+.\7za.exe x node-v22.19.0-win-x64.7z -onode
 ```  
 
 **electron运行**
@@ -40,7 +40,7 @@ npm run build
 
 ### /build  
 该部分是安装/卸载程序的脚本。
-在安装应用时，安装程序会将`child\node-v9.11.2-win-x64.7z`解压到`child\node`。  
+在安装应用时，安装程序会将`child\node-v22.19.0-win-x64.7z`解压到`child\node`。  
 
 ### /src/app/blockly/plugins
 blockly相关插件

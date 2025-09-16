@@ -10,10 +10,23 @@ export { deleteFolderTool } from './deleteFolderTool';
 export { checkExistsTool } from './checkExistsTool';
 export { getDirectoryTreeTool } from './getDirectoryTreeTool';
 
+// Blockly编辑工具索引
+export { 
+  smartBlockTool, 
+  connectBlocksTool, 
+  createCodeStructureTool, 
+  configureBlockTool, 
+  variableManagerTool, 
+  findBlockTool,
+  deleteBlockTool,
+  getWorkspaceOverviewTool // 新增工具
+} from './editBlockTool';
+
 // 其他工具
 export { newProjectTool } from './createProjectTool';
 export { executeCommandTool } from './executeCommandTool';
 export { askApprovalTool } from './askApprovalTool';
 export { getContextTool } from './getContextTool';
 export { fetchTool, FetchToolService } from './fetchTool';
-export { reloadAbiJsonTool, reloadAbiJsonToolSimple, reloadAbiJsonToolDirect, ReloadAbiJsonToolService } from './reloadAbiJsonTool';
+export { todoWriteTool } from './todoWriteTool';
+// export { reloadAbiJsonTool, reloadAbiJsonToolSimple, reloadAbiJsonToolDirect, ReloadAbiJsonToolService } from './reloadAbiJsonTool';

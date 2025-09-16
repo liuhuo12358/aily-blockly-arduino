@@ -687,6 +687,16 @@ export class ProjectService {
       console.log('安装新开发板模块:', newBoardPackage);
       this.uiService.updateFooterState({ state: 'doing', text: '正在安装新开发板...' });
       await this.cmdService.runAsync(`npm install ${newBoardPackage}`, this.currentProjectPath);
+
+      // 删除项目下的.temp文件夹，如果存在的话
+      const tempPath = this.currentProjectPath + '/.temp';
+      if (window['fs'].existsSync(tempPath)) {
+        console.log('删除项目下的.temp文件夹:', tempPath);
+        await this.cmdService.runAsync(`Remove-Item -Path "${tempPath}" -Recurse -Force`);
+      } else {
+        console.log('.temp文件夹不存在，无需删除');
+      }
+
       // 3. 重新加载项目
       console.log('重新加载项目...');
       await this.projectOpen(this.currentProjectPath);
