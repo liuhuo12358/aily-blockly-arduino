@@ -178,7 +178,7 @@ export class UploaderService {
         const compilerTool = boardJson.compilerTool || 'arduino-cli';
         if (compilerTool !== 'arduino-cli') {
           // 获取上传参数
-          uploadParam = boardJson._uploadParam;
+          uploadParam = boardJson.uploadParam;
           if (!uploadParam) {
             this.handleUploadError('缺少上传参数，请检查板子配置');
             reject({ state: 'error', text: '缺少上传参数' });
@@ -257,8 +257,21 @@ export class UploaderService {
 
             uploadParam = uploadParamList.join(' ');
             uploadParam += ` -d --port=${this.serialService.currentPort} -a -U -e -w ${buildPath}/sketch.bin -R`;
-          }
+          } else if (command === 'dfu-util') {
+            lastUploadText = `正在使用dfu-util上传${boardJson.name}`;
+            uploadParamList = uploadParam.split(' ').map(param => {
+              if (param === 'dfu-util') {
+                return `${toolsPath}/dfu-util@0.11.0-arduino5/dfu-util`;
+              }
+              return param;
+            });
 
+            // 构建命令
+            // "C:\Users\LENOVO\AppData\Local\Arduino15\packages\arduino\tools\dfu-util\0.11.0-arduino5/dfu-util" --device 0x2341:0x0069,:0x0369 -D "C:\Users\LENOVO\AppData\Local\arduino\sketches\1149E9B555B61CE95EAC981A26A112DC/Blink.ino.bin" -a0 -Q
+
+            uploadParam = uploadParamList.join(' ');
+            uploadParam += ` --device 0x2341:0x0069,:0x0369 -D ${buildPath}/sketch.bin -a0 -Q`;
+          }
         } else {
           // 获取上传参数
           uploadParam = boardJson.uploadParam;
