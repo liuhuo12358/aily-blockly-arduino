@@ -124,6 +124,7 @@ export class UploaderService {
         this.noticeService.clear()
 
         // 对比代码是否有变化
+        this.builderService.cancelled = false;
         const code = arduinoGenerator.workspaceToCode(this.blocklyService.workspace);
         if (!this.builderService.passed || code !== this.builderService.lastCode || this.projectService.currentProjectPath !== this.builderService.currentProjectPath) {
           // 编译
