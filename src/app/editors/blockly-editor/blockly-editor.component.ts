@@ -26,6 +26,7 @@ import { ProjectService } from '../../services/project.service';
     TranslateModule
   ],
   providers: [
+    _ProjectService,
     _BuilderService,
     _UploaderService,
     BitmapUploadService
