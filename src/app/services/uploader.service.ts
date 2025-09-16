@@ -10,16 +10,16 @@ export class UploaderService {
     private actionService: ActionService
   ) { }
 
-  cancelled = false;
-
   async upload() {
-    this.actionService.dispatch('upload-begin', {}, result => {
-      if (result.success) {
-        // this.stateSubject.next('saved');
-      } else {
-        // console.warn('项目保存失败:', result.error);
-      }
-    });
+    new Promise<void>((resolve, reject) => {
+      this.actionService.dispatch('upload-begin', {}, result => {
+        if (result.success) {
+          resolve()
+        } else {
+          reject()
+        }
+      });
+    })
   }
 
   /**
@@ -28,12 +28,9 @@ export class UploaderService {
   cancel() {
     this.actionService.dispatch('upload-cancel', {}, result => {
       if (result.success) {
-        this.cancelled = true;
       } else {
-        // console.warn('项目保存失败:', result.error);
       }
     });
-    this.cancelled = true;
   }
 }
 

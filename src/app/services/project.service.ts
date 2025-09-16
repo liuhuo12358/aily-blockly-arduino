@@ -255,9 +255,6 @@ export class ProjectService {
 
   // 获取当前项目的package.json
   async getPackageJson() {
-    if (!this.currentProjectPath) {
-      throw new Error('当前项目路径未设置');
-    }
     const packageJsonPath = `${this.currentProjectPath}/package.json`;
     return JSON.parse(window['fs'].readFileSync(packageJsonPath, 'utf8'));
   }
