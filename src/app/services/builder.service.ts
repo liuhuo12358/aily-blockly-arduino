@@ -421,7 +421,7 @@ export class BuilderService {
         } else {
           compileCommandParts = [
             "node",
-            `${window['path'].getAilyBuilderPath()}/index.js`,
+            `"${window['path'].getAilyBuilderPath()}/index.js"`,
             `${compilerParam}`,
             `"${sketchFilePath}"`,
             '--jobs', '4',
