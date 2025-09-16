@@ -619,7 +619,7 @@ export class BuilderService {
               this.buildInProgress = false;
               this.passed = false;
               // 终止Arduino CLI进程
-              this.cmdService.killArduinoCli();
+              
               reject({ state: 'error', text: `编译失败 (耗时: ${buildDuration}s)` });
             } else if (this.buildCompleted) {
               console.log('编译命令执行完成');
@@ -651,7 +651,7 @@ export class BuilderService {
               this.buildInProgress = false;
               this.passed = false;
               // 终止Arduino CLI进程
-              this.cmdService.killArduinoCli();
+              
               reject({ state: 'warn', text: `编译已取消 (耗时: ${buildDuration}s)` });
             } else {
               console.warn('编译命令未完成，可能是由于超时或其他原因');
@@ -670,7 +670,7 @@ export class BuilderService {
               this.buildInProgress = false;
               this.passed = false;
               // 终止Arduino CLI进程
-              this.cmdService.killArduinoCli();
+              
               reject({ state: 'warn', text: `编译未完成 (耗时: ${buildDuration}s)` });
             }
           }

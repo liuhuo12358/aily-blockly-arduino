@@ -10,7 +10,7 @@ import './plugins/toolbox-search/src/index';
 import './plugins/block-plus-minus/src/index.js';
 import { arduinoGenerator } from './generators/arduino/arduino';
 import { BlocklyService } from '../../services/blockly.service';
-import { BitmapUploadResponse } from '../../services/bitmap-upload.service';
+import { BitmapUploadResponse, GlobalServiceManager } from '../../services/bitmap-upload.service';
 
 import './custom-category';
 import './custom-field/field-bitmap';
@@ -32,7 +32,6 @@ import { NzModalModule, NzModalService } from 'ng-zorro-antd/modal';
 import * as BlockDynamicConnection from '@blockly/block-dynamic-connection';
 import { CommonModule } from '@angular/common';
 import { BitmapUploadService } from '../../services/bitmap-upload.service';
-import { GlobalServiceManager } from '../../services/global-service-manager';
 import { ImageUploadDialogComponent } from './components/image-upload-dialog/image-upload-dialog.component';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ConfigService } from '../../../../services/config.service';
@@ -140,6 +139,7 @@ export class BlocklyComponent {
     const globalServiceManager = GlobalServiceManager.getInstance();
     globalServiceManager.setBitmapUploadService(this.bitmapUploadService);
   }
+  
   ngOnInit(): void {
     this.setPrompt();
     this.bitmapUploadService.uploadRequestSubject.subscribe((request) => {

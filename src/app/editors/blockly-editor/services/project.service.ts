@@ -2,12 +2,11 @@ import { Injectable } from '@angular/core';
 import { BlocklyService } from './blockly.service';
 import { ActionService } from '../../../services/action.service';
 
-@Injectable({
-  providedIn: 'root'
-})
+@Injectable()
 export class _ProjectService {
 
   currentProjectPath;
+  currentPackageData;
 
   constructor(
     private blocklyService: BlocklyService,

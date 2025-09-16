@@ -5,7 +5,7 @@
  */
 
 import * as Blockly from 'blockly/core';
-import { GlobalServiceManager } from '../../../services/global-service-manager';
+import { GlobalServiceManager } from '../../../services/bitmap-upload.service';
 
 Blockly.Msg['BUTTON_LABEL_BROWSE'] = '打开';
 Blockly.Msg['BUTTON_LABEL_CLEAR'] = '清除';
@@ -19,9 +19,8 @@ const DEFAULT_PREVIEW_SIZE = 150;
  */
 export class FieldImagePreview extends Blockly.Field<ImagePreviewValue> {
     private initialValue: ImagePreviewValue | null = null;
-    private globalServiceManager: GlobalServiceManager;
     private fieldId: string;
-    
+
     // UI元素引用
     private previewContainer: HTMLElement | null = null;
     private previewImage: HTMLImageElement | null = null;
@@ -34,13 +33,13 @@ export class FieldImagePreview extends Blockly.Field<ImagePreviewValue> {
     private screenHeightInput: HTMLInputElement | null = null;
     private rotationSelect: HTMLSelectElement | null = null;
     private blockDisplayImage: SVGImageElement | null = null;
-    
+
     // 事件绑定数组
     private boundEvents: Blockly.browserEvents.Data[] = [];
-    
+
     // 配置选项
     previewSize: number;
-
+    globalServiceManager;
     /**
      * 构造函数
      */
@@ -50,16 +49,16 @@ export class FieldImagePreview extends Blockly.Field<ImagePreviewValue> {
         config?: FieldImagePreviewConfig,
     ) {
         super(value, validator, config);
-        
+
         this.SERIALIZABLE = true;
         this.previewSize = config?.previewSize ?? DEFAULT_PREVIEW_SIZE;
-        
+
         // 生成唯一ID
         this.fieldId = 'field_image_preview_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-        
+
         // 初始化全局服务管理器
         this.globalServiceManager = GlobalServiceManager.getInstance();
-        
+
         // 设置默认值
         const currentValue = this.getValue();
         if (!currentValue) {
@@ -92,7 +91,7 @@ export class FieldImagePreview extends Blockly.Field<ImagePreviewValue> {
         if (!newValue || typeof newValue !== 'object') {
             return null;
         }
-        
+
         // 确保必要的属性存在
         return {
             filePath: newValue.filePath || '',
@@ -119,11 +118,11 @@ export class FieldImagePreview extends Blockly.Field<ImagePreviewValue> {
      */
     private createEditor(): HTMLElement {
         const editor = this.createElement('div', 'imagePreviewEditor');
-        
+
         // 创建文件选择区域
         const fileSection = this.createFileSection();
         editor.appendChild(fileSection);
-        
+
         // 创建尺寸控制区域
         const sizeSection = this.createSizeSection();
         editor.appendChild(sizeSection);
@@ -139,14 +138,14 @@ export class FieldImagePreview extends Blockly.Field<ImagePreviewValue> {
         // 创建预览区域
         const previewSection = this.createPreviewSection();
         editor.appendChild(previewSection);
-        
+
         // 创建按钮区域
         const buttonSection = this.createButtonSection();
         editor.appendChild(buttonSection);
-        
+
         // 存储初始值
         this.initialValue = this.getValue();
-        
+
         return editor;
     }
 
@@ -155,13 +154,13 @@ export class FieldImagePreview extends Blockly.Field<ImagePreviewValue> {
      */
     private createFileSection(): HTMLElement {
         const section = this.createElement('div', 'fileSection');
-        
+
         const label = this.createElement('label', 'sectionLabel');
         label.textContent = '图像地址';
         section.appendChild(label);
-        
+
         const inputContainer = this.createElement('div', 'inputContainer');
-        
+
         this.filePathInput = document.createElement('input');
         this.filePathInput.type = 'text';
         this.filePathInput.className = 'filePathInput';
@@ -178,7 +177,7 @@ export class FieldImagePreview extends Blockly.Field<ImagePreviewValue> {
         this.bindEvent(this.filePathInput, 'blur', this.onFilePathBlur.bind(this));
         this.bindEvent(this.filePathInput, 'keydown', this.onFilePathKeydown.bind(this));
         inputContainer.appendChild(this.filePathInput);
-        
+
         const browseButton = this.createElement('button', 'browseButton');
         browseButton.textContent = '📁 ' + Blockly.Msg['BUTTON_LABEL_BROWSE'];
         this.bindEvent(browseButton, 'click', this.openFileDialog.bind(this));
@@ -192,9 +191,9 @@ export class FieldImagePreview extends Blockly.Field<ImagePreviewValue> {
         hintText.style.marginTop = '4px';
         hintText.style.fontStyle = 'italic';
         section.appendChild(hintText);
-        
+
         section.appendChild(inputContainer);
-        
+
         return section;
     }
 
@@ -518,12 +517,12 @@ export class FieldImagePreview extends Blockly.Field<ImagePreviewValue> {
      */
     private createButtonSection(): HTMLElement {
         const section = this.createElement('div', 'buttonSection');
-        
+
         const clearButton = this.createElement('button', 'actionButton');
         clearButton.textContent = Blockly.Msg['BUTTON_LABEL_CLEAR'];
         this.bindEvent(clearButton, 'click', this.clearImage.bind(this));
         section.appendChild(clearButton);
-        
+
         return section;
     }
 
@@ -555,14 +554,14 @@ export class FieldImagePreview extends Blockly.Field<ImagePreviewValue> {
         fileInput.type = 'file';
         fileInput.accept = 'image/*';
         fileInput.style.display = 'none';
-        
+
         fileInput.onchange = (e) => {
             const file = (e.target as HTMLInputElement).files?.[0];
             if (file) {
                 this.handleFileSelected(file);
             }
         };
-        
+
         document.body.appendChild(fileInput);
         fileInput.click();
         document.body.removeChild(fileInput);
@@ -849,7 +848,7 @@ export class FieldImagePreview extends Blockly.Field<ImagePreviewValue> {
             Blockly.browserEvents.unbind(event);
         }
         this.boundEvents.length = 0;
-        
+
         // 清理DOM引用
         this.previewContainer = null;
         this.previewImage = null;
@@ -861,7 +860,7 @@ export class FieldImagePreview extends Blockly.Field<ImagePreviewValue> {
         this.screenWidthInput = null;
         this.screenHeightInput = null;
         this.rotationSelect = null;
-        
+
         // 重置初始值
         this.initialValue = null;
     }

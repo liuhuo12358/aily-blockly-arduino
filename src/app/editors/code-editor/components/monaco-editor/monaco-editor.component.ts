@@ -30,7 +30,7 @@ export class MonacoEditorComponent {
   @Input() filePath = ''; // 当前文件路径
 
   @Output() codeChange = new EventEmitter<string>();
-  @Output() openFileRequest = new EventEmitter<{filePath: string, position: any}>();
+  @Output() openFileRequest = new EventEmitter<{ filePath: string, position: any }>();
 
   @Input() sdkPath: string;
   @Input() librariesPath: string;
@@ -47,21 +47,9 @@ export class MonacoEditorComponent {
   }
 
   ngAfterViewInit() {
-    // 编辑器初始化后，尝试启动智能补全服务
-    setTimeout(async () => {
-      if (this.codeEditor) {
-        await this.initializeIntelligence();
-      }
-    }, 1000); // 给编辑器更多时间初始化
   }
 
   ngOnChanges(changes: SimpleChanges): void {
-    setTimeout(async () => {
-      if (this.codeEditor) {
-        // 重新初始化代码智能补全服务
-        await this.initializeIntelligence();
-      }
-    }, 500);
   }
 
   ngOnDestroy() {
@@ -104,18 +92,18 @@ export class MonacoEditorComponent {
    * 生成 compile_commands.json (支持数组路径)
    */
   public async generateCompileCommandsWithArrays(
-    projectPaths: string[], 
-    sdkPaths: string[], 
+    projectPaths: string[],
+    sdkPaths: string[],
     librariesPaths: string[]
   ): Promise<any> {
     if (typeof window !== 'undefined' && (window as any).electronAPI?.clangd) {
       const clangdAPI = (window as any).electronAPI.clangd;
-      
+
       console.log('Generating compile_commands.json with array paths:');
       console.log('Project paths:', projectPaths);
       console.log('SDK paths:', sdkPaths);
       console.log('Libraries paths:', librariesPaths);
-      
+
       return await clangdAPI.generateCompileCommands(projectPaths, sdkPaths, librariesPaths);
     }
     throw new Error('electronAPI.clangd is not available');
@@ -127,17 +115,17 @@ export class MonacoEditorComponent {
   private async generateCompileCommands(projectPath: string, sdkPath: string, librariesPath: string): Promise<any> {
     if (typeof window !== 'undefined' && (window as any).electronAPI?.clangd) {
       const clangdAPI = (window as any).electronAPI.clangd;
-      
+
       // 将路径转换为数组格式
       const projectPaths = [projectPath];
       const sdkPaths = sdkPath ? [sdkPath] : [];
       const librariesPaths = librariesPath ? [librariesPath] : [];
-      
+
       console.log('Generating compile_commands.json with paths:');
       console.log('Project paths:', projectPaths);
       console.log('SDK paths:', sdkPaths);
       console.log('Libraries paths:', librariesPaths);
-      
+
       return await clangdAPI.generateCompileCommands(projectPaths, sdkPaths, librariesPaths);
     }
     throw new Error('electronAPI.clangd is not available');

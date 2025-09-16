@@ -1,7 +1,6 @@
 import { ChangeDetectorRef, Component } from '@angular/core';
 import { LibManagerComponent } from './components/lib-manager/lib-manager.component';
 import { NotificationComponent } from '../../components/notification/notification.component';
-import { ProjectService } from '../../services/project.service';
 import { UiService } from '../../services/ui.service';
 import { TranslateModule } from '@ngx-translate/core';
 import { ActivatedRoute } from '@angular/router';
@@ -9,29 +8,33 @@ import { ElectronService } from '../../services/electron.service';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { ConfigService } from '../../services/config.service';
 import { NpmService } from '../../services/npm.service';
-import { LibEditorComponent } from '../../pages/lib-editor/lib-editor.component';
 import { CmdService } from '../../services/cmd.service';
-import { UploaderService } from '../../services/uploader.service';
-import { BuilderService } from '../../services/builder.service';
 import { BlocklyService } from './services/blockly.service';
 import { BlocklyComponent } from './components/blockly/blockly.component';
 import { _ProjectService } from './services/project.service';
+import { _UploaderService } from './services/uploader.service';
+import { _BuilderService } from './services/builder.service';
+import { BitmapUploadService } from './services/bitmap-upload.service';
+import { ProjectService } from '../../services/project.service';
 
 @Component({
   selector: 'app-blockly-editor',
   imports: [
     BlocklyComponent,
     LibManagerComponent,
-    LibEditorComponent,
     NotificationComponent,
     TranslateModule
+  ],
+  providers: [
+    _BuilderService,
+    _UploaderService,
+    BitmapUploadService
   ],
   templateUrl: './blockly-editor.component.html',
   styleUrl: './blockly-editor.component.scss'
 })
 export class BlocklyEditorComponent {
-  showProjectManager = false;
-  showLibEditor = false;
+  showLibraryManager = false;
 
   get devmode() {
     return this.configService.data.devmode;
@@ -39,8 +42,6 @@ export class BlocklyEditorComponent {
 
   constructor(
     private cd: ChangeDetectorRef,
-    private projectService: ProjectService,
-    private _projectService: _ProjectService,
     private uiService: UiService,
     private activatedRoute: ActivatedRoute,
     private blocklyService: BlocklyService,
@@ -49,17 +50,19 @@ export class BlocklyEditorComponent {
     private configService: ConfigService,
     private npmService: NpmService,
     private cmdService: CmdService,
-    private builderService: BuilderService,
-    private uploadService: UploaderService
+    private projectService: ProjectService,
+    private _projectService: _ProjectService,
+    private _builderService: _BuilderService,
+    private _uploadService: _UploaderService
   ) { }
 
   ngOnInit(): void {
-    this._projectService.init();
     this.activatedRoute.queryParams.subscribe(params => {
       if (params['path']) {
         console.log('project path', params['path']);
         try {
-          this.loadProject(params['path']);
+          this._projectService.currentProjectPath = params['path']
+          this.loadProject();
         } catch (error) {
           console.error('加载项目失败', error);
           this.message.error('加载项目失败，请检查项目文件是否完整');
@@ -69,31 +72,32 @@ export class BlocklyEditorComponent {
       }
     });
 
+    this._projectService.init();
+    this._builderService.init();
+    this._uploadService.init();
+
     // 阻止鼠标按键前进后退
     window.history.replaceState(null, '', window.location.href);
     window.history.pushState(null, '', window.location.href);
   }
 
   ngOnDestroy(): void {
-    this.builderService.cancel();
-    this.uploadService.cancel();
-    this.cmdService.killArduinoCli();
+    this._builderService.cancel();
+    this._uploadService.cancel();
+
     this.electronService.setTitle('aily blockly');
     this.blocklyService.reset();
   }
 
-  async loadProject(projectPath) {
+  async loadProject(projectPath = this._projectService.currentProjectPath) {
     await new Promise(resolve => setTimeout(resolve, 100));
     // 加载项目package.json
     const packageJson = JSON.parse(this.electronService.readFile(`${projectPath}/package.json`));
     this.electronService.setTitle(`aily blockly - ${packageJson.name}`);
-    this.projectService.currentPackageData = packageJson;
     // 添加到最近打开的项目
     this.projectService.addRecentlyProject({ name: packageJson.name, path: projectPath });
     // 设置当前项目路径和package.json数据
-    this.projectService.currentPackageData = packageJson;
-    this.projectService.currentProjectPath = projectPath;
-
+    this._projectService.currentPackageData = packageJson;
     this._projectService.currentProjectPath = projectPath;
 
     // 检查是否有node_modules目录，没有则安装依赖，有则跳过
@@ -106,8 +110,11 @@ export class BlocklyEditorComponent {
     // 3. 加载开发板module中的board.json
     this.uiService.updateFooterState({ state: 'doing', text: '正在加载开发板配置' });
     const boardJson = await this.projectService.getBoardJson();
+
     this.blocklyService.boardConfig = boardJson;
-    this.projectService.currentBoardConfig = boardJson;
+
+    // this.projectService.currentBoardConfig = boardJson;
+
     console.log('boardConfig', boardJson);
     window['boardConfig'] = boardJson;
     // 4. 加载blockly library
@@ -126,7 +133,8 @@ export class BlocklyEditorComponent {
 
     // 6. 加载项目目录中project.abi（这是blockly格式的json文本必须要先安装库才能加载这个json，因为其中可能会用到一些库）
     this.uiService.updateFooterState({ state: 'done', text: '项目加载成功' });
-    this.projectService.stateSubject.next('loaded');
+
+    // this.projectService.stateSubject.next('loaded');
 
     // 7. 后台安装开发板依赖
     this.npmService.installBoardDeps()
@@ -140,17 +148,12 @@ export class BlocklyEditorComponent {
 
   openProjectManager() {
     this.uiService.closeToolAll();
-    this.showProjectManager = !this.showProjectManager;
+    this.showLibraryManager = !this.showLibraryManager;
     this.cd.detectChanges();
   }
 
   // 测试用
   reload() {
-    this.projectService.projectOpen(this.projectService.currentProjectPath);
-  }
-
-  edit() {
-    this.showLibEditor = !this.showLibEditor;
-    this.cd.detectChanges();
+    this.loadProject();
   }
 }

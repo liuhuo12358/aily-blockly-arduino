@@ -148,7 +148,7 @@ export class CodeEditorComponent implements OnInit, AfterViewInit, OnDestroy {
 
     this.builderService.cancel();
     this.uploadService.cancel();
-    this.cmdService.killArduinoCli();
+    
     this.electronService.setTitle('aily blockly');
 
     // 清理快捷键监听器

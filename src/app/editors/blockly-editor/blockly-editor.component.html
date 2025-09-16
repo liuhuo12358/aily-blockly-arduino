@@ -2,20 +2,19 @@
 <div class="project-mangager-btn ccenter">
   <div class="mangager ccenter" (click)="openProjectManager()">{{'LIB_MANAGER.TITLE'| translate}}</div>
   @if(devmode){
-  <div class="edit btn link ccenter" (click)="edit()">
+  <!-- <div class="edit btn link ccenter" (click)="edit()">
     <i class="fa-light fa-pen"></i>
-  </div>
+  </div> -->
   <div class="reload btn link ccenter" (click)="reload()">
     <i class="fa-light fa-sync"></i>
   </div>
   }
 
 </div>
-@if (showProjectManager) {
-<app-lib-manager (close)="showProjectManager=false"></app-lib-manager>
+@if (showLibraryManager) {
+<app-lib-manager (close)="showLibraryManager=false"></app-lib-manager>
 }
-
-@if (showLibEditor) {
+<!-- @if (showLibEditor) {
 <app-lib-editor (close)="showLibEditor=false"></app-lib-editor>
-}
+} -->
 <app-notification></app-notification>

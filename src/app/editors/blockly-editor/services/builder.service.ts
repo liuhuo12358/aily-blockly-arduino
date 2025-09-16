@@ -1,17 +1,18 @@
 import { Injectable } from '@angular/core';
 import { ProjectService } from '../../../services/project.service';
-import { CmdService } from '../../../services/cmd.service';
+import { CmdOutput, CmdService } from '../../../services/cmd.service';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { NoticeService } from '../../../services/notice.service';
 import { LogService } from '../../../services/log.service';
 import { NpmService } from '../../../services/npm.service';
 import { ConfigService } from '../../../services/config.service';
 import { BlocklyService } from './blockly.service';
+import { ActionState } from '../../../services/ui.service';
+import { ActionService } from '../../../services/action.service';
+import { arduinoGenerator } from '../components/blockly/generators/arduino/arduino';
 
-@Injectable({
-  providedIn: 'root'
-})
-export class BuilderService {
+@Injectable()
+export class _BuilderService {
 
   constructor(
     private blocklyService: BlocklyService,
@@ -22,6 +23,7 @@ export class BuilderService {
     private logService: LogService,
     private npmService: NpmService,
     private configService: ConfigService,
+    private actionService: ActionService
   ) { }
 
   private buildInProgress = false;
@@ -40,6 +42,15 @@ export class BuilderService {
   compilerPath = "";
   boardJson: any = null;
   buildPath = "";
+
+  init() {
+    this.actionService.listen('compile-begin', (action) => {
+      this.build();
+    });
+    this.actionService.listen('compile-cancel', (action) => {
+      this.cancel();
+    });
+  }
 
   // 添加这个错误处理方法
   private handleCompileError(errorMessage: string) {
@@ -312,6 +323,9 @@ export class BuilderService {
         this.sdkPath = await window["env"].get('AILY_SDK_PATH') + `/${sdk}`;
         this.toolsPath = await window["env"].get('AILY_TOOLS_PATH');
 
+        // 获取使用的编译器
+        const compilerTool = boardJson.compilerTool || 'aily-builder';
+
         // 获取编译命令
         let compilerParam = boardJson.compilerParam;
         if (!compilerParam) {
@@ -320,22 +334,41 @@ export class BuilderService {
         }
 
         let compilerParamList = compilerParam.split(' ');
-        compilerParamList = compilerParamList.map(param => {
-          if (param.startsWith('aily:')) {
-            let res;
-            const parts = param.split(':');
-            if (parts.length > 2) { // Ensure we have at least 3 parts (aily:avr:mega)
-              parts[1] = sdk;
-              res = parts.join(':');
-            } else {
-              res = param
+
+        // 找到 -b 或 --board 参数后面的 fqbn 值，并从参数列表中移除
+        for (let i = 0; i < compilerParamList.length; i++) {
+          if (compilerParamList[i] === '-b' || compilerParamList[i] === '--board') {
+            // 下一个参数就是 fqbn 值
+            if (i + 1 < compilerParamList.length) {
+              let fqbn = compilerParamList[i + 1];
+              // 如果 fqbn 以 aily: 开头，需要替换 sdk 部分
+              const parts = fqbn.split(':');
+              if (parts.length > 2) { // 确保至少有3部分 (aily:avr:mega)
+                if (compilerTool !== 'aily-builder') {
+                  parts[0] = "aily"
+                  parts[1] = sdk;
+                  fqbn = parts.join(':');
+                }
+              }
+              this.boardType = fqbn;
+
+              // 从参数列表中移除 -b/--board 和 fqbn 参数
+              compilerParamList.splice(i, 2); // 移除当前位置的两个元素
+
+              break;
             }
-            this.boardType = res
-            return res; // Return unchanged if format doesn't match
-          } else {
-            return param;
           }
-        });
+
+          if (compilerParamList[i] === '-v' || compilerParamList[i] === '--verbose') {
+            if (compilerTool === 'aily-builder') {
+              // 移除 -v 或 --verbose 参数
+              compilerParamList.splice(i, 1);
+              i--; // 调整索引以继续检查当前位置
+            }
+          }
+        }
+
+        console.log("boardType: ", this.boardType);
 
         compilerParam = compilerParamList.join(' ');
 
@@ -375,7 +408,44 @@ export class BuilderService {
         // 将buildProperties添加到compilerParam中
         compilerParam += buildProperties;
 
-        const compileCommand = `aily-arduino-cli.exe ${compilerParam} --libraries '${librariesPath}' --board-path '${this.sdkPath}' --compile-path '${this.compilerPath}' --tools-path '${this.toolsPath}' --output-dir '${this.buildPath}' --log-level debug '${sketchFilePath}'${buildProperties} --verbose`;
+        let compileCommandParts = [];
+
+        if (compilerTool !== 'aily-builder') {
+          // 使用 aily-arduino-cli 进行编译
+          compileCommandParts = [
+            "aily-arduino-cli.exe",
+            `${compilerParam}`,
+            `-b`,
+            `${this.boardType}`,
+            "--jobs 0",
+            `--board-path "${this.sdkPath}"`,
+            `--compile-path "${this.compilerPath}"`,
+            `--tools-path "${this.toolsPath}"`,
+            `--libraries "${librariesPath}"`,
+            `--output-dir "${this.buildPath}"`,
+            "--log-level debug",
+            `"${sketchFilePath}"`,
+            "--verbose"
+          ];
+        } else {
+          compileCommandParts = [
+            "node",
+            `"${window['path'].getAilyBuilderPath()}/index.js"`,
+            `${compilerParam}`,
+            `"${sketchFilePath}"`,
+            '--jobs', '4',
+            '--board', `"${this.boardType}"`,
+            '--build-path', `"${this.buildPath}"`,
+            '--libraries-path', `"${librariesPath}"`,
+            '--sdk-path', `"${this.sdkPath}"`,
+            '--tools-path', `"${this.toolsPath}"`
+          ];
+
+          // 检查复制compilerPath下的所有文件夹到toolsPath中
+          await this.syncCompilerToolsToToolsPath();
+
+        }
+        const compileCommand = compileCommandParts.join(' ');
 
         const title = `编译 ${boardJson.name}`;
         const completeTitle = `编译完成`;
@@ -461,12 +531,26 @@ export class BuilderService {
 
                   // Match patterns like [========================================          ] 80%
                   const barProgressMatch = progressInfo.match(/\[.*?\]\s*(\d+)%/);
+                  // Match patterns like [99/101] for fraction-based progress
+                  const fractionProgressMatch = progressInfo.match(/\[(\d+)\/(\d+)\]/);
+
                   if (barProgressMatch) {
                     try {
                       progressValue = parseInt(barProgressMatch[1], 10);
                     } catch (error) {
                       progressValue = 0;
                       console.warn('进度解析错误:', error);
+                    } finally {
+                      isProgress = true;
+                    }
+                  } else if (fractionProgressMatch) {
+                    try {
+                      const current = parseInt(fractionProgressMatch[1], 10);
+                      const total = parseInt(fractionProgressMatch[2], 10);
+                      progressValue = Math.round((current / total) * 100);
+                    } catch (error) {
+                      progressValue = 0;
+                      console.warn('分数进度解析错误:', error);
                     } finally {
                       isProgress = true;
                     }
@@ -544,7 +628,7 @@ export class BuilderService {
               this.buildInProgress = false;
               this.passed = false;
               // 终止Arduino CLI进程
-              this.cmdService.killArduinoCli();
+              
               reject({ state: 'error', text: `编译失败 (耗时: ${buildDuration}s)` });
             } else if (this.buildCompleted) {
               console.log('编译命令执行完成');
@@ -576,7 +660,7 @@ export class BuilderService {
               this.buildInProgress = false;
               this.passed = false;
               // 终止Arduino CLI进程
-              this.cmdService.killArduinoCli();
+              
               reject({ state: 'warn', text: `编译已取消 (耗时: ${buildDuration}s)` });
             } else {
               console.warn('编译命令未完成，可能是由于超时或其他原因');
@@ -595,7 +679,7 @@ export class BuilderService {
               this.buildInProgress = false;
               this.passed = false;
               // 终止Arduino CLI进程
-              this.cmdService.killArduinoCli();
+              
               reject({ state: 'warn', text: `编译未完成 (耗时: ${buildDuration}s)` });
             }
           }
@@ -634,6 +718,59 @@ export class BuilderService {
     }
 
     return "编译完成";
+  }
+
+  /**
+   * 检查并复制compilerPath目录到toolsPath中
+   * 确保toolsPath包含完整的编译器目录
+   */
+  private async syncCompilerToolsToToolsPath(): Promise<void> {
+    try {
+      // 检查compilerPath是否存在
+      if (!window['path'].isExists(this.compilerPath)) {
+        console.warn(`编译器路径不存在: ${this.compilerPath}`);
+        return;
+      }
+
+      // 检查toolsPath是否存在，如果不存在则创建
+      if (!window['path'].isExists(this.toolsPath)) {
+        console.log(`创建工具路径: ${this.toolsPath}`);
+        await this.cmdService.runAsync(`New-Item -Path "${this.toolsPath}" -ItemType Directory -Force`);
+      }
+
+      // 获取编译器目录名称（例如：从 /path/to/compiler@1.0.0 中提取 compiler@1.0.0）
+      const compilerDirName = this.compilerPath.split(/[/\\]/).pop();
+      if (!compilerDirName) {
+        console.warn('无法获取编译器目录名称');
+        return;
+      }
+
+      const targetCompilerPath = `${this.toolsPath}/${compilerDirName}`;
+
+      console.log(`检查编译器目录是否存在: ${targetCompilerPath}`);
+
+      // 检查目标路径是否已存在编译器目录
+      if (window['path'].isExists(targetCompilerPath)) {
+        console.log(`编译器目录已存在于工具路径中: ${compilerDirName}`);
+        return;
+      }
+
+      console.log(`开始复制编译器目录: ${this.compilerPath} -> ${targetCompilerPath}`);
+
+      // 复制整个编译器目录到工具路径
+      try {
+        await this.cmdService.runAsync(`Copy-Item -Path "${this.compilerPath}" -Destination "${this.toolsPath}" -Recurse -Force`);
+        console.log(`成功复制编译器目录: ${compilerDirName}`);
+      } catch (error) {
+        console.error(`复制编译器目录失败:`, error);
+        throw error;
+      }
+
+      console.log('编译器目录同步完成');
+    } catch (error) {
+      console.error('同步编译器目录失败:', error);
+      throw error;
+    }
   }
 
   /**

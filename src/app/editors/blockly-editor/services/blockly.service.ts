@@ -7,7 +7,7 @@ import { TranslateService } from '@ngx-translate/core';
 import { ElectronService } from '../../../services/electron.service';
 
 @Injectable({
-  providedIn: 'root',
+  providedIn: 'root'
 })
 export class BlocklyService {
   workspace: Blockly.WorkspaceSvg;
