@@ -9,6 +9,7 @@ import { CmdOutput, CmdService } from './cmd.service';
 import { NpmService } from './npm.service';
 import { LogService } from './log.service';
 import { ConfigService } from './config.service';
+import { calculateMD5 } from '../func/func';
 
 @Injectable({
   providedIn: 'root'
@@ -96,8 +97,6 @@ export class BuilderService {
         const sketchPath = tempPath + '/sketch';
         const sketchFilePath = sketchPath + '/sketch.ino';
         const librariesPath = tempPath + '/libraries';
-
-        this.buildPath = tempPath + '/build';
 
         this.buildCompleted = false;
         this.buildInProgress = true;
@@ -402,6 +401,7 @@ export class BuilderService {
         let compileCommandParts = [];
 
         if (compilerTool !== 'aily-builder') {
+          this.buildPath = tempPath + '/build';
           // 使用 aily-arduino-cli 进行编译
           compileCommandParts = [
             "aily-arduino-cli.exe",
@@ -419,6 +419,12 @@ export class BuilderService {
             "--verbose"
           ];
         } else {
+          console.log("sketchFilePath: ", sketchFilePath);
+          const sketchMd5 = calculateMD5(window['path'].dirname(window['path'].resolve(sketchFilePath))).slice(0, 8);
+          const sketchName = window['path'].basename(sketchFilePath, '.ino');
+          this.buildPath = `${window['path'].getAilyBuilderBuildPath()}\\${sketchName}_${sketchMd5}`;
+
+          console.log("buildPath: ", this.buildPath);
           compileCommandParts = [
             "node",
             `"${window['path'].getAilyBuilderPath()}/index.js"`,
@@ -426,7 +432,6 @@ export class BuilderService {
             `"${sketchFilePath}"`,
             '--jobs', '4',
             '--board', `"${this.boardType}"`,
-            '--build-path', `"${this.buildPath}"`,
             '--libraries-path', `"${librariesPath}"`,
             '--sdk-path', `"${this.sdkPath}"`,
             '--tools-path', `"${this.toolsPath}"`
