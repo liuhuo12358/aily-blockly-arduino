@@ -38,6 +38,8 @@ export class _UploaderService {
   private uploadCompleted = false;
   private isErrored = false;
   cancelled = false;
+  
+  private initialized = false; // 防止重复初始化
 
   // 定义正则表达式，匹配常见的进度格式
   progressRegexPatterns = [
@@ -62,6 +64,12 @@ export class _UploaderService {
   ];
 
   init() {
+    if (this.initialized) {
+      console.warn('_UploaderService 已经初始化过了，跳过重复初始化');
+      return;
+    }
+    
+    this.initialized = true;
     this.actionService.listen('upload-begin', (action) => {
       this.upload();
     });
