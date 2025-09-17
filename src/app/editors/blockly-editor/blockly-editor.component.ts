@@ -101,6 +101,7 @@ export class BlocklyEditorComponent {
     this.projectService.addRecentlyProject({ name: packageJson.name, path: projectPath });
     // 设置当前项目路径和package.json数据
     this._projectService.currentPackageData = packageJson;
+    this.projectService.currentPackageData = packageJson;
 
     // 检查是否有node_modules目录，没有则安装依赖，有则跳过
     const nodeModulesExist = this.electronService.exists(projectPath + '/node_modules');
