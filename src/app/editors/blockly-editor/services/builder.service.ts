@@ -46,9 +46,18 @@ export class _BuilderService {
   compilerPath = "";
   boardJson: any = null;
   buildPath = "";
+  
+  private initialized = false; // 防止重复初始化
 
   init() {
+    if (this.initialized) {
+      console.warn('_BuilderService 已经初始化过了，跳过重复初始化');
+      return;
+    }
+    
+    this.initialized = true;
     this.actionService.listen('compile-begin', (action) => {
+      console.log('>>>>> 收到编译请求: ', action);
       this.build();
     });
     this.actionService.listen('compile-cancel', (action) => {
@@ -78,6 +87,7 @@ export class _BuilderService {
   }
 
   async build(): Promise<ActionState> {
+    console.log(">>> 开始编译")
     return new Promise<ActionState>(async (resolve, reject) => {
       try {
         if (this.buildInProgress) {
@@ -103,7 +113,7 @@ export class _BuilderService {
           }
         });
 
-        this.currentProjectPath = this._projectService.currentProjectPath;
+        this.currentProjectPath = this.projectService.currentProjectPath;
         const tempPath = this.currentProjectPath + '/.temp';
         const sketchPath = tempPath + '/sketch';
         const sketchFilePath = sketchPath + '/sketch.ino';
@@ -133,7 +143,7 @@ export class _BuilderService {
         await window['fs'].writeFileSync(sketchFilePath, code);
 
         // 加载项目package.json
-        const packageJson = await this._projectService.currentPackageData;
+        const packageJson = await this.projectService.getPackageJson();
         const dependencies = packageJson.dependencies || {};
 
         const libsPath = []

@@ -20,7 +20,7 @@ export class BuilderService {
    */
   async build() {
     new Promise<void>((resolve, reject) => {
-      this.actionService.dispatch('compile-begin', {}, result => {
+    this.actionService.dispatch('compile-begin', {}, result => {
         if (result.success) {
           resolve()
         } else {
