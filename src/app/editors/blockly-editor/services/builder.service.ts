@@ -12,6 +12,7 @@ import { arduinoGenerator } from '../components/blockly/generators/arduino/ardui
 
 import { BlocklyService as BlocklyService } from './blockly.service';
 import { _ProjectService } from './project.service';
+import { calculateMD5 } from '../../../func/func';
 
 @Injectable()
 export class _BuilderService {
@@ -107,8 +108,6 @@ export class _BuilderService {
         const sketchPath = tempPath + '/sketch';
         const sketchFilePath = sketchPath + '/sketch.ino';
         const librariesPath = tempPath + '/libraries';
-
-        this.buildPath = tempPath + '/build';
 
         this.buildCompleted = false;
         this.buildInProgress = true;
@@ -414,6 +413,7 @@ export class _BuilderService {
 
         if (compilerTool !== 'aily-builder') {
           // 使用 aily-arduino-cli 进行编译
+          this.buildPath = tempPath + '/build';
           compileCommandParts = [
             "aily-arduino-cli.exe",
             `${compilerParam}`,
@@ -430,6 +430,11 @@ export class _BuilderService {
             "--verbose"
           ];
         } else {
+          const sketchMd5 = calculateMD5(window['path'].dirname(window['path'].resolve(sketchFilePath))).slice(0, 8);
+          const sketchName = window['path'].basename(sketchFilePath, '.ino');
+          this.buildPath = `${window['path'].getAilyBuilderBuildPath()}\\${sketchName}_${sketchMd5}`;
+
+          console.log("buildPath: ", this.buildPath);
           compileCommandParts = [
             "node",
             `"${window['path'].getAilyBuilderPath()}/index.js"`,
@@ -437,7 +442,6 @@ export class _BuilderService {
             `"${sketchFilePath}"`,
             '--jobs', '4',
             '--board', `"${this.boardType}"`,
-            '--build-path', `"${this.buildPath}"`,
             '--libraries-path', `"${librariesPath}"`,
             '--sdk-path', `"${this.sdkPath}"`,
             '--tools-path', `"${this.toolsPath}"`
