@@ -1,6 +1,5 @@
 import { Injectable } from '@angular/core';
 import { Subject } from 'rxjs';
-import * as AVR8js from 'avr8js';
 
 export interface PinState {
   pin: string;
@@ -24,10 +23,6 @@ export class SimulatorService {
   private isRunning = false;
   private boardType = '';
   private components: Map<string, ComponentConfig> = new Map();
-  
-  // AVR8js 相关
-  private cpu: AVR8js.CPU | null = null;
-  private ports: Map<string, AVR8js.AVRIOPort> = new Map();
   
   constructor() { }
 
