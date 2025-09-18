@@ -923,4 +923,77 @@ export class FileService {
     window['fs'].rmdirSync(folderPath);
     console.log('Folder deleted:', folderPath);
   }
+
+  // ==================== 内联编辑支持方法 ====================
+
+  /**
+   * 验证文件名/文件夹名是否有效
+   */
+  validateFileName(name: string): { valid: boolean; error?: string } {
+    if (!name || !name.trim()) {
+      return { valid: false, error: '名称不能为空' };
+    }
+
+    const invalidChars = /[<>:"/\\|?*]/;
+    if (invalidChars.test(name)) {
+      return { valid: false, error: '名称包含非法字符' };
+    }
+
+    return { valid: true };
+  }
+
+  /**
+   * 检查路径是否已存在
+   */
+  pathExists(path: string): boolean {
+    return window['fs'].existsSync(path);
+  }
+
+  /**
+   * 执行文件/文件夹重命名（无UI）
+   */
+  performRename(oldPath: string, newPath: string): { success: boolean; error?: string } {
+    try {
+      if (this.pathExists(newPath)) {
+        return { success: false, error: '该名称已存在' };
+      }
+
+      window['fs'].renameSync(oldPath, newPath);
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
+   * 执行文件创建（无UI）
+   */
+  performCreateFile(filePath: string): { success: boolean; error?: string } {
+    try {
+      if (this.pathExists(filePath)) {
+        return { success: false, error: '该文件已存在' };
+      }
+
+      window['fs'].writeFileSync(filePath, '');
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
+   * 执行文件夹创建（无UI）
+   */
+  performCreateFolder(folderPath: string): { success: boolean; error?: string } {
+    try {
+      if (this.pathExists(folderPath)) {
+        return { success: false, error: '该文件夹已存在' };
+      }
+
+      window['fs'].mkdirSync(folderPath);
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  }
 }

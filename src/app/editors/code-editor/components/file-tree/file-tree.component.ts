@@ -3,6 +3,7 @@ import { CollectionViewer, DataSource, SelectionChange } from '@angular/cdk/coll
 import { FlatTreeControl } from '@angular/cdk/tree';
 import { SelectionModel } from '@angular/cdk/collections';
 import { NzTreeViewModule } from 'ng-zorro-antd/tree-view';
+import { NzMessageService } from 'ng-zorro-antd/message';
 import { FileService } from '../../services/file.service';
 import { CommonModule } from '@angular/common';
 import { BehaviorSubject, Observable, merge } from 'rxjs';
@@ -39,6 +40,15 @@ interface FlatFileNode extends FileNode {
   expandable: boolean;
   level: number;
   loading?: boolean;
+}
+
+// 内联编辑状态
+interface InlineEditState {
+  isEditing: boolean;
+  nodeKey: string;
+  editType: 'rename' | 'newFile' | 'newFolder';
+  originalValue?: string;
+  parentPath?: string;
 }
 
 // 动态数据源类
@@ -330,8 +340,16 @@ export class FileTreeComponent implements OnInit {
   configList: IMenuItem[] = [];
   currentSelectedNode: FlatFileNode | null = null;
 
+  // 内联编辑状态
+  inlineEditState: InlineEditState = {
+    isEditing: false,
+    nodeKey: '',
+    editType: 'rename'
+  };
+
   constructor(
-    private fileService: FileService
+    private fileService: FileService,
+    private message: NzMessageService
   ) {
     // 初始化时创建空的数据源
     this.dataSource = new DynamicFileDataSource(this.treeControl, this.fileService, []);
@@ -381,6 +399,11 @@ export class FileTreeComponent implements OnInit {
 
   // 当节点被点击时
   nodeClick(node: FlatFileNode, event?: MouseEvent): void {
+    // 如果正在编辑，不处理点击事件
+    if (this.isNodeEditing(node)) {
+      return;
+    }
+
     // 处理多选逻辑
     this.handleNodeSelection(node, event);
 
@@ -614,18 +637,8 @@ export class FileTreeComponent implements OnInit {
   }
 
   private renameNode(node: FlatFileNode) {
-    this.fileService.renameNode(node, (oldPath: string, newPath: string) => {
-      // 使用增量更新重命名节点
-      this.renameFileNode(oldPath, newPath);
-      
-      // 更新选择状态中的节点路径
-      if (this.nodeSelection.isSelected(node)) {
-        // 更新选中节点的路径信息
-        node.path = newPath;
-        node.key = newPath;
-        node.title = window['path'].basename(newPath);
-      }
-    });
+    // 使用内联编辑
+    this.startInlineEdit(node, 'rename');
   }
 
   private deleteNodes(nodes: FlatFileNode[]) {
@@ -677,29 +690,55 @@ export class FileTreeComponent implements OnInit {
   }
 
   private createNewFile(parentNode: FlatFileNode) {
-    this.fileService.createNewFile(parentNode, (fileName: string) => {
-      // 确定实际的父路径
-      let parentPath = parentNode.path;
-      if (parentNode.isLeaf) {
-        parentPath = window['path'].dirname(parentPath);
-      }
-      
-      // 直接增量添加新文件，避免刷新
-      this.addFileNodeDirect(parentPath, fileName, true);
-    });
+    // 确定实际的父路径
+    let parentPath = parentNode.path;
+    if (parentNode.isLeaf) {
+      parentPath = window['path'].dirname(parentPath);
+    }
+
+    // 创建临时节点用于内联编辑，使用时间戳确保唯一性
+    const tempKey = `__new_file_temp_${Date.now()}__`;
+    const tempPath = window['path'].join(parentPath, tempKey);
+    const tempNode: FlatFileNode = {
+      expandable: false,
+      title: '',
+      level: parentNode.isLeaf ? parentNode.level : parentNode.level + 1,
+      key: tempPath,
+      isLeaf: true,
+      path: tempPath
+    };
+
+    // 添加临时节点到适当位置
+    this.addFileNodeDirect(parentPath, tempKey, true);
+    
+    // 开始内联编辑
+    this.startInlineEdit(tempNode, 'newFile', parentPath);
   }
 
   private createNewFolder(parentNode: FlatFileNode) {
-    this.fileService.createNewFolder(parentNode, (folderName: string) => {
-      // 确定实际的父路径
-      let parentPath = parentNode.path;
-      if (parentNode.isLeaf) {
-        parentPath = window['path'].dirname(parentPath);
-      }
-      
-      // 直接增量添加新文件夹，避免刷新
-      this.addFileNodeDirect(parentPath, folderName, false);
-    });
+    // 确定实际的父路径
+    let parentPath = parentNode.path;
+    if (parentNode.isLeaf) {
+      parentPath = window['path'].dirname(parentPath);
+    }
+
+    // 创建临时节点用于内联编辑，使用时间戳确保唯一性
+    const tempKey = `__new_folder_temp_${Date.now()}__`;
+    const tempPath = window['path'].join(parentPath, tempKey);
+    const tempNode: FlatFileNode = {
+      expandable: true,
+      title: '',
+      level: parentNode.isLeaf ? parentNode.level : parentNode.level + 1,
+      key: tempPath,
+      isLeaf: false,
+      path: tempPath
+    };
+
+    // 添加临时节点到适当位置
+    this.addFileNodeDirect(parentPath, tempKey, false);
+    
+    // 开始内联编辑
+    this.startInlineEdit(tempNode, 'newFolder', parentPath);
   }
 
   private copyPathToClipboard(node: FlatFileNode, relative: boolean) {
@@ -1035,5 +1074,246 @@ export class FileTreeComponent implements OnInit {
       node.key = newPath;
       node.title = window['path'].basename(newPath);
     });
+  }
+
+  // ==================== 内联编辑方法 ====================
+
+  // 开始内联编辑
+  startInlineEdit(node: FlatFileNode, editType: 'rename' | 'newFile' | 'newFolder', parentPath?: string) {
+    // 如果正在编辑其他节点，先取消
+    if (this.inlineEditState.isEditing) {
+      this.cancelInlineEdit();
+    }
+
+    this.inlineEditState = {
+      isEditing: true,
+      nodeKey: node.key,
+      editType: editType,
+      originalValue: editType === 'rename' ? node.title : '',
+      parentPath: parentPath
+    };
+
+    // 延迟到下一个事件循环，确保DOM已更新
+    setTimeout(() => {
+      this.focusInlineInput();
+    }, 0);
+  }
+
+  // 取消内联编辑
+  cancelInlineEdit() {
+    if (this.inlineEditState.editType !== 'rename') {
+      // 如果是新建操作，需要删除临时节点
+      this.removeInlineEditTempNode();
+    }
+
+    this.inlineEditState = {
+      isEditing: false,
+      nodeKey: '',
+      editType: 'rename'
+    };
+  }
+
+  // 完成内联编辑
+  finishInlineEdit(inputValue: string) {
+    if (!this.inlineEditState.isEditing) {
+      return;
+    }
+
+    const trimmedValue = inputValue.trim();
+    
+    if (!trimmedValue) {
+      this.cancelInlineEdit();
+      return;
+    }
+
+    switch (this.inlineEditState.editType) {
+      case 'rename':
+        this.performRename(trimmedValue);
+        break;
+      case 'newFile':
+        this.performCreateFile(trimmedValue);
+        break;
+      case 'newFolder':
+        this.performCreateFolder(trimmedValue);
+        break;
+    }
+
+    this.inlineEditState = {
+      isEditing: false,
+      nodeKey: '',
+      editType: 'rename'
+    };
+  }
+
+  // 检查节点是否正在编辑
+  isNodeEditing(node: FlatFileNode): boolean {
+    return this.inlineEditState.isEditing && this.inlineEditState.nodeKey === node.key;
+  }
+
+  // 获取编辑时显示的值
+  getEditingValue(node: FlatFileNode): string {
+    if (this.isNodeEditing(node)) {
+      return this.inlineEditState.originalValue || '';
+    }
+    return node.title;
+  }
+
+  // 聚焦到输入框
+  private focusInlineInput() {
+    const inputElement = document.querySelector('.inline-edit-input') as HTMLInputElement;
+    if (inputElement) {
+      inputElement.focus();
+      
+      // 选择文本（对于重命名操作，选择不包括扩展名的部分）
+      if (this.inlineEditState.editType === 'rename' && this.inlineEditState.originalValue) {
+        const value = this.inlineEditState.originalValue;
+        const lastDotIndex = value.lastIndexOf('.');
+        if (lastDotIndex > 0) {
+          inputElement.setSelectionRange(0, lastDotIndex);
+        } else {
+          inputElement.select();
+        }
+      } else {
+        inputElement.select();
+      }
+    }
+  }
+
+  // 移除临时节点（用于取消新建操作）
+  private removeInlineEditTempNode() {
+    if (this.inlineEditState.nodeKey) {
+      this.removeFileNode(this.inlineEditState.nodeKey);
+    }
+  }
+
+  // 执行重命名
+  private performRename(newName: string) {
+    const node = this.dataSource.getCurrentData().find(n => n.key === this.inlineEditState.nodeKey);
+    if (!node) {
+      return;
+    }
+
+    if (newName === this.inlineEditState.originalValue) {
+      // 名称没有变化，直接结束
+      return;
+    }
+
+    // 验证文件名
+    const validation = this.fileService.validateFileName(newName);
+    if (!validation.valid) {
+      this.message.error(validation.error);
+      return;
+    }
+
+    const parentDir = window['path'].dirname(node.path);
+    const newPath = window['path'].join(parentDir, newName);
+
+    const result = this.fileService.performRename(node.path, newPath);
+    if (result.success) {
+      this.message.success('重命名成功');
+
+      // 更新节点信息
+      this.renameFileNode(node.path, newPath);
+
+      // 更新选择状态中的节点路径
+      if (this.nodeSelection.isSelected(node)) {
+        node.path = newPath;
+        node.key = newPath;
+        node.title = newName;
+      }
+    } else {
+      this.message.error(result.error);
+    }
+  }
+
+  // 执行创建文件
+  private performCreateFile(fileName: string) {
+    if (!this.inlineEditState.parentPath) {
+      return;
+    }
+
+    // 验证文件名
+    const validation = this.fileService.validateFileName(fileName);
+    if (!validation.valid) {
+      this.message.error(validation.error);
+      this.removeInlineEditTempNode();
+      return;
+    }
+
+    const filePath = window['path'].join(this.inlineEditState.parentPath, fileName);
+
+    const result = this.fileService.performCreateFile(filePath);
+    if (result.success) {
+      this.message.success('文件创建成功');
+      // 更新临时节点为实际节点
+      this.updateTempNodeToReal(fileName, filePath, true);
+    } else {
+      this.message.error(result.error);
+      this.removeInlineEditTempNode();
+    }
+  }
+
+  // 执行创建文件夹
+  private performCreateFolder(folderName: string) {
+    if (!this.inlineEditState.parentPath) {
+      return;
+    }
+
+    // 验证文件夹名
+    const validation = this.fileService.validateFileName(folderName);
+    if (!validation.valid) {
+      this.message.error(validation.error);
+      this.removeInlineEditTempNode();
+      return;
+    }
+
+    const folderPath = window['path'].join(this.inlineEditState.parentPath, folderName);
+
+    const result = this.fileService.performCreateFolder(folderPath);
+    if (result.success) {
+      this.message.success('文件夹创建成功');
+      // 更新临时节点为实际节点
+      this.updateTempNodeToReal(folderName, folderPath, false);
+    } else {
+      this.message.error(result.error);
+      this.removeInlineEditTempNode();
+    }
+  }
+
+  // 将临时节点更新为实际节点
+  private updateTempNodeToReal(name: string, realPath: string, isLeaf: boolean) {
+    this.dataSource.updateNode(this.inlineEditState.nodeKey, (node) => {
+      node.title = name;
+      node.path = realPath;
+      node.key = realPath;
+      node.isLeaf = isLeaf;
+      node.expandable = !isLeaf;
+    });
+  }
+
+  // 处理输入框的键盘事件
+  onInlineEditKeyDown(event: KeyboardEvent, inputElement: HTMLInputElement) {
+    switch (event.key) {
+      case 'Enter':
+        event.preventDefault();
+        event.stopPropagation();
+        this.finishInlineEdit(inputElement.value);
+        break;
+      case 'Escape':
+        event.preventDefault();
+        event.stopPropagation();
+        this.cancelInlineEdit();
+        break;
+    }
+  }
+
+  // 处理输入框失去焦点
+  onInlineEditBlur(inputElement: HTMLInputElement) {
+    // 延迟一小段时间，允许其他事件（如Enter键）先处理
+    setTimeout(() => {
+      if (this.inlineEditState.isEditing) {
+        this.finishInlineEdit(inputElement.value);
+      }
+    }, 100);
   }
 }

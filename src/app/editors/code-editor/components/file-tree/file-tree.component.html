@@ -36,7 +36,18 @@
                         <div class="icon ccenter">
                             <i [class]="getFileIcon(node.title)"></i>
                         </div>
+                        @if (isNodeEditing(node)) {
+                        <input 
+                            #inlineInput
+                            class="inline-edit-input file-name-input" 
+                            type="text" 
+                            [value]="getEditingValue(node)"
+                            (keydown)="onInlineEditKeyDown($event, inlineInput)"
+                            (blur)="onInlineEditBlur(inlineInput)"
+                            placeholder="输入文件名" />
+                        } @else {
                         <span class="file-name">{{node.title}}</span>
+                        }
                     </div>
                 </nz-tree-node-option>
             </nz-tree-node>
@@ -55,7 +66,18 @@
                         <div class="icon ccenter">
                             <i class="fa-light {{treeControl.isExpanded(node) ? 'fa-folder-open' : 'fa-folder'}}"></i>
                         </div>
+                        @if (isNodeEditing(node)) {
+                        <input 
+                            #inlineInput
+                            class="inline-edit-input file-name-input" 
+                            type="text" 
+                            [value]="getEditingValue(node)"
+                            (keydown)="onInlineEditKeyDown($event, inlineInput)"
+                            (blur)="onInlineEditBlur(inlineInput)"
+                            placeholder="输入文件夹名" />
+                        } @else {
                         <span class="file-name">{{node.title}}</span>
+                        }
                     </div>
                 </nz-tree-node-option>
             </nz-tree-node>
