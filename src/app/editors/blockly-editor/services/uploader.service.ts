@@ -206,21 +206,105 @@ export class _UploaderService {
         let uploadParam = '';
         let uploadParamList: string[] = [];
 
-        const compilerTool = boardJson.compilerTool || 'arduino-cli';
-        if (compilerTool !== 'arduino-cli') {
-          // 获取上传参数
-          uploadParam = boardJson.uploadParam;
-          if (!uploadParam) {
-            this.handleUploadError('缺少上传参数，请检查板子配置');
-            reject({ state: 'error', text: '缺少上传参数' });
-            return;
+        // 获取上传参数
+        uploadParam = boardJson.uploadParam;
+        if (!uploadParam) {
+          this.handleUploadError('缺少上传参数，请检查板子配置');
+          reject({ state: 'error', text: '缺少上传参数' });
+          return;
+        }
+
+        let use_1200bps_touch = false;
+        let wait_for_upload = false;
+
+        uploadParamList = uploadParam.split(' ').map(param => {
+          if (param.includes('--use_1200bps_touch')) {
+            use_1200bps_touch = true;
+            return "";
+          } else if (param.includes('--wait_for_upload')) {
+            wait_for_upload = true;
+            return "";
+          }
+          return param;
+        });
+
+        // 上传预处理
+        if (use_1200bps_touch) {
+          await this.serialMonitorService.connect({ path: this.serialService.currentPort || '', baudRate: 1200 });
+          // await new Promise(resolve => setTimeout(resolve, 250));
+          this.serialMonitorService.disconnect();
+        }
+
+        console.log("Wait for upload:", wait_for_upload);
+
+        if (wait_for_upload) {
+          const portList = await this.serialMonitorService.getPortsList();
+          await this.serialMonitorService.connect({ path: this.serialService.currentPort });
+          await new Promise(resolve => setTimeout(resolve, 250));
+          this.serialMonitorService.disconnect();
+          const currentPortList = await this.serialMonitorService.getPortsList();
+
+          // 对比portList和currentPortList, 找出新增的port
+          const newPorts = currentPortList.filter(port => !portList.some(existingPort => existingPort.path === port.path));
+          if (newPorts.length > 0) {
+            this.serialService.currentPort = newPorts[0].path;
+          } else {
+            console.log("没有检测到新串口，继续使用旧串口");
+          }
+        }
+
+        const command = uploadParamList[0];
+
+        if (command === 'avrdude') {
+          lastUploadText = `正在使用avrdude上传${boardJson.name}`;
+          uploadParamList = uploadParamList.map(param => {
+            if (param === 'avrdude') {
+              return `${toolsPath}/avrdude@6.3.0-arduino17/bin/avrdude`;
+            } else if (param === '-Cavrdude.conf') {
+              return `-C${toolsPath}/avrdude@6.3.0-arduino17/etc/avrdude.conf`;
+            }
+            return param;
+          });
+
+          // 构建命令
+          // avrdude" "-CC:\Users\coloz\AppData\Local\Arduino15\packages\arduino\tools\avrdude\6.3.0-arduino17/etc/avrdude.conf" -v -V -patmega328p -carduino "-PCOM6" -b115200 -D "-Uflash:w:C:\Users\coloz\AppData\Local\arduino\sketches\66B0FBB49C1955500D8D91CCC1015A05/sketch.ino.hex:i"
+
+          const baudRate = '115200';
+          uploadParam = uploadParamList.join(' ');
+          uploadParam += ` -P${this.serialService.currentPort} -b${baudRate} -D -Uflash:w:${buildPath}/sketch.hex:i`;
+        } else if (command === 'esptool') {
+          lastUploadText = `正在使用esptool上传${boardJson.name}`;
+
+          // 提取--chip后的芯片型号
+          let chipType = '';
+          const chipIndex = uploadParamList.findIndex(param => param === '--chip');
+          if (chipIndex !== -1 && chipIndex + 1 < uploadParamList.length) {
+            chipType = uploadParamList[chipIndex + 1];
           }
 
-          let use_1200bps_touch = false;
-          let wait_for_upload = false;
+          uploadParamList = uploadParamList.map(param => {
+            if (param === 'esptool') {
+              return `${toolsPath}/esptool_py@4.8.1/esptool`;
+            }
+            return param;
+          });
 
-          uploadParamList = uploadParam.split(' ').map(param => {
-            if (param.includes('--use_1200bps_touch')) {
+          // 构建命令
+          // "C:\Users\LENOVO\AppData\Local\Arduino15\packages\esp32\tools\esptool_py\4.9.dev3/esptool.exe" --chip esp32s3--port "COM3" --baud 921600  --before default_reset--after hard_reset write_flash - z--flash_mode keep--flash_freq keep--flash_size keep 0x0 "C:\Users\LENOVO\AppData\Local\aily-builder\project\blink_sketch_efc08b5a\blink_sketch.bootloader.bin" 0x8000 "C:\Users\LENOVO\AppData\Local\aily-builder\project\blink_sketch_efc08b5a\blink_sketch.partitions.bin" 0xe000 "C:\Users\LENOVO\AppData\Local\Arduino15\packages\esp32\hardware\esp32\3.2.0/tools/partitions/boot_app0.bin" 0x10000 "C:\Users\LENOVO\AppData\Local\aily-builder\project\blink_sketch_efc08b5a\blink_sketch.bin"
+
+          const baudRate = '921600';
+          const sketch_bootloader = `${buildPath}/sketch.bootloader.bin`;
+          const sketch_partitions = `${buildPath}/sketch.partitions.bin`;
+          let boot_app0_bin = `${sdkPath}/tools/partitions/boot_app0.bin`;
+
+          uploadParam = uploadParamList.join(' ');
+          uploadParam += ` --port ${this.serialService.currentPort} --baud ${baudRate} --before default_reset --after hard_reset write_flash -z --flash_mode keep --flash_freq keep --flash_size keep 0x0 ${sketch_bootloader} 0x8000 ${sketch_partitions} 0xe000 ${boot_app0_bin} 0x10000 ${buildPath}/sketch.bin`;
+        } else if (command === 'bossac') {
+          lastUploadText = `正在使用bossac上传${boardJson.name}`;
+          uploadParamList = uploadParamList.map(param => {
+            if (param === 'bossac') {
+              return `${toolsPath}/bossac@1.9.1-arduino5/bossac`;
+            } else if (param.includes('--use_1200bps_touch')) {
               use_1200bps_touch = true;
               return "";
             } else if (param.includes('--wait_for_upload')) {
@@ -230,132 +314,25 @@ export class _UploaderService {
             return param;
           });
 
-          // 上传预处理
-          if (use_1200bps_touch) {
-            await this.serialMonitorService.connect({ path: this.serialService.currentPort || '', baudRate: 1200 });
-            // await new Promise(resolve => setTimeout(resolve, 250));
-            this.serialMonitorService.disconnect();
-          }
+          // 构建命令
+          // "C:\Users\LENOVO\AppData\Local\Arduino15\packages\arduino\tools\bossac\1.9.1-arduino5/bossac" -d --port=COM8 -a -U -e -w "C:\Users\LENOVO\AppData\Local\aily-builder\project\blink_sketch_efc08b5a/blink_sketch.bin" -R
 
-          console.log("Wait for upload:", wait_for_upload);
-
-          if (wait_for_upload) {
-            const portList = await this.serialMonitorService.getPortsList();
-            await this.serialMonitorService.connect({ path: this.serialService.currentPort });
-            await new Promise(resolve => setTimeout(resolve, 250));
-            this.serialMonitorService.disconnect();
-            const currentPortList = await this.serialMonitorService.getPortsList();
-
-            // 对比portList和currentPortList, 找出新增的port
-            const newPorts = currentPortList.filter(port => !portList.some(existingPort => existingPort.path === port.path));
-            if (newPorts.length > 0) {
-              this.serialService.currentPort = newPorts[0].path;
-            } else {
-              console.log("没有检测到新串口，继续使用旧串口");
-            }
-          }
-
-          const command = uploadParamList[0];
-
-          if (command === 'avrdude') {
-            lastUploadText = `正在使用avrdude上传${boardJson.name}`;
-            uploadParamList = uploadParamList.map(param => {
-              if (param === 'avrdude') {
-                return `${toolsPath}/avrdude@6.3.0-arduino17/bin/avrdude`;
-              } else if (param === '-Cavrdude.conf') {
-                return `-C${toolsPath}/avrdude@6.3.0-arduino17/etc/avrdude.conf`;
-              }
-              return param;
-            });
-
-            // 构建命令
-            // avrdude" "-CC:\Users\coloz\AppData\Local\Arduino15\packages\arduino\tools\avrdude\6.3.0-arduino17/etc/avrdude.conf" -v -V -patmega328p -carduino "-PCOM6" -b115200 -D "-Uflash:w:C:\Users\coloz\AppData\Local\arduino\sketches\66B0FBB49C1955500D8D91CCC1015A05/sketch.ino.hex:i"
-
-            const baudRate = '115200';
-            uploadParam = uploadParamList.join(' ');
-            uploadParam += ` -P${this.serialService.currentPort} -b${baudRate} -D -Uflash:w:${buildPath}/sketch.hex:i`;
-          } else if (command === 'esptool') {
-            lastUploadText = `正在使用esptool上传${boardJson.name}`;
-
-            // 提取--chip后的芯片型号
-            let chipType = '';
-            const chipIndex = uploadParamList.findIndex(param => param === '--chip');
-            if (chipIndex !== -1 && chipIndex + 1 < uploadParamList.length) {
-              chipType = uploadParamList[chipIndex + 1];
-            }
-
-            uploadParamList = uploadParamList.map(param => {
-              if (param === 'esptool') {
-                return `${toolsPath}/esptool_py@4.8.1/esptool`;
-              }
-              return param;
-            });
-
-            // 构建命令
-            // "C:\Users\LENOVO\AppData\Local\Arduino15\packages\esp32\tools\esptool_py\4.9.dev3/esptool.exe" --chip esp32s3--port "COM3" --baud 921600  --before default_reset--after hard_reset write_flash - z--flash_mode keep--flash_freq keep--flash_size keep 0x0 "C:\Users\LENOVO\AppData\Local\aily-builder\project\blink_sketch_efc08b5a\blink_sketch.bootloader.bin" 0x8000 "C:\Users\LENOVO\AppData\Local\aily-builder\project\blink_sketch_efc08b5a\blink_sketch.partitions.bin" 0xe000 "C:\Users\LENOVO\AppData\Local\Arduino15\packages\esp32\hardware\esp32\3.2.0/tools/partitions/boot_app0.bin" 0x10000 "C:\Users\LENOVO\AppData\Local\aily-builder\project\blink_sketch_efc08b5a\blink_sketch.bin"
-
-            const baudRate = '921600';
-            const sketch_bootloader = `${buildPath}/sketch.bootloader.bin`;
-            const sketch_partitions = `${buildPath}/sketch.partitions.bin`;
-            let boot_app0_bin = `${sdkPath}/tools/partitions/boot_app0.bin`;
-
-            uploadParam = uploadParamList.join(' ');
-            uploadParam += ` --port ${this.serialService.currentPort} --baud ${baudRate} --before default_reset --after hard_reset write_flash -z --flash_mode keep --flash_freq keep --flash_size keep 0x0 ${sketch_bootloader} 0x8000 ${sketch_partitions} 0xe000 ${boot_app0_bin} 0x10000 ${buildPath}/sketch.bin`;
-          } else if (command === 'bossac') {
-            lastUploadText = `正在使用bossac上传${boardJson.name}`;
-            uploadParamList = uploadParamList.map(param => {
-              if (param === 'bossac') {
-                return `${toolsPath}/bossac@1.9.1-arduino5/bossac`;
-              } else if (param.includes('--use_1200bps_touch')) {
-                use_1200bps_touch = true;
-                return "";
-              } else if (param.includes('--wait_for_upload')) {
-                wait_for_upload = true;
-                return "";
-              }
-              return param;
-            });
-
-            // 构建命令
-            // "C:\Users\LENOVO\AppData\Local\Arduino15\packages\arduino\tools\bossac\1.9.1-arduino5/bossac" -d --port=COM8 -a -U -e -w "C:\Users\LENOVO\AppData\Local\aily-builder\project\blink_sketch_efc08b5a/blink_sketch.bin" -R
-
-            uploadParam = uploadParamList.join(' ');
-            uploadParam += ` -d --port=${this.serialService.currentPort} -a -U -e -w ${buildPath}/sketch.bin -R`;
-          } else if (command === 'dfu-util') {
-            lastUploadText = `正在使用dfu-util上传${boardJson.name}`;
-            uploadParamList = uploadParamList.map(param => {
-              if (param === 'dfu-util') {
-                return `${toolsPath}/dfu-util@0.11.0-arduino5/dfu-util`;
-              }
-              return param;
-            });
-
-            // 构建命令
-            // "C:\Users\LENOVO\AppData\Local\Arduino15\packages\arduino\tools\dfu-util\0.11.0-arduino5/dfu-util" --device 0x2341:0x0069,:0x0369 -D "C:\Users\LENOVO\AppData\Local\arduino\sketches\1149E9B555B61CE95EAC981A26A112DC/Blink.ino.bin" -a0 -Q
-
-            uploadParam = uploadParamList.join(' ');
-            uploadParam += ` --device 0x2341:0x0069,:0x0369 -D ${buildPath}/sketch.bin -a0 -Q`;
-          }
-        } else {
-          // 获取上传参数
-          uploadParam = boardJson.uploadParam;
-          if (!uploadParam) {
-            this.handleUploadError('缺少上传参数，请检查板子配置');
-            reject({ state: 'error', text: '缺少上传参数' });
-            return;
-          }
-
-          uploadParamList = uploadParam.split(' ').map(param => {
-            // 替换${serial}为当前串口号
-            if (param.includes('${serial}')) {
-              return param.replace('${serial}', this.serialService.currentPort);
-            } else if (param.startsWith('aily:')) {
-              return this._builderService.boardType;
+          uploadParam = uploadParamList.join(' ');
+          uploadParam += ` -d --port=${this.serialService.currentPort} -a -U -e -w ${buildPath}/sketch.bin -R`;
+        } else if (command === 'dfu-util') {
+          lastUploadText = `正在使用dfu-util上传${boardJson.name}`;
+          uploadParamList = uploadParamList.map(param => {
+            if (param === 'dfu-util') {
+              return `${toolsPath}/dfu-util@0.11.0-arduino5/dfu-util`;
             }
             return param;
           });
 
+          // 构建命令
+          // "C:\Users\LENOVO\AppData\Local\Arduino15\packages\arduino\tools\dfu-util\0.11.0-arduino5/dfu-util" --device 0x2341:0x0069,:0x0369 -D "C:\Users\LENOVO\AppData\Local\arduino\sketches\1149E9B555B61CE95EAC981A26A112DC/Blink.ino.bin" -a0 -Q
+
           uploadParam = uploadParamList.join(' ');
+          uploadParam += ` --device 0x2341:0x0069,:0x0369 -D ${buildPath}/sketch.bin -a0 -Q`;
         }
 
         // 上传
@@ -404,13 +381,7 @@ export class _UploaderService {
 
         // 将buildProperties添加到compilerParam中
         uploadParam += buildProperties;
-
-        let uploadCmd = '';
-        if (compilerTool !== 'arduino-cli') {
-          uploadCmd = uploadParam;
-        } else {
-          uploadCmd = `aily-arduino-cli.exe ${uploadParam} --input-dir ${buildPath} --board-path ${sdkPath} --tools-path ${toolsPath} --verbose`;
-        }
+        const uploadCmd = uploadParam;
 
         this.uploadInProgress = true;
         this.noticeService.update({ title: title, text: lastUploadText, state: 'doing', progress: 0, setTimeout: 0 });

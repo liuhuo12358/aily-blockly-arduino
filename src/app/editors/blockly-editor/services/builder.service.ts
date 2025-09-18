@@ -347,7 +347,7 @@ export class _BuilderService {
         this.toolsPath = await window["env"].get('AILY_TOOLS_PATH');
 
         // 获取使用的编译器
-        const compilerTool = boardJson.compilerTool || 'aily-builder';
+        // const compilerTool = boardJson.compilerTool || 'aily-builder';
 
         // 获取编译命令
         let compilerParam = boardJson.compilerParam;
@@ -365,14 +365,14 @@ export class _BuilderService {
             if (i + 1 < compilerParamList.length) {
               let fqbn = compilerParamList[i + 1];
               // 如果 fqbn 以 aily: 开头，需要替换 sdk 部分
-              const parts = fqbn.split(':');
-              if (parts.length > 2) { // 确保至少有3部分 (aily:avr:mega)
-                if (compilerTool !== 'aily-builder') {
-                  parts[0] = "aily"
-                  parts[1] = sdk;
-                  fqbn = parts.join(':');
-                }
-              }
+              // const parts = fqbn.split(':');
+              // if (parts.length > 2) { // 确保至少有3部分 (aily:avr:mega)
+              //   if (compilerTool !== 'aily-builder') {
+              //     parts[0] = "aily"
+              //     parts[1] = sdk;
+              //     fqbn = parts.join(':');
+              //   }
+              // }
               this.boardType = fqbn;
 
               // 从参数列表中移除 -b/--board 和 fqbn 参数
@@ -383,11 +383,9 @@ export class _BuilderService {
           }
 
           if (compilerParamList[i] === '-v' || compilerParamList[i] === '--verbose') {
-            if (compilerTool === 'aily-builder') {
-              // 移除 -v 或 --verbose 参数
-              compilerParamList.splice(i, 1);
-              i--; // 调整索引以继续检查当前位置
-            }
+            // 移除 -v 或 --verbose 参数
+            compilerParamList.splice(i, 1);
+            i--; // 调整索引以继续检查当前位置
           }
         }
 
@@ -433,46 +431,26 @@ export class _BuilderService {
 
         let compileCommandParts = [];
 
-        if (compilerTool !== 'aily-builder') {
-          // 使用 aily-arduino-cli 进行编译
-          this.buildPath = tempPath + '/build';
-          compileCommandParts = [
-            "aily-arduino-cli.exe",
-            `${compilerParam}`,
-            `-b`,
-            `${this.boardType}`,
-            "--jobs 0",
-            `--board-path "${this.sdkPath}"`,
-            `--compile-path "${this.compilerPath}"`,
-            `--tools-path "${this.toolsPath}"`,
-            `--libraries "${librariesPath}"`,
-            `--output-dir "${this.buildPath}"`,
-            "--log-level debug",
-            `"${sketchFilePath}"`,
-            "--verbose"
-          ];
-        } else {
-          const sketchMd5 = calculateMD5(window['path'].dirname(window['path'].resolve(sketchFilePath))).slice(0, 8);
-          const sketchName = window['path'].basename(sketchFilePath, '.ino');
-          this.buildPath = `${window['path'].getAilyBuilderBuildPath()}\\${sketchName}_${sketchMd5}`;
+        
+        const sketchMd5 = calculateMD5(window['path'].dirname(window['path'].resolve(sketchFilePath))).slice(0, 8);
+        const sketchName = window['path'].basename(sketchFilePath, '.ino');
+        this.buildPath = `${window['path'].getAilyBuilderBuildPath()}\\${sketchName}_${sketchMd5}`;
 
-          console.log("buildPath: ", this.buildPath);
-          compileCommandParts = [
-            "node",
-            `"${window['path'].getAilyBuilderPath()}/index.js"`,
-            `${compilerParam}`,
-            `"${sketchFilePath}"`,
-            '--jobs', '4',
-            '--board', `"${this.boardType}"`,
-            '--libraries-path', `"${librariesPath}"`,
-            '--sdk-path', `"${this.sdkPath}"`,
-            '--tools-path', `"${this.toolsPath}"`
-          ];
+        console.log("buildPath: ", this.buildPath);
+        compileCommandParts = [
+          "node",
+          `"${window['path'].getAilyBuilderPath()}/index.js"`,
+          `${compilerParam}`,
+          `"${sketchFilePath}"`,
+          '--jobs', '4',
+          '--board', `"${this.boardType}"`,
+          '--libraries-path', `"${librariesPath}"`,
+          '--sdk-path', `"${this.sdkPath}"`,
+          '--tools-path', `"${this.toolsPath}"`
+        ];
 
-          // 检查复制compilerPath下的所有文件夹到toolsPath中
-          await this.syncCompilerToolsToToolsPath();
-
-        }
+        // 检查复制compilerPath下的所有文件夹到toolsPath中
+        await this.syncCompilerToolsToToolsPath();
         const compileCommand = compileCommandParts.join(' ');
 
         const title = `编译 ${boardJson.name}`;
