@@ -204,7 +204,7 @@ function loadEnv() {
   // 默认全局编译器路径
   process.env.AILY_COMPILERS_PATH = path.join(
     process.env.AILY_APPDATA_PATH,
-    "compiler",
+    "tools",
   );
   // 默认全局烧录器路径
   process.env.AILY_TOOLS_PATH = path.join(process.env.AILY_APPDATA_PATH, "tools");
