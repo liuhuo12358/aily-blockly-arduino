@@ -71,16 +71,25 @@ export class _UploaderService {
     
     this.initialized = true;
     this.actionService.listen('upload-begin', (action) => {
-      this.upload();
-    });
+      console.log('>>>>> 收到上传请求: ', action);
+      this.upload().then((result) => {
+        console.log("upload result: ", result);
+      }).catch((msg) => {
+        if (msg?.state === 'warn') {
+          console.log("upload warn: ", msg.text);
+        }
+      });
+    }, 'uploader-upload-begin');
     this.actionService.listen('upload-cancel', (action) => {
       this.cancel();
-    });
+    }, 'uploader-upload-cancel');
   }
 
   destroy() {
-    this.actionService.unlisten('upload-begin');
-    this.actionService.unlisten('upload-cancel');
+    console.log("_UploaderService destroy");
+    this.actionService.unlisten('uploader-upload-begin');
+    this.actionService.unlisten('uploader-upload-cancel');
+    this.initialized = false; // 重置初始化状态
   }
 
   // 添加这个错误处理方法

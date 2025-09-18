@@ -83,6 +83,7 @@ export class BlocklyEditorComponent {
   }
 
   ngOnDestroy(): void {
+    this._projectService.destroy();
     this._builderService.cancel();
     this._builderService.destroy();
     this._uploadService.cancel();

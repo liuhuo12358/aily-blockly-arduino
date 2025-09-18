@@ -58,16 +58,23 @@ export class _BuilderService {
     this.initialized = true;
     this.actionService.listen('compile-begin', (action) => {
       console.log('>>>>> 收到编译请求: ', action);
-      this.build();
-    });
+      this.build().then(result => {
+        console.log("build success: ", result);
+      }).catch(msg => {
+        if (msg?.state === 'warn') {
+          console.log("build warn: ", msg);
+        }
+      });
+    }, 'builder-compile-begin');
     this.actionService.listen('compile-cancel', (action) => {
       this.cancel();
-    });
+    }, 'builder-compile-cancel');
   }
 
   destroy() {
-    this.actionService.unlisten('compile-begin');
-    this.actionService.unlisten('compile-cancel');
+    this.actionService.unlisten('builder-compile-begin');
+    this.actionService.unlisten('builder-compile-cancel');
+    this.initialized = false; // 重置初始化状态
   }
 
   // 添加这个错误处理方法
