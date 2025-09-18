@@ -207,12 +207,52 @@ export class _UploaderService {
             return;
           }
 
-          uploadParamList = uploadParam.split(' ')
+          let use_1200bps_touch = false;
+          let wait_for_upload = false;
+
+          uploadParamList = uploadParam.split(' ').map(param => {
+            if (param.includes('--use_1200bps_touch')) {
+              use_1200bps_touch = true;
+              return "";
+            } else if (param.includes('--wait_for_upload')) {
+              wait_for_upload = true;
+              return "";
+            }
+            return param;
+          });
+
+          // 上传预处理
+          if (use_1200bps_touch) {
+            await this.serialMonitorService.connect({ path: this.serialService.currentPort || '', baudRate: 1200 });
+            // await new Promise(resolve => setTimeout(resolve, 250));
+            this.serialMonitorService.disconnect();
+          }
+
+          console.log("Wait for upload:", wait_for_upload);
+
+          if (wait_for_upload) {
+            const portList = await this.serialMonitorService.getPortsList();
+            await this.serialMonitorService.connect({ path: this.serialService.currentPort });
+            await new Promise(resolve => setTimeout(resolve, 250));
+            this.serialMonitorService.disconnect();
+            const currentPortList = await this.serialMonitorService.getPortsList();
+
+            // 对比portList和currentPortList, 找出新增的port
+            const newPorts = currentPortList.filter(port => !portList.some(existingPort => existingPort.path === port.path));
+            console.log("newPorts: ", newPorts);
+            console.log("newPorts.length: ", newPorts.length);
+            if (newPorts.length > 0) {
+              this.serialService.currentPort = newPorts[0].path;
+            } else {
+              console.log("没有检测到新串口，继续使用旧串口");
+            }
+          }
+
           const command = uploadParamList[0];
 
           if (command === 'avrdude') {
             lastUploadText = `正在使用avrdude上传${boardJson.name}`;
-            uploadParamList = uploadParam.split(' ').map(param => {
+            uploadParamList = uploadParamList.map(param => {
               if (param === 'avrdude') {
                 return `${toolsPath}/avrdude@6.3.0-arduino17/bin/avrdude`;
               } else if (param === '-Cavrdude.conf') {
@@ -237,7 +277,7 @@ export class _UploaderService {
               chipType = uploadParamList[chipIndex + 1];
             }
 
-            uploadParamList = uploadParam.split(' ').map(param => {
+            uploadParamList = uploadParamList.map(param => {
               if (param === 'esptool') {
                 return `${toolsPath}/esptool_py@4.8.1/esptool`;
               }
@@ -248,7 +288,6 @@ export class _UploaderService {
             // "C:\Users\LENOVO\AppData\Local\Arduino15\packages\esp32\tools\esptool_py\4.9.dev3/esptool.exe" --chip esp32s3--port "COM3" --baud 921600  --before default_reset--after hard_reset write_flash - z--flash_mode keep--flash_freq keep--flash_size keep 0x0 "C:\Users\LENOVO\AppData\Local\aily-builder\project\blink_sketch_efc08b5a\blink_sketch.bootloader.bin" 0x8000 "C:\Users\LENOVO\AppData\Local\aily-builder\project\blink_sketch_efc08b5a\blink_sketch.partitions.bin" 0xe000 "C:\Users\LENOVO\AppData\Local\Arduino15\packages\esp32\hardware\esp32\3.2.0/tools/partitions/boot_app0.bin" 0x10000 "C:\Users\LENOVO\AppData\Local\aily-builder\project\blink_sketch_efc08b5a\blink_sketch.bin"
 
             const baudRate = '921600';
-            // TODO
             const sketch_bootloader = `${buildPath}/sketch.bootloader.bin`;
             const sketch_partitions = `${buildPath}/sketch.partitions.bin`;
             let boot_app0_bin = `${sdkPath}/tools/partitions/boot_app0.bin`;
@@ -257,22 +296,18 @@ export class _UploaderService {
             uploadParam += ` --port ${this.serialService.currentPort} --baud ${baudRate} --before default_reset --after hard_reset write_flash -z --flash_mode keep --flash_freq keep --flash_size keep 0x0 ${sketch_bootloader} 0x8000 ${sketch_partitions} 0xe000 ${boot_app0_bin} 0x10000 ${buildPath}/sketch.bin`;
           } else if (command === 'bossac') {
             lastUploadText = `正在使用bossac上传${boardJson.name}`;
-            let use_1200bps_touch = false;
-            uploadParamList = uploadParam.split(' ').map(param => {
+            uploadParamList = uploadParamList.map(param => {
               if (param === 'bossac') {
                 return `${toolsPath}/bossac@1.9.1-arduino5/bossac`;
               } else if (param.includes('--use_1200bps_touch')) {
                 use_1200bps_touch = true;
                 return "";
+              } else if (param.includes('--wait_for_upload')) {
+                wait_for_upload = true;
+                return "";
               }
               return param;
             });
-
-            if (use_1200bps_touch) {
-              await this.serialMonitorService.connect({ path: this.serialService.currentPort || '', baudRate: 1200 });
-              // await new Promise(resolve => setTimeout(resolve, 250));
-              this.serialMonitorService.disconnect();
-            }
 
             // 构建命令
             // "C:\Users\LENOVO\AppData\Local\Arduino15\packages\arduino\tools\bossac\1.9.1-arduino5/bossac" -d --port=COM8 -a -U -e -w "C:\Users\LENOVO\AppData\Local\aily-builder\project\blink_sketch_efc08b5a/blink_sketch.bin" -R
@@ -281,7 +316,7 @@ export class _UploaderService {
             uploadParam += ` -d --port=${this.serialService.currentPort} -a -U -e -w ${buildPath}/sketch.bin -R`;
           } else if (command === 'dfu-util') {
             lastUploadText = `正在使用dfu-util上传${boardJson.name}`;
-            uploadParamList = uploadParam.split(' ').map(param => {
+            uploadParamList = uploadParamList.map(param => {
               if (param === 'dfu-util') {
                 return `${toolsPath}/dfu-util@0.11.0-arduino5/dfu-util`;
               }
