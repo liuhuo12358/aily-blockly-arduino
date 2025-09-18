@@ -791,10 +791,12 @@ export class FileTreeComponent implements OnInit {
     // 根据文件扩展名返回不同的图标类
     const ext = filename.split('.').pop()?.toLowerCase() || '';
     switch (ext) {
-      case 'c': return 'fa-light fa-c';
-      case 'cpp': return 'fa-light fa-c';
-      case 'h': return 'fa-light fa-h';
-      default: return 'fa-light fa-file';
+      case 'c': return 'fa-solid fa-c';
+      case 'cpp': return 'fa-solid fa-c';
+      case 'h': return 'fa-solid fa-h';
+      case 'ino': return 'fa-solid fa-infinity main';
+      // case 'json': return 'fa-light fa-brackets-curly'
+      default: return 'fa-solid fa-file';
     }
   }
 

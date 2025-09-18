@@ -64,7 +64,7 @@
                     (nzClick)="nodeClick(node, $event); $event.stopPropagation()" (contextmenu)="onRightClick($event, node)">
                     <div class="file-item">
                         <div class="icon ccenter">
-                            <i class="fa-light {{treeControl.isExpanded(node) ? 'fa-folder-open' : 'fa-folder'}}"></i>
+                            <i class="fa-solid {{treeControl.isExpanded(node) ? 'fa-folder-open' : 'fa-folder'}}"></i>
                         </div>
                         @if (isNodeEditing(node)) {
                         <input 
