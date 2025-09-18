@@ -1205,20 +1205,17 @@ export class FileTreeComponent implements OnInit {
       return;
     }
 
-    const parentDir = window['path'].dirname(node.path);
-    const newPath = window['path'].join(parentDir, newName);
-
-    const result = this.fileService.performRename(node.path, newPath);
+    const result = this.fileService.renameNodeInline(node.path, newName);
     if (result.success) {
       this.message.success('重命名成功');
 
       // 更新节点信息
-      this.renameFileNode(node.path, newPath);
+      this.renameFileNode(node.path, result.newPath);
 
       // 更新选择状态中的节点路径
       if (this.nodeSelection.isSelected(node)) {
-        node.path = newPath;
-        node.key = newPath;
+        node.path = result.newPath;
+        node.key = result.newPath;
         node.title = newName;
       }
     } else {
@@ -1232,21 +1229,12 @@ export class FileTreeComponent implements OnInit {
       return;
     }
 
-    // 验证文件名
-    const validation = this.fileService.validateFileName(fileName);
-    if (!validation.valid) {
-      this.message.error(validation.error);
-      this.removeInlineEditTempNode();
-      return;
-    }
-
-    const filePath = window['path'].join(this.inlineEditState.parentPath, fileName);
-
-    const result = this.fileService.performCreateFile(filePath);
+    const result = this.fileService.createFileInline(this.inlineEditState.parentPath, fileName);
+    
     if (result.success) {
       this.message.success('文件创建成功');
       // 更新临时节点为实际节点
-      this.updateTempNodeToReal(fileName, filePath, true);
+      this.updateTempNodeToReal(fileName, result.filePath, true);
     } else {
       this.message.error(result.error);
       this.removeInlineEditTempNode();
@@ -1259,21 +1247,12 @@ export class FileTreeComponent implements OnInit {
       return;
     }
 
-    // 验证文件夹名
-    const validation = this.fileService.validateFileName(folderName);
-    if (!validation.valid) {
-      this.message.error(validation.error);
-      this.removeInlineEditTempNode();
-      return;
-    }
-
-    const folderPath = window['path'].join(this.inlineEditState.parentPath, folderName);
-
-    const result = this.fileService.performCreateFolder(folderPath);
+    const result = this.fileService.createFolderInline(this.inlineEditState.parentPath, folderName);
+    
     if (result.success) {
       this.message.success('文件夹创建成功');
       // 更新临时节点为实际节点
-      this.updateTempNodeToReal(folderName, folderPath, false);
+      this.updateTempNodeToReal(folderName, result.folderPath, false);
     } else {
       this.message.error(result.error);
       this.removeInlineEditTempNode();

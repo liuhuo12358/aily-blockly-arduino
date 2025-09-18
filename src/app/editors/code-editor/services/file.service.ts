@@ -276,83 +276,6 @@ export class FileService {
   }
 
   /**
-   * 重命名文件/文件夹
-   */
-  renameNode(node: FileNode, onSuccess?: (oldPath: string, newPath: string) => void): void {
-    console.log('Rename:', node.path);
-    
-    const currentName = window['path'].basename(node.path);
-    
-    this.modal.create({
-      nzTitle: `重命名${node.isLeaf ? '文件' : '文件夹'}`,
-      nzContent: `
-        <div>
-          <p>当前名称: ${currentName}</p>
-          <input id="rename-input" type="text" value="${currentName}" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;" />
-        </div>
-      `,
-      nzOnOk: () => {
-        const newName = (document.getElementById('rename-input') as HTMLInputElement)?.value?.trim();
-        
-        if (!newName) {
-          this.message.error('请输入有效的名称');
-          return false;
-        }
-        
-        if (newName === currentName) {
-          return true; // 没有变化，直接关闭
-        }
-        
-        const parentDir = window['path'].dirname(node.path);
-        const newPath = window['path'].join(parentDir, newName);
-        
-        try {
-          // 检查新名称是否已存在
-          if (window['fs'].existsSync(newPath)) {
-            this.message.error('该名称已存在');
-            return false;
-          }
-          
-          // 执行重命名
-          window['fs'].renameSync(node.path, newPath);
-          this.message.success('重命名成功');
-          
-          // 调用成功回调，传递旧路径和新路径
-          if (onSuccess) {
-            onSuccess(node.path, newPath);
-          }
-          
-          return true;
-        } catch (error) {
-          console.error('重命名失败:', error);
-          this.message.error(`重命名失败: ${error.message}`);
-          return false;
-        }
-      }
-    });
-    
-    // 延迟聚焦到输入框并选中文本
-    setTimeout(() => {
-      const input = document.getElementById('rename-input') as HTMLInputElement;
-      if (input) {
-        input.focus();
-        if (node.isLeaf) {
-          // 如果是文件，选中文件名（不包括扩展名）
-          const lastDotIndex = currentName.lastIndexOf('.');
-          if (lastDotIndex > 0) {
-            input.setSelectionRange(0, lastDotIndex);
-          } else {
-            input.select();
-          }
-        } else {
-          // 如果是文件夹，选中全部
-          input.select();
-        }
-      }
-    }, 100);
-  }
-
-  /**
    * 删除文件/文件夹
    */
   deleteNodes(nodes: FileNode[], onSuccess?: (deletedPaths: string[]) => void): void {
@@ -440,145 +363,102 @@ export class FileService {
   // ==================== 文件创建操作 ====================
 
   /**
-   * 创建新文件
+   * 验证文件/文件夹名称是否有效
    */
-  createNewFile(parentNode: FileNode, onSuccess?: (fileName: string) => void): void {
-    console.log('Create new file in:', parentNode.path);
-    
-    // 确保父节点是文件夹
-    let parentPath = parentNode.path;
-    if (parentNode.isLeaf) {
-      parentPath = window['path'].dirname(parentPath);
+  validateFileName(name: string): { valid: boolean, error?: string } {
+    if (!name || !name.trim()) {
+      return { valid: false, error: '名称不能为空' };
     }
-    
-    this.modal.create({
-      nzTitle: '创建新文件',
-      nzContent: `
-        <div>
-          <p>在文件夹中创建新文件: ${window['path'].basename(parentPath)}</p>
-          <input id="new-file-input" type="text" placeholder="输入文件名（如: main.cpp）" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;" />
-        </div>
-      `,
-      nzOnOk: () => {
-        const fileName = (document.getElementById('new-file-input') as HTMLInputElement)?.value?.trim();
-        
-        if (!fileName) {
-          this.message.error('请输入文件名');
-          return false;
-        }
-        
-        // 检查文件名是否包含非法字符
-        const invalidChars = /[<>:"/\\|?*]/;
-        if (invalidChars.test(fileName)) {
-          this.message.error('文件名包含非法字符');
-          return false;
-        }
-        
-        const filePath = window['path'].join(parentPath, fileName);
-        
-        try {
-          // 检查文件是否已存在
-          if (window['fs'].existsSync(filePath)) {
-            this.message.error('该文件名已存在');
-            return false;
-          }
-          
-          // 创建空文件
-          window['fs'].writeFileSync(filePath, '');
-          this.message.success('文件创建成功');
-          
-          // 调用成功回调，传递文件名
-          if (onSuccess) {
-            onSuccess(fileName);
-          }
-          
-          return true;
-        } catch (error) {
-          console.error('创建文件失败:', error);
-          this.message.error(`创建文件失败: ${error.message}`);
-          return false;
-        }
-      }
-    });
-    
-    // 延迟聚焦到输入框
-    setTimeout(() => {
-      const input = document.getElementById('new-file-input') as HTMLInputElement;
-      if (input) {
-        input.focus();
-      }
-    }, 100);
+
+    // 检查是否包含非法字符
+    const invalidChars = /[<>:"/\\|?*]/;
+    if (invalidChars.test(name)) {
+      return { valid: false, error: '名称包含非法字符: < > : " / \\ | ? *' };
+    }
+
+    // 检查是否为保留名称（Windows）
+    const reservedNames = ['CON', 'PRN', 'AUX', 'NUL', 'COM1', 'COM2', 'COM3', 'COM4', 'COM5', 'COM6', 'COM7', 'COM8', 'COM9', 'LPT1', 'LPT2', 'LPT3', 'LPT4', 'LPT5', 'LPT6', 'LPT7', 'LPT8', 'LPT9'];
+    if (reservedNames.includes(name.toUpperCase())) {
+      return { valid: false, error: '不能使用系统保留名称' };
+    }
+
+    return { valid: true };
   }
 
   /**
-   * 创建新文件夹
+   * 创建文件（内联编辑版本）
    */
-  createNewFolder(parentNode: FileNode, onSuccess?: (folderName: string) => void): void {
-    console.log('Create new folder in:', parentNode.path);
-    
-    // 确保父节点是文件夹
-    let parentPath = parentNode.path;
-    if (parentNode.isLeaf) {
-      parentPath = window['path'].dirname(parentPath);
+  createFileInline(parentPath: string, fileName: string): { success: boolean, error?: string, filePath?: string } {
+    try {
+      const validation = this.validateFileName(fileName);
+      if (!validation.valid) {
+        return { success: false, error: validation.error };
+      }
+
+      const filePath = window['path'].join(parentPath, fileName);
+
+      // 检查文件是否已存在
+      if (window['fs'].existsSync(filePath)) {
+        return { success: false, error: '文件已存在' };
+      }
+
+      // 创建空文件
+      window['fs'].writeFileSync(filePath, '');
+      return { success: true, filePath };
+    } catch (error) {
+      return { success: false, error: `创建文件失败: ${error.message}` };
     }
-    
-    this.modal.create({
-      nzTitle: '创建新文件夹',
-      nzContent: `
-        <div>
-          <p>在文件夹中创建新文件夹: ${window['path'].basename(parentPath)}</p>
-          <input id="new-folder-input" type="text" placeholder="输入文件夹名" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;" />
-        </div>
-      `,
-      nzOnOk: () => {
-        const folderName = (document.getElementById('new-folder-input') as HTMLInputElement)?.value?.trim();
-        
-        if (!folderName) {
-          this.message.error('请输入文件夹名');
-          return false;
-        }
-        
-        // 检查文件夹名是否包含非法字符
-        const invalidChars = /[<>:"/\\|?*]/;
-        if (invalidChars.test(folderName)) {
-          this.message.error('文件夹名包含非法字符');
-          return false;
-        }
-        
-        const folderPath = window['path'].join(parentPath, folderName);
-        
-        try {
-          // 检查文件夹是否已存在
-          if (window['fs'].existsSync(folderPath)) {
-            this.message.error('该文件夹名已存在');
-            return false;
-          }
-          
-          // 创建文件夹
-          window['fs'].mkdirSync(folderPath);
-          this.message.success('文件夹创建成功');
-          
-          // 调用成功回调，传递文件夹名
-          if (onSuccess) {
-            onSuccess(folderName);
-          }
-          
-          return true;
-        } catch (error) {
-          console.error('创建文件夹失败:', error);
-          this.message.error(`创建文件夹失败: ${error.message}`);
-          return false;
-        }
+  }
+
+  /**
+   * 创建文件夹（内联编辑版本）
+   */
+  createFolderInline(parentPath: string, folderName: string): { success: boolean, error?: string, folderPath?: string } {
+    try {
+      const validation = this.validateFileName(folderName);
+      if (!validation.valid) {
+        return { success: false, error: validation.error };
       }
-    });
-    
-    // 延迟聚焦到输入框
-    setTimeout(() => {
-      const input = document.getElementById('new-folder-input') as HTMLInputElement;
-      if (input) {
-        input.focus();
+
+      const folderPath = window['path'].join(parentPath, folderName);
+
+      // 检查文件夹是否已存在
+      if (window['fs'].existsSync(folderPath)) {
+        return { success: false, error: '文件夹已存在' };
       }
-    }, 100);
+
+      // 创建文件夹
+      window['fs'].mkdirSync(folderPath);
+      return { success: true, folderPath };
+    } catch (error) {
+      return { success: false, error: `创建文件夹失败: ${error.message}` };
+    }
+  }
+
+  /**
+   * 重命名文件/文件夹（内联编辑版本）
+   */
+  renameNodeInline(oldPath: string, newName: string): { success: boolean, error?: string, newPath?: string } {
+    try {
+      const validation = this.validateFileName(newName);
+      if (!validation.valid) {
+        return { success: false, error: validation.error };
+      }
+
+      const parentDir = window['path'].dirname(oldPath);
+      const newPath = window['path'].join(parentDir, newName);
+
+      // 检查新名称是否已存在
+      if (window['fs'].existsSync(newPath)) {
+        return { success: false, error: '该名称已存在' };
+      }
+
+      // 执行重命名
+      window['fs'].renameSync(oldPath, newPath);
+      return { success: true, newPath };
+    } catch (error) {
+      return { success: false, error: `重命名失败: ${error.message}` };
+    }
   }
 
   // ==================== 路径操作 ====================
@@ -922,78 +802,5 @@ export class FileService {
     // 删除空文件夹
     window['fs'].rmdirSync(folderPath);
     console.log('Folder deleted:', folderPath);
-  }
-
-  // ==================== 内联编辑支持方法 ====================
-
-  /**
-   * 验证文件名/文件夹名是否有效
-   */
-  validateFileName(name: string): { valid: boolean; error?: string } {
-    if (!name || !name.trim()) {
-      return { valid: false, error: '名称不能为空' };
-    }
-
-    const invalidChars = /[<>:"/\\|?*]/;
-    if (invalidChars.test(name)) {
-      return { valid: false, error: '名称包含非法字符' };
-    }
-
-    return { valid: true };
-  }
-
-  /**
-   * 检查路径是否已存在
-   */
-  pathExists(path: string): boolean {
-    return window['fs'].existsSync(path);
-  }
-
-  /**
-   * 执行文件/文件夹重命名（无UI）
-   */
-  performRename(oldPath: string, newPath: string): { success: boolean; error?: string } {
-    try {
-      if (this.pathExists(newPath)) {
-        return { success: false, error: '该名称已存在' };
-      }
-
-      window['fs'].renameSync(oldPath, newPath);
-      return { success: true };
-    } catch (error) {
-      return { success: false, error: error.message };
-    }
-  }
-
-  /**
-   * 执行文件创建（无UI）
-   */
-  performCreateFile(filePath: string): { success: boolean; error?: string } {
-    try {
-      if (this.pathExists(filePath)) {
-        return { success: false, error: '该文件已存在' };
-      }
-
-      window['fs'].writeFileSync(filePath, '');
-      return { success: true };
-    } catch (error) {
-      return { success: false, error: error.message };
-    }
-  }
-
-  /**
-   * 执行文件夹创建（无UI）
-   */
-  performCreateFolder(folderPath: string): { success: boolean; error?: string } {
-    try {
-      if (this.pathExists(folderPath)) {
-        return { success: false, error: '该文件夹已存在' };
-      }
-
-      window['fs'].mkdirSync(folderPath);
-      return { success: true };
-    } catch (error) {
-      return { success: false, error: error.message };
-    }
   }
 }
