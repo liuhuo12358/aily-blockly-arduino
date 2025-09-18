@@ -180,17 +180,17 @@ class DynamicFileDataSource implements DataSource<FlatFileNode> {
   addNode(parentPath: string, newNode: FlatFileNode): void {
     const data = this.flattenedData.getValue();
     const parentIndex = data.findIndex(n => n.path === parentPath);
-    
+
     if (parentIndex !== -1) {
       // 找到插入位置（在同级节点的最后）
       let insertIndex = parentIndex + 1;
       const parentLevel = data[parentIndex].level;
-      
+
       // 找到同级节点的最后位置
       while (insertIndex < data.length && data[insertIndex].level > parentLevel) {
         insertIndex++;
       }
-      
+
       data.splice(insertIndex, 0, newNode);
       this.flattenedData.next([...data]);
     }
@@ -200,16 +200,16 @@ class DynamicFileDataSource implements DataSource<FlatFileNode> {
   removeNode(nodePath: string): void {
     const data = this.flattenedData.getValue();
     const nodeIndex = data.findIndex(n => n.path === nodePath);
-    
+
     console.log('DynamicFileDataSource.removeNode called for:', nodePath);
     console.log('Node found at index:', nodeIndex);
-    
+
     if (nodeIndex !== -1) {
       const node = data[nodeIndex];
       const nodesToRemove = [nodeIndex];
-      
+
       console.log('Removing node:', node.title, 'expandable:', node.expandable);
-      
+
       // 如果是文件夹，也要删除所有子节点
       if (node.expandable) {
         for (let i = nodeIndex + 1; i < data.length; i++) {
@@ -221,22 +221,22 @@ class DynamicFileDataSource implements DataSource<FlatFileNode> {
           }
         }
       }
-      
+
       console.log('Total nodes to remove:', nodesToRemove.length);
-      
+
       // 从后往前删除，避免索引问题
       nodesToRemove.reverse().forEach(index => {
         const removedNode = data[index];
         console.log('Removing node at index', index, ':', removedNode.title);
         data.splice(index, 1);
       });
-      
+
       console.log('Updating flattenedData with new array, length:', data.length);
       this.flattenedData.next([...data]);
-      
+
       // 更新树控件的数据节点
       this.treeControl.dataNodes = [...data];
-      
+
       // 清除相关的展开状态
       this.expandedPaths.delete(nodePath);
       this.childrenLoadedSet.forEach(loadedNode => {
@@ -244,7 +244,7 @@ class DynamicFileDataSource implements DataSource<FlatFileNode> {
           this.childrenLoadedSet.delete(loadedNode);
         }
       });
-      
+
       console.log('Node removal completed for:', nodePath);
     } else {
       console.warn('Node not found for removal:', nodePath);
@@ -255,7 +255,7 @@ class DynamicFileDataSource implements DataSource<FlatFileNode> {
   refreshPath(path: string): void {
     const data = this.flattenedData.getValue();
     const nodeIndex = data.findIndex(n => n.path === path);
-    
+
     if (nodeIndex !== -1) {
       const node = data[nodeIndex];
       if (node.expandable) {
@@ -283,7 +283,7 @@ class DynamicFileDataSource implements DataSource<FlatFileNode> {
         // 用新的子节点替换
         data.splice(nodeIndex + 1, deleteCount, ...flatChildren);
         this.flattenedData.next([...data]);
-        
+
         // 标记子节点已加载
         this.childrenLoadedSet.add(node);
       }
@@ -389,7 +389,7 @@ export class FileTreeComponent implements OnInit {
     }));
 
     this.dataSource.setRootData(flatFiles);
-    
+
     // 恢复展开状态
     this.dataSource.restoreExpandedState();
   }
@@ -585,10 +585,10 @@ export class FileTreeComponent implements OnInit {
         this.openInTerminal(currentNode);
         break;
 
-      case 'file-properties':
-      case 'folder-properties':
-        this.showProperties(currentNode);
-        break;
+      // case 'file-properties':
+      // case 'folder-properties':
+      //   this.showProperties(currentNode);
+      //   break;
 
       case 'multi-compress':
         this.compressMultipleFiles(selectedNodes);
@@ -612,7 +612,7 @@ export class FileTreeComponent implements OnInit {
     // 获取剪贴板状态，判断是否是剪切操作
     const clipboardStatus = this.fileService.getClipboardStatus();
     const isCutOperation = clipboardStatus.operation === 'cut';
-    
+
     const result = await this.fileService.pasteFromClipboard(targetNode);
     if (result.success && result.newFiles) {
       // 确定实际的目标路径
@@ -621,14 +621,14 @@ export class FileTreeComponent implements OnInit {
         // 如果是文件，使用其父目录
         targetPath = window['path'].dirname(targetPath);
       }
-      
+
       // 如果是剪切操作，先从原位置删除文件节点
       if (isCutOperation && clipboardStatus.nodes.length > 0) {
         for (const originalNode of clipboardStatus.nodes) {
           this.removeFileNode(originalNode.path);
         }
       }
-      
+
       // 增量添加新文件，避免全量刷新
       for (const newFile of result.newFiles) {
         this.addFileNodeDirect(targetPath, newFile.name, newFile.isLeaf);
@@ -643,20 +643,20 @@ export class FileTreeComponent implements OnInit {
 
   private deleteNodes(nodes: FlatFileNode[]) {
     console.log('Starting delete operation for nodes:', nodes.map(n => n.path));
-    
+
     this.fileService.deleteNodes(nodes, (deletedPaths: string[]) => {
       console.log('Delete callback received for paths:', deletedPaths);
-      
+
       try {
         // 发出文件删除事件，通知父组件
         this.filesDeleted.emit(deletedPaths);
-        
+
         // 使用增量更新删除节点
         deletedPaths.forEach(path => {
           console.log('Removing node from UI:', path);
           this.removeFileNode(path);
         });
-        
+
         // 清除已删除节点的选择状态
         const currentSelected = this.nodeSelection.selected.filter(
           node => !deletedPaths.includes(node.path)
@@ -665,22 +665,22 @@ export class FileTreeComponent implements OnInit {
         currentSelected.forEach(node => {
           this.nodeSelection.select(node);
         });
-        
+
         console.log('Delete operation completed, UI updated');
-        
+
         // 验证删除是否成功反映在UI中
         setTimeout(() => {
           const currentData = this.dataSource.getCurrentData();
-          const stillExists = deletedPaths.some(path => 
+          const stillExists = deletedPaths.some(path =>
             currentData.some(node => node.path === path)
           );
-          
+
           if (stillExists) {
             console.warn('Some deleted nodes still exist in UI, forcing refresh');
             this.refresh();
           }
         }, 100);
-        
+
       } catch (error) {
         console.error('Error updating UI after delete:', error);
         // 如果增量更新失败，强制刷新整个树
@@ -710,7 +710,7 @@ export class FileTreeComponent implements OnInit {
 
     // 添加临时节点到适当位置
     this.addFileNodeDirect(parentPath, tempKey, true);
-    
+
     // 开始内联编辑
     this.startInlineEdit(tempNode, 'newFile', parentPath);
   }
@@ -736,7 +736,7 @@ export class FileTreeComponent implements OnInit {
 
     // 添加临时节点到适当位置
     this.addFileNodeDirect(parentPath, tempKey, false);
-    
+
     // 开始内联编辑
     this.startInlineEdit(tempNode, 'newFolder', parentPath);
   }
@@ -757,9 +757,9 @@ export class FileTreeComponent implements OnInit {
     this.fileService.openInTerminal(node);
   }
 
-  private showProperties(node: FlatFileNode) {
-    this.fileService.showProperties(node);
-  }
+  // private showProperties(node: FlatFileNode) {
+  //   this.fileService.showProperties(node);
+  // }
 
   private compressMultipleFiles(nodes: FlatFileNode[]) {
     // TODO: 实现多文件压缩功能
@@ -806,10 +806,10 @@ export class FileTreeComponent implements OnInit {
   refresh() {
     // 保存当前选择的路径
     const selectedPaths = this.nodeSelection.selected.map(node => node.path);
-    
+
     // 保存展开状态，然后重新加载
     this.loadRootPath();
-    
+
     // 恢复选择状态
     setTimeout(() => {
       this.restoreSelection(selectedPaths);
@@ -845,7 +845,7 @@ export class FileTreeComponent implements OnInit {
   invertSelection(): void {
     const allNodes = this.dataSource.getCurrentData();
     const currentSelected = [...this.nodeSelection.selected];
-    
+
     this.nodeSelection.clear();
     allNodes.forEach(node => {
       if (!currentSelected.includes(node)) {
@@ -858,7 +858,7 @@ export class FileTreeComponent implements OnInit {
   private restoreSelection(selectedPaths: string[]): void {
     this.nodeSelection.clear();
     const allNodes = this.dataSource.getCurrentData();
-    
+
     selectedPaths.forEach(path => {
       const node = allNodes.find(n => n.path === path);
       if (node) {
@@ -870,7 +870,7 @@ export class FileTreeComponent implements OnInit {
   // 处理键盘事件
   onKeyDown(event: KeyboardEvent): void {
     const isCtrlPressed = event.ctrlKey || event.metaKey;
-    
+
     switch (event.key) {
       case 'a':
       case 'A':
@@ -879,26 +879,26 @@ export class FileTreeComponent implements OnInit {
           this.selectAll();
         }
         break;
-      
+
       case 'Escape':
         event.preventDefault();
         this.clearSelection();
         break;
-        
+
       case 'Delete':
         if (this.nodeSelection.selected.length > 0) {
           event.preventDefault();
           this.deleteNodes(this.nodeSelection.selected);
         }
         break;
-        
+
       case 'F2':
         if (this.nodeSelection.selected.length === 1) {
           event.preventDefault();
           this.renameNode(this.nodeSelection.selected[0]);
         }
         break;
-        
+
       case 'c':
       case 'C':
         if (isCtrlPressed && this.nodeSelection.selected.length > 0) {
@@ -906,7 +906,7 @@ export class FileTreeComponent implements OnInit {
           this.copyToClipboard(this.nodeSelection.selected);
         }
         break;
-        
+
       case 'x':
       case 'X':
         if (isCtrlPressed && this.nodeSelection.selected.length > 0) {
@@ -914,14 +914,14 @@ export class FileTreeComponent implements OnInit {
           this.cutToClipboard(this.nodeSelection.selected);
         }
         break;
-        
+
       case 'v':
       case 'V':
         if (isCtrlPressed) {
           event.preventDefault();
           // 如果有选中的文件夹，粘贴到第一个文件夹；否则粘贴到根目录
-          const targetNode = this.nodeSelection.selected.find(node => !node.isLeaf) 
-                           || this.createRootNode();
+          const targetNode = this.nodeSelection.selected.find(node => !node.isLeaf)
+            || this.createRootNode();
           this.pasteFromClipboard(targetNode);
         }
         break;
@@ -932,8 +932,8 @@ export class FileTreeComponent implements OnInit {
   onContentClick(event: MouseEvent): void {
     // 检查点击的是否是空白区域（没有点击到树节点）
     const target = event.target as HTMLElement;
-    if (target.classList.contains('file-explorer-content') || 
-        target.classList.contains('sscroll')) {
+    if (target.classList.contains('file-explorer-content') ||
+      target.classList.contains('sscroll')) {
       // 如果没有按住 Ctrl 或 Shift，清除选择
       if (!event.ctrlKey && !event.metaKey && !event.shiftKey) {
         this.clearSelection();
@@ -957,7 +957,7 @@ export class FileTreeComponent implements OnInit {
   addFileNode(parentPath: string, newFileName: string, isLeaf: boolean) {
     const fullPath = window['path'].join(parentPath, newFileName);
     const parentNode = this.dataSource.getCurrentData().find(n => n.path === parentPath);
-    
+
     if (parentNode) {
       const newNode: FlatFileNode = {
         expandable: !isLeaf,
@@ -967,7 +967,7 @@ export class FileTreeComponent implements OnInit {
         isLeaf: isLeaf,
         path: fullPath
       };
-      
+
       this.dataSource.addNode(parentPath, newNode);
     }
   }
@@ -976,17 +976,17 @@ export class FileTreeComponent implements OnInit {
   addFileNodeDirect(parentPath: string, newFileName: string, isLeaf: boolean) {
     const fullPath = window['path'].join(parentPath, newFileName);
     const data = this.dataSource.getCurrentData();
-    
+
     // 检查文件是否已存在
     const existingNode = data.find(n => n.path === fullPath);
     if (existingNode) {
       return; // 文件已存在，不重复添加
     }
-    
+
     // 寻找合适的插入位置
     let insertLevel = 0;
     let insertIndex = data.length; // 默认插入到末尾
-    
+
     // 如果是根目录，直接插入到顶层
     if (parentPath === this.rootPath) {
       insertLevel = 0;
@@ -1016,7 +1016,7 @@ export class FileTreeComponent implements OnInit {
       if (parentNodeIndex !== -1) {
         const parentNode = data[parentNodeIndex];
         insertLevel = parentNode.level + 1;
-        
+
         // 找到同级节点的末尾位置，并按照文件类型和字母顺序排序
         insertIndex = parentNodeIndex + 1;
         while (insertIndex < data.length && data[insertIndex].level > parentNode.level) {
@@ -1039,7 +1039,7 @@ export class FileTreeComponent implements OnInit {
         return;
       }
     }
-    
+
     const newNode: FlatFileNode = {
       expandable: !isLeaf,
       title: newFileName,
@@ -1048,7 +1048,7 @@ export class FileTreeComponent implements OnInit {
       isLeaf: isLeaf,
       path: fullPath
     };
-    
+
     // 直接插入到数据中
     data.splice(insertIndex, 0, newNode);
     // 使用flattenedData.next来触发更新，避免完全重置
@@ -1060,9 +1060,9 @@ export class FileTreeComponent implements OnInit {
     console.log('removeFileNode called for:', nodePath);
     const currentData = this.dataSource.getCurrentData();
     console.log('Current data before removal:', currentData.map(n => n.path));
-    
+
     this.dataSource.removeNode(nodePath);
-    
+
     const updatedData = this.dataSource.getCurrentData();
     console.log('Current data after removal:', updatedData.map(n => n.path));
   }
@@ -1120,7 +1120,7 @@ export class FileTreeComponent implements OnInit {
     }
 
     const trimmedValue = inputValue.trim();
-    
+
     if (!trimmedValue) {
       this.cancelInlineEdit();
       return;
@@ -1163,7 +1163,7 @@ export class FileTreeComponent implements OnInit {
     const inputElement = document.querySelector('.inline-edit-input') as HTMLInputElement;
     if (inputElement) {
       inputElement.focus();
-      
+
       // 选择文本（对于重命名操作，选择不包括扩展名的部分）
       if (this.inlineEditState.editType === 'rename' && this.inlineEditState.originalValue) {
         const value = this.inlineEditState.originalValue;
@@ -1230,7 +1230,7 @@ export class FileTreeComponent implements OnInit {
     }
 
     const result = this.fileService.createFileInline(this.inlineEditState.parentPath, fileName);
-    
+
     if (result.success) {
       this.message.success('文件创建成功');
       // 更新临时节点为实际节点
@@ -1248,7 +1248,7 @@ export class FileTreeComponent implements OnInit {
     }
 
     const result = this.fileService.createFolderInline(this.inlineEditState.parentPath, folderName);
-    
+
     if (result.success) {
       this.message.success('文件夹创建成功');
       // 更新临时节点为实际节点
