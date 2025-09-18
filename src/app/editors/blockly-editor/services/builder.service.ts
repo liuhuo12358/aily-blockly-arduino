@@ -46,6 +46,7 @@ export class _BuilderService {
   compilerPath = "";
   boardJson: any = null;
   buildPath = "";
+  outputFilePath = ""; // 存储Output file路径
   
   private initialized = false; // 防止重复初始化
 
@@ -137,6 +138,7 @@ export class _BuilderService {
         this.isErrored = false; // 重置错误状态
         this.cancelled = false; // 重置取消状态
         this.buildStartTime = Date.now(); // 记录编译开始时间
+        this.outputFilePath = ""; // 重置输出文件路径
 
         // 创建临时文件夹
         if (!window['path'].isExists(tempPath)) {
@@ -530,6 +532,15 @@ export class _BuilderService {
                     isBuildText = false;
                   }
 
+                  // 提取Output file路径
+                  if (trimmedLine.includes('Output File:')) {
+                    const outputFileMatch = trimmedLine.match(/Output File:\s*(.+)$/);
+                    if (outputFileMatch) {
+                      this.outputFilePath = outputFileMatch[1].trim();
+                      console.log('提取到Output file路径:', this.outputFilePath);
+                    }
+                  }
+
                   // 提取进度信息
                   const progressInfo = trimmedLine.trim();
                   let progressValue = 0;
@@ -780,10 +791,18 @@ export class _BuilderService {
   }
 
   /**
- * 取消当前编译过程
- */
+   * 取消当前编译过程
+   */
   cancel() {
     this.cancelled = true;
     this.cmdService.kill(this.streamId || '');
+  }
+
+  /**
+   * 获取输出文件路径
+   * @returns 编译生成的输出文件完整路径
+   */
+  getOutputFilePath(): string {
+    return this.outputFilePath;
   }
 }

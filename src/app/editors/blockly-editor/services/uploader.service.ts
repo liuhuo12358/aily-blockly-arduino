@@ -92,6 +92,89 @@ export class _UploaderService {
     this.initialized = false; // 重置初始化状态
   }
 
+  /**
+   * 文件查找
+   */
+  private async findFile(basePath: string, fileName: string): Promise<string> {
+    const findRes = await window['finder'].findFile(basePath, fileName);
+    console.log(`find ${fileName} in tools: `, findRes);
+    return findRes[0] || '';
+  }
+
+  /**
+   * 处理上传参数，统一处理所有参数替换和文件查找逻辑
+   * @param uploadParam 原始上传参数字符串
+   * @param buildPath 构建路径
+   * @param toolsPath 工具路径
+   * @returns 处理后的参数列表、标志和命令信息
+   */
+  private async processUploadParams(uploadParam: string, buildPath: string, filePath: string, toolsPath: string, sdkPath: string) {
+    const flags = {
+      use_1200bps_touch: false,
+      wait_for_upload: false
+    };
+
+    // 第一步：分割参数并处理基本变量替换和标志提取
+    let paramPromises = uploadParam.split(' ').map(async param => {
+      if (param.startsWith('[') && param.endsWith(']')) {
+        if (param.includes('--use_1200bps_touch')) {
+          flags.use_1200bps_touch = true;
+        }
+        if (param.includes('--wait_for_upload')) {
+          flags.wait_for_upload = true;
+        }
+        return ""; // 标志参数不需要保留在参数列表中
+      } else if (param.includes('${serial}')) {
+        return param.replace('${serial}', this.serialService.currentPort || '');
+      } else if (param.includes('${baud}')) {
+        return param.replace('${baudRate}', '115200');
+      } else if (param.includes('${file}')) {
+        return param.replace('${file}', `${filePath}`);
+      } else if (param.includes('${bootloader}')) {
+        const bootLoaderFile = await this.findFile(buildPath, '*.bootloader.bin');
+        return param.replace('${bootloader}', bootLoaderFile);
+      } else if (param.includes('${partitions}')) {
+        const partitionsFile = await this.findFile(buildPath, '*.partitions.bin');
+        return param.replace('${partitions}', partitionsFile);
+      } else if (param.includes('${boot_app0}')) {
+        return param.replace('${boot_app0}', `${sdkPath}/tools/partitions/boot_app0.bin`)
+      }
+      return param;
+    });
+    
+    let paramList = (await Promise.all(paramPromises)).filter(param => param !== ""); // 过滤掉空字符串（标志参数）
+
+    console.log("Processed upload params: ", paramList, flags);
+
+    // 第二步：查找可执行文件的完整路径
+    let command = '';
+    if (paramList.length > 0) {
+      command = await this.findFile(toolsPath, paramList[0] + (window['platform'].isWindows ? '.exe' : ''));
+    }
+
+    // 替换命令为完整路径命令
+    if (command) {
+      paramList[0] = command;
+    }
+
+    // 第三步：处理 ${'filename'} 格式的文件路径参数
+    for (let i = 0; i < paramList.length; i++) {
+      const param = paramList[i];
+      const match = param.match(/\$\{\'(.+?)\'\}/);
+      if (match) {
+        const fileName = match[1];
+        const findRes = await this.findFile(toolsPath, fileName);
+        paramList[i] = param.replace(`\$\{\'${fileName}\'\}`, findRes);
+      }
+    }
+
+    return {
+      processedParams: paramList,
+      flags,
+      command
+    };
+  }
+
   // 添加这个错误处理方法
   private handleUploadError(errorMessage: string, title = "上传失败") {
     console.error("handle errror: ", errorMessage);
@@ -189,9 +272,12 @@ export class _UploaderService {
         }
 
         const buildPath = this._builderService.buildPath;
+        const sdkPath = this._builderService.sdkPath;
+        const toolsPath = this._builderService.toolsPath;
+        const filePath = this._builderService.outputFilePath || '';
 
-        // 判断buildPath是否存在
-        if (!window['path'].isExists(buildPath)) {
+        // 判断filePath是否存在
+        if (!window['path'].isExists(filePath)) {
           // 编译
           await this._builderService.build();
         }
@@ -199,9 +285,6 @@ export class _UploaderService {
         const boardJson = this._builderService.boardJson;
 
         let lastUploadText = `正在上传${boardJson.name}`;
-
-        const sdkPath = this._builderService.sdkPath;
-        const toolsPath = this._builderService.toolsPath;
 
         let uploadParam = '';
         let uploadParamList: string[] = [];
@@ -214,19 +297,31 @@ export class _UploaderService {
           return;
         }
 
-        let use_1200bps_touch = false;
-        let wait_for_upload = false;
+        // 解析和处理上传参数
+        let processedParams: string[];
+        let flags: { use_1200bps_touch: boolean; wait_for_upload: boolean };
+        let command: string;
+        
+        try {
+          const result = await this.processUploadParams(uploadParam, buildPath, filePath, toolsPath, sdkPath);
+          processedParams = result.processedParams;
+          flags = result.flags;
+          command = result.command;
+        } catch (error) {
+          this.handleUploadError(error.message || '参数处理失败');
+          reject({ state: 'error', text: error.message || '参数处理失败' });
+          return;
+        }
 
-        uploadParamList = uploadParam.split(' ').map(param => {
-          if (param.includes('--use_1200bps_touch')) {
-            use_1200bps_touch = true;
-            return "";
-          } else if (param.includes('--wait_for_upload')) {
-            wait_for_upload = true;
-            return "";
-          }
-          return param;
-        });
+        uploadParamList = processedParams;
+        const use_1200bps_touch = flags.use_1200bps_touch;
+        const wait_for_upload = flags.wait_for_upload;
+
+        if (!command) {
+          this.handleUploadError('上传工具未找到，请检查安装');
+          reject({ state: 'error', text: '上传工具未找到' });
+          return;
+        }
 
         // 上传预处理
         if (use_1200bps_touch) {
@@ -252,91 +347,6 @@ export class _UploaderService {
             console.log("没有检测到新串口，继续使用旧串口");
           }
         }
-
-        const command = uploadParamList[0];
-
-        if (command === 'avrdude') {
-          lastUploadText = `正在使用avrdude上传${boardJson.name}`;
-          uploadParamList = uploadParamList.map(param => {
-            if (param === 'avrdude') {
-              return `${toolsPath}/avrdude@6.3.0-arduino17/bin/avrdude`;
-            } else if (param === '-Cavrdude.conf') {
-              return `-C${toolsPath}/avrdude@6.3.0-arduino17/etc/avrdude.conf`;
-            }
-            return param;
-          });
-
-          // 构建命令
-          // avrdude" "-CC:\Users\coloz\AppData\Local\Arduino15\packages\arduino\tools\avrdude\6.3.0-arduino17/etc/avrdude.conf" -v -V -patmega328p -carduino "-PCOM6" -b115200 -D "-Uflash:w:C:\Users\coloz\AppData\Local\arduino\sketches\66B0FBB49C1955500D8D91CCC1015A05/sketch.ino.hex:i"
-
-          const baudRate = '115200';
-          uploadParam = uploadParamList.join(' ');
-          uploadParam += ` -P${this.serialService.currentPort} -b${baudRate} -D -Uflash:w:${buildPath}/sketch.hex:i`;
-        } else if (command === 'esptool') {
-          lastUploadText = `正在使用esptool上传${boardJson.name}`;
-
-          // 提取--chip后的芯片型号
-          let chipType = '';
-          const chipIndex = uploadParamList.findIndex(param => param === '--chip');
-          if (chipIndex !== -1 && chipIndex + 1 < uploadParamList.length) {
-            chipType = uploadParamList[chipIndex + 1];
-          }
-
-          uploadParamList = uploadParamList.map(param => {
-            if (param === 'esptool') {
-              return `${toolsPath}/esptool_py@4.8.1/esptool`;
-            }
-            return param;
-          });
-
-          // 构建命令
-          // "C:\Users\LENOVO\AppData\Local\Arduino15\packages\esp32\tools\esptool_py\4.9.dev3/esptool.exe" --chip esp32s3--port "COM3" --baud 921600  --before default_reset--after hard_reset write_flash - z--flash_mode keep--flash_freq keep--flash_size keep 0x0 "C:\Users\LENOVO\AppData\Local\aily-builder\project\blink_sketch_efc08b5a\blink_sketch.bootloader.bin" 0x8000 "C:\Users\LENOVO\AppData\Local\aily-builder\project\blink_sketch_efc08b5a\blink_sketch.partitions.bin" 0xe000 "C:\Users\LENOVO\AppData\Local\Arduino15\packages\esp32\hardware\esp32\3.2.0/tools/partitions/boot_app0.bin" 0x10000 "C:\Users\LENOVO\AppData\Local\aily-builder\project\blink_sketch_efc08b5a\blink_sketch.bin"
-
-          const baudRate = '921600';
-          const sketch_bootloader = `${buildPath}/sketch.bootloader.bin`;
-          const sketch_partitions = `${buildPath}/sketch.partitions.bin`;
-          let boot_app0_bin = `${sdkPath}/tools/partitions/boot_app0.bin`;
-
-          uploadParam = uploadParamList.join(' ');
-          uploadParam += ` --port ${this.serialService.currentPort} --baud ${baudRate} --before default_reset --after hard_reset write_flash -z --flash_mode keep --flash_freq keep --flash_size keep 0x0 ${sketch_bootloader} 0x8000 ${sketch_partitions} 0xe000 ${boot_app0_bin} 0x10000 ${buildPath}/sketch.bin`;
-        } else if (command === 'bossac') {
-          lastUploadText = `正在使用bossac上传${boardJson.name}`;
-          uploadParamList = uploadParamList.map(param => {
-            if (param === 'bossac') {
-              return `${toolsPath}/bossac@1.9.1-arduino5/bossac`;
-            } else if (param.includes('--use_1200bps_touch')) {
-              use_1200bps_touch = true;
-              return "";
-            } else if (param.includes('--wait_for_upload')) {
-              wait_for_upload = true;
-              return "";
-            }
-            return param;
-          });
-
-          // 构建命令
-          // "C:\Users\LENOVO\AppData\Local\Arduino15\packages\arduino\tools\bossac\1.9.1-arduino5/bossac" -d --port=COM8 -a -U -e -w "C:\Users\LENOVO\AppData\Local\aily-builder\project\blink_sketch_efc08b5a/blink_sketch.bin" -R
-
-          uploadParam = uploadParamList.join(' ');
-          uploadParam += ` -d --port=${this.serialService.currentPort} -a -U -e -w ${buildPath}/sketch.bin -R`;
-        } else if (command === 'dfu-util') {
-          lastUploadText = `正在使用dfu-util上传${boardJson.name}`;
-          uploadParamList = uploadParamList.map(param => {
-            if (param === 'dfu-util') {
-              return `${toolsPath}/dfu-util@0.11.0-arduino5/dfu-util`;
-            }
-            return param;
-          });
-
-          // 构建命令
-          // "C:\Users\LENOVO\AppData\Local\Arduino15\packages\arduino\tools\dfu-util\0.11.0-arduino5/dfu-util" --device 0x2341:0x0069,:0x0369 -D "C:\Users\LENOVO\AppData\Local\arduino\sketches\1149E9B555B61CE95EAC981A26A112DC/Blink.ino.bin" -a0 -Q
-
-          uploadParam = uploadParamList.join(' ');
-          uploadParam += ` --device 0x2341:0x0069,:0x0369 -D ${buildPath}/sketch.bin -a0 -Q`;
-        }
-
-        // 上传
-        // await this.uiService.openTerminal();
 
         const title = '上传中';
         const completeTitle = '上传完成';
@@ -380,8 +390,11 @@ export class _UploaderService {
         }
 
         // 将buildProperties添加到compilerParam中
-        uploadParam += buildProperties;
-        const uploadCmd = uploadParam;
+        // uploadParam += buildProperties;
+        // const uploadCmd = uploadParam;
+
+        const uploadCmd = `${command} ${uploadParamList.slice(1).join(' ')}${buildProperties}`;
+        console.log("Upload cmd: ", uploadCmd);
 
         this.uploadInProgress = true;
         this.noticeService.update({ title: title, text: lastUploadText, state: 'doing', progress: 0, setTimeout: 0 });

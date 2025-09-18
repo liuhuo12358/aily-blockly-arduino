@@ -305,5 +305,15 @@ contextBridge.exposeInMainWorld("electronAPI", {
     getZoomLevel: () => webFrame.getZoomLevel(),
     setZoomFactor: (factor) => webFrame.setZoomFactor(factor),
     getZoomFactor: () => webFrame.getZoomFactor()
+  },
+  finder: {
+    findFile: (searchPath, fileName) => {
+      return new Promise((resolve, reject) => {
+        ipcRenderer
+          .invoke("find-file", searchPath, fileName)
+          .then((files) => resolve(files))
+          .catch((error) => reject(error));
+      });
+    }
   }
 });
