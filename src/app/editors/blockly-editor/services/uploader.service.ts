@@ -248,8 +248,6 @@ export class _UploaderService {
 
             // 对比portList和currentPortList, 找出新增的port
             const newPorts = currentPortList.filter(port => !portList.some(existingPort => existingPort.path === port.path));
-            console.log("newPorts: ", newPorts);
-            console.log("newPorts.length: ", newPorts.length);
             if (newPorts.length > 0) {
               this.serialService.currentPort = newPorts[0].path;
             } else {
