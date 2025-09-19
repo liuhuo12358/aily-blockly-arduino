@@ -17,10 +17,23 @@ export async function findFile(basePath: string, fileName: string): Promise<stri
         return '';
     }
 
-    // 将fileName中的*替换?
-    fileName = fileName.replace(/\*/g, '?');
-    
+    // 保持原始fileName，不进行*替换，让底层工具处理通配符
     const findRes = await window['tools'].findFileByName(basePath, fileName);
     console.log(`find ${fileName} in tools: `, findRes);
+    
+    // 如果传入的是 *.bin 这样的模式，过滤结果只返回确切匹配的文件
+    if (fileName.includes('*')) {
+        // 将通配符模式转换为正则表达式
+        const pattern = fileName.replace(/\*/g, '([^.]+)').replace(/\./g, '\\.');
+        const regex = new RegExp(`^${pattern}$`);
+        
+        const filteredRes = findRes.filter((filePath: string) => {
+            const baseName = window['path'].basename(filePath);
+            return regex.test(baseName);
+        });
+        
+        return filteredRes[0] || '';
+    }
+    
     return findRes[0] || '';
 }
