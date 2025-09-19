@@ -315,12 +315,20 @@ contextBridge.exposeInMainWorld("electronAPI", {
     setZoomFactor: (factor) => webFrame.setZoomFactor(factor),
     getZoomFactor: () => webFrame.getZoomFactor()
   },
-  finder: {
-    findFile: (searchPath, fileName) => {
+  tools: {
+    findFileByName: (searchPath, fileName) => {
       return new Promise((resolve, reject) => {
         ipcRenderer
           .invoke("find-file", searchPath, fileName)
           .then((files) => resolve(files))
+          .catch((error) => reject(error));
+      });
+    },
+    calculateMD5: (text) => {
+      return new Promise((resolve, reject) => {
+        ipcRenderer
+          .invoke("calculate-md5", text)
+          .then((md5) => resolve(md5))
           .catch((error) => reject(error));
       });
     }

@@ -96,7 +96,7 @@ export class _UploaderService {
    * 文件查找
    */
   private async findFile(basePath: string, fileName: string): Promise<string> {
-    const findRes = await window['finder'].findFile(basePath, fileName);
+    const findRes = await window['tools'].findFileByName(basePath, fileName);
     console.log(`find ${fileName} in tools: `, findRes);
     return findRes[0] || '';
   }

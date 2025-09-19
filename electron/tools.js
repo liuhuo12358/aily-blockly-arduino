@@ -16,6 +16,7 @@ try {
 const path = require('path');
 const fs = require('fs');
 const { ipcMain } = require('electron');
+const { createHash } = require('crypto');
 
 /**
  * 文件查找器类
@@ -175,8 +176,38 @@ class FileFinder {
     }
 }
 
+/**
+ * 计算文本的MD5值
+ * @param text 要计算MD5的文本
+ * @returns MD5哈希值（32位十六进制字符串）
+ */
+function calculateMD5(text) {
+    return createHash('md5').update(text, 'utf8').digest('hex');
+}
 
-function registerFinderHandlers(mainWindow) {
+/**
+ * 计算Buffer的MD5值
+ * @param buffer 要计算MD5的Buffer
+ * @returns MD5哈希值（32位十六进制字符串）
+ */
+function calculateMD5FromBuffer(buffer) {
+    return createHash('md5').update(buffer).digest('hex');
+}
+
+/**
+ * 计算文件内容的MD5值
+ * @param content 文件内容（字符串或Buffer）
+ * @returns MD5哈希值（32位十六进制字符串）
+ */
+function calculateContentMD5(content) {
+    if (typeof content === 'string') {
+        return calculateMD5(content);
+    }
+    return calculateMD5FromBuffer(content);
+}
+
+
+function registerToolsHandlers(mainWindow) {
     // 注册文件查找相关的 IPC 处理器
     ipcMain.handle("find-file", async (event, searchPath, fileName) => {
         try {
@@ -224,40 +255,21 @@ function registerFinderHandlers(mainWindow) {
             throw error;
         }
     });
+
+    // 注册计算文本MD5的处理器
+    ipcMain.handle("calculate-md5", async (event, text) => {
+        try {
+            return calculateMD5(text);
+        } catch (error) {
+            console.error('计算文本MD5失败:', error);
+            throw error;
+        }
+    });
 }
 
 
 // 导出模块
 module.exports = {
-    registerFinderHandlers,
+    registerToolsHandlers,
     FileFinder  // 也导出类，以便其他地方直接使用
 };
-
-// 如果直接运行此文件，执行示例
-if (require.main === module) {
-    function runExamples() {
-        console.log('=== 文件查找器示例 ===\n');
-
-        const currentDir = process.cwd();
-        console.log(`当前工作目录: ${currentDir}\n`);
-
-        try {
-            // 创建实例用于示例
-            const finder = new FileFinder();
-
-            // 示例2: 在指定路径查找 avrdude 相关文件
-            const toolsPath = "C:\\Users\\stao\\AppData\\Local\\aily-project\\tools";
-            if (require('fs').existsSync(toolsPath)) {
-                console.log('2. 在工具目录中查找 avrdude 相关文件:');
-                const avrdudeFiles = finder.findFilesByName(toolsPath, 'avrdude.exe');
-                console.log(`找到 ${avrdudeFiles.length} 个文件:`);
-                avrdudeFiles.forEach(file => console.log(`  - ${file}`));
-                console.log();
-            }
-        } catch (error) {
-            console.error('示例执行出错:', error.message);
-        }
-    }
-
-    runExamples();
-}

@@ -111,8 +111,8 @@ const { registerCmdHandlers } = require("./cmd");
 const { registerMCPHandlers } = require("./mcp");
 // debug模块
 const { initLogger } = require("./logger");
-// finder
-const { registerFinderHandlers } = require("./finder");
+// tools
+const { registerToolsHandlers } = require("./tools");
 
 let mainWindow;
 let userConf;
@@ -320,7 +320,7 @@ function createWindow() {
   registerNpmHandlers(mainWindow);
   registerCmdHandlers(mainWindow);
   registerMCPHandlers(mainWindow);
-  registerFinderHandlers(mainWindow);
+  registerToolsHandlers(mainWindow);
 }
 
 app.on("ready", () => {
