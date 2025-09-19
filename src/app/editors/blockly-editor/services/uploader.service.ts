@@ -121,10 +121,10 @@ export class _UploaderService {
       } else if (param.includes('${baud}')) {
         return param.replace('${baud}', '115200');
       } else if (param.includes('${bootloader}')) {
-        const bootLoaderFile = await findFile(buildPath, '?.bootloader.bin');
+        const bootLoaderFile = await findFile(buildPath, '*.bootloader.bin');
         return param.replace('${bootloader}', bootLoaderFile);
       } else if (param.includes('${partitions}')) {
-        const partitionsFile = await findFile(buildPath, '?.partitions.bin');
+        const partitionsFile = await findFile(buildPath, '*.partitions.bin');
         return param.replace('${partitions}', partitionsFile);
       } else if (param.includes('${boot_app0}')) {
         return param.replace('${boot_app0}', `${sdkPath}/tools/partitions/boot_app0.bin`)
