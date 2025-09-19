@@ -265,7 +265,9 @@ export class _BuilderService {
         }
 
         // 组合编译器、sdk、tools的路径
-        this.compilerPath = await window["env"].get('AILY_COMPILERS_PATH') + `/${compiler}`;
+        // 兼容旧版本
+        const oldCompilerPath = window['path'].getAppDataPath() + `/compiler/${compiler}`;
+        this.compilerPath = oldCompilerPath;
         this.sdkPath = await window["env"].get('AILY_SDK_PATH') + `/${sdk}`;
         this.toolsPath = await window["env"].get('AILY_TOOLS_PATH');
 
