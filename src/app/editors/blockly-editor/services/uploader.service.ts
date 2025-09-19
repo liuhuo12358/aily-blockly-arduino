@@ -100,7 +100,7 @@ export class _UploaderService {
    * @param toolsPath 工具路径
    * @returns 处理后的参数列表、标志和命令信息
    */
-  private async processUploadParams(uploadParam: string, buildPath: string, filePath: string, toolsPath: string, sdkPath: string) {
+  private async processUploadParams(uploadParam: string, buildPath: string, toolsPath: string, sdkPath: string) {
     const flags = {
       use_1200bps_touch: false,
       wait_for_upload: false
@@ -120,8 +120,6 @@ export class _UploaderService {
         return param.replace('${serial}', this.serialService.currentPort || '');
       } else if (param.includes('${baud}')) {
         return param.replace('${baud}', '115200');
-      } else if (param.includes('${file}')) {
-        return param.replace('${file}', `${filePath}`);
       } else if (param.includes('${bootloader}')) {
         const bootLoaderFile = await findFile(buildPath, '*.bootloader.bin');
         return param.replace('${bootloader}', bootLoaderFile);
@@ -155,7 +153,20 @@ export class _UploaderService {
       const match = param.match(/\$\{\'(.+?)\'\}/);
       if (match) {
         const fileName = match[1];
-        const findRes = await findFile(toolsPath, fileName);
+        
+        // 获取fileName后缀
+        const fileNameParts = fileName.split('.');
+        const fileExtension = fileNameParts.length > 1 ? fileNameParts.pop() : '';
+
+        let findRes = '';
+
+        // 判断后缀是否为(bin|elf|hex|eep|img)之一
+        if (!['bin', 'elf', 'hex', 'eep', 'img'].includes(fileExtension)) {
+          findRes = await findFile(toolsPath, fileName);
+        } else {
+          findRes = await findFile(buildPath, fileName);
+        }
+
         paramList[i] = param.replace(`\$\{\'${fileName}\'\}`, findRes);
       }
     }
@@ -266,10 +277,9 @@ export class _UploaderService {
         const buildPath = this._builderService.buildPath;
         const sdkPath = this._builderService.sdkPath;
         const toolsPath = this._builderService.toolsPath;
-        const filePath = this._builderService.outputFilePath || '';
 
-        // 判断filePath是否存在
-        if (!window['path'].isExists(filePath)) {
+        // 判断buildPath是否存在
+        if (!window['path'].isExists(buildPath)) {
           // 编译
           await this._builderService.build();
         }
@@ -295,7 +305,7 @@ export class _UploaderService {
         let command: string;
         
         try {
-          const result = await this.processUploadParams(uploadParam, buildPath, filePath, toolsPath, sdkPath);
+          const result = await this.processUploadParams(uploadParam, buildPath, toolsPath, sdkPath);
           processedParams = result.processedParams;
           flags = result.flags;
           command = result.command;
