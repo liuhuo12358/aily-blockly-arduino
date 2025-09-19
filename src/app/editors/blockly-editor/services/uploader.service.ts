@@ -119,7 +119,7 @@ export class _UploaderService {
       } else if (param.includes('${serial}')) {
         return param.replace('${serial}', this.serialService.currentPort || '');
       } else if (param.includes('${baud}')) {
-        return param.replace('${baudRate}', '115200');
+        return param.replace('${baud}', '115200');
       } else if (param.includes('${file}')) {
         return param.replace('${file}', `${filePath}`);
       } else if (param.includes('${bootloader}')) {
