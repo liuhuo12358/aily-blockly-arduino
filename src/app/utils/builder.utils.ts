@@ -16,6 +16,9 @@ export async function findFile(basePath: string, fileName: string): Promise<stri
         console.warn(`路径不存在: ${basePath}`);
         return '';
     }
+
+    // 将fileName中的*替换?
+    fileName = fileName.replace(/\*/g, '?');
     
     const findRes = await window['tools'].findFileByName(basePath, fileName);
     console.log(`find ${fileName} in tools: `, findRes);
