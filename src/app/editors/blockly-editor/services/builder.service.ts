@@ -13,6 +13,8 @@ import { arduinoGenerator } from '../components/blockly/generators/arduino/ardui
 import { BlocklyService as BlocklyService } from './blockly.service';
 import { _ProjectService } from './project.service';
 
+import { getDefaultBuildPath } from '../../../utils/builder.utils';
+
 @Injectable()
 export class _BuilderService {
 
@@ -432,10 +434,8 @@ export class _BuilderService {
 
         let compileCommandParts = [];
 
-        const sketchMd5Value = await window["tools"].calculateMD5(window['path'].dirname(window['path'].resolve(sketchFilePath)));
-        const sketchMd5 = sketchMd5Value.slice(0, 8);
-        const sketchName = window['path'].basename(sketchFilePath, '.ino');
-        this.buildPath = `${window['path'].getAilyBuilderBuildPath()}\\${sketchName}_${sketchMd5}`;
+        // buildPath
+        this.buildPath = await getDefaultBuildPath(sketchFilePath);
 
         compileCommandParts = [
           "node",
