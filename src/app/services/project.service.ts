@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { BehaviorSubject } from 'rxjs';
+import { BehaviorSubject, Subject } from 'rxjs';
 import { UiService } from './ui.service';
 import { NewProjectData } from '../windows/project-new/project-new.component';
 import { ElectronService } from './electron.service';
@@ -31,6 +31,9 @@ interface ProjectPackageData {
 export class ProjectService {
 
   stateSubject = new BehaviorSubject<'default' | 'loading' | 'loaded' | 'saving' | 'saved' | 'error'>('default');
+  
+  // 开发板变更事件通知，只在变更时发出
+  boardChangeSubject = new Subject<void>();
 
   currentPackageData: ProjectPackageData = {
     name: 'aily blockly',
@@ -47,7 +50,7 @@ export class ProjectService {
     private router: Router,
     private cmdService: CmdService,
     private configService: ConfigService,
-    private actionService: ActionService
+    private actionService: ActionService,
   ) {
   }
 
@@ -681,18 +684,13 @@ export class ProjectService {
       this.uiService.updateFooterState({ state: 'doing', text: '正在安装新开发板...' });
       await this.cmdService.runAsync(`npm install ${newBoardPackage}`, this.currentProjectPath);
 
-      // 删除项目下的.temp文件夹，如果存在的话
-      const tempPath = this.currentProjectPath + '/.temp';
-      if (window['fs'].existsSync(tempPath)) {
-        console.log('删除项目下的.temp文件夹:', tempPath);
-        await this.cmdService.runAsync(`Remove-Item -Path "${tempPath}" -Recurse -Force`);
-      } else {
-        console.log('.temp文件夹不存在，无需删除');
-      }
-
       // 3. 重新加载项目
       console.log('重新加载项目...');
       await this.projectOpen(this.currentProjectPath);
+      
+      // 触发开发板变更事件
+      this.boardChangeSubject.next();
+      
       this.uiService.updateFooterState({ state: 'done', text: '开发板切换完成' });
       this.message.success('开发板切换成功', { nzDuration: 3000 });
     } catch (error) {

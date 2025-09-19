@@ -14,6 +14,7 @@ import { SerialDialogComponent } from "../../../main-window/components/serial-di
 import { ActionService } from "../../../services/action.service";
 import { arduinoGenerator } from "../components/blockly/generators/arduino/arduino";
 import { BlocklyService } from "./blockly.service";
+import { findFile } from '../../../utils/builder.utils';
 
 @Injectable()
 export class _UploaderService {
@@ -93,15 +94,6 @@ export class _UploaderService {
   }
 
   /**
-   * 文件查找
-   */
-  private async findFile(basePath: string, fileName: string): Promise<string> {
-    const findRes = await window['tools'].findFileByName(basePath, fileName);
-    console.log(`find ${fileName} in tools: `, findRes);
-    return findRes[0] || '';
-  }
-
-  /**
    * 处理上传参数，统一处理所有参数替换和文件查找逻辑
    * @param uploadParam 原始上传参数字符串
    * @param buildPath 构建路径
@@ -131,10 +123,10 @@ export class _UploaderService {
       } else if (param.includes('${file}')) {
         return param.replace('${file}', `${filePath}`);
       } else if (param.includes('${bootloader}')) {
-        const bootLoaderFile = await this.findFile(buildPath, '*.bootloader.bin');
+        const bootLoaderFile = await findFile(buildPath, '*.bootloader.bin');
         return param.replace('${bootloader}', bootLoaderFile);
       } else if (param.includes('${partitions}')) {
-        const partitionsFile = await this.findFile(buildPath, '*.partitions.bin');
+        const partitionsFile = await findFile(buildPath, '*.partitions.bin');
         return param.replace('${partitions}', partitionsFile);
       } else if (param.includes('${boot_app0}')) {
         return param.replace('${boot_app0}', `${sdkPath}/tools/partitions/boot_app0.bin`)
@@ -149,7 +141,7 @@ export class _UploaderService {
     // 第二步：查找可执行文件的完整路径
     let command = '';
     if (paramList.length > 0) {
-      command = await this.findFile(toolsPath, paramList[0] + (window['platform'].isWindows ? '.exe' : ''));
+      command = await findFile(toolsPath, paramList[0] + (window['platform'].isWindows ? '.exe' : ''));
     }
 
     // 替换命令为完整路径命令
@@ -163,7 +155,7 @@ export class _UploaderService {
       const match = param.match(/\$\{\'(.+?)\'\}/);
       if (match) {
         const fileName = match[1];
-        const findRes = await this.findFile(toolsPath, fileName);
+        const findRes = await findFile(toolsPath, fileName);
         paramList[i] = param.replace(`\$\{\'${fileName}\'\}`, findRes);
       }
     }
