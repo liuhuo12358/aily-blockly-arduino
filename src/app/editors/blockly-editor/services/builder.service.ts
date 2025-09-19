@@ -15,6 +15,28 @@ import { _ProjectService } from './project.service';
 
 import { getDefaultBuildPath } from '../../../utils/builder.utils';
 
+// 库缓存信息接口
+interface LibraryCacheInfo {
+  timestamp: number;
+  hasHeaderFiles: boolean;
+  directories: string[];
+  targetNames: string[];
+}
+
+// 库处理结果接口
+interface LibraryProcessResult {
+  targetNames: string[];
+  success: boolean;
+  error?: string;
+}
+
+// 复制操作信息接口
+interface CopyOperation {
+  source: string;
+  target: string;
+  type: 'library' | 'directory';
+}
+
 @Injectable()
 export class _BuilderService {
 
@@ -36,6 +58,9 @@ export class _BuilderService {
   private buildCompleted = false;
   private isErrored = false; // 标识是否为错误状态
   private buildStartTime: number = 0; // 编译开始时间
+
+  // 库缓存机制
+  private libraryCache = new Map<string, LibraryCacheInfo>();
 
   currentProjectPath = "";
   lastCode = "";
@@ -77,6 +102,8 @@ export class _BuilderService {
     this.actionService.unlisten('builder-compile-begin');
     this.actionService.unlisten('builder-compile-cancel');
     this.initialized = false; // 重置初始化状态
+    // 清理库缓存
+    this.libraryCache.clear();
   }
 
   // 添加这个错误处理方法
@@ -178,114 +205,9 @@ export class _BuilderService {
 
         this.boardJson = boardJson;
 
-        // 解压libraries到临时文件夹
-        // 用于记录已复制的库文件夹名称
-        const copiedLibraries: string[] = [];
-
-        for (let lib of libsPath) {
-          let sourcePath = `${this.currentProjectPath}/node_modules/${lib}/src`;
-          if (!window['path'].isExists(sourcePath)) {
-            // 如果没有src文件夹，则使用src.7z解压到临时文件夹
-            let sourceZipPath = `${this.currentProjectPath}/node_modules/${lib}/src.7z`;
-            if (!window['path'].isExists(sourceZipPath)) continue;
-            await this.cmdService.runAsync(`7za x "${sourceZipPath}" -o"${sourcePath}" -y`);
-          }
-
-          // 判断src目录下是否有且仅有一个src目录，没有别的文件或文件夹
-          if (window['fs'].existsSync(sourcePath)) {
-            const srcContents = window['fs'].readDirSync(sourcePath);
-            if (srcContents.length === 1) {
-              // 兼容处理文件对象和字符串
-              const firstItem = srcContents[0];
-              const itemName = typeof firstItem === 'object' && firstItem !== null ? firstItem.name : firstItem;
-
-              if (itemName === 'src' && window['fs'].isDirectory(`${sourcePath}/${itemName}`)) {
-                // 如果有且仅有一个src目录，则将复制源路径定位到src/src
-                console.log(`库 ${lib} 检测到嵌套src目录，使用 ${sourcePath}/src 作为源路径`);
-                sourcePath = `${sourcePath}/src`;
-              }
-            }
-          }
-
-          // 判断src目录下是否包含.h文件
-          let hasHeaderFiles = false;
-          if (window['fs'].existsSync(sourcePath)) {
-            // 获取sourcePath下的所有文件，排除文件夹
-            const files = window['fs'].readDirSync(sourcePath, { withFileTypes: true });
-            // 检查文件是否是对象数组或字符串数组
-            hasHeaderFiles = Array.isArray(files) && files.some(file => {
-              // 如果是文件对象
-              if (typeof file === 'object' && file !== null && file.name) {
-                return file.name.toString().endsWith('.h');
-              }
-              // 如果是字符串
-              return typeof file === 'string' && file.endsWith('.h');
-            });
-            if (hasHeaderFiles) {
-              console.log(`库 ${lib} 包含头文件`);
-              let targetName = lib.split('@aily-project/')[1];
-              let targetPath = `${librariesPath}/${targetName}`;
-
-              let shouldCopy = true;
-              if (window['path'].isExists(targetPath)) {
-                if (this.configService.data.devmode || false) {
-                  await this.cmdService.runAsync(`Remove-Item -Path "${targetPath}" -Recurse -Force`);
-                } else {
-                  // 非开发模式下，仍然记录为已复制，避免被清理
-                  console.log(`库 ${lib} 目标路径已存在，跳过复制但保留记录`);
-                  shouldCopy = false;
-                }
-              }
-
-              if (shouldCopy) {
-                // 直接复制src到targetPath
-                await this.cmdService.runAsync(`Copy-Item -Path "${sourcePath}" -Destination "${targetPath}" -Recurse -Force`);
-              }
-              // 无论是否复制，都记录已处理的文件夹名称
-              copiedLibraries.push(targetName);
-            } else {
-              // For libraries without header files, copy each directory individually
-              console.log(`库 ${lib} 不包含头文件，逐个复制目录`);
-              // Get all directories in the source path
-              if (window['fs'].existsSync(sourcePath)) {
-                const items = window['fs'].readDirSync(sourcePath);
-
-                // Process each directory
-                for (const item of items) {
-                  console.log("item: ", item);
-                  // 兼容处理文件对象和字符串
-                  const itemName = typeof item === 'object' && item !== null ? item.name : item;
-                  const fullSourcePath = `${sourcePath}/${itemName}`;
-
-                  // Check if it's a directory
-                  if (window['fs'].isDirectory(fullSourcePath)) {
-                    const targetPath = `${librariesPath}/${itemName}`;
-
-                    let shouldCopy = true;
-                    // Delete target directory if it exists
-                    if (window['path'].isExists(targetPath)) {
-                      if (this.configService.data.devmode || false) {
-                        await this.cmdService.runAsync(`Remove-Item -Path "${targetPath}" -Recurse -Force`);
-                      } else {
-                        // 如果不是debug模式，仍然记录但跳过复制
-                        console.log(`目录 ${itemName} 已存在，跳过复制但保留记录`);
-                        shouldCopy = false;
-                      }
-                    }
-
-                    if (shouldCopy) {
-                      // Copy directory
-                      await this.cmdService.runAsync(`Copy-Item -Path "${fullSourcePath}" -Destination "${targetPath}" -Recurse -Force`);
-                    }
-                    // 无论是否复制，都记录已处理的文件夹名称
-                    copiedLibraries.push(itemName);
-                    // console.log(`目录 ${itemName} 已处理`);
-                  }
-                }
-              }
-            }
-          }
-        }
+        // 解压libraries到临时文件夹，使用并行处理优化性能
+        console.log(`开始处理 ${libsPath.length} 个库文件`);
+        const copiedLibraries = await this.processLibrariesParallel(libsPath, librariesPath);
 
         // 检查和清理libraries文件夹
         // 输出已复制的库文件夹名称
@@ -733,6 +655,351 @@ export class _BuilderService {
     }
 
     return "编译完成";
+  }
+
+  /**
+   * 检查库缓存是否有效
+   * @param lib 库名称
+   * @param sourcePath 源码路径
+   * @returns 缓存是否有效
+   */
+  private isLibraryCacheValid(lib: string, sourcePath: string): boolean {
+    const cached = this.libraryCache.get(lib);
+    if (!cached) return false;
+    
+    try {
+      if (!window['fs'].existsSync(sourcePath)) return false;
+      const stat = window['fs'].statSync(sourcePath);
+      return stat.mtime.getTime() <= cached.timestamp;
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * 准备库源码路径，处理解压和嵌套src目录
+   * @param lib 库名称
+   * @returns 准备好的源码路径，失败返回null
+   */
+  private async prepareLibrarySource(lib: string): Promise<string | null> {
+    let sourcePath = `${this.currentProjectPath}/node_modules/${lib}/src`;
+    
+    // 检查缓存
+    if (this.isLibraryCacheValid(lib, sourcePath)) {
+      console.log(`库 ${lib} 使用缓存信息`);
+      return sourcePath;
+    }
+    
+    // 如果没有src文件夹，尝试解压
+    if (!window['path'].isExists(sourcePath)) {
+      const sourceZipPath = `${this.currentProjectPath}/node_modules/${lib}/src.7z`;
+      if (!window['path'].isExists(sourceZipPath)) {
+        return null;
+      }
+      
+      try {
+        await this.cmdService.runAsync(`7za x "${sourceZipPath}" -o"${sourcePath}" -y`);
+      } catch (error) {
+        console.error(`解压库 ${lib} 失败:`, error);
+        return null;
+      }
+    }
+
+    // 处理嵌套src目录
+    sourcePath = this.resolveNestedSrcPath(sourcePath);
+    return sourcePath;
+  }
+
+  /**
+   * 解析嵌套的src目录结构
+   * @param sourcePath 原始源码路径
+   * @returns 解析后的源码路径
+   */
+  private resolveNestedSrcPath(sourcePath: string): string {
+    if (!window['fs'].existsSync(sourcePath)) {
+      return sourcePath;
+    }
+    
+    try {
+      const srcContents = window['fs'].readDirSync(sourcePath);
+      if (srcContents.length === 1) {
+        const firstItem = srcContents[0];
+        const itemName = typeof firstItem === 'object' && firstItem !== null ? firstItem.name : firstItem;
+
+        if (itemName === 'src' && window['fs'].isDirectory(`${sourcePath}/${itemName}`)) {
+          console.log(`检测到嵌套src目录，使用 ${sourcePath}/src 作为源路径`);
+          return `${sourcePath}/src`;
+        }
+      }
+    } catch (error) {
+      console.warn(`解析嵌套src路径失败:`, error);
+    }
+    
+    return sourcePath;
+  }
+
+  /**
+   * 检查目录下是否包含头文件
+   * @param sourcePath 源码路径
+   * @returns 是否包含头文件
+   */
+  private async checkForHeaderFiles(sourcePath: string): Promise<boolean> {
+    if (!window['fs'].existsSync(sourcePath)) {
+      return false;
+    }
+    
+    try {
+      const files = window['fs'].readDirSync(sourcePath, { withFileTypes: true });
+      return Array.isArray(files) && files.some(file => {
+        if (typeof file === 'object' && file !== null && file.name) {
+          return file.name.toString().endsWith('.h');
+        }
+        return typeof file === 'string' && file.endsWith('.h');
+      });
+    } catch (error) {
+      console.warn(`检查头文件失败:`, error);
+      return false;
+    }
+  }
+
+  /**
+   * 收集复制操作，用于批量执行
+   * @param operations 复制操作数组
+   * @returns 批量执行的Promise
+   */
+  private async executeBatchCopyOperations(operations: CopyOperation[]): Promise<void> {
+    if (operations.length === 0) return;
+    
+    // 分组删除和复制操作
+    const deleteCommands: string[] = [];
+    const copyCommands: string[] = [];
+    
+    for (const op of operations) {
+      // 如果目标已存在且是开发模式，添加删除命令
+      if (window['path'].isExists(op.target) && (this.configService.data.devmode || false)) {
+        deleteCommands.push(`Remove-Item -Path "${op.target}" -Recurse -Force`);
+      }
+      copyCommands.push(`Copy-Item -Path "${op.source}" -Destination "${op.target}" -Recurse -Force`);
+    }
+    
+    try {
+      // 先执行删除操作
+      if (deleteCommands.length > 0) {
+        const deleteScript = deleteCommands.join('; ');
+        await this.cmdService.runAsync(deleteScript);
+      }
+      
+      // 再执行复制操作
+      if (copyCommands.length > 0) {
+        const copyScript = copyCommands.join('; ');
+        await this.cmdService.runAsync(copyScript);
+      }
+    } catch (error) {
+      console.error('批量文件操作失败:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * 处理包含头文件的库
+   * @param lib 库名称
+   * @param sourcePath 源码路径
+   * @param librariesPath 目标库路径
+   * @returns 处理结果
+   */
+  private async processLibraryWithHeaders(lib: string, sourcePath: string, librariesPath: string): Promise<LibraryProcessResult> {
+    try {
+      console.log(`库 ${lib} 包含头文件`);
+      const targetName = lib.split('@aily-project/')[1];
+      const targetPath = `${librariesPath}/${targetName}`;
+
+      let shouldCopy = true;
+      if (window['path'].isExists(targetPath)) {
+        if (this.configService.data.devmode || false) {
+          await this.cmdService.runAsync(`Remove-Item -Path "${targetPath}" -Recurse -Force`);
+        } else {
+          console.log(`库 ${lib} 目标路径已存在，跳过复制但保留记录`);
+          shouldCopy = false;
+        }
+      }
+
+      if (shouldCopy) {
+        await this.cmdService.runAsync(`Copy-Item -Path "${sourcePath}" -Destination "${targetPath}" -Recurse -Force`);
+      }
+
+      // 更新缓存
+      this.libraryCache.set(lib, {
+        timestamp: Date.now(),
+        hasHeaderFiles: true,
+        directories: [],
+        targetNames: [targetName]
+      });
+
+      return {
+        targetNames: [targetName],
+        success: true
+      };
+    } catch (error) {
+      console.error(`处理库 ${lib} 失败:`, error);
+      return {
+        targetNames: [],
+        success: false,
+        error: error.message
+      };
+    }
+  }
+
+  /**
+   * 处理不包含头文件的库，逐个复制目录
+   * @param lib 库名称
+   * @param sourcePath 源码路径
+   * @param librariesPath 目标库路径
+   * @returns 处理结果
+   */
+  private async processLibraryDirectories(lib: string, sourcePath: string, librariesPath: string): Promise<LibraryProcessResult> {
+    try {
+      console.log(`库 ${lib} 不包含头文件，逐个复制目录`);
+      const targetNames: string[] = [];
+      const copyOperations: CopyOperation[] = [];
+
+      if (!window['fs'].existsSync(sourcePath)) {
+        return { targetNames: [], success: true };
+      }
+
+      const items = window['fs'].readDirSync(sourcePath);
+
+      for (const item of items) {
+        const itemName = typeof item === 'object' && item !== null ? item.name : item;
+        const fullSourcePath = `${sourcePath}/${itemName}`;
+
+        if (window['fs'].isDirectory(fullSourcePath)) {
+          const targetPath = `${librariesPath}/${itemName}`;
+
+          let shouldCopy = true;
+          if (window['path'].isExists(targetPath)) {
+            if (this.configService.data.devmode || false) {
+              // 删除操作将在批量操作中处理
+            } else {
+              console.log(`目录 ${itemName} 已存在，跳过复制但保留记录`);
+              shouldCopy = false;
+            }
+          }
+
+          if (shouldCopy) {
+            copyOperations.push({
+              source: fullSourcePath,
+              target: targetPath,
+              type: 'directory'
+            });
+          }
+          targetNames.push(itemName);
+        }
+      }
+
+      // 批量执行复制操作
+      await this.executeBatchCopyOperations(copyOperations);
+
+      // 更新缓存
+      this.libraryCache.set(lib, {
+        timestamp: Date.now(),
+        hasHeaderFiles: false,
+        directories: targetNames,
+        targetNames: targetNames
+      });
+
+      return {
+        targetNames: targetNames,
+        success: true
+      };
+    } catch (error) {
+      console.error(`处理库目录 ${lib} 失败:`, error);
+      return {
+        targetNames: [],
+        success: false,
+        error: error.message
+      };
+    }
+  }
+
+  /**
+   * 处理单个库
+   * @param lib 库名称
+   * @param librariesPath 目标库路径
+   * @returns 处理结果
+   */
+  private async processLibrary(lib: string, librariesPath: string): Promise<LibraryProcessResult> {
+    try {
+      // 检查缓存
+      const cachedInfo = this.libraryCache.get(lib);
+      if (cachedInfo && this.isLibraryCacheValid(lib, `${this.currentProjectPath}/node_modules/${lib}/src`)) {
+        console.log(`库 ${lib} 使用缓存结果`);
+        return {
+          targetNames: cachedInfo.targetNames,
+          success: true
+        };
+      }
+
+      // 准备源码路径
+      const sourcePath = await this.prepareLibrarySource(lib);
+      if (!sourcePath) {
+        console.warn(`库 ${lib} 源码准备失败`);
+        return { targetNames: [], success: true };
+      }
+
+      // 检查是否包含头文件
+      const hasHeaderFiles = await this.checkForHeaderFiles(sourcePath);
+
+      if (hasHeaderFiles) {
+        return await this.processLibraryWithHeaders(lib, sourcePath, librariesPath);
+      } else {
+        return await this.processLibraryDirectories(lib, sourcePath, librariesPath);
+      }
+    } catch (error) {
+      console.error(`处理库 ${lib} 失败:`, error);
+      return {
+        targetNames: [],
+        success: false,
+        error: error.message
+      };
+    }
+  }
+
+  /**
+   * 并行处理所有库
+   * @param libsPath 库列表
+   * @param librariesPath 目标库路径
+   * @returns 已复制的库名称列表
+   */
+  private async processLibrariesParallel(libsPath: string[], librariesPath: string): Promise<string[]> {
+    console.log(`开始并行处理 ${libsPath.length} 个库`);
+    
+    try {
+      // 并行处理所有库
+      const libraryTasks = libsPath.map(lib => this.processLibrary(lib, librariesPath));
+      const results = await Promise.all(libraryTasks);
+
+      // 收集所有成功处理的库名称
+      const copiedLibraries: string[] = [];
+      const errors: string[] = [];
+
+      results.forEach((result, index) => {
+        if (result.success) {
+          copiedLibraries.push(...result.targetNames);
+        } else {
+          errors.push(`库 ${libsPath[index]}: ${result.error}`);
+        }
+      });
+
+      if (errors.length > 0) {
+        console.warn('以下库处理失败:', errors);
+      }
+
+      console.log(`并行处理完成，成功处理 ${copiedLibraries.length} 个库目录`);
+      return copiedLibraries;
+    } catch (error) {
+      console.error('并行处理库失败:', error);
+      throw error;
+    }
   }
 
   /**
