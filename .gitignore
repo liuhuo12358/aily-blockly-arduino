@@ -13,7 +13,10 @@ npm-debug.log
 yarn-error.log
 /child/node
 /child/clangd
+<<<<<<< HEAD
+=======
 /child/aily-builder
+>>>>>>> stao
 
 # IDEs and editors
 .idea/

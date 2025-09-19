@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
-import { BlocklyService } from '../../../blockly/blockly.service';
 import { ProjectService } from '../../../services/project.service';
 import { ToolUseResult } from "./tools";
+import { BlocklyService } from '../../../editors/blockly-editor/services/blockly.service';
 
 export interface ReloadAbiJsonArgs {
   projectPath?: string;

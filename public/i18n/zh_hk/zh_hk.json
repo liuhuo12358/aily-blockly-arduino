@@ -24,7 +24,8 @@
         "USER_MANUAL": "使用者手冊",
         "EXAMPLES": "範例程式",
         "UPDATE": "檢查更新",
-        "USER_AUTH": "用戶服務"
+        "USER_AUTH": "用戶服務",
+        "LIB_MANAGER": "庫管理"
     },
     "ESP32": {
         "UPLOAD_SPEED": "燒錄速度",

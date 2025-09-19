@@ -9,16 +9,14 @@ import { NzResizableModule, NzResizeEvent } from 'ng-zorro-antd/resizable';
 import { SubWindowComponent } from '../../components/sub-window/sub-window.component';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
-import { Observable, tap, Subscription } from 'rxjs';
+import { Subscription } from 'rxjs';
 import { ChatService, ChatTextOptions } from './services/chat.service';
 import { NzToolTipModule } from 'ng-zorro-antd/tooltip';
-import { SimplebarAngularComponent, SimplebarAngularModule } from 'simplebar-angular';
 import { MenuComponent } from '../../components/menu/menu.component';
 import { IMenuItem } from '../../configs/menu.config';
 import { McpService } from './services/mcp.service';
 import { ProjectService } from '../../services/project.service';
-import { CmdOutput, CmdService } from '../../services/cmd.service';
-import { BlocklyService } from '../../blockly/blockly.service';
+import { CmdService } from '../../services/cmd.service';
 import { newProjectTool } from './tools/createProjectTool';
 import { executeCommandTool } from './tools/executeCommandTool';
 import { askApprovalTool } from './tools/askApprovalTool';
@@ -34,12 +32,12 @@ import { deleteFolderTool } from './tools/deleteFolderTool';
 import { checkExistsTool } from './tools/checkExistsTool';
 import { getDirectoryTreeTool } from './tools/getDirectoryTreeTool';
 import { fetchTool, FetchToolService } from './tools/fetchTool';
-import { 
-  smartBlockTool, 
-  connectBlocksTool, 
-  createCodeStructureTool, 
-  configureBlockTool, 
-  variableManagerTool, 
+import {
+  smartBlockTool,
+  connectBlocksTool,
+  createCodeStructureTool,
+  configureBlockTool,
+  variableManagerTool,
   findBlockTool,
   deleteBlockTool,
   getWorkspaceOverviewTool  // 新增工具导入
@@ -73,6 +71,7 @@ import { NzMessageService } from 'ng-zorro-antd/message';
 import { TOOLS } from './tools/tools';
 import { AuthService } from '../../services/auth.service';
 import { resolveObjectURL } from 'buffer';
+import { BlocklyService } from '../../editors/blockly-editor/services/blockly.service';
 // import { reloadAbiJsonTool, reloadAbiJsonToolSimple } from './tools';
 
 @Component({
@@ -87,7 +86,6 @@ import { resolveObjectURL } from 'buffer';
     ToolContainerComponent,
     NzResizableModule,
     NzToolTipModule,
-    SimplebarAngularModule,
     MenuComponent
   ],
   templateUrl: './aily-chat.component.html',
@@ -307,12 +305,12 @@ export class AilyChatComponent implements OnDestroy {
           isSessionStarting: this.isSessionStarting,
           currentSessionId: this.sessionId
         });
-        
+
         // 只在登录状态下调用startSession，避免登出时重复显示登录按钮
         if (!this.hasInitializedForThisLogin && !this.isSessionStarting && isLoggedIn) {
           this.hasInitializedForThisLogin = true;
-          this.list = [...this.defaultList.map(item => ({...item}))]; // 重置消息列表
-          
+          this.list = [...this.defaultList.map(item => ({ ...item }))]; // 重置消息列表
+
           this.startSession().then((res) => {
             console.log("startSession result: ", res);
             // 获取历史记录
@@ -321,7 +319,7 @@ export class AilyChatComponent implements OnDestroy {
             console.error("startSession error: ", err);
           });
         }
-        
+
         if (isLoggedIn) {
           // 只在登录状态且未初始化过MCP时才初始化
           if (!this.mcpInitialized) {
@@ -331,26 +329,26 @@ export class AilyChatComponent implements OnDestroy {
         } else {
           // 用户登出时的处理
           console.log('用户已登出，清理会话和状态');
-          
+
           // 停止并关闭当前会话（如果存在）
           try {
             await this.stopAndCloseSession();
           } catch (error) {
             console.error('清理会话时出错:', error);
           }
-          
+
           // 重置所有相关状态
           this.hasInitializedForThisLogin = false;
           this.mcpInitialized = false;
           this.isWaiting = false;
           this.isCompleted = false;
           this.isSessionStarting = false;
-          
+
           // 清空会话ID
           this.chatService.currentSessionId = '';
-          
+
           // 重置消息列表为默认状态
-          this.list = [...this.defaultList.map(item => ({...item}))];
+          this.list = [...this.defaultList.map(item => ({ ...item }))];
 
           let errData = {
             status: 422,
@@ -360,16 +358,16 @@ export class AilyChatComponent implements OnDestroy {
 \`\`\`aily-error
 ${JSON.stringify(errData)}
 \`\`\`\n\n`)
-          
+
           // 清理工具调用状态
           this.toolCallStates = {};
-          
+
           // 断开流连接
           if (this.messageSubscription) {
             this.messageSubscription.unsubscribe();
             this.messageSubscription = null;
           }
-          
+
           console.log('用户登出状态清理完成');
         }
       }
@@ -540,13 +538,13 @@ ${JSON.stringify(errData)}
       console.log('startSession 被跳过: 会话正在启动中');
       return Promise.resolve();
     }
-    
-    console.log('开始启动会话...', { 
+
+    console.log('开始启动会话...', {
       currentSessionId: this.sessionId,
-      isSessionStarting: this.isSessionStarting 
+      isSessionStarting: this.isSessionStarting
     });
     this.isSessionStarting = true;
-    
+
     // tools + mcp tools
     this.isCompleted = false;
     let tools = this.tools;
@@ -614,7 +612,7 @@ ${JSON.stringify(errData)}
       this.stop();
       return;
     }
-    
+
 
 
     // 发送消息时重新启用自动滚动
@@ -637,7 +635,7 @@ ${JSON.stringify(errData)}
   send(sender: string, content: string, clear: boolean = true): void {
     let text = content.trim();
     if (!this.sessionId || !text) return;
-    
+
 
 
     if (sender === 'user') {
@@ -693,11 +691,11 @@ ${JSON.stringify(errData)}
       },
       error: (error) => {
         console.error('发送消息失败:', error);
-        
+
         // 检查是否是502错误且还有重试次数
         if (error.status === 502 && retryCount > 0) {
           console.log(`遇到502错误，还有${retryCount}次重试机会，正在重试...`);
-          
+
           // 延迟1秒后重试
           setTimeout(() => {
             this.sendMessageWithRetry(sessionId, text, sender, clear, retryCount - 1);
@@ -705,14 +703,14 @@ ${JSON.stringify(errData)}
         } else {
           // 重试次数用完或非502错误，显示错误信息
           this.isWaiting = false;
-          
+
           let errorMessage = '发送消息失败';
           if (error.status === 502) {
             errorMessage = '服务器暂时无法响应，请稍后重试';
           } else if (error.message) {
             errorMessage = error.message;
           }
-          
+
           this.appendMessage('error', `
 \`\`\`aily-error
 {
@@ -1241,7 +1239,7 @@ ${JSON.stringify(errData)}
                     break;
                   case 'edit_abi_file':
                     console.log('[编辑ABI文件工具被调用]', toolArgs);
-                    
+
                     // 根据操作模式生成不同的状态文本
                     let abiOperationText = "正在编辑ABI文件...";
                     if (toolArgs.replaceStartLine !== undefined) {
@@ -1255,7 +1253,7 @@ ${JSON.stringify(errData)}
                     } else if (toolArgs.replaceMode === false) {
                       abiOperationText = "正在向ABI文件末尾追加内容...";
                     }
-                    
+
                     this.appendMessage('aily', `
 
 \`\`\`aily-state
@@ -1371,7 +1369,7 @@ ${JSON.stringify(errData)}
                     console.log('  - 输入:', toolArgs.inputs);
                     console.log('  - 父级连接:', toolArgs.parentConnection);
                     console.log('  - 创建变量:', toolArgs.createVariables);
-                    
+
                     this.appendMessage('aily', `
 
 \`\`\`aily-state
@@ -1559,10 +1557,10 @@ ${JSON.stringify(errData)}
                       // 根据操作类型显示不同的成功消息
                       const operation = toolArgs.operation || 'unknown';
                       const itemTitle = toolArgs.content || toolArgs.title || '项目';
-                      
+
                       // 基础成功消息
                       let baseMessage = '';
-                      switch(operation) {
+                      switch (operation) {
                         case 'add':
                           baseMessage = `TODO项目添加成功: ${itemTitle}`;
                           break;
@@ -1593,7 +1591,7 @@ ${JSON.stringify(errData)}
                         default:
                           baseMessage = `TODO操作完成`;
                       }
-                      
+
                       // // 如果有todos数据，添加任务列表显示
                       // if (toolResult.todos && Array.isArray(toolResult.todos) && toolResult.todos.length > 0) {
                       //   const todoList = toolResult.todos.map(todo => {
@@ -1603,7 +1601,7 @@ ${JSON.stringify(errData)}
                       //                         todo.priority === 'medium' ? '🟡' : '🟢';
                       //     return `${priorityIcon} ${todo.content} ${statusIcon}`;
                       //   }).join('\n');
-                        
+
                       //   resultText = `${baseMessage}\n\n当前任务列表:\n${todoList}`;
                       // } else {
                       resultText = baseMessage;
@@ -1940,13 +1938,13 @@ ${JSON.stringify(errData)}
 
   async newChat() {
     console.log('启动新会话');
-    
+
     // 防止重复创建新会话
     if (this.isSessionStarting) {
       console.log('新会话正在创建中，跳过重复调用');
       return;
     }
-    
+
     this.list = [...this.defaultList.map(item => ({...item}))];
 
     console.log("CurrentList: ", this.list);
@@ -1957,23 +1955,23 @@ ${JSON.stringify(errData)}
     try {
       // 先停止并关闭当前会话
       await this.stopAndCloseSession();
-      
+
       // 确保会话完全关闭后再清空ID
       this.chatService.currentSessionId = '';
-      
+
       // 重置会话启动标志和初始化标志
       this.isSessionStarting = false;
       this.hasInitializedForThisLogin = false;
-      
+
       // 等待一小段时间确保所有异步操作完成
       await new Promise(resolve => setTimeout(resolve, 100));
-      
+
       // 启动新会话
       await this.startSession();
-      
+
     } catch (error) {
       console.error('新会话启动失败:', error);
-      
+
       // 即使失败也要确保标志位重置
       this.isSessionStarting = false;
     }
@@ -2250,7 +2248,7 @@ ${JSON.stringify(errData)}
    */
   ngOnDestroy() {
     console.log('AilyChatComponent 正在销毁...');
-    
+
     // 清理消息订阅
     if (this.messageSubscription) {
       this.messageSubscription.unsubscribe();

@@ -1,8 +1,7 @@
 import { Injectable } from '@angular/core';
-import { BehaviorSubject } from 'rxjs';
+import { BehaviorSubject, Subject } from 'rxjs';
 import { UiService } from './ui.service';
 import { NewProjectData } from '../windows/project-new/project-new.component';
-import { BlocklyService } from '../blockly/blockly.service';
 import { ElectronService } from './electron.service';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { pinyin } from "pinyin-pro";
@@ -11,6 +10,7 @@ import { CmdService } from './cmd.service';
 import { generateDateString } from '../func/func';
 import { ConfigService } from './config.service';
 import { ESP32_CONFIG_MENU } from '../configs/esp32.config';
+import { ActionService } from './action.service';
 
 const { pt } = (window as any)['electronAPI'].platform;
 
@@ -31,6 +31,10 @@ interface ProjectPackageData {
 export class ProjectService {
 
   stateSubject = new BehaviorSubject<'default' | 'loading' | 'loaded' | 'saving' | 'saved' | 'error'>('default');
+  
+  // 开发板变更事件通知，只在变更时发出
+  boardChangeSubject = new Subject<void>();
+
   currentPackageData: ProjectPackageData = {
     name: 'aily blockly',
   };
@@ -38,26 +42,21 @@ export class ProjectService {
   projectRootPath: string;
   currentProjectPath: string;
   currentBoardConfig: any;
-  // currentProjectConfig: any[]; // 编译和上传配置
-
-  isMainWindow = false;
-  isInstalling = false;
 
   constructor(
     private uiService: UiService,
-    private blocklyService: BlocklyService,
     private electronService: ElectronService,
     private message: NzMessageService,
     private router: Router,
     private cmdService: CmdService,
-    private configService: ConfigService
+    private configService: ConfigService,
+    private actionService: ActionService,
   ) {
   }
 
   // 初始化UI服务，这个init函数仅供main-window使用
   async init() {
     if (this.electronService.isElectron) {
-      this.isMainWindow = true;
       window['ipcRenderer'].on('window-receive', async (event, message) => {
         console.log('window-receive', message);
         if (message.data.action == 'open-project') {
@@ -87,7 +86,9 @@ export class ProjectService {
       });
 
       this.projectRootPath = (await window['env'].get("AILY_PROJECT_PATH")).replace('%HOMEPATH%\\Documents', window['path'].getUserDocuments());
-      this.currentProjectPath = this.projectRootPath;
+      if (!this.currentProjectPath) {
+        this.currentProjectPath = this.projectRootPath;
+      }
     }
   }
 
@@ -129,7 +130,7 @@ export class ProjectService {
     this.uiService.updateFooterState({ state: 'done', text: '项目创建成功' });
     // 此后就是打开项目(projectOpen)的逻辑，理论可复用，由于此时在新建项目窗口，因此要告知主窗口，进行打开项目操作
     await window['iWindow'].send({ to: 'main', data: { action: 'open-project', path: projectPath } });
-    
+
     if (closeWindow) {
       this.uiService.closeWindow();
     }
@@ -171,11 +172,13 @@ export class ProjectService {
 
   // 保存项目
   save(path = this.currentProjectPath) {
-    // 导出blockly json配置并保存
-    // console.log('save path: ', path);
-    const jsonData = this.blocklyService.getWorkspaceJson();
-    window['fs'].writeFileSync(`${path}/project.abi`, JSON.stringify(jsonData, null, 2));
-    this.stateSubject.next('saved');
+    this.actionService.dispatch('project-save', { path }, result => {
+      if (result.success) {
+        this.stateSubject.next('saved');
+      } else {
+        console.warn('项目保存失败:', result.error);
+      }
+    });
   }
 
   saveAs(path) {
@@ -245,66 +248,16 @@ export class ProjectService {
       return false;
     }
 
-    try {
-      // 获取当前工作区的 JSON 数据
-      const currentWorkspaceJson = this.blocklyService.getWorkspaceJson();
-
-      // 读取并解析已保存的 JSON 数据
-      const savedJsonStr = window['fs'].readFileSync(`${this.currentProjectPath}/project.abi`, 'utf8');
-      const savedJson = JSON.parse(savedJsonStr);
-
-      // 将当前工作区 JSON 和保存的 JSON 转为字符串进行比较
-      const currentJsonStr = JSON.stringify(currentWorkspaceJson);
-      const normalizedSavedJsonStr = JSON.stringify(savedJson);
-
-      // 比较两个 JSON 字符串是否相同
-      return currentJsonStr !== normalizedSavedJsonStr;
-    } catch (error) {
-      console.error('检查未保存更改时出错:', error);
-      // 出错时，保守地返回 true，表示可能有未保存的更改
-      return true;
-    }
+    return new Promise((resolve) => {
+      this.actionService.dispatch('project-check-unsaved', {}, (result) => {
+        console.log(result);
+        resolve(result.data.hasUnsavedChanges);
+      });
+    });
   }
-
-  // generateUniqueProjectName(prjPath, prefix = 'project_'): string {
-  //   const baseDateStr = generateDateString();
-  //   prefix = prefix + baseDateStr;
-
-  //   // 尝试使用字母后缀 a-z
-  //   for (let charCode = 97; charCode <= 122; charCode++) {
-  //     const suffix = String.fromCharCode(charCode);
-  //     const projectName: string = prefix + suffix;
-  //     const projectPath = prjPath + pt + projectName;
-
-  //     if (!window['path'].isExists(projectPath)) {
-  //       return projectName;
-  //     }
-  //   }
-
-  //   // 如果所有字母都已使用，则使用数字后缀
-  //   let numberSuffix = 0;
-  //   while (true) {
-  //     const projectName = prefix + 'a' + numberSuffix;
-  //     const projectPath = prjPath + pt + projectName;
-
-  //     if (!window['path'].isExists(projectPath)) {
-  //       return projectName;
-  //     }
-
-  //     numberSuffix++;
-
-  //     // 安全检查，防止无限循环
-  //     if (numberSuffix > 1000) {
-  //       return prefix + 'a' + Date.now(); // 极端情况下使用时间戳
-  //     }
-  //   }
-  // }
 
   // 获取当前项目的package.json
   async getPackageJson() {
-    if (!this.currentProjectPath) {
-      throw new Error('当前项目路径未设置');
-    }
     const packageJsonPath = `${this.currentProjectPath}/package.json`;
     return JSON.parse(window['fs'].readFileSync(packageJsonPath, 'utf8'));
   }
@@ -731,18 +684,13 @@ export class ProjectService {
       this.uiService.updateFooterState({ state: 'doing', text: '正在安装新开发板...' });
       await this.cmdService.runAsync(`npm install ${newBoardPackage}`, this.currentProjectPath);
 
-      // 删除项目下的.temp文件夹，如果存在的话
-      const tempPath = this.currentProjectPath + '/.temp';
-      if (window['fs'].existsSync(tempPath)) {
-        console.log('删除项目下的.temp文件夹:', tempPath);
-        await this.cmdService.runAsync(`Remove-Item -Path "${tempPath}" -Recurse -Force`);
-      } else {
-        console.log('.temp文件夹不存在，无需删除');
-      }
-
       // 3. 重新加载项目
       console.log('重新加载项目...');
       await this.projectOpen(this.currentProjectPath);
+      
+      // 触发开发板变更事件
+      this.boardChangeSubject.next();
+      
       this.uiService.updateFooterState({ state: 'done', text: '开发板切换完成' });
       this.message.success('开发板切换成功', { nzDuration: 3000 });
     } catch (error) {

@@ -24,7 +24,8 @@
         "USER_MANUAL": "Manuel Utilisateur",
         "EXAMPLES": "Exemples",
         "UPDATE": "Vérifier les mises à jour",
-        "USER_AUTH": "Service Utilisateur"
+        "USER_AUTH": "Service Utilisateur",
+        "LIB_MANAGER": "Gestionnaire de Bibliothèques"
     },
     "ESP32": {
         "UPLOAD_SPEED": "Vitesse de téléchargement",

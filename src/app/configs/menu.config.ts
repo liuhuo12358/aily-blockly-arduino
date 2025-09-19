@@ -62,6 +62,13 @@ export let HEADER_BTNS: IMenuItem[][] = [
       router: ['/main/blockly-editor']
     },
     {
+      name: 'MENU.LIB_MANAGER',
+      action: 'tool-open',
+      data: { type: 'tool', data: "lib-manager" },
+      icon: 'fa-light fa-books',
+      router: ['/main/code-editor']
+    },
+    {
       name: 'MENU.TOOL_SERIAL',
       action: 'tool-open',
       data: { type: 'tool', data: "serial-monitor" },

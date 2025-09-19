@@ -111,6 +111,8 @@ const { registerCmdHandlers } = require("./cmd");
 const { registerMCPHandlers } = require("./mcp");
 // debug模块
 const { initLogger } = require("./logger");
+// tools
+const { registerToolsHandlers } = require("./tools");
 
 let mainWindow;
 let userConf;
@@ -204,7 +206,7 @@ function loadEnv() {
   // 默认全局编译器路径
   process.env.AILY_COMPILERS_PATH = path.join(
     process.env.AILY_APPDATA_PATH,
-    "compiler",
+    "tools",
   );
   // 默认全局烧录器路径
   process.env.AILY_TOOLS_PATH = path.join(process.env.AILY_APPDATA_PATH, "tools");
@@ -318,6 +320,7 @@ function createWindow() {
   registerNpmHandlers(mainWindow);
   registerCmdHandlers(mainWindow);
   registerMCPHandlers(mainWindow);
+  registerToolsHandlers(mainWindow);
 }
 
 app.on("ready", () => {
@@ -415,6 +418,17 @@ ipcMain.handle("env-set", (event, data) => {
 
 ipcMain.handle("env-get", (event, key) => {
   return process.env[key];
+})
+
+// 移动文件到回收站
+ipcMain.handle("move-to-trash", async (event, filePath) => {
+  try {
+    const result = await shell.trashItem(filePath);
+    return { success: true, result };
+  } catch (error) {
+    console.error('Failed to move item to trash:', error);
+    return { success: false, error: error.message };
+  }
 })
 
 // 打开新实例

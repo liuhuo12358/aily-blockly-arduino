@@ -17,10 +17,6 @@ export class ActBtnComponent {
 
   disabled = false;
 
-  onClick() {
-
-  }
-
   constructor() {
   }
 
@@ -47,23 +43,4 @@ export class ActBtnComponent {
       }
     }
   }
-
-
-  // test() {
-  //   const states: ('default' | 'loading' | 'success' | 'error' | 'warn')[] =
-  //     ['default', 'loading', 'success', 'error', 'warn'];
-  //   let currentIndex = 0;
-
-  //   console.log('开始状态循环测试');
-
-  //   // 先立即设置一次，然后每10秒改变一次状态
-  //   this.state = states[currentIndex];
-  //   console.log(`状态已设置为: ${this.state}`);
-
-  //   setInterval(() => {
-  //     currentIndex = (currentIndex + 1) % states.length;
-  //     this.state = states[currentIndex];
-  //     console.log(`状态已更改为: ${this.state}`);
-  //   }, 10000);
-  // }
 }
