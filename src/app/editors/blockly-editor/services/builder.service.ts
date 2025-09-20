@@ -396,12 +396,6 @@ export class _BuilderService {
             console.log('编译命令输出:', output);
             this.streamId = output.streamId;
 
-            if (!this.isErrored && output.type == 'stderr') {
-              if (output.data) {
-                lastStdErr = output.data.trim();
-              }
-            }
-
             if (output.data) {
               const data = output.data;
               if (data.includes('\r\n') || data.includes('\n') || data.includes('\r')) {
@@ -423,19 +417,19 @@ export class _BuilderService {
                   // this.logService.update({ "detail": line });
 
                   // 检查是否有错误信息
-                  if (/error:|error during build:|failed|fatal/i.test(trimmedLine)) {
-                    console.error("检测到编译错误:", trimmedLine);
-                    // 提取更有用的错误信息，避免过长
-                    // const errorMatch = trimmedLine.match(/error:(.+?)($|(\s+at\s+))/i);
-                    // const errorText = errorMatch ? errorMatch[1].trim() : trimmedLine;
-                    // this.handleCompileError(errorText);
-                    this.isErrored = true;
-                    return;
-                  }
+                  // if (/error:|error during build:|failed|fatal/i.test(trimmedLine)) {
+                  //   console.error("检测到编译错误:", trimmedLine);
+                  //   // 提取更有用的错误信息，避免过长
+                  //   // const errorMatch = trimmedLine.match(/error:(.+?)($|(\s+at\s+))/i);
+                  //   // const errorText = errorMatch ? errorMatch[1].trim() : trimmedLine;
+                  //   // this.handleCompileError(errorText);
+                  //   this.isErrored = true;
+                  //   return;
+                  // }
 
-                  if (output.type === 'stderr') {
-                    return; // 如果是stderr输出，则不处理
-                  }
+                  // if (output.type === 'stderr') {
+                  //   return; // 如果是stderr输出，则不处理
+                  // }
 
                   // if (this.isErrored) {
                   //   // this.logService.update({ "detail": line, "state": "error" });
@@ -464,7 +458,6 @@ export class _BuilderService {
                   // 提取进度信息
                   const progressInfo = trimmedLine.trim();
                   let progressValue = 0;
-                  let isProgress = false;
 
                   // Match patterns like [========================================          ] 80%
                   const barProgressMatch = progressInfo.match(/\[.*?\]\s*(\d+)%/);
@@ -477,8 +470,6 @@ export class _BuilderService {
                     } catch (error) {
                       progressValue = 0;
                       console.warn('进度解析错误:', error);
-                    } finally {
-                      isProgress = true;
                     }
                   } else if (fractionProgressMatch) {
                     try {
@@ -488,8 +479,6 @@ export class _BuilderService {
                     } catch (error) {
                       progressValue = 0;
                       console.warn('分数进度解析错误:', error);
-                    } finally {
-                      isProgress = true;
                     }
                   }
 
@@ -513,23 +502,27 @@ export class _BuilderService {
                     this.buildCompleted = true;
                   }
 
-                  if (!isProgress && !isBuildText) {
-                    // 如果不是进度信息，则直接更新日志
-                    // 判断是否包含:Global variables use 9 bytes (0%) of dynamic memory, leaving 2039 bytes for local variables. Maximum is 2048 bytes.
-                    if (trimmedLine.includes('Global variables use')) {
-                      outputComplete = true;
-                      this.logService.update({ "detail": trimmedLine, "state": "done" });
-                    } else {
-                      if (!outputComplete) {
+                  // 如果不是进度信息，则直接更新日志
+                  // 判断是否包含:Global variables use 9 bytes (0%) of dynamic memory, leaving 2039 bytes for local variables. Maximum is 2048 bytes.
+                  if (trimmedLine.includes('Global variables use')) {
+                    outputComplete = true;
+                    this.logService.update({ "detail": trimmedLine, "state": "done" });
+                  } else {
+                    if (!outputComplete) {
+                      if (output.type == 'stderr') {
+                        this.logService.update({ "detail": trimmedLine, "state": "error" });
+                        lastStdErr = trimmedLine;
+                        this.isErrored = true;
+                      } else {
                         this.logService.update({ "detail": trimmedLine, "state": "doing" });
                       }
                     }
+                  }
 
-                    // 收集最后的几行日志用于提取固件信息
-                    lastLogLines.push(trimmedLine);
-                    if (lastLogLines.length > 30) {
-                      lastLogLines.shift(); // 保持最后30行
-                    }
+                  // 收集最后的几行日志用于提取固件信息
+                  lastLogLines.push(trimmedLine);
+                  if (lastLogLines.length > 30) {
+                    lastLogLines.shift(); // 保持最后30行
                   }
                 });
               } else {
@@ -541,23 +534,24 @@ export class _BuilderService {
             }
           },
           error: (error: any) => {
-            console.error('编译过程中发生错误:', error);
+            this.isErrored = true;
             this.handleCompileError(error.message);
             reject({ state: 'error', text: error.message });
           },
           complete: () => {
             console.log('编译命令执行完成');
             if (this.isErrored) {
-              console.error('编译过程中发生错误，编译未完成');
               // 计算编译耗时
               const buildEndTime = Date.now();
               const buildDuration = ((buildEndTime - this.buildStartTime) / 1000).toFixed(2);
               console.log(`编译失败，耗时: ${buildDuration} 秒`);
 
+              // 去掉lastStdErr中的颜色代码（"[31m[ERROR][0m Compilation failed: Compilation failed）
+              lastStdErr = lastStdErr.replace(/\[\d+(;\d+)*m/g, '');
+
               this.noticeService.update({
                 title: "编译失败",
-                text: `编译失败 (耗时: ${buildDuration}s)`,
-                detail: lastStdErr,
+                text: `${lastStdErr.slice(0, 30) + "..." || '编译未完成'} (耗时: ${buildDuration}s)`,
                 state: 'error',
                 setTimeout: 600000
               });
@@ -599,30 +593,10 @@ export class _BuilderService {
               // 终止Arduino CLI进程
 
               reject({ state: 'warn', text: `编译已取消 (耗时: ${buildDuration}s)` });
-            } else {
-              console.warn('编译命令未完成，可能是由于超时或其他原因');
-              // 计算编译耗时
-              const buildEndTime = Date.now();
-              const buildDuration = ((buildEndTime - this.buildStartTime) / 1000).toFixed(2);
-              console.log(`编译未完成，耗时: ${buildDuration} 秒`);
-
-              this.noticeService.update({
-                title: "编译失败",
-                text: `${lastStdErr.slice(0, 30) + "..." || '编译未完成'} (耗时: ${buildDuration}s)`,
-                detail: lastStdErr,
-                state: 'error',
-                setTimeout: 600000
-              });
-              this.buildInProgress = false;
-              this.passed = false;
-              // 终止Arduino CLI进程
-
-              reject({ state: 'warn', text: `编译未完成 (耗时: ${buildDuration}s)` });
             }
           }
         })
       } catch (error) {
-        console.error('编译过程中发生错误:', error);
         this.handleCompileError(error.message);
         reject({ state: 'error', text: error.message });
       }
