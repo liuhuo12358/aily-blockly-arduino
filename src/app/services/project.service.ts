@@ -16,6 +16,7 @@ const { pt } = (window as any)['electronAPI'].platform;
 
 interface ProjectPackageData {
   name: string;
+  nickname?: string;
   version?: string;
   author?: string;
   description?: string;
@@ -31,7 +32,7 @@ interface ProjectPackageData {
 export class ProjectService {
 
   stateSubject = new BehaviorSubject<'default' | 'loading' | 'loaded' | 'saving' | 'saved' | 'error'>('default');
-  
+
   // 开发板变更事件通知，只在变更时发出
   boardChangeSubject = new Subject<void>();
 
@@ -687,10 +688,10 @@ export class ProjectService {
       // 3. 重新加载项目
       console.log('重新加载项目...');
       await this.projectOpen(this.currentProjectPath);
-      
+
       // 触发开发板变更事件
       this.boardChangeSubject.next();
-      
+
       this.uiService.updateFooterState({ state: 'done', text: '开发板切换完成' });
       this.message.success('开发板切换成功', { nzDuration: 3000 });
     } catch (error) {
