@@ -42,6 +42,7 @@ interface InputConfig {
 
 interface BlockConfig {
   type: string;
+  id?: string;  // 新增：支持预设块ID
   fields?: FieldConfig;
   inputs?: InputConfig;
   position?: Position;
@@ -1311,28 +1312,118 @@ async function applyDynamicExtensions(block: any, config: any): Promise<void> {
   console.log('📦 配置:', JSON.stringify(config, null, 2));
   
   try {
-    // 首先处理 extraState（如果存在）
-    if (config.extraState) {
-      console.log('🎛️ 应用 extraState 配置:', JSON.stringify(config.extraState));
-      
-      // 特殊处理需要动态输入的块
-      if (block.type === 'blinker_widget_print' && config.inputs) {
-        console.log('🔢 blinker_widget_print 块特殊处理，扩展动态输入');
-        await extendBlockWithDynamicInputs(block, config.inputs);
-      } else if (block.loadExtraState && typeof block.loadExtraState === 'function') {
-        console.log('🔄 使用 loadExtraState 方法');
-        block.loadExtraState(config.extraState);
-      }
-    }
-    
-    // 处理需要动态输入的块类型
+    // 处理需要动态输入的块类型 - 先扩展输入，再处理extraState
     if (config.inputs) {
       const inputNames = Object.keys(config.inputs);
+      console.log('🔍 检测到输入配置:', inputNames);
       
       // 检查是否需要动态扩展输入
       if (block.type === 'blinker_widget_print' || block.type.includes('_print')) {
         console.log('🔧 检测到需要动态输入的块类型，准备扩展');
         await extendBlockWithDynamicInputs(block, config.inputs);
+        
+        // 根据实际输入数量计算并设置 itemCount
+        const inputCount = inputNames.filter(name => name.startsWith('INPUT')).length;
+        console.log(`📊 计算得到的输入数量: ${inputCount}`);
+        
+        if (inputCount > 0) {
+          // 动态设置 extraState
+          if (!config.extraState) {
+            config.extraState = {};
+          }
+          config.extraState.itemCount = inputCount;
+          console.log(`🔢 动态设置 itemCount 为: ${inputCount}`);
+          
+          // 应用到块 - 设置 itemCount_
+          block.itemCount_ = inputCount;
+          console.log(`✅ 设置块的 itemCount_ 为: ${inputCount}`);
+          
+          // 🆕 关键修复：参考 text_join.js 模式，重写 saveExtraState 方法
+          block.saveExtraState = function() {
+            console.log(`💾 saveExtraState 被调用，返回 itemCount: ${this.itemCount_}`);
+            return {
+              itemCount: this.itemCount_
+            };
+          };
+          
+          // 🆕 同时重写 loadExtraState 方法确保一致性
+          block.loadExtraState = function(state) {
+            console.log(`🔄 loadExtraState 被调用，state:`, state);
+            if (state && state.itemCount !== undefined) {
+              this.itemCount_ = state.itemCount;
+              if (this.updateShape_ && typeof this.updateShape_ === 'function') {
+                this.updateShape_();
+                console.log(`✅ loadExtraState 调用 updateShape_，itemCount_: ${this.itemCount_}`);
+              }
+            }
+          };
+          
+          // 如果有 updateShape_ 方法，调用它
+          if (block.updateShape_ && typeof block.updateShape_ === 'function') {
+            block.updateShape_();
+            console.log(`🔄 调用 updateShape_ 更新块形状，当前 itemCount_: ${block.itemCount_}`);
+          }
+        }
+      }
+    }
+    
+    // 然后处理 extraState（如果存在）
+    if (config.extraState) {
+      console.log('🎛️ 应用 extraState 配置:', JSON.stringify(config.extraState));
+      
+      // 特殊处理 text_join 块（使用 mutator 系统）
+      if (block.type === 'text_join' && config.extraState.itemCount !== undefined) {
+        console.log(`🔢 text_join 块特殊处理，设置 itemCount: ${config.extraState.itemCount}`);
+        
+        // 直接设置 itemCount_ 属性
+        block.itemCount_ = config.extraState.itemCount;
+        
+        // 如果有 updateShape_ 方法，调用它
+        if (block.updateShape_ && typeof block.updateShape_ === 'function') {
+          block.updateShape_();
+          console.log(`✅ text_join 块 updateShape_ 调用完成，itemCount_: ${block.itemCount_}`);
+        }
+      }
+      // 其他需要 itemCount 的块类型
+      else if ((block.type === 'blinker_widget_print' || block.type.includes('_print')) && config.extraState.itemCount !== undefined) {
+        console.log(`🔢 ${block.type} 块设置 itemCount: ${config.extraState.itemCount}`);
+        
+        // 直接设置 itemCount_ 属性
+        if (block.itemCount_ !== undefined) {
+          block.itemCount_ = config.extraState.itemCount;
+          console.log(`✅ 设置 ${block.type} 的 itemCount_: ${config.extraState.itemCount}`);
+        }
+        
+        // 如果有 updateShape_ 方法，调用它
+        if (block.updateShape_ && typeof block.updateShape_ === 'function') {
+          block.updateShape_();
+          console.log(`🔄 ${block.type} updateShape_ 调用完成，itemCount_: ${block.itemCount_}`);
+        }
+      }
+      // 通用的 extraState 处理
+      else if (block.loadExtraState && typeof block.loadExtraState === 'function') {
+        console.log('🔄 使用 loadExtraState 方法');
+        block.loadExtraState(config.extraState);
+      } else if (block.setSaveState && typeof block.setSaveState === 'function') {
+        console.log('🔄 使用 setSaveState 方法');
+        block.setSaveState(config.extraState);
+      } else if (config.extraState.itemCount !== undefined) {
+        // 通用的 itemCount 处理
+        console.log(`🔢 通用设置 itemCount: ${config.extraState.itemCount}`);
+        
+        // 尝试通用方式设置
+        Object.keys(config.extraState).forEach(key => {
+          if (block.hasOwnProperty(key + '_')) {
+            block[key + '_'] = config.extraState[key];
+            console.log(`✅ 设置 ${key}_: ${config.extraState[key]}`);
+          }
+        });
+        
+        // 如果块有 updateShape_ 方法，调用它
+        if (block.updateShape_ && typeof block.updateShape_ === 'function') {
+          block.updateShape_();
+          console.log('🔄 调用 updateShape_ 更新块形状');
+        }
       }
     }
     
@@ -1353,6 +1444,10 @@ async function extendBlockWithDynamicInputs(block: any, inputsConfig: any): Prom
     const inputNames = Object.keys(inputsConfig);
     console.log('🔍 需要的输入名称:', inputNames);
     
+    // 计算最高的INPUT编号
+    const maxInputNumber = getHighestInputNumber(inputNames);
+    console.log('📈 最高输入编号:', maxInputNumber);
+    
     // 检查当前块有哪些输入
     const currentInputs = [];
     if (block.inputList) {
@@ -1369,20 +1464,33 @@ async function extendBlockWithDynamicInputs(block: any, inputsConfig: any): Prom
     const missingInputs = inputNames.filter(name => !currentInputs.includes(name));
     console.log('❌ 缺少的输入:', missingInputs);
     
-    if (missingInputs.length > 0) {
-      console.log('🔧 尝试添加缺少的输入...');
+    if (missingInputs.length > 0 || maxInputNumber >= 0) {
+      console.log('🔧 尝试扩展块输入...');
       
       // 使用 custom_dynamic_extension 如果可用
       if (block.custom_dynamic_extension && typeof block.custom_dynamic_extension === 'function') {
         console.log('🎯 使用 custom_dynamic_extension 扩展块');
-        const maxInputNumber = Math.max(...inputNames
-          .filter(name => name.startsWith('INPUT'))
-          .map(name => parseInt(name.replace('INPUT', '')) || 0));
         
-        if (maxInputNumber >= 0) {
-          block.custom_dynamic_extension(maxInputNumber + 1);
-          console.log(`✅ 块已扩展到 ${maxInputNumber + 1} 个输入`);
+        // 计算需要的输入总数（最高编号+1）
+        const targetInputCount = Math.max(maxInputNumber + 1, missingInputs.length);
+        console.log(`📊 目标输入数量: ${targetInputCount}`);
+        
+        // 设置块的 itemCount_ 属性（如果存在）
+        if (block.itemCount_ !== undefined) {
+          block.itemCount_ = targetInputCount;
+          console.log(`📊 设置 itemCount_: ${targetInputCount}`);
         }
+        
+        // 调用动态扩展函数
+        block.custom_dynamic_extension(targetInputCount);
+        console.log(`✅ 块已扩展到 ${targetInputCount} 个输入`);
+        
+        // 如果有 updateShape_ 方法，调用它
+        if (block.updateShape_ && typeof block.updateShape_ === 'function') {
+          block.updateShape_();
+          console.log('🔄 调用 updateShape_ 更新块形状');
+        }
+        
       } else {
         console.log('⚠️ 块没有 custom_dynamic_extension 方法，尝试标准方法');
         
@@ -1399,6 +1507,18 @@ async function extendBlockWithDynamicInputs(block: any, inputsConfig: any): Prom
             console.warn(`⚠️ 添加输入 ${inputName} 失败:`, addError);
           }
         }
+        
+        // 设置 itemCount_ 属性（如果存在）
+        if (maxInputNumber >= 0 && block.itemCount_ !== undefined) {
+          block.itemCount_ = maxInputNumber + 1;
+          console.log(`📊 设置 itemCount_: ${maxInputNumber + 1}`);
+          
+          // 如果有 updateShape_ 方法，调用它
+          if (block.updateShape_ && typeof block.updateShape_ === 'function') {
+            block.updateShape_();
+            console.log('🔄 调用 updateShape_ 更新块形状');
+          }
+        }
       }
     }
     
@@ -1408,9 +1528,26 @@ async function extendBlockWithDynamicInputs(block: any, inputsConfig: any): Prom
 }
 
 /**
+ * 获取输入名称中的最高数字
+ */
+function getHighestInputNumber(inputNames: string[]): number {
+  let highest = -1;
+  for (const name of inputNames) {
+    const match = name.match(/INPUT(\d+)/);
+    if (match) {
+      const num = parseInt(match[1], 10);
+      if (num > highest) {
+        highest = num;
+      }
+    }
+  }
+  return highest;
+}
+
+/**
  * 配置块的输入
  */
-async function configureBlockInputs(workspace: any, block: any, inputs: InputConfig): Promise<string[]> {
+async function configureBlockInputs(workspace: any, block: any, inputs: InputConfig, blockMap?: Map<string, any>): Promise<string[]> {
   const updatedInputs: string[] = [];
 
   console.log('🔌 configureBlockInputs 开始执行');
@@ -1430,8 +1567,8 @@ async function configureBlockInputs(workspace: any, block: any, inputs: InputCon
         
         if (inputConfig.block) {
           console.log('🏗️ 创建子块...');
-          // 创建并连接块
-          const childResult = await createBlockFromConfig(workspace, inputConfig.block);
+          // 创建并连接块，传递blockMap以便子块也能被映射
+          const childResult = await createBlockFromConfig(workspace, inputConfig.block, blockMap);
           const childBlock = childResult?.block;
           if (childBlock && input.connection) {
             console.log(`✅ 子块创建成功: ${childBlock.type} (ID: ${childBlock.id})`);
@@ -1448,8 +1585,8 @@ async function configureBlockInputs(workspace: any, block: any, inputs: InputCon
           }
         } else if (inputConfig.shadow) {
           console.log('👤 创建影子块...');
-          // 创建影子块
-          const shadowResult = await createBlockFromConfig(workspace, inputConfig.shadow);
+          // 创建影子块，也传递blockMap以便影子块能被映射
+          const shadowResult = await createBlockFromConfig(workspace, inputConfig.shadow, blockMap);
           const shadowBlock = shadowResult?.block;
           if (shadowBlock && input.connection) {
             console.log(`✅ 影子块创建成功: ${shadowBlock.type} (ID: ${shadowBlock.id})`);
@@ -1498,9 +1635,12 @@ async function configureBlockInputs(workspace: any, block: any, inputs: InputCon
 
 /**
  * 从配置创建块 - 增强版本，支持嵌套输入处理
+ * @param workspace Blockly工作区
+ * @param config 块配置
+ * @param blockMap 可选的块映射表，用于存储预设ID的块以便后续连接
  * @returns 包含主块和总块数的结果对象
  */
-async function createBlockFromConfig(workspace: any, config: BlockConfig | string): Promise<{ block: any, totalBlocks: number }> {
+async function createBlockFromConfig(workspace: any, config: BlockConfig | string, blockMap?: Map<string, any>): Promise<{ block: any, totalBlocks: number }> {
   console.log('🏗️ createBlockFromConfig 开始');
   console.log('📦 块配置:', JSON.stringify(config, null, 2));
   
@@ -1529,6 +1669,12 @@ async function createBlockFromConfig(workspace: any, config: BlockConfig | strin
     console.log(`✅ 块创建成功: ${config.type} (ID: ${block.id})`);
     let totalBlocks = 1;
     
+    // 🗂️ 如果提供了blockMap且块配置有预设ID，将块添加到映射表中
+    if (blockMap && config.id) {
+      blockMap.set(config.id, block);
+      console.log(`🗂️ 块映射键设置: '${config.id}' → ${config.type}[${block.id}]`);
+    }
+    
     // 检查并应用动态扩展
     await applyDynamicExtensions(block, config);
     
@@ -1540,14 +1686,14 @@ async function createBlockFromConfig(workspace: any, config: BlockConfig | strin
     
     if (config.inputs) {
       console.log('🔌 配置块输入...');
-      await configureBlockInputs(workspace, block, config.inputs);
+      await configureBlockInputs(workspace, block, config.inputs, blockMap);
       console.log('✅ 块输入配置完成');
     }
     
     // 处理next连接
     if (config.next) {
       console.log('🔗 配置next连接...');
-      const nextResult = await createBlockFromConfig(workspace, config.next.block);
+      const nextResult = await createBlockFromConfig(workspace, config.next.block, blockMap);
       const nextBlock = nextResult?.block;
       if (nextBlock && block.nextConnection && nextBlock.previousConnection) {
         try {
@@ -2703,7 +2849,8 @@ export async function getWorkspaceOverviewTool(args?: any): Promise<ToolUseResul
       
       // 1. 完整扫描所有输入 - 不管类型，全部收集
       for (const input of inputList) {
-        console.log(`� 扫描输入: ${input.name || '匿名'} (类型: ${input.type || '未知'})`);
+        const inputTypeStr = getInputType(input);
+        console.log(`📝 扫描输入: ${input.name || '匿名'} (类型: ${input.type || '未知'} → ${inputTypeStr})`);
         
         // 收集字段值（如下拉菜单、数字输入等）
         if (input.fieldRow) {
@@ -3072,9 +3219,10 @@ function isValidField(name: string, value: any): boolean {
 // 简化的输入类型获取
 function getInputType(input: any): string {
   if (!input) return 'unknown';
-  if (input.type === 3) return 'input_statement';
-  if (input.type === 2) return 'input_value'; 
-  if (input.type === 1) return 'input_dummy';
+  // 根据Blockly常量：1=INPUT_VALUE, 2=OUTPUT_VALUE, 3=NEXT_STATEMENT, 4=PREVIOUS_STATEMENT, 5=DUMMY_INPUT
+  if (input.type === 1) return 'input_value';     // INPUT_VALUE
+  if (input.type === 3) return 'input_statement'; // NEXT_STATEMENT (用于语句连接)
+  if (input.type === 5) return 'input_dummy';     // DUMMY_INPUT (虚拟输入，只包含字段)
   return 'input_value'; // 默认
 }
 
@@ -4988,7 +5136,7 @@ async function createDynamicStructure(
   console.log('📦 创建根块:', rootConfig.type);
   console.log('🔍 根块配置:', JSON.stringify(rootConfig, null, 2));
   const enhancedRootConfig = enhanceConfigWithInputs(rootConfig, blockInputRequirements);
-  const rootResult = await createBlockFromConfig(workspace, enhancedRootConfig);
+  const rootResult = await createBlockFromConfig(workspace, enhancedRootConfig, blockMap);
   if (rootResult?.block) {
     const rootBlock = rootResult.block;
     console.log(`✅ 根块创建成功: ${rootBlock.type}[${rootBlock.id}]`);
@@ -5016,7 +5164,7 @@ async function createDynamicStructure(
     console.log(`🔍 附加块配置:`, JSON.stringify(blockConfig, null, 2));
     
     const enhancedConfig = enhanceConfigWithInputs(blockConfig, blockInputRequirements);
-    const blockResult = await createBlockFromConfig(workspace, enhancedConfig);
+    const blockResult = await createBlockFromConfig(workspace, enhancedConfig, blockMap);
     if (blockResult?.block) {
       const block = blockResult.block;
       console.log(`✅ 附加块创建成功: ${block.type}[${block.id}]`);
