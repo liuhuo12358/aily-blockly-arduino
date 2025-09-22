@@ -99,7 +99,7 @@ export class _UploaderService {
    * @param toolsPath 工具路径
    * @returns 处理后的参数列表、标志和命令信息
    */
-  private async processUploadParams(uploadParam: string, buildPath: string, toolsPath: string, sdkPath: string) {
+  private async processUploadParams(uploadParam: string, buildPath: string, toolsPath: string, sdkPath: string, baudRate: string) {
     const flags = {
       use_1200bps_touch: false,
       wait_for_upload: false
@@ -118,7 +118,7 @@ export class _UploaderService {
       } else if (param.includes('${serial}')) {
         return param.replace('${serial}', this.serialService.currentPort || '');
       } else if (param.includes('${baud}')) {
-        return param.replace('${baud}', '115200');
+        return param.replace('${baud}', baudRate || '115200');
       } else if (param.includes('${bootloader}')) {
         const bootLoaderFile = await findFile(buildPath, '*.bootloader.bin');
         return param.replace('${bootloader}', bootLoaderFile);
@@ -290,6 +290,8 @@ export class _UploaderService {
         let uploadParam = '';
         let uploadParamList: string[] = [];
 
+        let baudRate = '';
+
         // 获取上传参数
         uploadParam = boardJson.uploadParam;
         if (!uploadParam) {
@@ -298,13 +300,23 @@ export class _UploaderService {
           return;
         }
 
+        try {
+          const projectConfig = await this.projectService.getProjectConfig();
+          console.log("Project config: ", projectConfig);
+          if (projectConfig) {
+            baudRate = projectConfig?.UploadSpeed?.upload?.speed || '';
+          }
+        } catch (error) {
+          console.warn('没有额外的自定义配置');
+        }
+
         // 解析和处理上传参数
         let processedParams: string[];
         let flags: { use_1200bps_touch: boolean; wait_for_upload: boolean };
         let command: string;
         
         try {
-          const result = await this.processUploadParams(uploadParam, buildPath, toolsPath, sdkPath);
+          const result = await this.processUploadParams(uploadParam, buildPath, toolsPath, sdkPath, baudRate);
           processedParams = result.processedParams;
           flags = result.flags;
           command = result.command;
@@ -357,42 +369,45 @@ export class _UploaderService {
 
         let errorText = '';
 
-        // 获取和解析项目编译参数
-        let buildProperties = '';
-        try {
-          const projectConfig = await this.projectService.getProjectConfig();
-          if (projectConfig) {
-            const buildPropertyParams: string[] = [];
+        // // 获取和解析项目编译参数
+        // let buildProperties = '';
+        // try {
+        //   const projectConfig = await this.projectService.getProjectConfig();
+        //   if (projectConfig) {
+        //     const buildPropertyParams: string[] = [];
 
-            // 遍历配置对象，解析编译参数
-            Object.values(projectConfig).forEach((configSection: any) => {
-              if (configSection && typeof configSection === 'object') {
-                // 遍历每个配置段（如 build、upload 等）
-                Object.entries(configSection).forEach(([sectionKey, sectionValue]: [string, any]) => {
-                  // 排除upload等非编译相关的配置段
-                  if (sectionKey == 'build') return;
-                  if (sectionValue && typeof sectionValue === 'object') {
-                    // 遍历具体的配置项
-                    Object.entries(sectionValue).forEach(([key, value]: [string, any]) => {
-                      buildPropertyParams.push(`--upload-property ${sectionKey}.${key}=${value}`);
-                    });
-                  }
-                });
-              }
-            });
+        //     // 遍历配置对象，解析编译参数
+        //     Object.values(projectConfig).forEach((configSection: any) => {
+        //       if (configSection && typeof configSection === 'object') {
+        //         // 遍历每个配置段（如 build、upload 等）
+        //         Object.entries(configSection).forEach(([sectionKey, sectionValue]: [string, any]) => {
+        //           // 排除upload等非编译相关的配置段
+        //           if (sectionKey == 'build') return;
+        //           if (sectionValue && typeof sectionValue === 'object') {
+        //             // 遍历具体的配置项
+        //             Object.entries(sectionValue).forEach(([key, value]: [string, any]) => {
+        //               buildPropertyParams.push(`--upload-property ${sectionKey}.${key}=${value}`);
+        //             });
+        //           }
+        //         });
+        //       }
+        //     });
 
-            buildProperties = buildPropertyParams.join(' ');
-            if (buildProperties) {
-              buildProperties = ' ' + buildProperties; // 在前面添加空格
-            }
-          }
-        } catch (error) {
-          console.warn('获取项目配置失败:', error);
-        }
+        //     buildProperties = buildPropertyParams.join(' ');
+            
+        //     if (buildProperties) {
+        //       buildProperties = ' ' + buildProperties; // 在前面添加空格
+        //     }
+        //   }
+        // } catch (error) {
+        //   console.warn('获取项目配置失败:', error);
+        // }
 
         // 将buildProperties添加到compilerParam中
         // uploadParam += buildProperties;
         // const uploadCmd = uploadParam;
+
+        const buildProperties = '';
 
         const uploadCmd = `${command} ${uploadParamList.slice(1).join(' ')}${buildProperties}`;
         console.log("Upload cmd: ", uploadCmd);
