@@ -572,7 +572,7 @@ export class _BuilderService {
                 setTimeout: 600000
               });
 
-              this.logService.update({ title: "编译失败", detail: fullStdErr, state: 'error' });
+              this.logService.update({ detail: fullStdErr, state: 'error' });
 
               // this.logService.update({ title: "编译失败", detail: lastStdErr, state: 'error' });
               this.buildInProgress = false;
