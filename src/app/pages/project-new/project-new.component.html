@@ -29,37 +29,19 @@
   <div class="content">
     <div class="left">
       <div class="left-inner">
-        <nz-steps [nzCurrent]="currentStep" nzDirection="vertical" nzSize="small">
+        <app-brand-list (brandSelected)="onBrandSelected($event)"></app-brand-list>
+        <!-- <nz-steps [nzCurrent]="currentStep" nzDirection="vertical" nzSize="small">
           <nz-step [nzTitle]="'PROJECT_NEW.STEPS.SELECT_BOARD' | translate"></nz-step>
           <nz-step [nzTitle]="'PROJECT_NEW.STEPS.BASIC_SETTINGS' | translate"></nz-step>
           <nz-step [nzTitle]="'PROJECT_NEW.STEPS.CREATE_PROJECT' | translate"
             [nzIcon]="currentStep == 2 ? iconTemplate : null"></nz-step>
         </nz-steps>
-        <ng-template #iconTemplate><i class="fa-duotone fa-solid fa-spinner-third"></i></ng-template>
+        <ng-template #iconTemplate><i class="fa-duotone fa-solid fa-spinner-third"></i></ng-template> -->
       </div>
     </div>
     <div class="right">
       @if (currentStep == 0) {
       <div class="right-inner flex-start">
-        <div class="brand-selector">
-          <div class="ccenter">
-            <img src="brands\arduino.webp">
-          </div>
-          <div class="ccenter">
-            <img src="brands\espressif.webp">
-          </div>
-          <div class="ccenter">
-            <img src="brands\raspberrypi.webp">
-          </div>
-          <div class="ccenter">
-            <img src="sponsor\seeedstudio\logo.webp">
-          </div>
-          <div class="ccenter">
-            <img src="sponsor\openjumper\logo.webp">
-          </div>
-          <div class="ccenter">Nulllab</div>
-          <div class="ccenter">Other Brand</div>
-        </div>
         <div class="board-selector sscroll">
           @for (board of boardList; track board.name) {
           <div class="board ccenter btn" [ngClass]="{ selected: currentBoard == board, disabled: board.disabled }"

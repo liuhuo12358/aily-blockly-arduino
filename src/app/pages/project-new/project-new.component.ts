@@ -13,6 +13,7 @@ import { NzTagModule } from 'ng-zorro-antd/tag';
 import { TranslateModule } from '@ngx-translate/core';
 import { NzToolTipModule } from 'ng-zorro-antd/tooltip';
 import { Router } from '@angular/router';
+import { BrandListComponent } from './components/brand-list/brand-list.component';
 
 const { pt } = (window as any)['electronAPI'].platform;
 
@@ -27,13 +28,15 @@ const { pt } = (window as any)['electronAPI'].platform;
     NzStepsModule,
     NzSelectModule,
     NzTagModule,
-    TranslateModule
+    TranslateModule,
+    BrandListComponent
   ],
   templateUrl: './project-new.component.html',
   styleUrl: './project-new.component.scss',
 })
 export class ProjectNewComponent {
   currentStep = 0;
+  selectedBrand: any = null;
 
   currentBoard: any = null;
   newProjectData: NewProjectData = {
@@ -181,6 +184,41 @@ export class ProjectNewComponent {
     } else {
       // 如果没有历史记录，跳转到项目初始默认路径
       this.router.navigate(['/main/guide']);
+    }
+  }
+
+  onBrandSelected(brand: any) {
+    this.selectedBrand = brand;
+    console.log('选中的品牌:', brand);
+    
+    // 根据选中的品牌过滤开发板列表
+    if (brand && brand.value && brand.value !== 'all') {
+      // 根据品牌值过滤开发板
+      this.boardList = this._boardList.filter(board => {
+        // 将品牌名称转换为小写进行比较，处理不同的命名方式
+        const boardBrand = board.brand ? board.brand.toLowerCase() : '';
+        const selectedBrandValue = brand.value.toLowerCase();
+        
+        // 支持多种匹配方式
+        return boardBrand === selectedBrandValue || 
+               boardBrand.includes(selectedBrandValue) ||
+               selectedBrandValue.includes(boardBrand);
+      });
+      
+      console.log('过滤后的开发板列表:', this.boardList);
+      
+      // 如果有过滤结果，选择第一个开发板
+      if (this.boardList.length > 0) {
+        this.selectBoard(this.boardList[0]);
+      } else {
+        this.currentBoard = null;
+      }
+    } else {
+      // 如果选择"显示全部"或没有选中品牌，显示所有开发板
+      this.boardList = JSON.parse(JSON.stringify(this._boardList));
+      if (this.boardList.length > 0) {
+        this.selectBoard(this.boardList[0]);
+      }
     }
   }
 
