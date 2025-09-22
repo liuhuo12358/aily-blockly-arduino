@@ -82,15 +82,13 @@ export class _BuilderService {
     }
     
     this.initialized = true;
-    this.actionService.listen('compile-begin', (action) => {
-      console.log('>>>>> 收到编译请求: ', action);
-      this.build().then(result => {
-        console.log("build success: ", result);
-      }).catch(msg => {
-        if (msg?.state === 'warn') {
-          console.log("build warn: ", msg);
-        }
-      });
+    this.actionService.listen('compile-begin', async (action) => {
+      try {
+        const result = await this.build();
+        return { success: true, result };
+      } catch (msg) {
+        throw new Error(msg?.message || 'Compilation failed');
+      }
     }, 'builder-compile-begin');
     this.actionService.listen('compile-cancel', (action) => {
       this.cancel();
@@ -127,7 +125,6 @@ export class _BuilderService {
   }
 
   async build(): Promise<ActionState> {
-    console.log(">>> 开始编译")
     return new Promise<ActionState>(async (resolve, reject) => {
       try {
         if (this.buildInProgress) {

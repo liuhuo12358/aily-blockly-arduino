@@ -273,7 +273,11 @@ export class HeaderComponent {
         if (item.state === 'doing') return;
         item.state = 'doing';
         this.builderService.build().then(result => {
-          item.state = 'done';
+          if (result) {
+            item.state = 'done';
+          } else {
+            item.state = 'error';
+          }
         }).catch(err => {
           console.log("编译未完成: ", JSON.stringify(err));
           if (err.state) item.state = err.state;

@@ -39,16 +39,18 @@ export class BuilderService {
    * 开始编译
    */
   async build() {
-    new Promise<void>((resolve, reject) => {
-    this.actionService.dispatch('compile-begin', {}, result => {
-        if (result.success) {
-          resolve()
-        } else {
-          reject()
-        }
-      });
-
-    })
+    try {
+      const result = await this.actionService.dispatchWithFeedback('compile-begin', {}, 30000).toPromise();
+      console.log('>>>>> 编译结果:', result);
+      if (result.success) {
+        return true;
+      } else {
+        return false;
+      }
+    } catch (error) {
+      console.error('编译失败:', error);
+      throw error;
+    }
   }
 
   /*
