@@ -87,7 +87,7 @@ export class _BuilderService {
         const result = await this.build();
         return { success: true, result };
       } catch (msg) {
-        throw new Error(msg?.message || 'Compilation failed');
+        return { success: false, result: msg };
       }
     }, 'builder-compile-begin');
     this.actionService.listen('compile-cancel', (action) => {
@@ -105,7 +105,6 @@ export class _BuilderService {
 
   // 添加这个错误处理方法
   private handleCompileError(errorMessage: string) {
-    console.error("handle errror: ", errorMessage);
     // 计算编译耗时
     const buildEndTime = Date.now();
     const buildDuration = this.buildStartTime > 0 ? ((buildEndTime - this.buildStartTime) / 1000).toFixed(2) : '0.00';

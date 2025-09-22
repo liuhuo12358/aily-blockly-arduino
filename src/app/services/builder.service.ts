@@ -42,11 +42,7 @@ export class BuilderService {
     try {
       const result = await this.actionService.dispatchWithFeedback('compile-begin', {}, 30000).toPromise();
       console.log('>>>>> 编译结果:', result);
-      if (result.success) {
-        return true;
-      } else {
-        return false;
-      }
+      return result.data?.result;
     } catch (error) {
       console.error('编译失败:', error);
       throw error;

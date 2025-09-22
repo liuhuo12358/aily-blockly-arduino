@@ -273,11 +273,7 @@ export class HeaderComponent {
         if (item.state === 'doing') return;
         item.state = 'doing';
         this.builderService.build().then(result => {
-          if (result) {
-            item.state = 'done';
-          } else {
-            item.state = 'error';
-          }
+          item.state = result.state || 'done';
         }).catch(err => {
           console.log("编译未完成: ", JSON.stringify(err));
           if (err.state) item.state = err.state;
@@ -287,7 +283,7 @@ export class HeaderComponent {
         if (item.state === 'doing') return;
         item.state = 'doing';
         this.uploaderService.upload().then(result => {
-          item.state = result.state;
+          item.state = result.state || 'done';
         }).catch(err => {
           console.log("上传未完成: ", JSON.stringify(err));
           if (err.state) item.state = err.state;
