@@ -29,21 +29,6 @@ function setupUniqueUserDataPath() {
 // 在应用初始化之前设置独立的用户数据目录
 setupUniqueUserDataPath();
 
-// GitHub OAuth 简化处理（仅转发协议回调到渲染进程）
-
-// 注册自定义协议
-const PROTOCOL_NAME = 'ailyblockly';
-if (!app.isDefaultProtocolClient(PROTOCOL_NAME)) {
-  app.setAsDefaultProtocolClient(PROTOCOL_NAME);
-}
-
-// 确保单实例应用
-const gotTheLock = app.requestSingleInstanceLock();
-if (!gotTheLock) {
-  app.quit();
-  return;
-}
-
 app.commandLine.appendSwitch('js-flags', '--max-old-space-size=4096');
 app.commandLine.appendSwitch('enable-features', 'V8LazyCodeGeneration,V8CacheOptions');
 
@@ -58,14 +43,6 @@ let pendingQueryParams = null;
 
 // 处理命令行参数中的 .abi 文件和路由参数
 function handleCommandLineArgs(argv) {
-  // 处理协议 URL
-  const protocolUrl = argv.find(arg => arg.startsWith(`${PROTOCOL_NAME}://`));
-  if (protocolUrl) {
-    console.log('Found protocol URL:', protocolUrl);
-    handleProtocolUrl(protocolUrl);
-    return true;
-  }
-
   // 处理 .abi 文件
   const abiFile = argv.find(arg => arg.endsWith('.abi') && fs.existsSync(arg));
   if (abiFile) {
@@ -98,60 +75,8 @@ function handleCommandLineArgs(argv) {
   return !!(abiFile || routeArg || queryArg);
 }
 
-function handleProtocolUrl(url) {
-  console.log('Handling protocol URL:', url);
-  
-  try {
-    const urlObj = new URL(url);
-    
-    if (urlObj.pathname === '/auth/callback') {
-      // 直接将协议回调数据转发给渲染进程处理
-      if (mainWindow && mainWindow.webContents) {
-        mainWindow.webContents.send('oauth-callback', {
-          url: url,
-          code: urlObj.searchParams.get('code'),
-          state: urlObj.searchParams.get('state'),
-          error: urlObj.searchParams.get('error'),
-          error_description: urlObj.searchParams.get('error_description')
-        });
-      }
-    }
-    
-    // 聚焦窗口
-    if (mainWindow) {
-      if (mainWindow.isMinimized()) mainWindow.restore();
-      mainWindow.focus();
-    }
-    
-  } catch (error) {
-    console.error('Error parsing protocol URL:', error);
-    if (mainWindow && mainWindow.webContents) {
-      mainWindow.webContents.send('oauth-callback', {
-        url: url,
-        error: 'invalid_url',
-        error_description: 'Failed to parse protocol URL'
-      });
-    }
-  }
-}
-
 // 在应用启动时处理命令行参数
 handleCommandLineArgs(process.argv);
-
-// 监听第二个实例（Windows/Linux）
-app.on('second-instance', (event, commandLine, workingDirectory) => {
-  // 有人尝试运行第二个实例，聚焦我们的窗口
-  if (mainWindow) {
-    if (mainWindow.isMinimized()) mainWindow.restore();
-    mainWindow.focus();
-  }
-  
-  // 处理协议URL
-  const protocolUrl = commandLine.find(arg => arg.startsWith(`${PROTOCOL_NAME}://`));
-  if (protocolUrl) {
-    handleProtocolUrl(protocolUrl);
-  }
-});
 
 // macOS下处理文件打开
 app.on('open-file', (event, filePath) => {
@@ -174,16 +99,6 @@ app.on('open-file', (event, filePath) => {
     } else {
       pendingFileToOpen = projectDir;
     }
-  }
-});
-
-// macOS下处理协议URL
-app.on('open-url', (event, url) => {
-  event.preventDefault();
-  console.log('macOS open-url:', url);
-  
-  if (url.startsWith(`${PROTOCOL_NAME}://`)) {
-    handleProtocolUrl(url);
   }
 });
 
@@ -755,7 +670,3 @@ function cleanupOldInstances() {
 }
 
 cleanupOldInstances();
-
-// OAuth 处理已转移到渲染进程，主进程只负责协议回调转发
-
-
