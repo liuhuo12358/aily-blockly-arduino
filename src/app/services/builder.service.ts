@@ -30,7 +30,7 @@ export class BuilderService {
       this.clearCache(this.projectService.currentProjectPath).then(() => {
         console.log('编译缓存已清除');
       }).catch(err => {
-        console.error('清除编译缓存时出错:', err);
+        console.warn('清除编译缓存时出错:', err);
       });
     });
   }
@@ -44,7 +44,7 @@ export class BuilderService {
       console.log('>>>>> 编译结果:', result);
       return result.data?.result;
     } catch (error) {
-      console.error('编译失败:', error);
+      // console.error('编译失败:', error);
       throw error;
     }
   }

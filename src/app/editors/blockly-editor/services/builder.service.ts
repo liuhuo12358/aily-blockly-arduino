@@ -508,9 +508,12 @@ export class _BuilderService {
                     if (!outputComplete) {
                       if (output.type == 'stderr') {
                         // this.logService.update({ "detail": trimmedLine, "state": "error" });
-                        lastStdErr = trimmedLine;
-                        fullStdErr += trimmedLine + '\n';
-                        this.isErrored = true;
+                        
+                        if (trimmedLine.includes('[ERROR]') || trimmedLine.toLowerCase().includes("[error]")) {
+                          lastStdErr = trimmedLine;
+                          fullStdErr += trimmedLine + '\n';
+                          this.isErrored = true;
+                        }
                       } else {
                         this.logService.update({ "detail": trimmedLine, "state": "doing" });
                       }
