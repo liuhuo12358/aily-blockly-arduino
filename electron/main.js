@@ -196,6 +196,8 @@ const { registerCmdHandlers } = require("./cmd");
 const { registerMCPHandlers } = require("./mcp");
 // debug模块
 const { initLogger } = require("./logger");
+// tools
+const { registerToolsHandlers } = require("./tools");
 
 let mainWindow;
 let userConf;
@@ -237,6 +239,7 @@ function loadEnv() {
   if (isWin32) {
     // 设置Windows的环境变量
     process.env.AILY_APPDATA_PATH = conf["appdata_path"]["win32"].replace('%HOMEPATH%', os.homedir());
+    process.env.AILY_BUILDER_BUILD_PATH = path.join(os.homedir(), "AppData", "Local", "aily-builder", "project");
   } else if (isDarwin) {
     // 设置macOS的环境变量
     process.env.AILY_APPDATA_PATH = conf["appdata_path"]["darwin"];
@@ -281,12 +284,14 @@ function loadEnv() {
   process.env.AILY_NPM_REGISTRY = conf["npm_registry"][0];
   // 7za path
   process.env.AILY_7ZA_PATH = path.join(childPath, "7za.exe")
+  // aily builder path
+  process.env.AILY_BUILDER_PATH = path.join(childPath, "aily-builder");
   // 全局npm包路径
   process.env.AILY_NPM_PREFIX = process.env.AILY_APPDATA_PATH;
   // 默认全局编译器路径
   process.env.AILY_COMPILERS_PATH = path.join(
     process.env.AILY_APPDATA_PATH,
-    "compiler",
+    "tools",
   );
   // 默认全局烧录器路径
   process.env.AILY_TOOLS_PATH = path.join(process.env.AILY_APPDATA_PATH, "tools");
@@ -296,6 +301,16 @@ function loadEnv() {
   process.env.AILY_ZIP_URL = conf["resource"][0];
 
   process.env.AILY_PROJECT_PATH = conf["project_path"];
+
+  // 将aily builder以及其中的ninja添加到PATH中
+  const ailyBuilderPath = path.join(process.env.AILY_BUILDER_PATH);
+  if (fs.existsSync(ailyBuilderPath)) {
+    process.env.PATH = `${process.env.PATH}${path.delimiter}${ailyBuilderPath}`;
+  }
+  const ninjaPath = path.join(process.env.AILY_BUILDER_PATH, 'ninja');
+  if (fs.existsSync(ninjaPath)) {
+    process.env.PATH = `${process.env.PATH}${path.delimiter}${ninjaPath}`;
+  }
 }
 
 
@@ -390,6 +405,7 @@ function createWindow() {
   registerNpmHandlers(mainWindow);
   registerCmdHandlers(mainWindow);
   registerMCPHandlers(mainWindow);
+  registerToolsHandlers(mainWindow);
 }
 
 app.on("ready", () => {
@@ -487,6 +503,17 @@ ipcMain.handle("env-set", (event, data) => {
 
 ipcMain.handle("env-get", (event, key) => {
   return process.env[key];
+})
+
+// 移动文件到回收站
+ipcMain.handle("move-to-trash", async (event, filePath) => {
+  try {
+    const result = await shell.trashItem(filePath);
+    return { success: true, result };
+  } catch (error) {
+    console.error('Failed to move item to trash:', error);
+    return { success: false, error: error.message };
+  }
 })
 
 // 打开新实例

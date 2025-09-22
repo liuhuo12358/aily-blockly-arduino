@@ -48,10 +48,10 @@ export const routes: Routes = [
             }
         ]
     },
-    {
-        path: 'ai-manager',
-        loadComponent: () => import('./pages/ai-manager/ai-manager.component').then(m => m.AiManagerComponent)
-    },
+    // {
+    //     path: 'ai-manager',
+    //     loadComponent: () => import('./pages/ai-manager/ai-manager.component').then(m => m.AiManagerComponent)
+    // },
     // {
     //     path:"sub",
     //     loadComponent: () => import('./sub-window/sub-window.component').then(m => m.SubWindowComponent)
@@ -78,7 +78,7 @@ export const routes: Routes = [
     },
     {
         path: "code-viewer",
-        loadComponent: () => import('./tools/code-viewer/code-viewer.component').then(m => m.CodeViewerComponent)
+        loadComponent: () => import('./editors/blockly-editor/tools/code-viewer/code-viewer.component').then(m => m.CodeViewerComponent)
     },
     {
         path: "simulator",

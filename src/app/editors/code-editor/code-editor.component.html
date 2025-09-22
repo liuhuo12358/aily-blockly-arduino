@@ -7,13 +7,14 @@
             </nz-resize-handle>
             <div class="left-box">
                 <app-file-tree [rootPath]="projectPath" [(selectedFile)]="selectedFile"
-                    (selectedFileChange)="selectedFileChange($event)"></app-file-tree>
+                    (selectedFileChange)="selectedFileChange($event)"
+                    (filesDeleted)="onFilesDeleted($event)"></app-file-tree>
             </div>
         </nz-sider>
         <nz-content>
             <div class="right-box">
                 @if (openedFiles.length > 0) {
-                <nz-tabset [nzSize]="'small'" [(nzSelectedIndex)]="selectedIndex"
+                <nz-tabset [nzSize]="'small'" [nzSelectedIndex]="selectedIndex"
                     (nzSelectedIndexChange)="onTabChange($event)" nzType="editable-card" [nzHideAdd]="true"
                     (nzClose)="closeTab($event)">
                     @for (file of openedFiles; track file.path; let i = $index) {
@@ -26,8 +27,8 @@
                     </nz-tab>
                     }
                 </nz-tabset>
-                <app-monaco-editor [code]="code" (codeChange)="onCodeChange($event)" [sdkPath]="sdkPath"
-                    [librariesPath]="librariesPath"></app-monaco-editor>
+                <app-monaco-editor [code]="code" (codeChange)="onCodeChange($event)" [filePath]="selectedFile"
+                    (openFileRequest)="onOpenFileRequest($event)"></app-monaco-editor>
                 } @else {
                 <div class="empty-editor" style="padding: 15px;">
                     <div>这是代码编辑器，是一个测试功能，还不能正常使用</div>

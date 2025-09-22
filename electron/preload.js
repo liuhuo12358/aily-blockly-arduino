@@ -15,6 +15,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
   path: {
     getUserHome: () => require("os").homedir(),
     getAppDataPath: () => process.env.AILY_APPDATA_PATH,
+    getAilyBuilderPath: () => process.env.AILY_BUILDER_PATH,
+    getAilyBuilderBuildPath: () => process.env.AILY_BUILDER_BUILD_PATH,
     getUserDocuments: () => require("os").homedir() + `${pt}Documents`,
     isExists: (path) => existsSync(path),
     getElectronPath: () => __dirname,
@@ -24,7 +26,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
     extname: (path) => require("path").extname(path),
     normalize: (path) => require("path").normalize(path),
     resolve: (path) => require("path").resolve(path),
-    basename: (path) => require("path").basename(path)
+    basename: (path, suffix = undefined) => require("path").basename(path, suffix)
   },
   versions: () => process.versions,
   SerialPort: {
@@ -160,6 +162,35 @@ contextBridge.exposeInMainWorld("electronAPI", {
     rmdirSync: (path) => require("fs").rmdirSync(path, { recursive: true, force: true }),
     renameSync: (oldPath, newPath) => require("fs").renameSync(oldPath, newPath),
   },
+  glob: {
+    // 使用glob模式查找文件
+    sync: (pattern, options = {}) => {
+      try {
+        const glob = require("glob");
+        return glob.sync(pattern, options);
+      } catch (error) {
+        console.error("Glob sync error:", error);
+        return [];
+      }
+    },
+    // 异步版本
+    async: (pattern, options = {}) => {
+      return new Promise((resolve, reject) => {
+        try {
+          const glob = require("glob");
+          glob(pattern, options, (error, files) => {
+            if (error) {
+              reject(error);
+            } else {
+              resolve(files);
+            }
+          });
+        } catch (error) {
+          reject(error);
+        }
+      });
+    }
+  },
   ble: {
 
   },
@@ -187,6 +218,15 @@ contextBridge.exposeInMainWorld("electronAPI", {
     },
     // 通过浏览器打开
     openByBrowser: (url) => shell.openExternal(url),
+    // 移动文件到回收站
+    moveToTrash: (filePath) => {
+      return new Promise((resolve, reject) => {
+        ipcRenderer
+          .invoke("move-to-trash", filePath)
+          .then((result) => resolve(result))
+          .catch((error) => reject(error));
+      });
+    },
     exitApp: () => ipcRenderer.send("window-close"),
     // 打开新的程序实例
     openNewInstance: (options = {}) => {
@@ -284,6 +324,24 @@ contextBridge.exposeInMainWorld("electronAPI", {
       return () => {
         ipcRenderer.removeListener('oauth-callback', listener);
       };
+    }
+  },
+  tools: {
+    findFileByName: (searchPath, fileName) => {
+      return new Promise((resolve, reject) => {
+        ipcRenderer
+          .invoke("find-file", searchPath, fileName)
+          .then((files) => resolve(files))
+          .catch((error) => reject(error));
+      });
+    },
+    calculateMD5: (text) => {
+      return new Promise((resolve, reject) => {
+        ipcRenderer
+          .invoke("calculate-md5", text)
+          .then((md5) => resolve(md5))
+          .catch((error) => reject(error));
+      });
     }
   }
 });

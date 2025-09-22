@@ -1,13 +1,7 @@
+import { arduinoGenerator } from "../../../editors/blockly-editor/components/blockly/generators/arduino/arduino";
 import { ToolUseResult } from "./tools";
-
-// 导入 Blockly 核心库
-declare const Blockly: any;
-
-// 导入 Arduino 代码生成器
-import { arduinoGenerator } from '../../../blockly/generators/arduino/arduino';
-
-// 导入 JSON 修复库
 import { jsonrepair } from 'jsonrepair';
+declare const Blockly: any;
 
 /**
  * Blockly 可视化编程助手 - 高级块编辑工具
@@ -6523,16 +6517,7 @@ export const blocklyEditTools = {
 // 默认导出主要的编辑工具
 export default smartBlockTool;
 
-// 调试信息：事件系统保护已启用
-console.log('🛡️ Blockly事件系统全面保护已启用 - 版本 2024.12.03');
-console.log('🔧 包含功能：');
-console.log('  - 块创建事件保护');
-console.log('  - 连接操作事件保护');  
-console.log('  - 智能插入事件保护');
-console.log('  - 拖动冲突预防');
-console.log('  - 事件组自动清理');
-
-// 初始化事件错误处理器
-setTimeout(() => {
-  initializeEventErrorHandler();
-}, 1000);
+// 初始化事件错误处理器(2025.9.16 陈吕洲 未调用就运行，非常不好，要改)
+// setTimeout(() => {  
+//   initializeEventErrorHandler();
+// }, 1000);

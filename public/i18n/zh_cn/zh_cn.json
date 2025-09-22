@@ -61,7 +61,8 @@
         "MULTI_COPY": "复制选中项",
         "MULTI_CUT": "剪切选中项",
         "MULTI_DELETE": "删除选中项",
-        "MULTI_COMPRESS": "压缩为zip"
+        "MULTI_COMPRESS": "压缩为zip",
+        "LIB_MANAGER": "库管理"
     },
     "ESP32": {
         "UPLOAD_SPEED": "烧录速度",

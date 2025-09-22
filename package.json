@@ -1,6 +1,6 @@
 {
   "name": "aily-blockly",
-  "version": "0.6.4",
+  "version": "0.6.6",
   "author": "coloz",
   "description": "aily blockly dev",
   "main": "electron/main.js",
@@ -100,7 +100,7 @@
   },
   "scripts": {
     "ng": "ng",
-    "start": "ng serve --proxy-config proxy.conf.json",
+    "start": "ng serve",
     "watch": "ng build --watch --configuration development",
     "electron": "concurrently \"npm start\" \"wait-on tcp:4200 && electron ./electron/main.js --serve\"",
     "build": "ng build --base-href ./ && electron-builder build"
@@ -123,14 +123,12 @@
     "@ngx-translate/core": "^16.0.3",
     "@splidejs/splide": "^4.1.4",
     "@types/uuid": "^10.0.0",
-    "@wokwi/elements": "^1.7.0",
     "@xterm/addon-clipboard": "^0.1.0",
     "@xterm/addon-fit": "^0.10.0",
     "@xterm/xterm": "^5.5.0",
     "angular-gridster2": "^19.0.0",
     "angular2-draggable": "^16.0.0",
     "animate.css": "^4.1.1",
-    "avr8js": "^0.20.1",
     "blockly": "^11.2.2",
     "buffer": "^6.0.3",
     "cropperjs": "^1.6.2",

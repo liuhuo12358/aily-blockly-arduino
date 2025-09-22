@@ -24,7 +24,8 @@
         "USER_MANUAL": "ユーザーマニュアル",
         "EXAMPLES": "サンプルプログラム",
         "UPDATE": "アップデートを確認",
-        "USER_AUTH": "ユーザーサービス"
+        "USER_AUTH": "ユーザーサービス",
+        "LIB_MANAGER": "ライブラリマネージャー"
     },
     "ESP32": {
         "UPLOAD_SPEED": "書き込み速度",
