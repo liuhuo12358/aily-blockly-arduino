@@ -287,7 +287,7 @@ export class HeaderComponent {
         if (item.state === 'doing') return;
         item.state = 'doing';
         this.uploaderService.upload().then(result => {
-          item.state = 'done';
+          item.state = result.state;
         }).catch(err => {
           console.log("上传未完成: ", JSON.stringify(err));
           if (err.state) item.state = err.state;

@@ -15,6 +15,7 @@ import { ActionService } from "../../../services/action.service";
 import { arduinoGenerator } from "../components/blockly/generators/arduino/arduino";
 import { BlocklyService } from "./blockly.service";
 import { findFile } from '../../../utils/builder.utils';
+import { error } from "console";
 
 @Injectable()
 export class _UploaderService {
@@ -71,15 +72,13 @@ export class _UploaderService {
     }
     
     this.initialized = true;
-    this.actionService.listen('upload-begin', (action) => {
-      console.log('>>>>> 收到上传请求: ', action);
-      this.upload().then((result) => {
-        console.log("upload result: ", result);
-      }).catch((msg) => {
-        if (msg?.state === 'warn') {
-          console.log("upload warn: ", msg.text);
-        }
-      });
+    this.actionService.listen('upload-begin', async (action) => {
+      try {
+        const result = await this.upload();
+        return { success: true, result };
+      } catch (msg) {
+        return { success: false, result: msg };
+      }
     }, 'uploader-upload-begin');
     this.actionService.listen('upload-cancel', (action) => {
       this.cancel();
@@ -180,7 +179,7 @@ export class _UploaderService {
 
   // 添加这个错误处理方法
   private handleUploadError(errorMessage: string, title = "上传失败") {
-    console.error("handle errror: ", errorMessage);
+    // console.error("handle errror: ", errorMessage);
     this.noticeService.update({
       title: title,
       text: errorMessage,
@@ -251,7 +250,7 @@ export class _UploaderService {
             // 编译成功，继续上传流程
           } catch (error) {
             // 编译失败，处理错误
-            console.error("编译失败:", error);
+            // console.error("编译失败:", error);
             // reject(error || { state: 'error', text: '编译失败，请检查代码' });
           }
         }
@@ -420,11 +419,14 @@ export class _UploaderService {
                 lines.forEach((line: string) => {
                   const trimmedLine = line.trim();
                   if (trimmedLine) {
+                    errorText = trimmedLine;
+
                     // 检查是否有错误信息
                     if (trimmedLine.toLowerCase().includes('error:') ||
                       trimmedLine.toLowerCase().includes('failed') ||
                       trimmedLine.toLowerCase().includes('a fatal error occurred') ||
                       trimmedLine.toLowerCase().includes("can't open device")) {
+                      
                       this.handleUploadError(trimmedLine);
                       // return;
                     }
@@ -545,14 +547,12 @@ export class _UploaderService {
             }
           },
           error: (error: any) => {
-            console.error("上传错误:", error);
             this.handleUploadError(error.message || '上传过程中发生错误');
             reject({ state: 'error', text: error.message || '上传失败' });
           },
           complete: () => {
             console.log("bufferData: ", bufferData);
             if (this.isErrored) {
-              console.error("上传过程中发生错误，已取消");
               this.handleUploadError('上传过程中发生错误');
               // 终止Arduino CLI进程
 
@@ -596,7 +596,7 @@ export class _UploaderService {
           }
         })
       } catch (error) {
-        console.error("上传异常:", error);
+        // console.error("上传异常:", error);
         this.handleUploadError(error.message || '上传失败');
         reject({ state: 'error', text: error.message || '上传失败' });
       }
