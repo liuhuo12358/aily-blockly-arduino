@@ -383,6 +383,7 @@ export class _BuilderService {
         let bufferData = '';
         let completeLines = '';
         let lastStdErr = '';
+        let fullStdErr = '';
         let isBuildText = false;
         let outputComplete = false;
         let flashInfo = '';
@@ -510,8 +511,9 @@ export class _BuilderService {
                   } else {
                     if (!outputComplete) {
                       if (output.type == 'stderr') {
-                        this.logService.update({ "detail": trimmedLine, "state": "error" });
+                        // this.logService.update({ "detail": trimmedLine, "state": "error" });
                         lastStdErr = trimmedLine;
+                        fullStdErr += trimmedLine + '\n';
                         this.isErrored = true;
                       } else {
                         this.logService.update({ "detail": trimmedLine, "state": "doing" });
@@ -540,7 +542,21 @@ export class _BuilderService {
           },
           complete: () => {
             console.log('编译命令执行完成');
-            if (this.isErrored) {
+            if (this.buildCompleted) {
+              console.log('编译命令执行完成');
+              // 计算编译耗时
+              const buildEndTime = Date.now();
+              const buildDuration = ((buildEndTime - this.buildStartTime) / 1000).toFixed(2);
+              console.log(`编译耗时: ${buildDuration} 秒`);
+
+              // 提取flash和ram信息
+              const displayText = this.extractFirmwareInfo(lastLogLines);
+              const displayTextWithTime = `${displayText} (耗时: ${buildDuration}s)`;
+              this.noticeService.update({ title: completeTitle, text: displayTextWithTime, state: 'done', setTimeout: 600000 });
+              this.buildInProgress = false;
+              this.passed = true;
+              resolve({ state: 'done', text: `编译完成 (耗时: ${buildDuration}s)` });
+            } else if (this.isErrored) {
               // 计算编译耗时
               const buildEndTime = Date.now();
               const buildDuration = ((buildEndTime - this.buildStartTime) / 1000).toFixed(2);
@@ -555,26 +571,15 @@ export class _BuilderService {
                 state: 'error',
                 setTimeout: 600000
               });
+
+              this.logService.update({ title: "编译失败", detail: fullStdErr, state: 'error' });
+
               // this.logService.update({ title: "编译失败", detail: lastStdErr, state: 'error' });
               this.buildInProgress = false;
               this.passed = false;
               // 终止Arduino CLI进程
 
               reject({ state: 'error', text: `编译失败 (耗时: ${buildDuration}s)` });
-            } else if (this.buildCompleted) {
-              console.log('编译命令执行完成');
-              // 计算编译耗时
-              const buildEndTime = Date.now();
-              const buildDuration = ((buildEndTime - this.buildStartTime) / 1000).toFixed(2);
-              console.log(`编译耗时: ${buildDuration} 秒`);
-
-              // 提取flash和ram信息
-              const displayText = this.extractFirmwareInfo(lastLogLines);
-              const displayTextWithTime = `${displayText} (耗时: ${buildDuration}s)`;
-              this.noticeService.update({ title: completeTitle, text: displayTextWithTime, state: 'done', setTimeout: 600000 });
-              this.buildInProgress = false;
-              this.passed = true;
-              resolve({ state: 'done', text: `编译完成 (耗时: ${buildDuration}s)` });
             } else if (this.cancelled) {
               console.warn("编译中断")
               // 计算编译耗时
