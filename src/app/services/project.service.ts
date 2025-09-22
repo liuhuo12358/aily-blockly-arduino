@@ -270,6 +270,8 @@ export class ProjectService {
     const packageJsonPath = `${this.currentProjectPath}/package.json`;
     // 写入新的package.json
     window['fs'].writeFileSync(packageJsonPath, JSON.stringify(data, null, 2));
+
+    this.boardChangeSubject.next();
   }
 
   // 获取开发板名称
