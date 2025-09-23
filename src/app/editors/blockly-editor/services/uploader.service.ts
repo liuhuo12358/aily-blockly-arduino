@@ -15,6 +15,7 @@ import { ActionService } from "../../../services/action.service";
 import { arduinoGenerator } from "../components/blockly/generators/arduino/arduino";
 import { BlocklyService } from "./blockly.service";
 import { findFile } from '../../../utils/builder.utils';
+import { error } from "console";
 
 @Injectable()
 export class _UploaderService {
@@ -50,12 +51,14 @@ export class _UploaderService {
     /\[\s*={1,}>*\s*\]\s*\d+%.*$/,
     // Writing | ████████████████████████████████████████████████▉  | 98% 
     /\|\s*\d+%\s*$/,
-    // 或者只是数字+百分号（例如：[====>    ] 70%）
-    /\b(\d+)%\b/,
+    // Writing at 0x00a2b8d7 [============================> ]  97.1% 196608/202563 bytes...
+    /Writing\s+at\s+0x[0-9a-f]+\s+\[.*?\]\s+(\d+(?:\.\d+)?)%/i,
     // Writing at 0x0005446e... (18 %)
     // Writing at 0x0002d89e... (40 %)
     // Writing at 0x0003356b... (50 %)
     /Writing\s+at\s+0x[0-9a-f]+\.\.\.\s+\(\d+\s*%\)/i,
+    // 或者只是数字+百分号（例如：[====>    ] 70%）
+    /\b(\d+(?:\.\d+)?)%\b/,
     // 70% 13/18
     /^(\d+)%\s+\d+\/\d+/,
     // 标准格式：数字%（例如：70%）
@@ -71,15 +74,13 @@ export class _UploaderService {
     }
     
     this.initialized = true;
-    this.actionService.listen('upload-begin', (action) => {
-      console.log('>>>>> 收到上传请求: ', action);
-      this.upload().then((result) => {
-        console.log("upload result: ", result);
-      }).catch((msg) => {
-        if (msg?.state === 'warn') {
-          console.log("upload warn: ", msg.text);
-        }
-      });
+    this.actionService.listen('upload-begin', async (action) => {
+      try {
+        const result = await this.upload();
+        return { success: true, result };
+      } catch (msg) {
+        return { success: false, result: msg };
+      }
     }, 'uploader-upload-begin');
     this.actionService.listen('upload-cancel', (action) => {
       this.cancel();
@@ -100,7 +101,7 @@ export class _UploaderService {
    * @param toolsPath 工具路径
    * @returns 处理后的参数列表、标志和命令信息
    */
-  private async processUploadParams(uploadParam: string, buildPath: string, toolsPath: string, sdkPath: string) {
+  private async processUploadParams(uploadParam: string, buildPath: string, toolsPath: string, sdkPath: string, baudRate: string) {
     const flags = {
       use_1200bps_touch: false,
       wait_for_upload: false
@@ -119,12 +120,12 @@ export class _UploaderService {
       } else if (param.includes('${serial}')) {
         return param.replace('${serial}', this.serialService.currentPort || '');
       } else if (param.includes('${baud}')) {
-        return param.replace('${baud}', '115200');
+        return param.replace('${baud}', baudRate || '115200');
       } else if (param.includes('${bootloader}')) {
-        const bootLoaderFile = await findFile(buildPath, '?.bootloader.bin');
+        const bootLoaderFile = await findFile(buildPath, '*.bootloader.bin');
         return param.replace('${bootloader}', bootLoaderFile);
       } else if (param.includes('${partitions}')) {
-        const partitionsFile = await findFile(buildPath, '?.partitions.bin');
+        const partitionsFile = await findFile(buildPath, '*.partitions.bin');
         return param.replace('${partitions}', partitionsFile);
       } else if (param.includes('${boot_app0}')) {
         return param.replace('${boot_app0}', `${sdkPath}/tools/partitions/boot_app0.bin`)
@@ -180,7 +181,7 @@ export class _UploaderService {
 
   // 添加这个错误处理方法
   private handleUploadError(errorMessage: string, title = "上传失败") {
-    console.error("handle errror: ", errorMessage);
+    // console.error("handle errror: ", errorMessage);
     this.noticeService.update({
       title: title,
       text: errorMessage,
@@ -251,7 +252,7 @@ export class _UploaderService {
             // 编译成功，继续上传流程
           } catch (error) {
             // 编译失败，处理错误
-            console.error("编译失败:", error);
+            // console.error("编译失败:", error);
             // reject(error || { state: 'error', text: '编译失败，请检查代码' });
           }
         }
@@ -291,6 +292,8 @@ export class _UploaderService {
         let uploadParam = '';
         let uploadParamList: string[] = [];
 
+        let baudRate = '';
+
         // 获取上传参数
         uploadParam = boardJson.uploadParam;
         if (!uploadParam) {
@@ -299,13 +302,23 @@ export class _UploaderService {
           return;
         }
 
+        try {
+          const projectConfig = await this.projectService.getProjectConfig();
+          console.log("Project config: ", projectConfig);
+          if (projectConfig) {
+            baudRate = projectConfig?.UploadSpeed?.upload?.speed || '';
+          }
+        } catch (error) {
+          console.warn('没有额外的自定义配置');
+        }
+
         // 解析和处理上传参数
         let processedParams: string[];
         let flags: { use_1200bps_touch: boolean; wait_for_upload: boolean };
         let command: string;
         
         try {
-          const result = await this.processUploadParams(uploadParam, buildPath, toolsPath, sdkPath);
+          const result = await this.processUploadParams(uploadParam, buildPath, toolsPath, sdkPath, baudRate);
           processedParams = result.processedParams;
           flags = result.flags;
           command = result.command;
@@ -358,42 +371,45 @@ export class _UploaderService {
 
         let errorText = '';
 
-        // 获取和解析项目编译参数
-        let buildProperties = '';
-        try {
-          const projectConfig = await this.projectService.getProjectConfig();
-          if (projectConfig) {
-            const buildPropertyParams: string[] = [];
+        // // 获取和解析项目编译参数
+        // let buildProperties = '';
+        // try {
+        //   const projectConfig = await this.projectService.getProjectConfig();
+        //   if (projectConfig) {
+        //     const buildPropertyParams: string[] = [];
 
-            // 遍历配置对象，解析编译参数
-            Object.values(projectConfig).forEach((configSection: any) => {
-              if (configSection && typeof configSection === 'object') {
-                // 遍历每个配置段（如 build、upload 等）
-                Object.entries(configSection).forEach(([sectionKey, sectionValue]: [string, any]) => {
-                  // 排除upload等非编译相关的配置段
-                  if (sectionKey == 'build') return;
-                  if (sectionValue && typeof sectionValue === 'object') {
-                    // 遍历具体的配置项
-                    Object.entries(sectionValue).forEach(([key, value]: [string, any]) => {
-                      buildPropertyParams.push(`--upload-property ${sectionKey}.${key}=${value}`);
-                    });
-                  }
-                });
-              }
-            });
+        //     // 遍历配置对象，解析编译参数
+        //     Object.values(projectConfig).forEach((configSection: any) => {
+        //       if (configSection && typeof configSection === 'object') {
+        //         // 遍历每个配置段（如 build、upload 等）
+        //         Object.entries(configSection).forEach(([sectionKey, sectionValue]: [string, any]) => {
+        //           // 排除upload等非编译相关的配置段
+        //           if (sectionKey == 'build') return;
+        //           if (sectionValue && typeof sectionValue === 'object') {
+        //             // 遍历具体的配置项
+        //             Object.entries(sectionValue).forEach(([key, value]: [string, any]) => {
+        //               buildPropertyParams.push(`--upload-property ${sectionKey}.${key}=${value}`);
+        //             });
+        //           }
+        //         });
+        //       }
+        //     });
 
-            buildProperties = buildPropertyParams.join(' ');
-            if (buildProperties) {
-              buildProperties = ' ' + buildProperties; // 在前面添加空格
-            }
-          }
-        } catch (error) {
-          console.warn('获取项目配置失败:', error);
-        }
+        //     buildProperties = buildPropertyParams.join(' ');
+            
+        //     if (buildProperties) {
+        //       buildProperties = ' ' + buildProperties; // 在前面添加空格
+        //     }
+        //   }
+        // } catch (error) {
+        //   console.warn('获取项目配置失败:', error);
+        // }
 
         // 将buildProperties添加到compilerParam中
         // uploadParam += buildProperties;
         // const uploadCmd = uploadParam;
+
+        const buildProperties = '';
 
         const uploadCmd = `${command} ${uploadParamList.slice(1).join(' ')}${buildProperties}`;
         console.log("Upload cmd: ", uploadCmd);
@@ -420,11 +436,14 @@ export class _UploaderService {
                 lines.forEach((line: string) => {
                   const trimmedLine = line.trim();
                   if (trimmedLine) {
+                    errorText = trimmedLine;
+
                     // 检查是否有错误信息
                     if (trimmedLine.toLowerCase().includes('error:') ||
                       trimmedLine.toLowerCase().includes('failed') ||
                       trimmedLine.toLowerCase().includes('a fatal error occurred') ||
                       trimmedLine.toLowerCase().includes("can't open device")) {
+                      
                       this.handleUploadError(trimmedLine);
                       // return;
                     }
@@ -498,14 +517,16 @@ export class _UploaderService {
                         const match = trimmedLine.match(regex);
                         if (match) {
                           // 提取数字部分
-                          console.log("match: ", match);
-                          let numericMatch = trimmedLine.match(/(\d+)%/);
+                          // console.log("match: ", match);
+                          let numericMatch = trimmedLine.match(/(\d+(?:\.\d+)?)%/);
                           if (!numericMatch) {
-                            numericMatch = trimmedLine.match(/(\d+)\s*%/);
+                            numericMatch = trimmedLine.match(/(\d+(?:\.\d+)?)\s*%/);
                           }
-                          console.log("numericMatch: ", numericMatch);
+                          // console.log("numericMatch: ", numericMatch);
                           if (numericMatch) {
-                            progressValue = parseInt(numericMatch[1], 10);
+                            progressValue = parseFloat(numericMatch[1]);
+                            // 转换为整数，因为进度条通常使用整数
+                            progressValue = Math.floor(progressValue);
                             if (lastProgress == 0 && progressValue > 100) {
                               progressValue = 0;
                             }
@@ -516,7 +537,7 @@ export class _UploaderService {
                     }
 
                     if (progressValue && progressValue > lastProgress) {
-                      console.log("progress: ", lastProgress);
+                      // console.log("progress: ", lastProgress);
                       lastProgress = progressValue;
                       this.noticeService.update({
                         title: title,
@@ -545,14 +566,13 @@ export class _UploaderService {
             }
           },
           error: (error: any) => {
-            console.error("上传错误:", error);
+            console.log("上传命令错误:", error);
             this.handleUploadError(error.message || '上传过程中发生错误');
             reject({ state: 'error', text: error.message || '上传失败' });
           },
           complete: () => {
-            console.log("bufferData: ", bufferData);
+            console.log("上传命令完成");
             if (this.isErrored) {
-              console.error("上传过程中发生错误，已取消");
               this.handleUploadError('上传过程中发生错误');
               // 终止Arduino CLI进程
 
@@ -584,7 +604,7 @@ export class _UploaderService {
               this.noticeService.update({
                 title: errorTitle,
                 text: lastUploadText,
-                detail: errorText,
+                detail: "超时或其他原因",
                 state: 'error',
                 setTimeout: 600000
               });
@@ -596,7 +616,7 @@ export class _UploaderService {
           }
         })
       } catch (error) {
-        console.error("上传异常:", error);
+        // console.error("上传异常:", error);
         this.handleUploadError(error.message || '上传失败');
         reject({ state: 'error', text: error.message || '上传失败' });
       }
