@@ -558,6 +558,12 @@ export class _UploaderService {
                     if (lastProgress === 100) {
                       this.uploadCompleted = true;
                     }
+
+                    // 处理特定的完成标志: Wrote 198144 bytes to E:/NEW.UF2
+                    if (trimmedLine.includes('Wrote') && trimmedLine.includes('bytes to')) {
+                      this.uploadCompleted = true;
+                    }
+
                   }
                 });
               } else {
