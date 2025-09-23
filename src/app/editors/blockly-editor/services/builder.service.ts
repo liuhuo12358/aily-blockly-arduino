@@ -245,13 +245,23 @@ export class _BuilderService {
         let compiler = ""
         let sdk = ""
 
+        const toolVersions = []
+
         const boardDependencies = (await this.projectService.getBoardPackageJson()).boardDependencies || {};
 
         Object.entries(boardDependencies).forEach(([key, version]) => {
           if (key.startsWith('@aily-project/compiler-')) {
             compiler = key.replace(/^@aily-project\/compiler-/, '') + '@' + version;
+            toolVersions.push(compiler);
           } else if (key.startsWith('@aily-project/sdk-')) {
             sdk = key.replace(/^@aily-project\/sdk-/, '') + '_' + version;
+          } else if (key.startsWith('@aily-project/tool-')) {
+            let toolName = key.replace(/^@aily-project\/tool-/, '');
+            if (toolName.startsWith('idf_')) {
+              toolName = 'esp32-arduino-libs';
+            }
+            const tool = toolName + '@' + version;
+            toolVersions.push(tool);
           }
         });
 
@@ -364,7 +374,8 @@ export class _BuilderService {
           '--board', `"${this.boardType}"`,
           '--libraries-path', `"${librariesPath}"`,
           '--sdk-path', `"${this.sdkPath}"`,
-          '--tools-path', `"${this.toolsPath}"`
+          '--tools-path', `"${this.toolsPath}"`,
+          '--tool-versions', `"${toolVersions.join(',')}"`,
         ];
 
         // 检查复制compilerPath下的所有文件夹到toolsPath中
