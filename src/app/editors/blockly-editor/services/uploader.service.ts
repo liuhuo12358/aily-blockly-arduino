@@ -517,12 +517,12 @@ export class _UploaderService {
                         const match = trimmedLine.match(regex);
                         if (match) {
                           // 提取数字部分
-                          console.log("match: ", match);
+                          // console.log("match: ", match);
                           let numericMatch = trimmedLine.match(/(\d+(?:\.\d+)?)%/);
                           if (!numericMatch) {
                             numericMatch = trimmedLine.match(/(\d+(?:\.\d+)?)\s*%/);
                           }
-                          console.log("numericMatch: ", numericMatch);
+                          // console.log("numericMatch: ", numericMatch);
                           if (numericMatch) {
                             progressValue = parseFloat(numericMatch[1]);
                             // 转换为整数，因为进度条通常使用整数
@@ -537,7 +537,7 @@ export class _UploaderService {
                     }
 
                     if (progressValue && progressValue > lastProgress) {
-                      console.log("progress: ", lastProgress);
+                      // console.log("progress: ", lastProgress);
                       lastProgress = progressValue;
                       this.noticeService.update({
                         title: title,

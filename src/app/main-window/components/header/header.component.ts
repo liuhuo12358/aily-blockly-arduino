@@ -276,7 +276,7 @@ export class HeaderComponent {
           item.state = result.state || 'done';
         }).catch(err => {
           console.log("编译未完成: ", JSON.stringify(err));
-          if (err.state) item.state = err.state;
+          if (err && err.state) item.state = err.state;
         })
         break;
       case 'upload':
@@ -286,7 +286,7 @@ export class HeaderComponent {
           item.state = result.state || 'done';
         }).catch(err => {
           console.log("上传未完成: ", JSON.stringify(err));
-          if (err.state) item.state = err.state;
+          if (err && err.state) item.state = err.state;
         });
         break;
       case 'settings-open':

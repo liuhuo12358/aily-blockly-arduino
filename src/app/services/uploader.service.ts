@@ -12,11 +12,11 @@ export class UploaderService {
 
   async upload() {
     try {
-      const result = await this.actionService.dispatchWithFeedback('upload-begin', {}, 30000).toPromise();
-      // console.log("Upload finished: ", result);
+      const result = await this.actionService.dispatchWithFeedback('upload-begin', {}, 300000).toPromise();
+      console.log("Upload finished: ", result);
       return result.data?.result;
     } catch (error) {
-      // console.error('上传失败:', error);
+      console.log('上传失败:  ', error);
       throw error;
     }
   }

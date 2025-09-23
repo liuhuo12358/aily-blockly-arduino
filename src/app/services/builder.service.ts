@@ -40,7 +40,7 @@ export class BuilderService {
    */
   async build() {
     try {
-      const result = await this.actionService.dispatchWithFeedback('compile-begin', {}, 30000).toPromise();
+      const result = await this.actionService.dispatchWithFeedback('compile-begin', {}, 600000).toPromise();
       console.log('>>>>> 编译结果:', result);
       return result.data?.result;
     } catch (error) {
