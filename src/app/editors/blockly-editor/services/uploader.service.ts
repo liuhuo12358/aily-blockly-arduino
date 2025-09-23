@@ -51,12 +51,14 @@ export class _UploaderService {
     /\[\s*={1,}>*\s*\]\s*\d+%.*$/,
     // Writing | ████████████████████████████████████████████████▉  | 98% 
     /\|\s*\d+%\s*$/,
-    // 或者只是数字+百分号（例如：[====>    ] 70%）
-    /\b(\d+)%\b/,
+    // Writing at 0x00a2b8d7 [============================> ]  97.1% 196608/202563 bytes...
+    /Writing\s+at\s+0x[0-9a-f]+\s+\[.*?\]\s+(\d+(?:\.\d+)?)%/i,
     // Writing at 0x0005446e... (18 %)
     // Writing at 0x0002d89e... (40 %)
     // Writing at 0x0003356b... (50 %)
     /Writing\s+at\s+0x[0-9a-f]+\.\.\.\s+\(\d+\s*%\)/i,
+    // 或者只是数字+百分号（例如：[====>    ] 70%）
+    /\b(\d+(?:\.\d+)?)%\b/,
     // 70% 13/18
     /^(\d+)%\s+\d+\/\d+/,
     // 标准格式：数字%（例如：70%）
@@ -516,13 +518,15 @@ export class _UploaderService {
                         if (match) {
                           // 提取数字部分
                           console.log("match: ", match);
-                          let numericMatch = trimmedLine.match(/(\d+)%/);
+                          let numericMatch = trimmedLine.match(/(\d+(?:\.\d+)?)%/);
                           if (!numericMatch) {
-                            numericMatch = trimmedLine.match(/(\d+)\s*%/);
+                            numericMatch = trimmedLine.match(/(\d+(?:\.\d+)?)\s*%/);
                           }
                           console.log("numericMatch: ", numericMatch);
                           if (numericMatch) {
-                            progressValue = parseInt(numericMatch[1], 10);
+                            progressValue = parseFloat(numericMatch[1]);
+                            // 转换为整数，因为进度条通常使用整数
+                            progressValue = Math.floor(progressValue);
                             if (lastProgress == 0 && progressValue > 100) {
                               progressValue = 0;
                             }
@@ -562,11 +566,12 @@ export class _UploaderService {
             }
           },
           error: (error: any) => {
+            console.log("上传命令错误:", error);
             this.handleUploadError(error.message || '上传过程中发生错误');
             reject({ state: 'error', text: error.message || '上传失败' });
           },
           complete: () => {
-            console.log("bufferData: ", bufferData);
+            console.log("上传命令完成");
             if (this.isErrored) {
               this.handleUploadError('上传过程中发生错误');
               // 终止Arduino CLI进程
@@ -599,7 +604,7 @@ export class _UploaderService {
               this.noticeService.update({
                 title: errorTitle,
                 text: lastUploadText,
-                detail: errorText,
+                detail: "超时或其他原因",
                 state: 'error',
                 setTimeout: 600000
               });
