@@ -58,8 +58,6 @@ export class UserComponent implements OnInit, OnDestroy, AfterViewInit {
   isLoggedIn = false;
   currentUser: any = null;
   isGitHubAuthWaiting = false;
-  
-  private oauthResultListener: (() => void) | null = null;
 
   ngOnInit() {
     // 监听登录状态
@@ -67,6 +65,12 @@ export class UserComponent implements OnInit, OnDestroy, AfterViewInit {
       .pipe(takeUntil(this.destroy$))
       .subscribe(isLoggedIn => {
         this.isLoggedIn = isLoggedIn;
+        
+        // 如果登录成功且当前在GitHub登录等待状态，关闭弹窗
+        if (isLoggedIn && this.isGitHubAuthWaiting) {
+          this.isGitHubAuthWaiting = false;
+          this.closeEvent.emit();
+        }
       });
 
     // 监听用户信息
@@ -76,8 +80,8 @@ export class UserComponent implements OnInit, OnDestroy, AfterViewInit {
         this.currentUser = userInfo;
       });
 
-    // 设置 GitHub OAuth 结果监听
-    this.setupGitHubOAuthListener();
+    // 由于app.component已经设置了全局OAuth监听器，这里不需要再设置
+    // 但是我们可以监听AuthService的登录状态变化来处理UI状态
   }
 
   ngAfterViewInit(): void {
@@ -90,11 +94,6 @@ export class UserComponent implements OnInit, OnDestroy, AfterViewInit {
     this.destroy$.complete();
     document.removeEventListener('click', this.handleDocumentClick);
     document.removeEventListener('contextmenu', this.handleDocumentClick);
-    
-    // 清理 OAuth 监听器
-    if (this.oauthResultListener) {
-      this.oauthResultListener();
-    }
   }
 
   handleDocumentClick = (event: MouseEvent) => {
@@ -217,55 +216,6 @@ export class UserComponent implements OnInit, OnDestroy, AfterViewInit {
 
   more() {
     this.message.warning('服务暂不可用');
-  }
-
-  /**
-   * 设置 GitHub OAuth 协议回调监听
-   */
-  private setupGitHubOAuthListener() {
-    if (window.electronAPI?.oauth?.onCallback) {
-      this.oauthResultListener = window.electronAPI.oauth.onCallback(async (callbackData: any) => {
-        this.isGitHubAuthWaiting = false;
-        
-        try {
-          // 使用 AuthService 处理协议回调
-          const result = await this.authService.handleOAuthCallback(callbackData);
-          
-          if (result.success) {
-            console.log('GitHub OAuth 成功:', result.data);
-            this.message.success('GitHub 登录成功');
-            this.closeEvent.emit();
-          } else {
-            // OAuth 失败
-            console.error('GitHub OAuth 失败:', result);
-            let errorMessage = 'GitHub 登录失败';
-            
-            switch (result.error) {
-              case 'timeout':
-              case 'invalid_state':
-                errorMessage = '登录状态无效或已超时，请重试';
-                break;
-              case 'missing_parameters':
-                errorMessage = '授权参数缺失，请重试';
-                break;
-              case 'access_denied':
-                errorMessage = '您取消了授权';
-                break;
-              case 'callback_processing_failed':
-                errorMessage = result.message || '处理授权回调失败';
-                break;
-              default:
-                errorMessage = result.message || 'GitHub 登录失败';
-            }
-            
-            this.message.error(errorMessage);
-          }
-        } catch (error) {
-          console.error('处理 OAuth 回调异常:', error);
-          this.message.error('登录处理失败，请重试');
-        }
-      });
-    }
   }
 
   /**

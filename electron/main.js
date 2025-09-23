@@ -6,6 +6,8 @@ const { app, BrowserWindow, ipcMain, dialog, screen, shell } = require("electron
 
 const { isWin32, isDarwin, isLinux } = require("./platform");
 
+PROTOCOL = "ailyblockly";
+
 // 隔离用户数据目录：为每个实例生成唯一的用户数据目录。如果此处不隔离，会导致启动第二个实例时，要等待几秒才会出现窗口
 function setupUniqueUserDataPath() {
   const timestamp = Date.now();
@@ -32,9 +34,14 @@ setupUniqueUserDataPath();
 app.commandLine.appendSwitch('js-flags', '--max-old-space-size=4096');
 app.commandLine.appendSwitch('enable-features', 'V8LazyCodeGeneration,V8CacheOptions');
 
+app.removeAsDefaultProtocolClient(PROTOCOL);
+
 const args = process.argv.slice(1);
 const serve = args.some((val) => val === "--serve");
 process.env.DEV = serve;
+
+// 注册协议处理
+app.setAsDefaultProtocolClient(PROTOCOL);
 
 // 文件关联处理
 let pendingFileToOpen = null;
@@ -43,6 +50,14 @@ let pendingQueryParams = null;
 
 // 处理命令行参数中的 .abi 文件和路由参数
 function handleCommandLineArgs(argv) {
+  // 处理OAuth协议链接
+  const protocolUrl = argv.find(arg => arg.startsWith(`${PROTOCOL}://`));
+  if (protocolUrl) {
+    console.log('Found OAuth protocol URL in args:', protocolUrl);
+    handleProtocol(protocolUrl);
+    return true;
+  }
+
   // 处理 .abi 文件
   const abiFile = argv.find(arg => arg.endsWith('.abi') && fs.existsSync(arg));
   if (abiFile) {
@@ -78,29 +93,55 @@ function handleCommandLineArgs(argv) {
 // 在应用启动时处理命令行参数
 handleCommandLineArgs(process.argv);
 
-// macOS下处理文件打开
-app.on('open-file', (event, filePath) => {
-  event.preventDefault();
-  if (filePath.endsWith('.abi') && fs.existsSync(filePath)) {
-    const projectDir = path.dirname(path.resolve(filePath));
-    console.log('macOS open-file:', filePath);
-    console.log('Project directory:', projectDir);
-
-    if (mainWindow && mainWindow.webContents) {
-      // 直接导航到对应路由
-      const routePath = `main/blockly-editor?path=${encodeURIComponent(projectDir)}`;
-      console.log('Navigating to route:', routePath);
-
-      if (serve) {
-        mainWindow.loadURL(`http://localhost:4200/#/${routePath}`);
+function handleProtocol(url) {
+  console.log('收到协议链接:', url);
+  
+  try {
+    const urlObj = new URL(url);
+    
+    // 检查是否是OAuth回调
+    if (urlObj.pathname === '/auth/callback') {
+      const searchParams = urlObj.searchParams;
+      const code = searchParams.get('code');
+      const state = searchParams.get('state');
+      const error = searchParams.get('error');
+      const errorDescription = searchParams.get('error_description');
+      
+      console.log('OAuth回调参数:', { code, state, error, errorDescription });
+      
+      // 构建回调数据
+      const callbackData = {
+        code,
+        state,
+        error,
+        error_description: errorDescription
+      };
+      
+      // 如果主窗口存在且已加载，发送OAuth回调数据
+      if (mainWindow && mainWindow.webContents) {
+        mainWindow.webContents.send('oauth-callback', callbackData);
+        
+        // 将窗口置前显示
+        if (mainWindow.isMinimized()) {
+          mainWindow.restore();
+        }
+        mainWindow.focus();
+        mainWindow.show();
       } else {
-        mainWindow.loadFile(`renderer/index.html`, { hash: `#/${routePath}` });
+        // 如果窗口不存在，存储回调数据以便稍后处理
+        global.pendingOAuthCallback = callbackData;
       }
-    } else {
-      pendingFileToOpen = projectDir;
+      
+      return;
     }
+    
+    // 处理其他协议链接
+    dialog.showMessageBox({ message: `收到协议：${url}` });
+  } catch (error) {
+    console.error('解析协议链接失败:', error);
+    dialog.showErrorBox('协议错误', `无法解析协议链接: ${url}`);
   }
-});
+}
 
 // ipc handlers模块
 const { registerTerminalHandlers } = require("./terminal");
@@ -321,7 +362,46 @@ function createWindow() {
   registerCmdHandlers(mainWindow);
   registerMCPHandlers(mainWindow);
   registerToolsHandlers(mainWindow);
+
+  // 检查是否有待处理的OAuth回调
+  if (global.pendingOAuthCallback) {
+    // 延迟发送以确保渲染进程已准备好
+    setTimeout(() => {
+      if (mainWindow && mainWindow.webContents) {
+        mainWindow.webContents.send('oauth-callback', global.pendingOAuthCallback);
+        global.pendingOAuthCallback = null;
+      }
+    }, 2000);
+  }
 }
+
+// 监听 Windows / Linux second-instance 事件
+const gotTheLock = app.requestSingleInstanceLock();
+if (!gotTheLock) {
+  const isProtocolLaunch = process.argv.some(arg => arg.startsWith(`${PROTOCOL}://`));
+  if (isProtocolLaunch) {
+    app.quit();
+  } else {
+    // 处理非协议启动的情况
+  }
+} else {
+  // 监听second-instance事件，处理协议链接
+  app.on('second-instance', (event, commandLine, workingDirectory) => {
+    // 查找协议链接
+    const protocolUrl = commandLine.find(arg => arg.startsWith(`${PROTOCOL}://`));
+    if (protocolUrl) {
+      handleProtocol(protocolUrl);
+    }
+    
+    // 将现有窗口置前
+    if (mainWindow) {
+      if (mainWindow.isMinimized()) {
+        mainWindow.restore();
+      }
+      mainWindow.focus();
+    }
+  });
+} 
 
 app.on("ready", () => {
   try {
@@ -353,6 +433,44 @@ app.on("activate", () => {
     // 创建主窗口
     createWindow();
   }
+});
+// 用于嵌入的iframe打开外部链接
+app.on('web-contents-created', (event, contents) => {
+  // 处理iframe中的链接点击
+  contents.setWindowOpenHandler(({ url }) => {
+    shell.openExternal(url);
+    return { action: 'deny' }; // 阻止在Electron中打开
+  });
+});
+// macOS下处理文件打开
+app.on('open-file', (event, filePath) => {
+  event.preventDefault();
+  if (filePath.endsWith('.abi') && fs.existsSync(filePath)) {
+    const projectDir = path.dirname(path.resolve(filePath));
+    console.log('macOS open-file:', filePath);
+    console.log('Project directory:', projectDir);
+
+    if (mainWindow && mainWindow.webContents) {
+      // 直接导航到对应路由
+      const routePath = `main/blockly-editor?path=${encodeURIComponent(projectDir)}`;
+      console.log('Navigating to route:', routePath);
+
+      if (serve) {
+        mainWindow.loadURL(`http://localhost:4200/#/${routePath}`);
+      } else {
+        mainWindow.loadFile(`renderer/index.html`, { hash: `#/${routePath}` });
+      }
+    } else {
+      pendingFileToOpen = projectDir;
+    }
+  }
+});
+
+// macOS下处理协议链接
+app.on('open-url', (event, url) => {
+  event.preventDefault();
+  console.log('macOS open-url:', url);
+  handleProtocol(url);
 });
 
 // 项目管理相关
@@ -481,15 +599,6 @@ ipcMain.handle("open-new-instance", async (event, data) => {
     };
   }
 })
-
-// 用于嵌入的iframe打开外部链接
-app.on('web-contents-created', (event, contents) => {
-  // 处理iframe中的链接点击
-  contents.setWindowOpenHandler(({ url }) => {
-    shell.openExternal(url);
-    return { action: 'deny' }; // 阻止在Electron中打开
-  });
-});
 
 // settingChanged
 ipcMain.on("setting-changed", (event, data) => {
