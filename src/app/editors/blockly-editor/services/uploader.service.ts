@@ -161,9 +161,12 @@ export class _UploaderService {
 
         let findRes = '';
 
-        // 判断后缀是否为(bin|elf|hex|eep|img)之一
-        if (!['bin', 'elf', 'hex', 'eep', 'img'].includes(fileExtension)) {
+        // 判断后缀是否为(bin|elf|hex|eep|img|uf2)之一
+        if (!['bin', 'elf', 'hex', 'eep', 'img', 'uf2'].includes(fileExtension)) {
           findRes = await findFile(toolsPath, fileName);
+          if (!findRes) {
+            findRes = await findFile(sdkPath + "/tools", fileName);
+          }
         } else {
           findRes = await findFile(buildPath, fileName);
         }
