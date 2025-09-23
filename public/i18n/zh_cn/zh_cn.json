@@ -126,7 +126,7 @@
         },
         "BOARD": {
             "SEARCH": "搜索开发板",
-            "READ_DOC": "阅读文档",
+            "READ_DOC": "文档",
             "ADD_BOARD": "添加开发板",
             "DEV": "dev"
         },

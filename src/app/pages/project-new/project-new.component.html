@@ -71,13 +71,27 @@
         </div>
         @if(currentBoard){
         <div class="desc-box">
-          <div class="title">
-            {{currentBoard.nickname}}
-            <div class="doc btn link" (click)="openUrl(currentBoard.url)">
-              {{ 'PROJECT_NEW.BOARD.READ_DOC' | translate }}
-            </div>
+          <div class="img-box ccenter">
+            <img [src]="resourceUrl+'/imgs/boards/'+currentBoard.img" />
           </div>
-          <div class="content">{{ currentBoard.description }}</div>
+          <div class="content">
+            <div class="title">
+              <div class="title-text">{{currentBoard.nickname}}</div>
+              <div class="btns">
+                <div class="doc btn link" (click)="openUrl(currentBoard.url)">
+                  {{ 'PROJECT_NEW.BOARD.READ_DOC' | translate }}
+                </div>
+                <!-- <div class="doc btn link" (click)="openUrl(currentBoard.url)">
+                  {{ '数据手册' | translate }}
+                </div>
+                <div class="doc btn link" (click)="openUrl(currentBoard.url)">
+                  {{ '购买' | translate }}
+                </div> -->
+              </div>
+            </div>
+            <div class="text sscroll">{{ currentBoard.description }}</div>
+          </div>
+
         </div>
         }
       </div>
