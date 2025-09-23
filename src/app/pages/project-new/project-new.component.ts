@@ -14,6 +14,7 @@ import { TranslateModule } from '@ngx-translate/core';
 import { NzToolTipModule } from 'ng-zorro-antd/tooltip';
 import { Router } from '@angular/router';
 import { BrandListComponent } from './components/brand-list/brand-list.component';
+import { BRAND_LIST } from '../../configs/board.config';
 
 const { pt } = (window as any)['electronAPI'].platform;
 
@@ -53,7 +54,7 @@ export class ProjectNewComponent {
 
   // 搜索开发板关键字
   keyword = '';
-  
+
   tagList = [
     { name: '显示全部', mode: 'all' },
     { name: '按品牌', mode: 'brand' },
@@ -66,6 +67,13 @@ export class ProjectNewComponent {
 
   get resourceUrl() {
     return this.configService.data.resource[0];
+  }
+
+  // 获取已定义的品牌列表（排除'all'和'other'）
+  private getDefinedBrands(): string[] {
+    return BRAND_LIST
+      .filter(brand => brand.value !== 'all' && brand.value !== 'other')
+      .map(brand => brand.value.toLowerCase());
   }
 
   constructor(
@@ -163,10 +171,6 @@ export class ProjectNewComponent {
     this.currentStep = 2;
 
     await this.projectService.projectNew(this.newProjectData);
-
-    // setTimeout(() => {
-    //   window['subWindow'].close();
-    // }, 1000);
   }
 
   openUrl(url) {
@@ -190,23 +194,27 @@ export class ProjectNewComponent {
   onBrandSelected(brand: any) {
     this.selectedBrand = brand;
     console.log('选中的品牌:', brand);
-    
+
     // 根据选中的品牌过滤开发板列表
     if (brand && brand.value && brand.value !== 'all') {
-      // 根据品牌值过滤开发板
-      this.boardList = this._boardList.filter(board => {
-        // 将品牌名称转换为小写进行比较，处理不同的命名方式
-        const boardBrand = board.brand ? board.brand.toLowerCase() : '';
-        const selectedBrandValue = brand.value.toLowerCase();
-        
-        // 支持多种匹配方式
-        return boardBrand === selectedBrandValue || 
-               boardBrand.includes(selectedBrandValue) ||
-               selectedBrandValue.includes(boardBrand);
-      });
-      
+      if (brand.value === 'other') {
+        // 当选择"其他品牌"时，显示已有品牌列表未覆盖的元素
+        const definedBrands = this.getDefinedBrands();
+        this.boardList = this._boardList.filter(board => {
+          const boardBrand = board.brand ? board.brand.toLowerCase() : '';
+          return !definedBrands.includes(boardBrand);
+        });
+      } else {
+        // 普通品牌过滤
+        this.boardList = this._boardList.filter(board => {
+          const boardBrand = board.brand ? board.brand.toLowerCase() : '';
+          const selectedBrandValue = brand.value.toLowerCase();
+          return boardBrand === selectedBrandValue
+        });
+      }
+
       console.log('过滤后的开发板列表:', this.boardList);
-      
+
       // 如果有过滤结果，选择第一个开发板
       if (this.boardList.length > 0) {
         this.selectBoard(this.boardList[0]);

@@ -132,9 +132,9 @@ export class ProjectService {
     // 此后就是打开项目(projectOpen)的逻辑，理论可复用，由于此时在新建项目窗口，因此要告知主窗口，进行打开项目操作
     await window['iWindow'].send({ to: 'main', data: { action: 'open-project', path: projectPath } });
 
-    if (closeWindow) {
-      this.uiService.closeWindow();
-    }
+    // if (closeWindow) {
+    //   this.uiService.closeWindow();
+    // }
   }
 
   // 打开项目

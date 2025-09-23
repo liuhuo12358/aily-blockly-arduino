@@ -10,11 +10,6 @@ export const BRAND_LIST = [
         img: 'brands\\arduino.webp',
     },
     {
-        name: 'Espressif',
-        value: 'espressif',
-        img: 'brands\\espressif.webp',
-    },
-    {
         name: 'Raspberry Pi',
         value: 'raspberrypi',
         img: 'brands\\raspberrypi.webp',
@@ -32,7 +27,12 @@ export const BRAND_LIST = [
     {
         name: 'Nulllab',
         value: 'nulllab',
-        img: '',
+        img: 'brands\\nulllab.webp',
+    },
+    {
+        name: 'Espressif',
+        value: 'espressif',
+        img: 'brands\\espressif.webp',
     },
     {
         name: 'Other Brand',

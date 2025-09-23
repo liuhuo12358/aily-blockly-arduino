@@ -14,12 +14,19 @@
       <i class="fa-light fa-search"></i>
       }
     </ng-template>
-    查看模式：
+    <!-- 查看模式：
     <div class="tag-list">
       @for (tag of tagList; track tag) {
       <nz-tag (click)="changeViewMode(tag)">{{ tag.name }}</nz-tag>
       }
-    </div>
+    </div> -->
+    <!-- <nz-steps [nzCurrent]="currentStep" nzSize="small">
+      <nz-step [nzTitle]="'PROJECT_NEW.STEPS.SELECT_BOARD' | translate"></nz-step>
+      <nz-step [nzTitle]="'PROJECT_NEW.STEPS.BASIC_SETTINGS' | translate"></nz-step>
+      <nz-step [nzTitle]="'PROJECT_NEW.STEPS.CREATE_PROJECT' | translate"
+        [nzIcon]="currentStep == 2 ? iconTemplate : null"></nz-step>
+    </nz-steps>
+    <ng-template #iconTemplate><i class="fa-duotone fa-solid fa-spinner-third"></i></ng-template> -->
     <div class="btns">
       <button nz-button nzType="primary" nzGhost nzSize="small" style="margin-right: 10px;" (click)="help()">
         <i class="fa-light fa-question"></i>{{ 'PROJECT_NEW.BOARD.ADD_BOARD' | translate }}
@@ -29,14 +36,19 @@
   <div class="content">
     <div class="left">
       <div class="left-inner">
+        @if (currentStep == 0) {
         <app-brand-list (brandSelected)="onBrandSelected($event)"></app-brand-list>
-        <!-- <nz-steps [nzCurrent]="currentStep" nzDirection="vertical" nzSize="small">
-          <nz-step [nzTitle]="'PROJECT_NEW.STEPS.SELECT_BOARD' | translate"></nz-step>
-          <nz-step [nzTitle]="'PROJECT_NEW.STEPS.BASIC_SETTINGS' | translate"></nz-step>
-          <nz-step [nzTitle]="'PROJECT_NEW.STEPS.CREATE_PROJECT' | translate"
-            [nzIcon]="currentStep == 2 ? iconTemplate : null"></nz-step>
-        </nz-steps>
-        <ng-template #iconTemplate><i class="fa-duotone fa-solid fa-spinner-third"></i></ng-template> -->
+        } @else {
+        <div class="steps-box ccenter">
+          <nz-steps [nzCurrent]="currentStep" nzSize="small" [nzDirection]="'vertical'">
+            <nz-step [nzTitle]="'PROJECT_NEW.STEPS.SELECT_BOARD' | translate"></nz-step>
+            <nz-step [nzTitle]="'PROJECT_NEW.STEPS.BASIC_SETTINGS' | translate"></nz-step>
+            <nz-step [nzTitle]="'PROJECT_NEW.STEPS.CREATE_PROJECT' | translate"
+              [nzIcon]="currentStep == 2 ? iconTemplate : null"></nz-step>
+          </nz-steps>
+          <ng-template #iconTemplate><i class="fa-duotone fa-solid fa-spinner-third"></i></ng-template>
+        </div>
+        }
       </div>
     </div>
     <div class="right">
