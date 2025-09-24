@@ -182,17 +182,13 @@
 
 .board-selector {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
   gap: 15px;
   border-radius: 5px 0 0 5px;
 
-  // 当容器宽度能容纳5个或更多格子时（5*200px + 4*15px gap = 1060px），使用较小的最小宽度
-  @media (min-width: 1060px) {
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  }
-
   .board {
     min-width: 180px;
+    max-width: 210px;
     height: 110px;
     background: #3e4243;
     border-radius: 5px;
