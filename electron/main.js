@@ -30,22 +30,16 @@ function setupUniqueUserDataPath() {
 
 // 检查是否需要多实例模式
 function shouldUseMultiInstance() {
-  const args = process.argv.slice(1);
-  
-  // 检查是否是协议启动
-  const isProtocolLaunch = args.some(arg => arg.startsWith(`${PROTOCOL}://`));
-  
-  // 检查是否明确要求新实例（通过--new-instance参数）
-  const forceNewInstance = args.some(arg => arg === '--new-instance');
-  
-  // 协议启动不使用多实例（让单实例处理）
-  if (isProtocolLaunch && !forceNewInstance) {
-    console.log('协议启动，使用单实例模式');
-    return false;
-  }
-  
-  // 其他情况根据参数决定
-  return forceNewInstance;
+  // TODO 判断有问题
+  // 1. 自定义协议启动时，第一次判断不到协议参数，然后就会打开一个通过自定义方式打开的实例，接着后边儿再次打开协议链接时，就不会出现新的实例。但当前有两个实例存在。
+  // const isProtocolLaunch = process.argv.some(arg => arg.startsWith(`${PROTOCOL}://`));
+  // if (isProtocolLaunch) {
+  //   return false; // 协议启动不使用多实例
+  // }
+  // return true;
+
+  // 当前直接默认不开启多实例
+  return false;
 }
 
 // 只有在需要多实例时才设置独立的用户数据目录
@@ -72,14 +66,6 @@ let pendingQueryParams = null;
 
 // 处理命令行参数中的 .abi 文件和路由参数
 function handleCommandLineArgs(argv) {
-  // 处理OAuth协议链接
-  const protocolUrl = argv.find(arg => arg.startsWith(`${PROTOCOL}://`));
-  if (protocolUrl) {
-    console.log('Found OAuth protocol URL in args:', protocolUrl);
-    handleProtocol(protocolUrl);
-    return true;
-  }
-
   // 处理 .abi 文件
   const abiFile = argv.find(arg => arg.endsWith('.abi') && fs.existsSync(arg));
   if (abiFile) {
@@ -128,14 +114,6 @@ function handleProtocol(url) {
     if (urlObj.hostname && urlObj.hostname !== '') {
       fullPath = '/' + urlObj.hostname + urlObj.pathname;
     }
-
-    dialog.showMessageBox({ message: `收到协议链接1: ${url}`});
-    dialog.showMessageBox({ message: `收到协议hostname: ${urlObj.hostname}`});
-    dialog.showMessageBox({ message: `收到协议pathname: ${urlObj.pathname}`});
-    dialog.showMessageBox({ message: `收到协议完整路径: ${fullPath}`});
-    dialog.showMessageBox({ message: `收到协议code: ${urlObj.searchParams.get('code')}`});
-    dialog.showMessageBox({ message: `收到协议state: ${urlObj.searchParams.get('state')}`});
-    dialog.showMessageBox({ message: `收到协议error: ${urlObj.searchParams.get('error')}`});
     
     // 检查是否是OAuth回调（使用完整路径）
     if (fullPath === '/auth/callback') {
@@ -177,7 +155,7 @@ function handleProtocol(url) {
     }
     
     // 处理其他协议链接
-    dialog.showMessageBox({ message: `收到协议：${url}` });
+    // dialog.showMessageBox({ message: `收到协议：${url}` });
   } catch (error) {
     console.error('解析协议链接失败:', error);
     // dialog.showErrorBox('协议错误', `无法解析协议链接: ${url}`);
@@ -461,15 +439,13 @@ function createWindow() {
 
 // 监听 Windows / Linux second-instance 事件
 const gotTheLock = app.requestSingleInstanceLock();
-if (!gotTheLock) {
+if (!gotTheLock && !shouldUseMultiInstance()) {
   // 如果无法获取单实例锁，说明已有实例在运行
   // 直接退出，让系统的协议处理机制将协议链接传递给已存在的实例
   app.quit();
 } else {
   // 监听second-instance事件，处理协议链接和其他启动参数
   app.on('second-instance', (event, commandLine, workingDirectory) => {
-    console.log('收到second-instance事件:', commandLine);
-    
     // 查找协议链接
     const protocolUrl = commandLine.find(arg => arg.startsWith(`${PROTOCOL}://`));
     if (protocolUrl) {
@@ -494,7 +470,7 @@ if (!gotTheLock) {
       mainWindow.show();
     }
   });
-} 
+}
 
 app.on("ready", () => {
   try {
