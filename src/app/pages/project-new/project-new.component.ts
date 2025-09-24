@@ -94,7 +94,13 @@ export class ProjectNewComponent {
     // this.electronService.setTitle('PROJECT_NEW.TITLE');
 
     await this.configService.init();
-    this._boardList = this.process(this.configService.boardList);
+    
+    // 先处理开发板列表数据
+    let processedBoardList = this.process(this.configService.boardList);
+    
+    // 按使用次数排序
+    this._boardList = this.configService.sortBoardsByUsage(processedBoardList);
+    
     this.boardList = JSON.parse(JSON.stringify(this._boardList));
     this.currentBoard = this.boardList[0];
 
@@ -117,8 +123,11 @@ export class ProjectNewComponent {
   search(keyword = this.keyword) {
     if (keyword) {
       keyword = keyword.replace(/\s/g, '').toLowerCase();
-      this.boardList = this._boardList.filter(item => item.fulltext.includes(keyword));
+      let filteredBoardList = this._boardList.filter(item => item.fulltext.includes(keyword));
+      // 对搜索结果按使用次数排序
+      this.boardList = this.configService.sortBoardsByUsage(filteredBoardList);
     } else {
+      // 恢复完整列表（已按使用次数排序）
       this.boardList = JSON.parse(JSON.stringify(this._boardList));
     }
   }
@@ -170,6 +179,9 @@ export class ProjectNewComponent {
     }
     this.currentStep = 2;
 
+    // 记录开发板使用次数
+    this.configService.recordBoardUsage(this.newProjectData.board.name);
+
     await this.projectService.projectNew(this.newProjectData);
   }
 
@@ -200,17 +212,21 @@ export class ProjectNewComponent {
       if (brand.value === 'other') {
         // 当选择"其他品牌"时，显示已有品牌列表未覆盖的元素
         const definedBrands = this.getDefinedBrands();
-        this.boardList = this._boardList.filter(board => {
+        let filteredBoardList = this._boardList.filter(board => {
           const boardBrand = board.brand ? board.brand.toLowerCase() : '';
           return !definedBrands.includes(boardBrand);
         });
+        // 对过滤后的列表按使用次数排序
+        this.boardList = this.configService.sortBoardsByUsage(filteredBoardList);
       } else {
         // 普通品牌过滤
-        this.boardList = this._boardList.filter(board => {
+        let filteredBoardList = this._boardList.filter(board => {
           const boardBrand = board.brand ? board.brand.toLowerCase() : '';
           const selectedBrandValue = brand.value.toLowerCase();
           return boardBrand === selectedBrandValue
         });
+        // 对过滤后的列表按使用次数排序
+        this.boardList = this.configService.sortBoardsByUsage(filteredBoardList);
       }
 
       console.log('过滤后的开发板列表:', this.boardList);
@@ -222,7 +238,7 @@ export class ProjectNewComponent {
         this.currentBoard = null;
       }
     } else {
-      // 如果选择"显示全部"或没有选中品牌，显示所有开发板
+      // 如果选择"显示全部"或没有选中品牌，显示所有开发板（已按使用次数排序）
       this.boardList = JSON.parse(JSON.stringify(this._boardList));
       if (this.boardList.length > 0) {
         this.selectBoard(this.boardList[0]);

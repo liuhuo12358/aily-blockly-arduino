@@ -8,6 +8,7 @@ Aily Project is a hardware development integrated environment that plans to inte
 Aily Blockly is a blockly IDE under the aily Project. In the early stage, it provides AI-assisted programming capabilities for non-professional users. The long-term goal is to break the boundary between professional development and non-professional development, and ultimately achieve natural language programming.  
 
 <img src="./img/sf.webp" width=1000 />
+<img src="./img/devices.webp" width=1000 />
 
 ## Current Version Highlights  
 1. **Engineering Project Management**

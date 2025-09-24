@@ -1,6 +1,6 @@
 export const BRAND_LIST = [
     {
-        name: '显示全部',
+        name: 'All',
         value: 'all',
         img: '',
     },
@@ -8,11 +8,6 @@ export const BRAND_LIST = [
         name: 'Arduino',
         value: 'arduino',
         img: 'brands\\arduino.webp',
-    },
-    {
-        name: 'Raspberry Pi',
-        value: 'raspberrypi',
-        img: 'brands\\raspberrypi.webp',
     },
     {
         name: 'Seeed Studio',
@@ -33,6 +28,16 @@ export const BRAND_LIST = [
         name: 'Espressif',
         value: 'espressif',
         img: 'brands\\espressif.webp',
+    },
+    {
+        name: 'Raspberry Pi',
+        value: 'raspberrypi',
+        img: 'brands\\raspberrypi.webp',
+    },
+    {
+        name: 'STMicroelectronics',
+        value: 'stmicroelectronics',
+        img: 'brands\\stmicroelectronics.webp',
     },
     {
         name: 'Other Brand',
