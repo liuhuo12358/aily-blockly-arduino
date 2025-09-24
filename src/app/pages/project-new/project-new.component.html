@@ -79,23 +79,23 @@
           <div class="content">
             <div class="title">
               <div class="title-text">{{currentBoard.nickname}}</div>
-              <div class="btns">
-                <div class="doc btn link" (click)="openUrl(currentBoard.url)">
-                  {{ 'PROJECT_NEW.BOARD.READ_DOC' | translate }}
-                </div>
-                <!-- <div class="doc btn link" (click)="openUrl(currentBoard.url)">
-                  {{ '数据手册' | translate }}
-                </div>
-                <div class="doc btn link" (click)="openUrl(currentBoard.url)">
-                  {{ '购买' | translate }}
-                </div> -->
-              </div>
             </div>
             <div class="text sscroll">{{ currentBoard.description }}</div>
             <div class="next">
               <button nz-button nzType="primary" (click)="nextStep()">
                 {{ 'PROJECT_NEW.BUTTONS.USE_THIS' | translate }}
               </button>
+              <div class="links">
+                <div class="btn link ccenter" (click)="openUrl(currentBoard.url)">
+                  {{ 'PROJECT_NEW.BOARD.READ_DOC' | translate }}
+                </div>
+                <!-- <div class="btn link ccenter" (click)="openUrl(currentBoard.url)">
+                  {{ '教程' | translate }}
+                </div>
+                <div class="btn link ccenter" (click)="openUrl(currentBoard.url)">
+                  {{ '购买' | translate }}
+                </div> -->
+              </div>
             </div>
           </div>
 

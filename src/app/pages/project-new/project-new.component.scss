@@ -278,6 +278,24 @@
 
     .next {
       height: 45px;
+      display: flex;
+      align-items: center;
+
+      .links {
+        margin-left: 15px;
+        display: flex;
+        align-items: center;
+
+        .link {
+          padding: 5px;
+          height: 12px;
+          border-right: 1px solid #6c6c6c;
+
+          &:last-child {
+            border-right: none;
+          }
+        }
+      }
     }
 
     .title-text {
