@@ -42,7 +42,7 @@
 
 .content {
   // flex-grow: 0;
-  height: calc(100% - 100px);
+  height: calc(100% - 40px);
   display: flex;
   position: relative;
 
@@ -143,23 +143,23 @@
   }
 }
 
-.footer {
-  border-top: 1px solid #222427;
-  height: 60px;
-  position: relative;
+// .footer {
+//   border-top: 1px solid #222427;
+//   height: 60px;
+//   position: relative;
 
-  .btns {
-    display: flex;
-    align-items: center;
-    position: absolute;
-    right: 0;
-    height: 100%;
+//   .btns {
+//     display: flex;
+//     align-items: center;
+//     position: absolute;
+//     right: 0;
+//     height: 100%;
 
-    button {
-      margin-right: 15px;
-    }
-  }
-}
+//     button {
+//       margin-right: 15px;
+//     }
+//   }
+// }
 
 .fa-spinner-third {
   animation: rotate45 1s steps(60, end) infinite;
@@ -175,23 +175,35 @@
   }
 }
 
-.board-selector {
-  display: flex;
-  flex-wrap: wrap;
-  align-content: flex-start;
-  gap: 15px;
-  overflow-y: auto;
-  padding-bottom: 110px;
-  border-radius: 5px 0 0 5px;
+.board-selector-box {
   flex-grow: 1;
+  overflow-y: auto;
+}
+
+.board-selector {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 15px;
+  border-radius: 5px 0 0 5px;
+
+  // 当容器宽度能容纳5个或更多格子时（5*200px + 4*15px gap = 1060px），使用较小的最小宽度
+  @media (min-width: 1060px) {
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  }
 
   .board {
-    width: 180px;
+    min-width: 180px;
     height: 110px;
     background: #3e4243;
     border-radius: 5px;
+    display: flex;
     flex-direction: column;
     justify-content: flex-start;
+    border: 2px solid #3e4243;
+
+    @media (max-width: 1059px) {
+      min-width: 200px;
+    }
 
     img {
       height: 80px;
@@ -221,7 +233,7 @@
   width: 100%;
   border-radius: 5px;
   margin-top: 15px;
-  padding: 5px 10px;
+  padding: 5px 10px 5px 0;
   background: rgba(59, 59, 59, 0.9);
   overflow: hidden;
   box-shadow: 0 0 5px rgba(0, 0, 0, 0.2);
@@ -229,7 +241,7 @@
   align-items: center;
 
   .img-box {
-    width: 185px;
+    width: 200px;
     height: 180px;
     flex-grow: 0;
     flex-shrink: 0;
@@ -265,6 +277,11 @@
       width: calc(100% + 10px);
       padding-right: 5px;
       overflow-y: scroll;
+      margin-bottom: 5px;
+    }
+
+    .next {
+      height: 45px;
     }
 
     .title-text {
@@ -287,7 +304,7 @@
         display: flex;
         align-items: center;
 
-        &:last-child{
+        &:last-child {
           border-right: none;
         }
       }
@@ -320,5 +337,20 @@
 .tag-list {
   nz-tag {
     cursor: pointer;
+  }
+}
+
+.right-content {
+  max-width: 600px;
+  position: relative;
+}
+
+.step-btns {
+  position: absolute;
+  right: 0;
+  bottom: -50px;
+
+  button {
+    margin-left: 10px;
   }
 }
