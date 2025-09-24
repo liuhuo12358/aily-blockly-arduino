@@ -1,6 +1,6 @@
 export const BRAND_LIST = [
     {
-        name: '显示全部',
+        name: 'All',
         value: 'all',
         img: '',
     },
