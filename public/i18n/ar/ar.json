@@ -34,6 +34,9 @@
         "PARTITION_SCHEME": "مخطط التقسيم",
         "CDC_ON_BOOT": "USB CDC عند التشغيل"
     },
+    "STM32": {
+        "BOARD": "Board Core"
+    },
     "GUIDE": {
         "START": "البدء",
         "RECENTLY": "مؤخرًا",

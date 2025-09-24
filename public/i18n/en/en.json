@@ -69,6 +69,9 @@
         "PARTITION_SCHEME": "Partition Scheme",
         "CDC_ON_BOOT": "USB CDC on Boot"
     },
+    "STM32": {
+        "BOARD": "Board Core"
+    },
     "GUIDE": {
         "START": "Start",
         "RECENTLY": "Recent",

@@ -34,6 +34,9 @@
         "PARTITION_SCHEME": "パーティション方式",
         "CDC_ON_BOOT": "USBシリアル通信"
     },
+    "STM32": {
+        "BOARD": "ボードコア"
+    },
     "GUIDE": {
         "START": "スタート",
         "RECENTLY": "最近",

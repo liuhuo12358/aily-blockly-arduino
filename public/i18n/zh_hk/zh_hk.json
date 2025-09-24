@@ -34,6 +34,9 @@
         "PARTITION_SCHEME": "分區方案",
         "CDC_ON_BOOT": "USB模擬串口"
     },
+    "STM32": {
+        "BOARD": "開發板核心"
+    },
     "GUIDE": {
         "START": "開始",
         "RECENTLY": "最近",

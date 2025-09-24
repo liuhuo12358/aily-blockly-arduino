@@ -34,6 +34,9 @@
         "PARTITION_SCHEME": "Schéma de partition",
         "CDC_ON_BOOT": "USB CDC au démarrage"
     },
+    "STM32": {
+        "BOARD": "Núcleo da placa"
+    },
     "GUIDE": {
         "START": "Démarrer",
         "RECENTLY": "Récent",

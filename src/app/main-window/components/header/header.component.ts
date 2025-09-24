@@ -169,6 +169,18 @@ export class HeaderComponent {
       // console.log('ESP32配置选项:', esp32config);
     }
 
+    // 添加STM32相关配置选项
+    if (this.projectService.currentBoardConfig['core'].indexOf('stm32') > -1 &&
+      this.projectService.currentBoardConfig['description'].indexOf('Series') > -1) {
+      let temp = this.projectService.currentBoardConfig['type'].split(':');
+      let board = temp[temp.length - 1];
+      let stm32config = await this.projectService.updateStm32ConfigMenu(board);
+      if (stm32config) {
+        portList0 = portList0.concat(stm32config)
+      }
+      // console.log('STM32配置选项:', stm32config);
+    }
+
     // 添加切换开发板功能
     let boardList = await this.configService.loadBoardList();
     boardList = this.convertBoardListFormat(boardList);
@@ -574,6 +586,8 @@ export class HeaderComponent {
       packageJson['projectConfig'][subItem.key] = subItem.data;
       // 更新项目配置
       this.projectService.setPackageJson(packageJson);
+      let newPinConfig = subItem.data;
+      this.projectService.compareStm32PinConfig(newPinConfig)
     }
   }
 

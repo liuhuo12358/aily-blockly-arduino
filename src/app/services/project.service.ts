@@ -10,6 +10,7 @@ import { CmdService } from './cmd.service';
 import { generateDateString } from '../func/func';
 import { ConfigService } from './config.service';
 import { ESP32_CONFIG_MENU } from '../configs/esp32.config';
+import { STM32_CONFIG_MENU } from '../configs/stm32.config';
 import { ActionService } from './action.service';
 
 const { pt } = (window as any)['electronAPI'].platform;
@@ -43,6 +44,8 @@ export class ProjectService {
   projectRootPath: string;
   currentProjectPath: string;
   currentBoardConfig: any;
+  // STM32选择开发板时定义引脚使用
+  currentStm32pinConfig: any;
 
   constructor(
     private uiService: UiService,
@@ -300,6 +303,48 @@ export class ProjectService {
     return JSON.parse(this.electronService.readFile(boardJsonPath));
   }
 
+  // 获取开发板特殊配置文件，如 STM32 需要的特殊配置
+  async getJsonConfig(fileName: string) {
+    const boardModule = await this.getBoardModule();
+    if (!boardModule) {
+      throw new Error('未找到开发板模块');
+    }
+    const configPath = `${this.currentProjectPath}/node_modules/${boardModule}/${fileName}`;
+    if (!window['fs'].existsSync(configPath)) {
+      throw new Error('配置文件不存在: ' + configPath);
+    }
+    return JSON.parse(this.electronService.readFile(configPath));
+  }
+
+  // 修改开发板配置文件board.json， 如 STM32需要，传入新的data
+  async setBoardJson(data: any) {
+    const boardModule = await this.getBoardModule();
+    if (!boardModule) {
+      throw new Error('未找到开发板模块');
+    }
+    const boardJsonPath = `${this.currentProjectPath}/node_modules/${boardModule}/board.json`;
+    if (!window['fs'].existsSync(boardJsonPath)) {
+      throw new Error('开发板配置文件不存在: ' + boardJsonPath);
+    }
+
+    // 保存当前项目
+    this.save();
+    this.message.loading('正在切换开发板配置...', { nzDuration: 5000 });
+
+    const boardJson = JSON.parse(this.electronService.readFile(boardJsonPath));
+    Object.assign(boardJson, data);
+    window['fs'].writeFileSync(boardJsonPath, JSON.stringify(boardJson, null, 2));
+
+    // 重新加载项目
+    console.log('重新加载项目...');
+    await this.projectOpen(this.currentProjectPath);
+
+    // 通知开发板变更
+    this.boardChangeSubject.next();
+    this.uiService.updateFooterState({ state: 'done', text: '开发板切换完成' });
+    this.message.success('开发板切换成功', { nzDuration: 3000 });
+  }
+
   // 获取开发板package路径
   async getBoardPackagePath() {
     const boardModule = await this.getBoardModule();
@@ -388,6 +433,44 @@ export class ProjectService {
       return esp32Config;
     } catch (error) {
       console.error('获取ESP32开发板配置失败:', error);
+      return null;
+    }
+  }
+
+  // 解析boards.txt并获取STM32配置信息
+  async getStm32BoardConfig(boardName: string) {
+    try {
+      const sdkPath = await this.getSdkPath();
+      if (!sdkPath) {
+        throw new Error('未找到 SDK 路径');
+      }
+
+      const boardsFilePath = `${sdkPath}/boards.txt`;
+      if (!window['fs'].existsSync(boardsFilePath)) {
+        throw new Error('boards.txt 文件不存在: ' + boardsFilePath);
+      }
+
+      const boardsContent = window['fs'].readFileSync(boardsFilePath, 'utf8');
+      const lines = boardsContent.split('\n');
+
+      // 查找指定开发板的配置
+      const boardConfig = this.parseBoardsConfig(lines, boardName);
+      if (!boardConfig) {
+        throw new Error(`未找到开发板 "${boardName}" 的配置`);
+      }
+
+      const stm32Config = {
+        board: this.extractMenuOptions(boardConfig, 'pnum')
+      };
+
+      // 只保留 name 字段中包含 "Generic" 的选项，其它全部去掉
+      if (stm32Config.board && Array.isArray(stm32Config.board)) {
+        stm32Config.board = stm32Config.board.filter(item => item.name && item.name.includes('Generic'));
+      }
+
+      return stm32Config;
+    } catch (error) {
+      console.error('获取STM32开发板配置失败:', error);
       return null;
     }
   }
@@ -648,6 +731,107 @@ export class ProjectService {
     } catch (error) {
       console.error('更新ESP32配置菜单失败:', error);
       return null;
+    }
+  }
+
+  // 更新STM32配置菜单项
+  async updateStm32ConfigMenu(boardName: string) {
+    try {
+      const boardConfig = await this.getStm32BoardConfig(boardName);
+
+      if (!boardConfig) {
+        console.warn(`无法获取开发板 "${boardName}" 的配置`);
+        return null;
+      }
+
+      // 读取当前项目的package.json配置
+      let currentProjectConfig: any = {};
+      let packageJson: any = {};
+      try {
+        packageJson = await this.getPackageJson();
+        currentProjectConfig = packageJson.projectConfig || {};
+      } catch (error) {
+        console.warn('无法读取项目配置:', error);
+      }
+
+      let STM32_CONFIG_MENU_TEMP = JSON.parse(JSON.stringify(STM32_CONFIG_MENU));
+
+      // 更新菜单项
+      STM32_CONFIG_MENU_TEMP.forEach(menuItem => {
+        if (menuItem.name === 'STM32.BOARD' && boardConfig.board) {
+          menuItem.children = boardConfig.board;
+          // 根据当前项目配置设置check状态
+          if (currentProjectConfig.pnum) {
+            menuItem.children.forEach((child: any) => {
+              child.check = false; // 先清空所有选中状态
+              if (child.data && child.data.build && currentProjectConfig.pnum) {
+                if (this.compareConfigs(child.data, currentProjectConfig.pnum, ['board'])) {
+                  child.check = true;
+                  this.currentStm32pinConfig = child.data;
+                }
+              }
+            });
+          } else {
+            // 如果项目配置中没有pnum，则默认选中第一个
+            if (menuItem.children.length > 0) {
+              menuItem.children[0].check = true;
+              packageJson['projectConfig'] = packageJson['projectConfig'] || {};
+              packageJson['projectConfig']['pnum'] = menuItem.children[0].data;
+              // 更新项目配置
+              this.setPackageJson(packageJson);
+              this.compareStm32PinConfig(menuItem.children[0].data);
+            }
+          }
+        }
+      });
+      return STM32_CONFIG_MENU_TEMP;
+    } catch (error) {
+      console.error('更新STM32配置菜单失败:', error);
+      return null;
+    }
+  }
+
+  // 比较stm32引脚配置
+  async compareStm32PinConfig(pinConfig: any): Promise<boolean> {
+    if (pinConfig == this.currentStm32pinConfig) {
+      return true;
+    } else {
+      let newPinConfig = pinConfig.build.variant;
+      // 获取到的config格式为“STM32F1xx/F100C(4-6)T”
+      // 我们需要转换为“F1XXC”
+      // 支持 STM32F1xx/F103C、STM32F4xx/F407V、STM32H7xx/H767Z、STM32C0xx/C030F 等
+      const match = newPinConfig.match(/STM32([A-Z]\d?)xx\/[A-Z]\d{3}([A-Z])/i);
+      if (match) {
+        // match[1] 可能是 F1、F4、H7、C0 等，match[2] 是主型号字母
+        newPinConfig = match[1].toUpperCase() + 'XX' + match[2].toUpperCase();
+      }
+      // console.log('newPinConfig:', newPinConfig);
+      // 读取特殊配置文件
+      const newPinJson = await this.getJsonConfig(newPinConfig + '.pins.json');
+      // console.log('newPinJson:', newPinJson);
+      const currentBoardJson = await this.getBoardJson();
+      // console.log('currentBoardJson:', currentBoardJson);
+      let isChanged = false;
+      // 遍历newPinJson中的每一项，更新currentBoardJson中的对应项
+      if (typeof newPinJson === 'object' && newPinJson !== null) {
+        // 如果 newPinJson 结构为 {analog: [...], digital: [...]}，则直接整体替换 currentBoardJson 的同名属性
+        Object.keys(newPinJson).forEach(key => {
+          if (Array.isArray(newPinJson[key])) {
+            if (JSON.stringify(currentBoardJson[key]) !== JSON.stringify(newPinJson[key])) {
+              currentBoardJson[key] = newPinJson[key];
+              isChanged = true;
+            }
+          }
+        });
+      } else {
+        console.error('newPinJson 不是对象:', newPinJson);
+      }
+      // 保存更新后的board.json
+      if (isChanged) {
+        await this.setBoardJson(currentBoardJson);
+        this.currentStm32pinConfig = pinConfig;
+      }
+      return false;
     }
   }
 

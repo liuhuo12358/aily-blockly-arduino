@@ -34,6 +34,9 @@
         "PARTITION_SCHEME": "파티션 스킴",
         "CDC_ON_BOOT": "USB 시리얼 통신"
     },
+    "STM32": {
+        "BOARD": "보드 코어"
+    },
     "GUIDE": {
         "START": "시작",
         "RECENTLY": "최근",
