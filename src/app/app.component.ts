@@ -51,8 +51,8 @@ export class AppComponent implements OnInit, OnDestroy {
    * 设置全局GitHub OAuth协议回调监听
    */
   private setupGlobalOAuthListener() {
-    if (window.electronAPI?.oauth?.onCallback) {
-      this.oauthResultListener = window.electronAPI.oauth.onCallback(async (callbackData: any) => {
+    if (window['oauth'].onCallback) {
+      this.oauthResultListener = window['oauth'].onCallback(async (callbackData: any) => {
         try {
           // 使用AuthService处理协议回调
           const result = await this.authService.handleOAuthCallback(callbackData);

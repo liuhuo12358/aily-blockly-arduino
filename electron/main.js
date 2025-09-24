@@ -8,7 +8,7 @@ const { isWin32, isDarwin, isLinux } = require("./platform");
 
 PROTOCOL = "ailyblockly";
 
-// 隔离用户数据目录：为每个实例生成唯一的用户数据目录。如果此处不隔离，会导致启动第二个实例时，要等待几秒才会出现窗口
+// 隔离用户数据目录：为指定的多实例生成唯一的用户数据目录
 function setupUniqueUserDataPath() {
   const timestamp = Date.now();
   const randomId = Math.random().toString(36).substring(2, 8);
@@ -28,8 +28,30 @@ function setupUniqueUserDataPath() {
   return uniqueUserDataPath;
 }
 
-// 在应用初始化之前设置独立的用户数据目录
-setupUniqueUserDataPath();
+// 检查是否需要多实例模式
+function shouldUseMultiInstance() {
+  const args = process.argv.slice(1);
+  
+  // 检查是否是协议启动
+  const isProtocolLaunch = args.some(arg => arg.startsWith(`${PROTOCOL}://`));
+  
+  // 检查是否明确要求新实例（通过--new-instance参数）
+  const forceNewInstance = args.some(arg => arg === '--new-instance');
+  
+  // 协议启动不使用多实例（让单实例处理）
+  if (isProtocolLaunch && !forceNewInstance) {
+    console.log('协议启动，使用单实例模式');
+    return false;
+  }
+  
+  // 其他情况根据参数决定
+  return forceNewInstance;
+}
+
+// 只有在需要多实例时才设置独立的用户数据目录
+if (shouldUseMultiInstance()) {
+  setupUniqueUserDataPath();
+}
 
 app.commandLine.appendSwitch('js-flags', '--max-old-space-size=4096');
 app.commandLine.appendSwitch('enable-features', 'V8LazyCodeGeneration,V8CacheOptions');
@@ -98,9 +120,25 @@ function handleProtocol(url) {
   
   try {
     const urlObj = new URL(url);
+
+    // 自定义协议URL中，hostname 可能包含路径的第一部分
+    // 例如 ailyblockly://auth/callback 中，hostname='auth', pathname='/callback'
+    // 需要重新构建完整路径
+    let fullPath = urlObj.pathname;
+    if (urlObj.hostname && urlObj.hostname !== '') {
+      fullPath = '/' + urlObj.hostname + urlObj.pathname;
+    }
+
+    dialog.showMessageBox({ message: `收到协议链接1: ${url}`});
+    dialog.showMessageBox({ message: `收到协议hostname: ${urlObj.hostname}`});
+    dialog.showMessageBox({ message: `收到协议pathname: ${urlObj.pathname}`});
+    dialog.showMessageBox({ message: `收到协议完整路径: ${fullPath}`});
+    dialog.showMessageBox({ message: `收到协议code: ${urlObj.searchParams.get('code')}`});
+    dialog.showMessageBox({ message: `收到协议state: ${urlObj.searchParams.get('state')}`});
+    dialog.showMessageBox({ message: `收到协议error: ${urlObj.searchParams.get('error')}`});
     
-    // 检查是否是OAuth回调
-    if (urlObj.pathname === '/auth/callback') {
+    // 检查是否是OAuth回调（使用完整路径）
+    if (fullPath === '/auth/callback') {
       const searchParams = urlObj.searchParams;
       const code = searchParams.get('code');
       const state = searchParams.get('state');
@@ -108,6 +146,8 @@ function handleProtocol(url) {
       const errorDescription = searchParams.get('error_description');
       
       console.log('OAuth回调参数:', { code, state, error, errorDescription });
+
+      dialog.showMessageBox({ message: `收到OAuth回调参数: ${JSON.stringify({ code, state, error, errorDescription })}` });
       
       // 构建回调数据
       const callbackData = {
@@ -120,7 +160,7 @@ function handleProtocol(url) {
       // 如果主窗口存在且已加载，发送OAuth回调数据
       if (mainWindow && mainWindow.webContents) {
         mainWindow.webContents.send('oauth-callback', callbackData);
-        
+        dialog.showMessageBox({ message: '主窗口已准备好，发送OAuth回调' });
         // 将窗口置前显示
         if (mainWindow.isMinimized()) {
           mainWindow.restore();
@@ -130,6 +170,7 @@ function handleProtocol(url) {
       } else {
         // 如果窗口不存在，存储回调数据以便稍后处理
         global.pendingOAuthCallback = callbackData;
+        dialog.showMessageBox({ message: '主窗口未准备好，稍后处理OAuth回调' });
       }
       
       return;
@@ -139,7 +180,7 @@ function handleProtocol(url) {
     dialog.showMessageBox({ message: `收到协议：${url}` });
   } catch (error) {
     console.error('解析协议链接失败:', error);
-    dialog.showErrorBox('协议错误', `无法解析协议链接: ${url}`);
+    // dialog.showErrorBox('协议错误', `无法解析协议链接: ${url}`);
   }
 }
 
@@ -270,6 +311,49 @@ function loadEnv() {
 }
 
 
+// 更新已存在主窗口的内容（用于second-instance处理）
+function updateMainWindowWithPendingData() {
+  if (!mainWindow || !mainWindow.webContents) {
+    console.log('主窗口不存在，无法更新内容');
+    return;
+  }
+
+  let targetUrl = null;
+
+  if (pendingFileToOpen) {
+    const routePath = `main/blockly-editor?path=${encodeURIComponent(pendingFileToOpen)}`;
+    console.log('Updating existing window with project path:', routePath);
+    targetUrl = `#/${routePath}`;
+    pendingFileToOpen = null;
+  } else if (pendingRoute) {
+    // 构建路由URL
+    let routePath = pendingRoute;
+
+    // 如果有查询参数，添加到路由中
+    if (pendingQueryParams) {
+      const queryString = new URLSearchParams();
+      Object.keys(pendingQueryParams).forEach(key => {
+        queryString.append(key, pendingQueryParams[key]);
+      });
+      routePath += (routePath.includes('?') ? '&' : '?') + queryString.toString();
+    }
+
+    console.log('Updating existing window with custom route:', routePath);
+    targetUrl = `#/${routePath}`;
+    pendingRoute = null;
+    pendingQueryParams = null;
+  }
+
+  // 如果有目标URL，导航到该页面
+  if (targetUrl) {
+    if (serve) {
+      mainWindow.loadURL(`http://localhost:4200/${targetUrl}`);
+    } else {
+      mainWindow.loadFile(`renderer/index.html`, { hash: targetUrl });
+    }
+  }
+}
+
 function createWindow() {
   let windowBounds = getConfWindowBounds();
 
@@ -378,19 +462,27 @@ function createWindow() {
 // 监听 Windows / Linux second-instance 事件
 const gotTheLock = app.requestSingleInstanceLock();
 if (!gotTheLock) {
-  const isProtocolLaunch = process.argv.some(arg => arg.startsWith(`${PROTOCOL}://`));
-  if (isProtocolLaunch) {
-    app.quit();
-  } else {
-    // 处理非协议启动的情况
-  }
+  // 如果无法获取单实例锁，说明已有实例在运行
+  // 直接退出，让系统的协议处理机制将协议链接传递给已存在的实例
+  app.quit();
 } else {
-  // 监听second-instance事件，处理协议链接
+  // 监听second-instance事件，处理协议链接和其他启动参数
   app.on('second-instance', (event, commandLine, workingDirectory) => {
+    console.log('收到second-instance事件:', commandLine);
+    
     // 查找协议链接
     const protocolUrl = commandLine.find(arg => arg.startsWith(`${PROTOCOL}://`));
     if (protocolUrl) {
+      console.log('在second-instance中处理协议链接:', protocolUrl);
       handleProtocol(protocolUrl);
+    } else {
+      // 处理其他类型的启动参数（如.abi文件、路由参数等）
+      handleCommandLineArgs(commandLine);
+      
+      // 如果有待处理的文件或路由，更新主窗口
+      if (pendingFileToOpen || pendingRoute) {
+        updateMainWindowWithPendingData();
+      }
     }
     
     // 将现有窗口置前
@@ -399,6 +491,7 @@ if (!gotTheLock) {
         mainWindow.restore();
       }
       mainWindow.focus();
+      mainWindow.show();
     }
   });
 } 
@@ -555,7 +648,7 @@ ipcMain.handle("open-new-instance", async (event, data) => {
     const { route, queryParams } = data || {};
 
     // 构建命令行参数
-    const args = [];
+    const args = ['--new-instance']; // 添加强制新实例标志
 
     // 如果有路由参数，将其作为环境变量传递
     if (route) {
