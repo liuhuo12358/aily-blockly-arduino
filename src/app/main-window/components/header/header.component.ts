@@ -166,7 +166,7 @@ export class HeaderComponent {
       if (esp32config) {
         portList0 = portList0.concat(esp32config)
       }
-      // console.log('ESP32配置选项:', esp32config);
+      console.log('ESP32配置选项:', esp32config);
     }
 
     // 添加STM32相关配置选项
@@ -174,11 +174,12 @@ export class HeaderComponent {
       this.projectService.currentBoardConfig['description'].indexOf('Series') > -1) {
       let temp = this.projectService.currentBoardConfig['type'].split(':');
       let board = temp[temp.length - 1];
+      console.log('STM32开发板标识:', board);
       let stm32config = await this.projectService.updateStm32ConfigMenu(board);
       if (stm32config) {
         portList0 = portList0.concat(stm32config)
       }
-      // console.log('STM32配置选项:', stm32config);
+      console.log('STM32配置选项:', stm32config);
     }
 
     // 添加切换开发板功能
@@ -584,10 +585,13 @@ export class HeaderComponent {
       let packageJson = await this.projectService.getPackageJson();
       packageJson['projectConfig'] = packageJson['projectConfig'] || {};
       packageJson['projectConfig'][subItem.key] = subItem.data;
-      // 更新项目配置
       this.projectService.setPackageJson(packageJson);
-      let newPinConfig = subItem.data;
-      this.projectService.compareStm32PinConfig(newPinConfig)
+      // 判断是否是STM32，是则更新项目配置
+      if (this.projectService.currentBoardConfig['core'].indexOf('stm32') > -1 &&
+      this.projectService.currentBoardConfig['description'].indexOf('Series') > -1) {
+        let newPinConfig = subItem.data;
+        this.projectService.compareStm32PinConfig(newPinConfig)
+      }
     }
   }
 

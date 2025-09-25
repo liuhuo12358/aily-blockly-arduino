@@ -424,6 +424,7 @@ export class ProjectService {
       // 提取需要的配置项
       const esp32Config = {
         uploadSpeed: this.extractMenuOptions(boardConfig, 'UploadSpeed'),
+        uploadMode: this.extractMenuOptions(boardConfig, 'UploadMode'),
         flashMode: this.extractMenuOptions(boardConfig, 'FlashMode'),
         flashSize: this.extractMenuOptions(boardConfig, 'FlashSize'),
         partitionScheme: this.extractMenuOptions(boardConfig, 'PartitionScheme'),
@@ -455,12 +456,15 @@ export class ProjectService {
 
       // 查找指定开发板的配置
       const boardConfig = this.parseBoardsConfig(lines, boardName);
+
       if (!boardConfig) {
         throw new Error(`未找到开发板 "${boardName}" 的配置`);
       }
 
       const stm32Config = {
-        board: this.extractMenuOptions(boardConfig, 'pnum')
+        board: this.extractMenuOptions(boardConfig, 'pnum'),
+        usb: this.extractMenuOptions(boardConfig, 'usb'),
+        upload_method: this.extractMenuOptions(boardConfig, 'upload_method'),
       };
 
       // 只保留 name 字段中包含 "Generic" 的选项，其它全部去掉
@@ -500,6 +504,14 @@ export class ProjectService {
         continue;
       }
 
+      // 以boardName.开头的行表示当前开发板的配置
+      if (!foundBoard) {
+        if (trimmedLine.startsWith(`${boardName}.`)) {
+          foundBoard = true;
+          currentBoard = boardName;
+        }
+      }
+
       // 如果找到了目标开发板，继续收集配置
       if (foundBoard && trimmedLine.startsWith(`${boardName}.`)) {
         const configMatch = trimmedLine.match(/^([^=]+)=(.*)$/);
@@ -535,31 +547,36 @@ export class ProjectService {
   }
 
   // 通用的配置比较方法
-  private compareConfigs(childData: any, currentData: any, configKeys: string[]): boolean {
+  private compareConfigs(childData: any, currentData: any): boolean {
     if (!childData || !currentData) {
       return false;
     }
 
-    // 检查build配置
-    if (childData.build && currentData.build) {
-      for (const key of configKeys) {
-        if (childData.build.hasOwnProperty(key)) {
-          if (childData.build[key] !== currentData.build[key]) {
-            return false;
-          }
-        }
+    if (childData && currentData) {
+      if (childData !== currentData) {
+        return false;
       }
     }
+    // // 检查build配置
+    // if (childData.build && currentData.build) {
+    //   for (const key of configKeys) {
+    //     if (childData.build.hasOwnProperty(key)) {
+    //       if (childData.build[key] !== currentData.build[key]) {
+    //         return false;
+    //       }
+    //     }
+    //   }
+    // }
 
-    // 检查upload配置
-    if (childData.upload && currentData.upload) {
-      const uploadKeys = Object.keys(childData.upload);
-      for (const key of uploadKeys) {
-        if (childData.upload[key] !== currentData.upload[key]) {
-          return false;
-        }
-      }
-    }
+    // // 检查upload配置
+    // if (childData.upload && currentData.upload) {
+    //   const uploadKeys = Object.keys(childData.upload);
+    //   for (const key of uploadKeys) {
+    //     if (childData.upload[key] !== currentData.upload[key]) {
+    //       return false;
+    //     }
+    //   }
+    // }
 
     return true;
   }
@@ -571,67 +588,85 @@ export class ProjectService {
     const menuPrefix = `${boardName}.menu.${menuType}.`;
 
     // 首先收集所有选项的基本信息
-    const optionKeys = new Set<string>();
+    const optionDatas = new Set<string>();
 
     for (const key in boardConfig) {
       if (key.startsWith(menuPrefix)) {
         const remainingPath = key.replace(menuPrefix, '');
-        const optionKey = remainingPath.split('.')[0];
+        const optionData = remainingPath.split('.')[0];
 
         // 只处理主选项，不处理子属性
         if (!remainingPath.includes('.') || remainingPath.split('.').length === 2) {
-          optionKeys.add(optionKey);
+          optionDatas.add(optionData);
+          // console.log('Found option data:', optionData);
         }
       }
     }
 
-    // 为每个选项构建完整的配置对象
-    optionKeys.forEach(optionKey => {
-      const mainKey = `${menuPrefix}${optionKey}`;
-      const optionName = boardConfig[mainKey];
-
-      if (optionName) {
-        const option = {
-          name: optionName,
-          key: menuType,
-          data: {
-            build: {},
-            upload: {}
-          },
-          check: false
-        };
-
-        // 收集该选项的所有相关配置
-        for (const key in boardConfig) {
-          if (key.startsWith(`${menuPrefix}${optionKey}.`)) {
-            const configPath = key.replace(`${menuPrefix}${optionKey}.`, '');
-            const pathParts = configPath.split('.');
-
-            if (pathParts.length === 2) {
-              const category = pathParts[0]; // build 或 upload
-              const property = pathParts[1]; // partitions, maximum_size 等
-
-              if (category === 'build' || category === 'upload') {
-                option.data[category][property] = boardConfig[key];
-              }
-            }
-          }
-        }
-
-        // 清理空的配置对象
-        if (Object.keys(option.data.build).length === 0) {
-          delete option.data.build;
-        }
-        if (Object.keys(option.data.upload).length === 0) {
-          delete option.data.upload;
-        }
-        if (Object.keys(option.data).length === 0) {
-          delete option.data;
-        }
-
-        options.push(option);
+    // 构建选项列表，只包含key和data，key为menuType，data为optionData
+    optionDatas.forEach(optionData => {
+      const option = {
+        name: boardConfig[`${menuPrefix}${optionData}`] || optionData,
+        key: menuType,
+        data: optionData,
+        check: false
       }
+
+      // 清理空的配置对象
+      if (Object.keys(option.data).length === 0) {
+        delete option.data;
+      }
+
+      options.push(option);
     });
+
+    // // 为每个选项构建完整的配置对象
+    // optionKeys.forEach(optionKey => {
+    //   const mainKey = `${menuPrefix}${optionKey}`;
+    //   const optionName = boardConfig[mainKey];
+
+    //   if (optionName) {
+    //     const option = {
+    //       name: optionName,
+    //       key: menuType,
+    //       data: {
+    //         build: {},
+    //         upload: {}
+    //       },
+    //       check: false
+    //     };
+
+    //     // 收集该选项的所有相关配置
+    //     for (const key in boardConfig) {
+    //       if (key.startsWith(`${menuPrefix}${optionKey}.`)) {
+    //         const configPath = key.replace(`${menuPrefix}${optionKey}.`, '');
+    //         const pathParts = configPath.split('.');
+
+    //         if (pathParts.length === 2) {
+    //           const category = pathParts[0]; // build 或 upload
+    //           const property = pathParts[1]; // partitions, maximum_size 等
+
+    //           if (category === 'build' || category === 'upload') {
+    //             option.data[category][property] = boardConfig[key];
+    //           }
+    //         }
+    //       }
+    //     }
+
+    //     // 清理空的配置对象
+    //     if (Object.keys(option.data.build).length === 0) {
+    //       delete option.data.build;
+    //     }
+    //     if (Object.keys(option.data.upload).length === 0) {
+    //       delete option.data.upload;
+    //     }
+    //     if (Object.keys(option.data).length === 0) {
+    //       delete option.data;
+    //     }
+
+    //     options.push(option);
+    //   }
+    // });
     return options;
   }
 
@@ -668,7 +703,18 @@ export class ProjectService {
             menuItem.children.forEach((child: any) => {
               child.check = false; // 先清空所有选中状态
               // 使用通用比较方法检查当前配置是否匹配
-              if (this.compareConfigs(child.data, currentProjectConfig.UploadSpeed, ['speed'])) {
+              if (this.compareConfigs(child.data, currentProjectConfig.UploadSpeed)) {
+                child.check = true;
+              }
+            });
+          }
+        } else if (menuItem.name === 'ESP32.UPLOAD_MODE' && boardConfig.uploadMode) {
+          menuItem.children = boardConfig.uploadMode;
+          // 根据当前项目配置设置check状态
+          if (currentProjectConfig.UploadMode) {
+            menuItem.children.forEach((child: any) => {
+              child.check = false;
+              if (this.compareConfigs(child.data, currentProjectConfig.UploadMode)) {
                 child.check = true;
               }
             });
@@ -680,15 +726,8 @@ export class ProjectService {
           if (currentProjectConfig.FlashMode) {
             menuItem.children.forEach((child: any) => {
               child.check = false;
-              if (child.data && child.data.build && currentProjectConfig.FlashMode.build) {
-                // 检查FlashMode的所有相关配置项是否完全匹配
-                const childBuild = child.data.build;
-                const currentBuild = currentProjectConfig.FlashMode.build;
-
-                const isMatched = this.compareFlashModeConfig(childBuild, currentBuild);
-                if (isMatched) {
-                  child.check = true;
-                }
+              if (this.compareConfigs(child.data, currentProjectConfig.FlashMode)) {
+                child.check = true;
               }
             });
           }
@@ -698,7 +737,7 @@ export class ProjectService {
           if (currentProjectConfig.FlashSize) {
             menuItem.children.forEach((child: any) => {
               child.check = false;
-              if (this.compareConfigs(child.data, currentProjectConfig.FlashSize, ['flash_size'])) {
+              if (this.compareConfigs(child.data, currentProjectConfig.FlashSize)) {
                 child.check = true;
               }
             });
@@ -709,7 +748,7 @@ export class ProjectService {
           if (currentProjectConfig.PartitionScheme) {
             menuItem.children.forEach((child: any) => {
               child.check = false;
-              if (this.compareConfigs(child.data, currentProjectConfig.PartitionScheme, ['partitions', 'maximum_size'])) {
+              if (this.compareConfigs(child.data, currentProjectConfig.PartitionScheme)) {
                 child.check = true;
               }
             });
@@ -720,7 +759,7 @@ export class ProjectService {
           if (currentProjectConfig.CDCOnBoot) {
             menuItem.children.forEach((child: any) => {
               child.check = false;
-              if (this.compareConfigs(child.data, currentProjectConfig.CDCOnBoot, ['cdc_on_boot'])) {
+              if (this.compareConfigs(child.data, currentProjectConfig.CDCOnBoot)) {
                 child.check = true;
               }
             });
@@ -761,14 +800,14 @@ export class ProjectService {
         if (menuItem.name === 'STM32.BOARD' && boardConfig.board) {
           menuItem.children = boardConfig.board;
           // 根据当前项目配置设置check状态
-          if (currentProjectConfig.pnum) {
+          // console.log('menuItem.children:', menuItem.children);
+          if (currentProjectConfig.pnum) {     
             menuItem.children.forEach((child: any) => {
               child.check = false; // 先清空所有选中状态
-              if (child.data && child.data.build && currentProjectConfig.pnum) {
-                if (this.compareConfigs(child.data, currentProjectConfig.pnum, ['board'])) {
-                  child.check = true;
-                  this.currentStm32pinConfig = child.data;
-                }
+              if (this.compareConfigs(child.data, currentProjectConfig.pnum)) {
+                child.check = true;
+                this.currentStm32pinConfig = child.data;
+                // console.log('Selected STM32 pin config:', this.currentStm32pinConfig);
               }
             });
           } else {
@@ -781,6 +820,28 @@ export class ProjectService {
               this.setPackageJson(packageJson);
               this.compareStm32PinConfig(menuItem.children[0].data);
             }
+          }
+        } else if (menuItem.name === 'STM32.USB' && boardConfig.usb) {
+          menuItem.children = boardConfig.usb;
+          // 根据当前项目配置设置check状态
+          if (currentProjectConfig.usb) {
+            menuItem.children.forEach((child: any) => {
+              child.check = false;
+              if (this.compareConfigs(child.data, currentProjectConfig.usb)) {
+                child.check = true;
+              }
+            });
+          }
+        } else if (menuItem.name === 'STM32.UPLOAD_METHOD' && boardConfig.upload_method) {
+          menuItem.children = boardConfig.upload_method;
+          // 根据当前项目配置设置check状态
+          if (currentProjectConfig.upload_method) {
+            menuItem.children.forEach((child: any) => {
+              child.check = false;
+              if (this.compareConfigs(child.data, currentProjectConfig.upload_method)) {
+                child.check = true;
+              }
+            });
           }
         }
       });
@@ -796,15 +857,19 @@ export class ProjectService {
     if (pinConfig == this.currentStm32pinConfig) {
       return true;
     } else {
-      let newPinConfig = pinConfig.build.variant;
-      // 获取到的config格式为“STM32F1xx/F100C(4-6)T”
-      // 我们需要转换为“F1XXC”
-      // 支持 STM32F1xx/F103C、STM32F4xx/F407V、STM32H7xx/H767Z、STM32C0xx/C030F 等
-      const match = newPinConfig.match(/STM32([A-Z]\d?)xx\/[A-Z]\d{3}([A-Z])/i);
-      if (match) {
-        // match[1] 可能是 F1、F4、H7、C0 等，match[2] 是主型号字母
-        newPinConfig = match[1].toUpperCase() + 'XX' + match[2].toUpperCase();
-      }
+      let newPinConfig = pinConfig;
+
+      newPinConfig = this.parseGenericConfig(newPinConfig);
+      // console.log('newPinConfig:', newPinConfig);
+
+      // // 获取到的config格式为“STM32F1xx/F100C(4-6)T”
+      // // 我们需要转换为“F1XXC”
+      // // 支持 STM32F1xx/F103C、STM32F4xx/F407V、STM32H7xx/H767Z、STM32C0xx/C030F 等
+      // const match = newPinConfig.match(/STM32([A-Z]\d?)xx\/[A-Z]\d{3}([A-Z])/i);
+      // if (match) {
+      //   // match[1] 可能是 F1、F4、H7、C0 等，match[2] 是主型号字母
+      //   newPinConfig = match[1].toUpperCase() + 'XX' + match[2].toUpperCase();
+      // }
       // console.log('newPinConfig:', newPinConfig);
       // 读取特殊配置文件
       const newPinJson = await this.getJsonConfig(newPinConfig + '.pins.json');
@@ -816,6 +881,7 @@ export class ProjectService {
       if (typeof newPinJson === 'object' && newPinJson !== null) {
         // 如果 newPinJson 结构为 {analog: [...], digital: [...]}，则直接整体替换 currentBoardJson 的同名属性
         Object.keys(newPinJson).forEach(key => {
+          // console.log(`Comparing key: ${key}`);
           if (Array.isArray(newPinJson[key])) {
             if (JSON.stringify(currentBoardJson[key]) !== JSON.stringify(newPinJson[key])) {
               currentBoardJson[key] = newPinJson[key];
@@ -833,6 +899,22 @@ export class ProjectService {
       }
       return false;
     }
+  }
+
+  private parseGenericConfig(config: string): string {
+    // 匹配 GENERIC_F100C4TX、GENERIC_F103CB、GENERIC_F407VG 等格式
+    // 识别后 输出F1XXC、F4XXV等格式
+    // const match = config.match(/GENERIC_([A-Z])(\d{1,2})\d*[A-Z]?([A-Z])/i);
+    // const match = config.match(/GENERIC_([A-Z])(\d?)\d*[A-Z]?([A-Z])/i);
+    const match = config.match(/GENERIC_([A-Z])(\d)\d*([A-Z])/i);
+    if (match) {
+      // match[1] 提取主系列（如 F）
+      // match[2] 提取数字部分（如 1、4、7、0）
+      // match[3] 提取主型号字母（如 C、V、Z、F）
+      return `${match[1]}${match[2]}XX${match[3]}`.toUpperCase();
+    }
+    console.warn('无法解析 GENERIC 配置:', config);
+    return config; // 如果无法解析，返回原始字符串
   }
 
   // 获取项目配置

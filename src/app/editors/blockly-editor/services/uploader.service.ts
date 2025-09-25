@@ -309,7 +309,7 @@ export class _UploaderService {
           const projectConfig = await this.projectService.getProjectConfig();
           console.log("Project config: ", projectConfig);
           if (projectConfig) {
-            baudRate = projectConfig?.UploadSpeed?.upload?.speed || '';
+            baudRate = projectConfig?.UploadSpeed || '';
           }
         } catch (error) {
           console.warn('没有额外的自定义配置');
