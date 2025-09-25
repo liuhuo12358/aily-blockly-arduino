@@ -1,7 +1,6 @@
 # AilyBlockly
-Inspired by Github Copilot  
 
-[中文](README-ZH.md) | English
+[中文](README_ZH.md) | English
 
 ## About This Software
 Aily Project is a hardware development integrated environment that plans to integrate numerous AI capabilities to help hardware developers develop more smoothly.  
