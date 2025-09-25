@@ -324,6 +324,24 @@ contextBridge.exposeInMainWorld("electronAPI", {
       return () => {
         ipcRenderer.removeListener('oauth-callback', listener);
       };
+    },
+    // 注册OAuth状态，用于多实例回调匹配
+    registerState: (state) => {
+      return new Promise((resolve, reject) => {
+        ipcRenderer
+          .invoke('oauth-register-state', state)
+          .then((result) => resolve(result))
+          .catch((error) => reject(error));
+      });
+    },
+    // 查找OAuth实例
+    findInstance: (state) => {
+      return new Promise((resolve, reject) => {
+        ipcRenderer
+          .invoke('oauth-find-instance', state)
+          .then((result) => resolve(result))
+          .catch((error) => reject(error));
+      });
     }
   },
   tools: {
