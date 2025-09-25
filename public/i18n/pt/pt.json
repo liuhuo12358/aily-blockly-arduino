@@ -98,6 +98,7 @@
             "NAME_EXISTS": "Nome do projeto já existe, por favor modifique"
         },
         "BUTTONS": {
+            "USE_THIS": "Usar esta Placa",
             "NEXT": "Próximo",
             "PREV": "Anterior",
             "CREATE": "Criar projeto",

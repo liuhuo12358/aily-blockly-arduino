@@ -98,6 +98,7 @@
             "NAME_EXISTS": "Le nom du projet existe déjà, veuillez le modifier"
         },
         "BUTTONS": {
+            "USE_THIS": "Utiliser cette Carte",
             "NEXT": "Suivant",
             "PREV": "Précédent",
             "CREATE": "Créer Projet",
