@@ -166,7 +166,7 @@ export class HeaderComponent {
       if (esp32config) {
         portList0 = portList0.concat(esp32config)
       }
-      console.log('ESP32配置选项:', esp32config);
+      // console.log('ESP32配置选项:', esp32config);
     }
 
     // 添加STM32相关配置选项
@@ -174,12 +174,12 @@ export class HeaderComponent {
       this.projectService.currentBoardConfig['description'].indexOf('Series') > -1) {
       let temp = this.projectService.currentBoardConfig['type'].split(':');
       let board = temp[temp.length - 1];
-      console.log('STM32开发板标识:', board);
+      // console.log('STM32开发板标识:', board);
       let stm32config = await this.projectService.updateStm32ConfigMenu(board);
       if (stm32config) {
         portList0 = portList0.concat(stm32config)
       }
-      console.log('STM32配置选项:', stm32config);
+      // console.log('STM32配置选项:', stm32config);
     }
 
     // 添加切换开发板功能
@@ -576,7 +576,7 @@ export class HeaderComponent {
 
   // 选择子菜单项-修改编译上传配置
   async selectSubItem(subItem: IMenuItem) {
-    console.log('选择子菜单项:', subItem);
+    // console.log('选择子菜单项:', subItem);
     // 切换开发板
     if (subItem.key === "BoardType") {
       this.projectService.changeBoard(subItem.data.board);
@@ -632,9 +632,9 @@ export class HeaderComponent {
    * @returns 转换后的菜单格式列表
    */
   convertBoardListFormat(boardList: any[]): any[] {
-    console.log('转换开发板列表格式:', boardList);
+    // console.log('转换开发板列表格式:', boardList);
     const currentBoardName = this.projectService.currentBoardConfig?.name;
-    console.log('当前开发板名称:', currentBoardName);
+    // console.log('当前开发板名称:', currentBoardName);
 
     return boardList
       .filter(board => board.nickname !== currentBoardName) // 过滤掉当前已选的开发板
