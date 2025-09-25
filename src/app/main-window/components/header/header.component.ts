@@ -589,7 +589,7 @@ export class HeaderComponent {
       // 判断是否是STM32，是则更新项目配置
       if (this.projectService.currentBoardConfig['core'].indexOf('stm32') > -1 &&
       this.projectService.currentBoardConfig['description'].indexOf('Series') > -1) {
-        let newPinConfig = subItem.data;
+        let newPinConfig = subItem;
         this.projectService.compareStm32PinConfig(newPinConfig)
       }
     }

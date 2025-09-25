@@ -45,7 +45,7 @@ export class ProjectService {
   currentProjectPath: string;
   currentBoardConfig: any;
   // STM32选择开发板时定义引脚使用
-  currentStm32pinConfig: any;
+  currentStm32Config: { board: any , variant: any , variant_h: any } = { board: null, variant: null, variant_h: null };
 
   constructor(
     private uiService: UiService,
@@ -104,7 +104,7 @@ export class ProjectService {
 
   // 新建项目
   async projectNew(newProjectData: NewProjectData, closeWindow: boolean = true) {
-    console.log('newProjectData: ', newProjectData);
+    // console.log('newProjectData: ', newProjectData);
     const appDataPath = window['path'].getAppDataPath();
     // const projectPath = (newProjectData.path + newProjectData.name).replace(/\s/g, '_');
     const projectPath = window['path'].join(newProjectData.path, newProjectData.name.replace(/\s/g, '_'));
@@ -398,6 +398,9 @@ export class ProjectService {
     }
   }
 
+  // // 解析boards.txt并获取配置信息
+  // async getBoardConfig(boardName: string, boardType: string) {
+
   // 解析boards.txt并获取ESP32配置信息
   async getEsp32BoardConfig(boardName: string) {
     try {
@@ -455,7 +458,9 @@ export class ProjectService {
       const lines = boardsContent.split('\n');
 
       // 查找指定开发板的配置
-      const boardConfig = this.parseBoardsConfig(lines, boardName);
+      const boardConfig = this.parseBoardsConfig(lines, boardName);      
+
+      // console.log('====boardConfig:', boardConfig);
 
       if (!boardConfig) {
         throw new Error(`未找到开发板 "${boardName}" 的配置`);
@@ -609,8 +614,18 @@ export class ProjectService {
         name: boardConfig[`${menuPrefix}${optionData}`] || optionData,
         key: menuType,
         data: optionData,
-        check: false
+        check: false,
+        // // 其他属性 如 build.variant
+        extra: {
+          build: {
+            variant: boardConfig[`${menuPrefix}${optionData}.build.variant`] || '',
+            variant_h: boardConfig[`${menuPrefix}${optionData}.build.variant_h`] || ''
+          }
+        }
       }
+
+      // console.log(`==========>>>${menuPrefix}${optionData}:`, boardConfig[`${menuPrefix}${optionData}.build.variant`] || '');
+      // console.log('option:', option);
 
       // 清理空的配置对象
       if (Object.keys(option.data).length === 0) {
@@ -674,7 +689,7 @@ export class ProjectService {
   async updateEsp32ConfigMenu(boardName: string) {
     try {
       const boardConfig = await this.getEsp32BoardConfig(boardName);
-      console.log('获取到的ESP32开发板配置:', boardConfig);
+      // console.log('获取到的ESP32开发板配置:', boardConfig);
 
       if (!boardConfig) {
         console.warn(`无法获取开发板 "${boardName}" 的配置`);
@@ -806,8 +821,13 @@ export class ProjectService {
               child.check = false; // 先清空所有选中状态
               if (this.compareConfigs(child.data, currentProjectConfig.pnum)) {
                 child.check = true;
-                this.currentStm32pinConfig = child.data;
-                // console.log('Selected STM32 pin config:', this.currentStm32pinConfig);
+                // console.log('=============================================');
+                // console.log('child:', child);
+                this.currentStm32Config.board = child.data;
+                this.currentStm32Config.variant = child.extra?.build.variant || null;
+                this.currentStm32Config.variant_h = child.extra?.build.variant_h || null;
+                // console.log('Selected STM32 pin config:', this.currentStm32Config);
+                // console.log('=============================================');
               }
             });
           } else {
@@ -818,7 +838,7 @@ export class ProjectService {
               packageJson['projectConfig']['pnum'] = menuItem.children[0].data;
               // 更新项目配置
               this.setPackageJson(packageJson);
-              this.compareStm32PinConfig(menuItem.children[0].data);
+              this.compareStm32PinConfig(menuItem.children[0]);
             }
           }
         } else if (menuItem.name === 'STM32.USB' && boardConfig.usb) {
@@ -854,51 +874,221 @@ export class ProjectService {
 
   // 比较stm32引脚配置
   async compareStm32PinConfig(pinConfig: any): Promise<boolean> {
-    if (pinConfig == this.currentStm32pinConfig) {
+    // console.log('=============================================');
+    // console.log('Comparing STM32 pin config:', pinConfig, "||", this.currentStm32Config);
+    if (pinConfig.data == this.currentStm32Config.board) {
+      return true;
+    } else if (pinConfig.extra?.build.variant == this.currentStm32Config.variant) {
       return true;
     } else {
       let newPinConfig = pinConfig;
 
-      newPinConfig = this.parseGenericConfig(newPinConfig);
+      // newPinConfig = this.parseGenericConfig(newPinConfig);
+      // console.log('=============================================');
       // console.log('newPinConfig:', newPinConfig);
 
-      // // 获取到的config格式为“STM32F1xx/F100C(4-6)T”
-      // // 我们需要转换为“F1XXC”
-      // // 支持 STM32F1xx/F103C、STM32F4xx/F407V、STM32H7xx/H767Z、STM32C0xx/C030F 等
-      // const match = newPinConfig.match(/STM32([A-Z]\d?)xx\/[A-Z]\d{3}([A-Z])/i);
-      // if (match) {
-      //   // match[1] 可能是 F1、F4、H7、C0 等，match[2] 是主型号字母
-      //   newPinConfig = match[1].toUpperCase() + 'XX' + match[2].toUpperCase();
-      // }
-      // console.log('newPinConfig:', newPinConfig);
-      // 读取特殊配置文件
-      const newPinJson = await this.getJsonConfig(newPinConfig + '.pins.json');
-      // console.log('newPinJson:', newPinJson);
+      let variant = newPinConfig.extra?.build.variant || null;
+      let variant_h = newPinConfig.extra?.build.variant_h || 'variant_generic.h';
+
+      const setPinConfig = await this.getVariantConfig(variant, variant_h);
       const currentBoardJson = await this.getBoardJson();
-      // console.log('currentBoardJson:', currentBoardJson);
+
       let isChanged = false;
-      // 遍历newPinJson中的每一项，更新currentBoardJson中的对应项
-      if (typeof newPinJson === 'object' && newPinJson !== null) {
-        // 如果 newPinJson 结构为 {analog: [...], digital: [...]}，则直接整体替换 currentBoardJson 的同名属性
-        Object.keys(newPinJson).forEach(key => {
-          // console.log(`Comparing key: ${key}`);
-          if (Array.isArray(newPinJson[key])) {
-            if (JSON.stringify(currentBoardJson[key]) !== JSON.stringify(newPinJson[key])) {
-              currentBoardJson[key] = newPinJson[key];
+      
+      if (typeof setPinConfig === 'object' && setPinConfig !== null) {
+        Object.keys(setPinConfig).forEach(key => {
+          if (Array.isArray(setPinConfig[key])) {
+            if (JSON.stringify(currentBoardJson[key]) !== JSON.stringify(setPinConfig[key])) {
+              currentBoardJson[key] = setPinConfig[key];
               isChanged = true;
             }
           }
         });
-      } else {
-        console.error('newPinJson 不是对象:', newPinJson);
       }
+
       // 保存更新后的board.json
       if (isChanged) {
         await this.setBoardJson(currentBoardJson);
-        this.currentStm32pinConfig = pinConfig;
+        this.currentStm32Config.board = pinConfig.data;
+        this.currentStm32Config.variant = variant;
+        this.currentStm32Config.variant_h = variant_h;
+        // console.log('Updated STM32 pin config:', this.currentStm32Config);
       }
+
+      // // // 获取到的config格式为“STM32F1xx/F100C(4-6)T”
+      // // // 我们需要转换为“F1XXC”
+      // // // 支持 STM32F1xx/F103C、STM32F4xx/F407V、STM32H7xx/H767Z、STM32C0xx/C030F 等
+      // // const match = newPinConfig.match(/STM32([A-Z]\d?)xx\/[A-Z]\d{3}([A-Z])/i);
+      // // if (match) {
+      // //   // match[1] 可能是 F1、F4、H7、C0 等，match[2] 是主型号字母
+      // //   newPinConfig = match[1].toUpperCase() + 'XX' + match[2].toUpperCase();
+      // // }
+      // // console.log('newPinConfig:', newPinConfig);
+      // // 读取特殊配置文件
+      // const newPinJson = await this.getJsonConfig(newPinConfig + '.pins.json');
+      // // console.log('newPinJson:', newPinJson);
+      // const currentBoardJson = await this.getBoardJson();
+      // // console.log('currentBoardJson:', currentBoardJson);
+      // let isChanged = false;
+      // // 遍历newPinJson中的每一项，更新currentBoardJson中的对应项
+      // if (typeof newPinJson === 'object' && newPinJson !== null) {
+      //   // 如果 newPinJson 结构为 {analog: [...], digital: [...]}，则直接整体替换 currentBoardJson 的同名属性
+      //   Object.keys(newPinJson).forEach(key => {
+      //     // console.log(`Comparing key: ${key}`);
+      //     if (Array.isArray(newPinJson[key])) {
+      //       if (JSON.stringify(currentBoardJson[key]) !== JSON.stringify(newPinJson[key])) {
+      //         currentBoardJson[key] = newPinJson[key];
+      //         isChanged = true;
+      //       }
+      //     }
+      //   });
+      // } else {
+      //   console.error('newPinJson 不是对象:', newPinJson);
+      // }
+      // // 保存更新后的board.json
+      // if (isChanged) {
+      //   await this.setBoardJson(currentBoardJson);
+      //   this.currentStm32pinConfig = pinConfig;
+      // }
       return false;
     }
+  }
+
+  // 根据传入的引脚信息解析引脚配置 如STM32F1xx/F100C(4-6)T
+  async getVariantConfig(variant: string, variant_h: string) {
+    try {
+      const sdkPath = await this.getSdkPath();
+      if (!sdkPath) {
+        throw new Error('未找到 SDK 路径');
+      }
+
+      const variantFilePath = `${sdkPath}/variants/${variant}/${variant_h}`;
+      // console.log('variantFilePath:', variantFilePath);
+      if (!window['fs'].existsSync(variantFilePath)) {
+        throw new Error('引脚配置文件不存在: ' + variantFilePath);
+      }
+
+      const variantContent = window['fs'].readFileSync(variantFilePath, 'utf8');
+
+      return this.parseVariantConfig(variantContent);
+    } catch (error) {
+      console.error('解析STM32引脚配置失败:', error);
+    }
+  }
+
+  private parseVariantConfig(content: string): any {
+    const analogPins: any[] = [];
+    const digitalPins: any[] = [];
+    const i2cPins: any = { Wire: [] };
+    const spiPins: any = { SPI: [] };
+
+    const lines = content.split(/\r?\n/);
+    const digitalSet = new Set<string>();
+    const i2cMap: any = {};
+    const spiMap: any = {};
+
+    // 宽松匹配多种 define 写法：PA0 PIN_A0 或 PIN_A0 PA0 等
+    const analogRe1 = /^\s*#\s*define\s+([A-Z]{1,3}\d{1,3})\s+(PIN_A\d+)\b/; // PA0  PIN_A0
+    const analogRe2 = /^\s*#\s*define\s+(PIN_A\d+)\s+([A-Z]{1,3}\d{1,3})\b/; // PIN_A0 PA0
+
+    const digitalRe1 = /^\s*#\s*define\s+([A-Z]{1,3}\d{1,3})\s+(\d+|PIN_A\d+)\b/; // PA1  1  或 PA1 PIN_A0
+    const digitalRe2 = /^\s*#\s*define\s+(PIN_[A-Z0-9_]+)\s+(\d+|[A-Z]{1,3}\d{1,3})\b/; // PIN_LED 13 或 PIN_A0 PA0
+
+    const i2cRe = /^\s*#\s*define\s+PIN_WIRE_(SDA|SCL)\s+([A-Z]{1,3}\d{1,3})\b/;
+    const i2cReAlt = /^\s*#\s*define\s+([A-Z]{1,3}\d{1,3})\s+PIN_WIRE_(SDA|SCL)\b/;
+
+    const spiRe = /^\s*#\s*define\s+PIN_SPI_(SS\d*|MOSI|MISO|SCK)\s+([A-Z]{1,3}\d{1,3})\b/;
+    const spiReAlt = /^\s*#\s*define\s+([A-Z]{1,3}\d{1,3})\s+PIN_SPI_(SS\d*|MOSI|MISO|SCK)\b/;
+
+    for (const line of lines) {
+      // 去掉行尾注释
+      const pureLine = line.replace(/\/\/.*$/,'').replace(/\/\*.*\*\/\s*$/,'');
+
+      // analog
+      let m = analogRe1.exec(pureLine) || analogRe2.exec(pureLine);
+      if (m) {
+        // 统一为 [pinMacro, port]，优先保留 PIN_Ax 做第一个元素以兼容 gen_boards 输出
+        if (m[1].startsWith('PIN_A')) {
+          analogPins.push([m[1], m[2]]);
+        } else {
+          analogPins.push([m[2], m[1]]);
+        }
+      }
+
+      // digital
+      m = digitalRe1.exec(pureLine) || digitalRe2.exec(pureLine);
+      if (m) {
+        // m[1] 是名字或 PIN_ 前缀，根据捕获组位置不同处理
+        let name = m[1];
+        let val = m[2];
+        // 如果捕获到 PIN_* 在第一位（digitalRe2），将 name 与 val 调换以保持一致
+        if (name.startsWith('PIN_')) {
+          // 如果包含SPI WIRE SERIAL等关键字，则跳过
+          if (name.includes('PIN_SPI_') || name.includes('PIN_WIRE_') || name.includes('PIN_SERIAL_')) {
+            continue;
+          }
+          // 保证唯一性，使用宏名或引脚名作为标识
+          const display = name;
+          if (!digitalSet.has(display)) {
+            digitalSet.add(display);
+            digitalPins.push([display, display]);
+          }
+        } else {
+          const display = name;
+          if (!digitalSet.has(display)) {
+            digitalSet.add(display);
+            digitalPins.push([display, display]);
+          }
+        }
+      }
+
+      // i2c
+      m = i2cRe.exec(pureLine);
+      if (m) {
+        i2cMap[m[1]] = m[2];
+      } else {
+        m = i2cReAlt.exec(pureLine);
+        if (m) {
+          i2cMap[m[2]] = m[1]; // alt captures port then PIN_WIRE_x
+        }
+      }
+
+      // spi
+      m = spiRe.exec(pureLine);
+      if (m) {
+        let key = m[1];
+        if (key.startsWith('SS')) key = 'SS';
+        spiMap[key] = m[2];
+      } else {
+        m = spiReAlt.exec(pureLine);
+        if (m) {
+          let key = m[2];
+          if (key.startsWith('SS')) key = 'SS';
+          spiMap[key] = m[1];
+        }
+      }
+    }
+
+    // i2c 输出顺序 SDA, SCL
+    if (i2cMap['SDA']) i2cPins.Wire.push(['SDA', i2cMap['SDA']]);
+    if (i2cMap['SCL']) i2cPins.Wire.push(['SCL', i2cMap['SCL']]);
+
+    // SPI 输出固定顺序 MOSI, MISO, SCK, SS
+    const spiOrder = ['MOSI','MISO','SCK','SS'];
+    for (const k of spiOrder) {
+      if (spiMap[k]) spiPins.SPI.push([k, spiMap[k]]);
+    }
+
+    // 结果格式与 gen_boards.js 相同
+    return {
+      analogPins,
+      digitalPins,
+      pwmPins: digitalPins,
+      servoPins: digitalPins,
+      interruptPins: digitalPins,
+      i2cPins,
+      spiPins
+    };
   }
 
   private parseGenericConfig(config: string): string {
