@@ -158,6 +158,7 @@ export class AuthService {
     } catch (error) {
       console.error('登出过程中出错:', error);
     } finally {
+      // 清理当前实例的认证数据
       await this.clearAuthData();
     }
   }
@@ -252,6 +253,64 @@ export class AuthService {
     } catch (error) {
       console.error('获取 token 失败:', error);
       return null;
+    }
+  }
+
+  /**
+   * 检查认证文件是否存在（用于快速判断登录状态）
+   */
+  async checkAuthFileExists(): Promise<boolean> {
+    try {
+      if (this.electronService.isElectron && (window as any).electronAPI?.path && (window as any).electronAPI?.fs) {
+        const appDataPath = (window as any).electronAPI.path.getAppDataPath();
+        const authFilePath = (window as any).electronAPI.path.join(appDataPath, '.aily');
+        return (window as any).electronAPI.fs.existsSync(authFilePath);
+      } else {
+        // 降级到localStorage检查
+        const token = localStorage.getItem('aily_auth_token');
+        return !!token;
+      }
+    } catch (error) {
+      console.error('检查认证文件失败:', error);
+      return false;
+    }
+  }
+
+  /**
+   * 同步登录状态（基于文件存在性检查）
+   */
+  async syncLoginStatus(): Promise<void> {
+    try {
+      const fileExists = await this.checkAuthFileExists();
+      const currentLoginStatus = this.isLoggedInSubject.value;
+      
+      // 如果文件状态与当前登录状态不一致，则更新状态
+      if (fileExists !== currentLoginStatus) {
+        if (!fileExists && currentLoginStatus) {
+          // 文件不存在但当前显示为登录状态，说明其他实例已登出
+          console.log('检测到其他实例已登出，同步登出当前实例');
+          await this.clearAuthData();
+        } else if (fileExists && !currentLoginStatus) {
+          // 文件存在但当前显示为未登录状态，重新获取用户信息
+          console.log('检测到认证文件存在，重新获取登录状态');
+          const token = await this.getToken2();
+          if (token) {
+            try {
+              const userInfo = await this.getMe(token);
+              if (userInfo) {
+                this.userInfoSubject.next(userInfo);
+                this.isLoggedInSubject.next(true);
+              }
+            } catch (error) {
+              console.error('获取用户信息失败:', error);
+              // token可能已过期，清理文件
+              await this.clearAuthDataFile();
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error('同步登录状态失败:', error);
     }
   }
 
@@ -518,6 +577,15 @@ export class AuthService {
    */
   get currentUser(): any {
     return this.userInfoSubject.value;
+  }
+
+  /**
+   * 检查并同步登录状态（供组件调用）
+   * 在用户点击用户组件时调用此方法来确保状态同步
+   */
+  async checkAndSyncAuthStatus(): Promise<boolean> {
+    await this.syncLoginStatus();
+    return this.isAuthenticated;
   }
 
   /**
@@ -809,6 +877,13 @@ export class AuthService {
       console.error('处理 GitHub OAuth 成功数据失败:', error);
       throw error;
     }
+  }
+
+  /**
+   * 服务销毁时的清理工作
+   */
+  destroy(): void {
+    // 不再需要文件监听的清理工作
   }
 
   /**

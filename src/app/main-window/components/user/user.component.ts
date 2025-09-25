@@ -59,7 +59,10 @@ export class UserComponent implements OnInit, OnDestroy, AfterViewInit {
   currentUser: any = null;
   isGitHubAuthWaiting = false;
 
-  ngOnInit() {
+  async ngOnInit() {
+    // 首先检查并同步登录状态
+    await this.checkAndSyncAuthStatus();
+
     // 监听登录状态
     this.authService.isLoggedIn$
       .pipe(takeUntil(this.destroy$))
@@ -82,6 +85,17 @@ export class UserComponent implements OnInit, OnDestroy, AfterViewInit {
 
     // 由于app.component已经设置了全局OAuth监听器，这里不需要再设置
     // 但是我们可以监听AuthService的登录状态变化来处理UI状态
+  }
+
+  /**
+   * 检查并同步认证状态
+   */
+  private async checkAndSyncAuthStatus(): Promise<void> {
+    try {
+      await this.authService.checkAndSyncAuthStatus();
+    } catch (error) {
+      console.error('同步认证状态失败:', error);
+    }
   }
 
   ngAfterViewInit(): void {
