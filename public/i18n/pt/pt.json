@@ -103,6 +103,9 @@
             "PREV": "Anterior",
             "CREATE": "Criar projeto",
             "CREATING": "Criando"
+        },
+        "WARNINGS": {
+            "BETA_VERSION": "Versão beta, não verificada, use com cautela"
         }
     },
     "LIB_MANAGER": {

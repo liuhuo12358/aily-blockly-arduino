@@ -105,6 +105,9 @@
             "PREV": "Zurück",
             "CREATE": "Projekt erstellen",
             "CREATING": "Erstellen"
+        },
+        "WARNINGS": {
+            "BETA_VERSION": "Beta-Version, ungeprüft, mit Vorsicht verwenden"
         }
     },
     "LIB_MANAGER": {

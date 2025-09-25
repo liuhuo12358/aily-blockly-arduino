@@ -140,6 +140,9 @@
             "PREV": "Previous",
             "CREATE": "Create Project",
             "CREATING": "Creating"
+        },
+        "WARNINGS": {
+            "BETA_VERSION": "Beta version, unverified, use with caution"
         }
     },
     "LIB_MANAGER": {
