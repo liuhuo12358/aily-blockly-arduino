@@ -104,7 +104,7 @@ export class _BuilderService {
   }
 
   // 添加这个错误处理方法
-  private handleCompileError(errorMessage: string) {
+  private handleCompileError(errorMessage: string, sendToLog: boolean = true): void {
     // 计算编译耗时
     const buildEndTime = Date.now();
     const buildDuration = this.buildStartTime > 0 ? ((buildEndTime - this.buildStartTime) / 1000).toFixed(2) : '0.00';
@@ -113,9 +113,10 @@ export class _BuilderService {
     this.noticeService.update({
       title: "编译失败",
       text: `${errorMessage} (耗时: ${buildDuration}s)`,
-      detail: errorMessage,
       state: 'error',
-      setTimeout: 600000
+      detail: errorMessage,
+      setTimeout: 600000,
+      sendToLog: sendToLog
     });
 
     this.passed = false;
@@ -608,12 +609,16 @@ export class _BuilderService {
                 // 去掉lastStdErr中的颜色代码（"[31m[ERROR][0m Compilation failed: Compilation failed）
                 lastStdErr = lastStdErr.replace(/\[\d+(;\d+)*m/g, '');
 
-                this.noticeService.update({
-                  title: "编译失败",
-                  text: `${lastStdErr.slice(0, 30) + "..." || '编译未完成'} (耗时: ${buildDuration}s)`,
-                  state: 'error',
-                  setTimeout: 600000
-                });
+                this.handleCompileError(lastStdErr || '编译未完成', false);
+
+                // this.noticeService.update({
+                //   title: "编译失败",
+                //   text: `${lastStdErr.slice(0, 30) + "..." || '编译未完成'} (耗时: ${buildDuration}s)`,
+                //   detail: fullStdErr,
+                //   state: 'error',
+                //   setTimeout: 600000,
+                //   sendToLog: false
+                // });
 
                 this.logService.update({ detail: fullStdErr, state: 'error' });
 
