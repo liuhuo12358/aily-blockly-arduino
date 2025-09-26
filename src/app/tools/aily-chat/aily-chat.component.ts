@@ -2164,6 +2164,8 @@ ${JSON.stringify(errData)}
 
   // 模式选择相关方法
   switchMode(event: MouseEvent) {
+    //
+    return;
     // 获取点击的按钮元素
     const target = event.currentTarget as HTMLElement;
     if (target) {

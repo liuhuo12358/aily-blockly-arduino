@@ -16,6 +16,7 @@ const { pt } = (window as any)['electronAPI'].platform;
 
 interface ProjectPackageData {
   name: string;
+  nickname?: string;
   version?: string;
   author?: string;
   description?: string;
@@ -31,7 +32,7 @@ interface ProjectPackageData {
 export class ProjectService {
 
   stateSubject = new BehaviorSubject<'default' | 'loading' | 'loaded' | 'saving' | 'saved' | 'error'>('default');
-  
+
   // 开发板变更事件通知，只在变更时发出
   boardChangeSubject = new Subject<void>();
 
@@ -86,9 +87,9 @@ export class ProjectService {
       });
 
       this.projectRootPath = (await window['env'].get("AILY_PROJECT_PATH")).replace('%HOMEPATH%\\Documents', window['path'].getUserDocuments());
-      if (!this.currentProjectPath) {
-        this.currentProjectPath = this.projectRootPath;
-      }
+      // if (!this.currentProjectPath) {
+      //   this.currentProjectPath = this.projectRootPath;
+      // }
     }
   }
 
@@ -131,9 +132,9 @@ export class ProjectService {
     // 此后就是打开项目(projectOpen)的逻辑，理论可复用，由于此时在新建项目窗口，因此要告知主窗口，进行打开项目操作
     await window['iWindow'].send({ to: 'main', data: { action: 'open-project', path: projectPath } });
 
-    if (closeWindow) {
-      this.uiService.closeWindow();
-    }
+    // if (closeWindow) {
+    //   this.uiService.closeWindow();
+    // }
   }
 
   // 打开项目
@@ -269,6 +270,8 @@ export class ProjectService {
     const packageJsonPath = `${this.currentProjectPath}/package.json`;
     // 写入新的package.json
     window['fs'].writeFileSync(packageJsonPath, JSON.stringify(data, null, 2));
+
+    this.boardChangeSubject.next();
   }
 
   // 获取开发板名称
@@ -671,6 +674,10 @@ export class ProjectService {
       // 0. 保存当前项目
       this.save();
       this.message.loading('正在切换开发板...', { nzDuration: 5000 });
+      
+      // 记录开发板使用次数
+      this.configService.recordBoardUsage(boardInfo.name);
+      
       // 1. 先获取项目package.json中的board依赖，如@aily-project/board-xxxx，然后npm uninstall移除这个board依赖
       const currentBoardModule = await this.getBoardModule();
       if (currentBoardModule) {
@@ -687,10 +694,10 @@ export class ProjectService {
       // 3. 重新加载项目
       console.log('重新加载项目...');
       await this.projectOpen(this.currentProjectPath);
-      
+
       // 触发开发板变更事件
       this.boardChangeSubject.next();
-      
+
       this.uiService.updateFooterState({ state: 'done', text: '开发板切换完成' });
       this.message.success('开发板切换成功', { nzDuration: 3000 });
     } catch (error) {
