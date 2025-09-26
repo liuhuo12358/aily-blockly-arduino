@@ -321,6 +321,8 @@ export class HeaderComponent {
         if (event) {
           this.calculateUserPosition(event);
         }
+        // 在显示用户组件前先同步登录状态
+        await this.authService.checkAndSyncAuthStatus();
         this.showUser = !this.showUser;
         break;
       case 'board-select':
