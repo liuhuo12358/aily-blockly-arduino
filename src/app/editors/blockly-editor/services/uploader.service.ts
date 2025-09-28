@@ -243,6 +243,7 @@ export class _UploaderService {
 
         this.isErrored = false;
         this.cancelled = false;
+        this.uploadCompleted = false;
 
         // 重置ESP32上传状态，防止进度累加
         this['esp32UploadState'] = {
