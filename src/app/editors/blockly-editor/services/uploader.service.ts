@@ -40,6 +40,7 @@ export class _UploaderService {
   private uploadCompleted = false;
   private isErrored = false;
   cancelled = false;
+  private commandName: string | null = null;
   
   private initialized = false; // 防止重复初始化
 
@@ -147,6 +148,8 @@ export class _UploaderService {
     if (command) {
       paramList[0] = command;
     }
+
+    this.commandName = window['path'].basename(paramList[0])
 
     // 第三步：处理 ${'filename'} 格式的文件路径参数
     for (let i = 0; i < paramList.length; i++) {
@@ -434,7 +437,7 @@ export class _UploaderService {
 
         let bufferData = '';
         this.cmdService.run(uploadCmd, null, false).subscribe({
-          next: (output: CmdOutput) => {
+          next: async (output: CmdOutput) => {
             // console.log('编译命令输出:', output);
             this.streamId = output.streamId;
 
@@ -619,7 +622,6 @@ export class _UploaderService {
               });
               this.uploadInProgress = false;
               this._builderService.isUploading = false;
-              // 终止Arduino CLI进程
 
               reject({ state: 'warn', text: '上传已取消' });
             } else {
@@ -653,6 +655,8 @@ export class _UploaderService {
   cancel() {
     this.cancelled = true;
     this.cmdService.kill(this.streamId || '');
+    console.log("取消command: ", this.commandName);
+    this.cmdService.killByName(this.commandName || '');
   }
 }
 

@@ -257,6 +257,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
   cmd: {
     run: (options) => ipcRenderer.invoke('cmd-run', options),
     kill: (streamId) => ipcRenderer.invoke('cmd-kill', { streamId }),
+    killByName: (processName) => ipcRenderer.invoke('cmd-kill-by-name', { processName }),
     input: (streamId, input) => ipcRenderer.invoke('cmd-input', { streamId, input }),
     onData: (streamId, callback) => {
       const listener = (event, data) => callback(data);
