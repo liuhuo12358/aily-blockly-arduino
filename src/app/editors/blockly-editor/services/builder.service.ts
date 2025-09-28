@@ -53,7 +53,7 @@ export class _BuilderService {
     private blocklyService: BlocklyService,
   ) { }
 
-  private buildInProgress = false;
+  buildInProgress = false;
   private streamId: string | null = null;
   private buildCompleted = false;
   private isErrored = false; // 标识是否为错误状态
@@ -72,6 +72,7 @@ export class _BuilderService {
   compilerPath = "";
   boardJson: any = null;
   buildPath = "";
+  isUploading = false;
   
   private initialized = false; // 防止重复初始化
 
@@ -139,6 +140,12 @@ export class _BuilderService {
         if (this.buildInProgress) {
           this.message.warning("编译正在进行中，请稍后再试");
           reject({ state: 'warn', text: '编译中，请稍后' });
+          return;
+        }
+
+        if (this.isUploading) {
+          this.message.warning("上传正在进行中，请稍后再试");
+          reject({ state: 'warn', text: '上传中，请稍后' });
           return;
         }
 
