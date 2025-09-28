@@ -42,7 +42,7 @@
 
 .content {
   // flex-grow: 0;
-  height: calc(100% - 100px);
+  height: calc(100% - 40px);
   display: flex;
   position: relative;
 
@@ -60,7 +60,7 @@
       flex-direction: column;
     }
 
-    .steps-box{
+    .steps-box {
       height: 100%;
       flex-direction: column;
     }
@@ -143,23 +143,23 @@
   }
 }
 
-.footer {
-  border-top: 1px solid #222427;
-  height: 60px;
-  position: relative;
+// .footer {
+//   border-top: 1px solid #222427;
+//   height: 60px;
+//   position: relative;
 
-  .btns {
-    display: flex;
-    align-items: center;
-    position: absolute;
-    right: 0;
-    height: 100%;
+//   .btns {
+//     display: flex;
+//     align-items: center;
+//     position: absolute;
+//     right: 0;
+//     height: 100%;
 
-    button {
-      margin-right: 15px;
-    }
-  }
-}
+//     button {
+//       margin-right: 15px;
+//     }
+//   }
+// }
 
 .fa-spinner-third {
   animation: rotate45 1s steps(60, end) infinite;
@@ -175,22 +175,31 @@
   }
 }
 
-.board-selector {
-  display: flex;
-  flex-wrap: wrap;
-  align-content: flex-start;
-  gap: 15px;
+.board-selector-box {
+  flex-grow: 1;
   overflow-y: auto;
-  // height: calc(100% - 95px);
-  padding-bottom: 110px;
+}
+
+.board-selector {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 15px;
+  border-radius: 5px 0 0 5px;
 
   .board {
-    width: 180px;
+    min-width: 180px;
+    max-width: 210px;
     height: 110px;
     background: #3e4243;
     border-radius: 5px;
+    display: flex;
     flex-direction: column;
     justify-content: flex-start;
+    border: 2px solid #3e4243;
+
+    @media (max-width: 1059px) {
+      min-width: 200px;
+    }
 
     img {
       height: 80px;
@@ -215,34 +224,118 @@
 }
 
 .desc-box {
-  height: 100px;
+  height: 210px;
+  flex-shrink: 0;
   width: 100%;
-  position: absolute;
-  bottom: 0;
-  border-radius: 10px;
-  padding: 5px 10px;
+  border-radius: 5px;
+  margin-top: 15px;
+  padding: 5px 10px 5px 0;
   background: rgba(59, 59, 59, 0.9);
   overflow: hidden;
   box-shadow: 0 0 5px rgba(0, 0, 0, 0.2);
+  display: flex;
+  align-items: center;
 
-  .title {
-    border-bottom: 1px solid #43494b;
-    margin-bottom: 3px;
-    position: relative;
+  .img-box {
+    width: 200px;
+    height: 180px;
+    flex-grow: 0;
+    flex-shrink: 0;
+    border-right: 1px solid #4a4a4a;
 
-    .doc {
-      position: absolute;
-      right: 0;
-      top: 0;
+    img {
+      max-height: 120px;
     }
   }
 
   .content {
-    height: 65px;
+    padding-left: 15px;
+    height: 100%;
+    width: 100%;
     color: #bbb;
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 3;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+
+    .title {
+      border-bottom: 1px solid #43494b;
+      margin-bottom: 3px;
+      position: relative;
+      height: 30px;
+      display: flex;
+      // justify-content: space-between;
+      align-items: flex-end;
+      padding-bottom: 5px;
+    }
+
+    .text {
+      height: calc(100% - 40px);
+      width: calc(100% + 10px);
+      padding-right: 5px;
+      overflow-y: scroll;
+      margin-bottom: 5px;
+    }
+
+    .next {
+      height: 45px;
+      display: flex;
+      align-items: center;
+
+      .links {
+        margin-left: 15px;
+        display: flex;
+        align-items: center;
+
+        .link {
+          padding: 5px;
+          height: 12px;
+          border-right: 1px solid #6c6c6c;
+
+          &:last-child {
+            border-right: none;
+          }
+        }
+      }
+    }
+
+    .title-text {
+      height: 16px;
+      font-size: 16px;
+      font-weight: bold;
+      display: flex;
+      align-items: center;
+    }
+
+    .warn {
+      color: #ffb400;
+      font-size: 14px;
+      height: 14px;
+      margin-left: 10px;
+      display: flex;
+      align-items: center;
+
+      i {
+        margin-right: 3px;
+      }
+    }
+
+    .btns {
+      display: flex;
+      align-items: center;
+      padding-top: 5px;
+
+      .btn {
+        height: 12px;
+        padding: 0 5px;
+        border-right: 1px solid #6c6c6c;
+        display: flex;
+        align-items: center;
+
+        &:last-child {
+          border-right: none;
+        }
+      }
+    }
   }
 }
 
@@ -271,5 +364,26 @@
 .tag-list {
   nz-tag {
     cursor: pointer;
+
+    &.active {
+      background: #007bff;
+      border-color: #007bff;
+      color: #fff;
+    }
+  }
+}
+
+.right-content {
+  max-width: 600px;
+  position: relative;
+}
+
+.step-btns {
+  position: absolute;
+  right: 0;
+  bottom: -50px;
+
+  button {
+    margin-left: 10px;
   }
 }

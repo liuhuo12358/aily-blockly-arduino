@@ -1,13 +1,13 @@
 # AilyBlockly
-Inspired by Github Copilot  
 
-[中文](README-ZH.md) | English
+[中文](README_ZH.md) | English
 
 ## About This Software
 Aily Project is a hardware development integrated environment that plans to integrate numerous AI capabilities to help hardware developers develop more smoothly.  
 Aily Blockly is a blockly IDE under the aily Project. In the early stage, it provides AI-assisted programming capabilities for non-professional users. The long-term goal is to break the boundary between professional development and non-professional development, and ultimately achieve natural language programming.  
 
 <img src="./img/sf.webp" width=1000 />
+<img src="./img/devices.webp" width=1000 />
 
 ## Current Version Highlights  
 1. **Engineering Project Management**
@@ -59,13 +59,13 @@ This project is sponsored by the following companies and individuals
 
 ### Corporate Sponsors
 <a target="_blank" href="https://www.seeedstudio.com/" >
-    <img src=".\public\sponsor\seeedstudio\logo.webp" alt="seeedstudio" width=200 />
+    <img src=".\public\sponsor\seeedstudio\logo_l.webp" alt="seeedstudio" width=200 />
 </a><br>  
 <a target="_blank" href="https://www.seekfree.cn/" >
-    <img src=".\public\sponsor\seekfree\logo.webp" alt="seekfree" width=200 />
+    <img src=".\public\sponsor\seekfree\logo_l.webp" alt="seekfree" width=200 />
 </a><br>
 <a target="_blank" href="https://www.diandeng.tech/" >
-    <img src=".\public\sponsor\diandeng\logo.webp" alt="diandeng" width=200 />
+    <img src=".\public\sponsor\diandeng\logo_l.webp" alt="diandeng" width=200 />
 </a><br>  
 <a target="_blank" href="https://www.openjumper.com/" >
     <img src=".\public\sponsor\openjumper\logo.webp" alt="openjumper" width=200 />
@@ -74,13 +74,13 @@ This project is sponsored by the following companies and individuals
     <img src=".\public\sponsor\pengde\logo.webp" alt="pengde" width=200 />
 </a><br>  
 <a target="_blank" href="https://www.titlab.cn/" >
-    <img src=".\public\sponsor\titlab\logo.webp" alt="titlab" width=200 />
+    <img src=".\public\sponsor\titlab\logo_l.webp" alt="titlab" width=200 />
 </a><br>  
 <a target="_blank" href="https://www.emakefun.com" >
-    <img src=".\public\sponsor\emakefun\logo.webp" alt="emakefun" width=200 />
+    <img src=".\public\sponsor\emakefun\logo_l.webp" alt="emakefun" width=200 />
 </a><br>  
 <a target="_blank" href="http://www.keyes-robot.com/" >
-    <img src=".\public\sponsor\keyes\logo.webp" alt="keyes" width=200 />
+    <img src=".\public\sponsor\keyes\logo_l.webp" alt="keyes" width=200 />
 </a>  
 
 ### Individual Sponsors   

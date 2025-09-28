@@ -1130,6 +1130,10 @@ export class ProjectService {
       // 0. 保存当前项目
       this.save();
       this.message.loading('正在切换开发板...', { nzDuration: 5000 });
+      
+      // 记录开发板使用次数
+      this.configService.recordBoardUsage(boardInfo.name);
+      
       // 1. 先获取项目package.json中的board依赖，如@aily-project/board-xxxx，然后npm uninstall移除这个board依赖
       const currentBoardModule = await this.getBoardModule();
       if (currentBoardModule) {
