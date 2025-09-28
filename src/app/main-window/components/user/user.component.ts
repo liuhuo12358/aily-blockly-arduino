@@ -4,11 +4,13 @@ import { FormsModule } from '@angular/forms';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzInputModule } from 'ng-zorro-antd/input';
 import { NzMessageService } from 'ng-zorro-antd/message';
+import { NzModalService } from 'ng-zorro-antd/modal';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
 import { NzDividerModule } from 'ng-zorro-antd/divider';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import { AuthService, LoginRequest, RegisterRequest } from '../../../services/auth.service';
 import { ElectronService } from '../../../services/electron.service';
+import { GitHubLoginDialogComponent } from '../github-login-dialog/github-login-dialog.component';
 import { Subject, takeUntil } from 'rxjs';
 import sha256 from 'crypto-js/sha256';
 
@@ -44,6 +46,7 @@ export class UserComponent implements OnInit, OnDestroy, AfterViewInit {
 
   private destroy$ = new Subject<void>();
   private message = inject(NzMessageService);
+  private modal = inject(NzModalService);
   private authService = inject(AuthService);
   private electronService = inject(ElectronService);
 
@@ -238,6 +241,36 @@ export class UserComponent implements OnInit, OnDestroy, AfterViewInit {
   async onGitHubLogin() {
     if (this.isGitHubAuthWaiting) return;
 
+    // 首先显示确认对话框
+    const modalRef = this.modal.create({
+      nzTitle: null,
+      nzFooter: null,
+      nzClosable: false,
+      nzBodyStyle: {
+        padding: '0',
+      },
+      nzWidth: '380px',
+      nzContent: GitHubLoginDialogComponent,
+      nzData: {
+        title: 'GitHub 登录确认',
+        text: ''
+      }
+    });
+
+    // 等待用户选择
+    modalRef.afterClose.subscribe(async (result: any) => {
+      if (result && result.result === 'agree') {
+        // 用户同意，继续GitHub登录流程
+        await this.proceedWithGitHubLogin();
+      }
+      // 如果用户取消或关闭对话框，则不执行任何操作
+    });
+  }
+
+  /**
+   * 执行实际的GitHub登录流程
+   */
+  private async proceedWithGitHubLogin() {
     this.isGitHubAuthWaiting = true;
 
     try {
