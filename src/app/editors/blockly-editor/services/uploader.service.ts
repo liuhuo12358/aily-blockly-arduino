@@ -128,9 +128,7 @@ export class _UploaderService {
     uploadParam = uploadParam.replace(/\[([^\]]+)\]/g, '').trim();
 
     let paramPromises = uploadParam.split(' ').map(async param => {
-      if (param.includes('${serial}')) {
-        return param.replace('${serial}', this.serialService.currentPort || '');
-      } else if (param.includes('${baud}')) {
+      if (param.includes('${baud}')) {
         return param.replace('${baud}', baudRate || '115200');
       } else if (param.includes('${bootloader}')) {
         const bootLoaderFile = await findFile(buildPath, '*.bootloader.bin');
@@ -440,8 +438,12 @@ export class _UploaderService {
 
         const buildProperties = '';
 
-        const uploadCmd = `${command} ${uploadParamList.slice(1).join(' ')}${buildProperties}`;
+        let uploadCmd = `${command} ${uploadParamList.slice(1).join(' ')}${buildProperties}`;
         console.log("Upload cmd: ", uploadCmd);
+
+        uploadCmd = uploadCmd.replace('${serial}', this.serialService.currentPort || '');
+
+        console.log("Final upload cmd: ", uploadCmd);
 
         this.uploadInProgress = true;
         this.noticeService.update({ title: title, text: lastUploadText, state: 'doing', progress: 0, setTimeout: 0 });
