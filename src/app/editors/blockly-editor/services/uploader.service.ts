@@ -379,7 +379,7 @@ export class _UploaderService {
         if (wait_for_upload) {
           const portList = await this.serialMonitorService.getPortsList();
           await this.serialMonitorService.connect({ path: this.serialService.currentPort });
-          await new Promise(resolve => setTimeout(resolve, 250));
+          await new Promise(resolve => setTimeout(resolve, 5000));
           this.serialMonitorService.disconnect();
           const currentPortList = await this.serialMonitorService.getPortsList();
 
