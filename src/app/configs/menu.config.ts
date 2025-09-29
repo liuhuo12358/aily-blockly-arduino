@@ -89,13 +89,13 @@ export let HEADER_BTNS: IMenuItem[][] = [
       icon: 'fa-light fa-star-christmas',
       more: 'AI'
     },
-    // {
-    //   name: 'MENU.APP_STORE',
-    //   action: 'tool-open',
-    //   data: { type: 'tool', data: "app-store" },
-    //   icon: 'fa-light fa-store',
-    //   dev: true
-    // },
+    {
+      name: 'MENU.APP_STORE',
+      action: 'tool-open',
+      data: { type: 'tool', data: "app-store" },
+      icon: 'fa-light fa-store',
+      dev: true
+    },
     {
       name: 'MENU.USER_SPACE',
       action: 'tool-open',
