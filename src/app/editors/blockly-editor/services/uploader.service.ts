@@ -109,16 +109,26 @@ export class _UploaderService {
     };
 
     // 第一步：分割参数并处理基本变量替换和标志提取
+    // 使用正则先提取出以[]包裹的标志参数，并从原来的字符串中移除
+    const flagParams = uploadParam.match(/\[([^\]]+)\]/g) || [];
+
+    flagParams.forEach(flag => {
+      if (flag.includes('--use_1200bps_touch')) {
+        flags.use_1200bps_touch = true;
+      }
+      if (flag.includes('--wait_for_upload')) {
+        flags.wait_for_upload = true;
+      }
+      if (flag.includes('--wait_for_upload_port')) {
+        flags.wait_for_upload = true;
+      }
+    });
+
+    // 移除标志参数后的上传参数字符串
+    uploadParam = uploadParam.replace(/\[([^\]]+)\]/g, '').trim();
+
     let paramPromises = uploadParam.split(' ').map(async param => {
-      if (param.startsWith('[') && param.endsWith(']')) {
-        if (param.includes('--use_1200bps_touch')) {
-          flags.use_1200bps_touch = true;
-        }
-        if (param.includes('--wait_for_upload')) {
-          flags.wait_for_upload = true;
-        }
-        return ""; // 标志参数不需要保留在参数列表中
-      } else if (param.includes('${serial}')) {
+      if (param.includes('${serial}')) {
         return param.replace('${serial}', this.serialService.currentPort || '');
       } else if (param.includes('${baud}')) {
         return param.replace('${baud}', baudRate || '115200');
