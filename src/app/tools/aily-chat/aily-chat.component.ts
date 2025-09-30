@@ -637,7 +637,9 @@ ${JSON.stringify(errData)}
     let text = content.trim();
     if (!this.sessionId || !text) return;
 
-
+    if (this.isCompleted) {
+      this.resetChat();
+    }
 
     if (sender === 'user') {
       if (this.isWaiting) {
