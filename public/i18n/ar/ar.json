@@ -150,5 +150,24 @@
         "CONFIRM": "تأكيد",
         "LOADING": "جاري تبديل اللوحة...",
         "SWITCH_FAILED": "فشل تبديل اللوحة"
+    },
+    "UPDATE_DIALOG": {
+        "TITLE": "تحديث البرنامج",
+        "DOWNLOAD_FAILED": "فشل التنزيل",
+        "REMIND_LATER": "تذكير لاحقًا",
+        "SKIP_VERSION": "تخطي هذا الإصدار",
+        "UPDATE_NOW": "التحديث الآن",
+        "CANCEL_DOWNLOAD": "إلغاء التنزيل",
+        "INSTALL_LATER": "التثبيت لاحقًا",
+        "INSTALL_NOW": "التثبيت الآن",
+        "CLOSE": "إغلاق",
+        "RETRY": "إعادة المحاولة"
+    },
+    "UNSAVE_DIALOG": {
+        "TITLE": "تغييرات غير محفوظة",
+        "MESSAGE": "لديك تغييرات غير محفوظة. هل تريد حفظها؟",
+        "CANCEL": "إلغاء",
+        "SKIP_SAVE": "تخطي الحفظ",
+        "SAVE_AND_CONTINUE": "الحفظ والمتابعة"
     }
 }

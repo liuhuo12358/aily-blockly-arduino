@@ -198,5 +198,24 @@
         "CONFIRM": "Confirm",
         "LOADING": "Switching board...",
         "SWITCH_FAILED": "Failed to switch board"
+    },
+    "UPDATE_DIALOG": {
+        "TITLE": "Software Update",
+        "DOWNLOAD_FAILED": "Download Failed",
+        "REMIND_LATER": "Remind Later",
+        "SKIP_VERSION": "Skip This Version",
+        "UPDATE_NOW": "Update Now",
+        "CANCEL_DOWNLOAD": "Cancel Download",
+        "INSTALL_LATER": "Install Later",
+        "INSTALL_NOW": "Install Now",
+        "CLOSE": "Close",
+        "RETRY": "Retry"
+    },
+    "UNSAVE_DIALOG": {
+        "TITLE": "Unsaved Changes",
+        "MESSAGE": "You have unsaved changes. Do you want to save them?",
+        "CANCEL": "Cancel",
+        "SKIP_SAVE": "Skip Save",
+        "SAVE_AND_CONTINUE": "Save and Continue"
     }
 }

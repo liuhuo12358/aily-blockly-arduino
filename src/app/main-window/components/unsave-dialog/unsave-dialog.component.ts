@@ -2,10 +2,11 @@ import { Component, OnInit, inject } from '@angular/core';
 import { NZ_MODAL_DATA, NzModalRef } from 'ng-zorro-antd/modal';
 import { CommonModule } from '@angular/common';
 import { NzButtonModule } from 'ng-zorro-antd/button';
+import { TranslateModule } from '@ngx-translate/core';
 
 @Component({
   selector: 'app-unsave-dialog',
-  imports: [NzButtonModule, CommonModule],
+  imports: [NzButtonModule, CommonModule, TranslateModule],
   templateUrl: './unsave-dialog.component.html',
   styleUrl: './unsave-dialog.component.scss'
 })

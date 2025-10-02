@@ -6,10 +6,11 @@ import { NzProgressModule } from 'ng-zorro-antd/progress';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import { Observable, Subscription } from 'rxjs';
 import { UpdateService } from '../../../services/update.service';
+import { TranslateModule } from '@ngx-translate/core';
 
 @Component({
   selector: 'app-update-dialog',
-  imports: [NzButtonModule, CommonModule, NzProgressModule, NzIconModule],
+  imports: [NzButtonModule, CommonModule, NzProgressModule, NzIconModule, TranslateModule],
   templateUrl: './update-dialog.component.html',
   styleUrls: ['./update-dialog.component.scss']
 })

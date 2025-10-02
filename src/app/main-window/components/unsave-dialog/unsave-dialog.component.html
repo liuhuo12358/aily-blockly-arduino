@@ -10,9 +10,9 @@
     <div class="content">
         <div class="text">{{text}}</div>
         <div class="footer">
-            <button nz-button [nzSize]="'small'" nzType="default" (click)="cancel()">取消</button>
-            <button nz-button [nzSize]="'small'" nzType="primary" nzDanger (click)="continueWithoutSave()">跳过保存</button>
-            <button nz-button [nzSize]="'small'" nzType="primary" (click)="saveAndContinue()">保存并继续</button>
+            <button nz-button [nzSize]="'small'" nzType="default" (click)="cancel()">{{ 'UNSAVE_DIALOG.CANCEL' | translate }}</button>
+            <button nz-button [nzSize]="'small'" nzType="primary" nzDanger (click)="continueWithoutSave()">{{ 'UNSAVE_DIALOG.SKIP_SAVE' | translate }}</button>
+            <button nz-button [nzSize]="'small'" nzType="primary" (click)="saveAndContinue()">{{ 'UNSAVE_DIALOG.SAVE_AND_CONTINUE' | translate }}</button>
         </div>
     </div>
 </div>

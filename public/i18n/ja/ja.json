@@ -153,5 +153,24 @@
         "CONFIRM": "確認",
         "LOADING": "ボードを切り替え中...",
         "SWITCH_FAILED": "ボードの切り替えに失敗しました"
+    },
+    "UPDATE_DIALOG": {
+        "TITLE": "ソフトウェアアップデート",
+        "DOWNLOAD_FAILED": "ダウンロード失敗",
+        "REMIND_LATER": "後で通知",
+        "SKIP_VERSION": "このバージョンをスキップ",
+        "UPDATE_NOW": "今すぐ更新",
+        "CANCEL_DOWNLOAD": "ダウンロードをキャンセル",
+        "INSTALL_LATER": "後でインストール",
+        "INSTALL_NOW": "今すぐインストール",
+        "CLOSE": "閉じる",
+        "RETRY": "再試行"
+    },
+    "UNSAVE_DIALOG": {
+        "TITLE": "未保存の変更",
+        "MESSAGE": "保存されていない変更があります。保存しますか？",
+        "CANCEL": "キャンセル",
+        "SKIP_SAVE": "保存をスキップ",
+        "SAVE_AND_CONTINUE": "保存して続行"
     }
 }
