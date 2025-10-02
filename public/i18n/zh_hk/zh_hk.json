@@ -168,6 +168,10 @@
     "UNSAVE_DIALOG": {
         "TITLE": "未儲存的變更",
         "MESSAGE": "您有未儲存的變更，是否儲存?",
+        "MESSAGE_OPEN": "在打開新項目前,是否儲存當前項目的變更?",
+        "MESSAGE_NEW": "在創建新項目前,是否儲存當前項目的變更?",
+        "MESSAGE_CLOSE": "是否在關閉前儲存變更?",
+        "MESSAGE_DEFAULT": "是否儲存當前項目?",
         "CANCEL": "取消",
         "SKIP_SAVE": "跳過儲存",
         "SAVE_AND_CONTINUE": "儲存並繼續"

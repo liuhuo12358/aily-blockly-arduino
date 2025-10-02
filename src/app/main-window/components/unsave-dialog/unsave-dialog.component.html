@@ -1,18 +1,7 @@
-<div class="prompt-box bborder">
-    <div class="header">
-        <div class="title">{{title}}</div>
-        <div class="win-btns">
-            <div class="btn ccenter close" (click)="cancel()">
-                <i class="fa-light fa-xmark"></i>
-            </div>
-        </div>
-    </div>
-    <div class="content">
-        <div class="text">{{text}}</div>
-        <div class="footer">
-            <button nz-button [nzSize]="'small'" nzType="default" (click)="cancel()">{{ 'UNSAVE_DIALOG.CANCEL' | translate }}</button>
-            <button nz-button [nzSize]="'small'" nzType="primary" nzDanger (click)="continueWithoutSave()">{{ 'UNSAVE_DIALOG.SKIP_SAVE' | translate }}</button>
-            <button nz-button [nzSize]="'small'" nzType="primary" (click)="saveAndContinue()">{{ 'UNSAVE_DIALOG.SAVE_AND_CONTINUE' | translate }}</button>
-        </div>
-    </div>
-</div>
+<app-base-dialog 
+    [title]="title | translate" 
+    [buttons]="buttons"
+    (closeDialog)="onClose()"
+    (buttonClick)="onButtonClick($event)">
+    <div class="text">{{text | translate}}</div>
+</app-base-dialog>

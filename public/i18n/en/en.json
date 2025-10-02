@@ -214,6 +214,10 @@
     "UNSAVE_DIALOG": {
         "TITLE": "Unsaved Changes",
         "MESSAGE": "You have unsaved changes. Do you want to save them?",
+        "MESSAGE_OPEN": "Do you want to save changes to the current project before opening a new one?",
+        "MESSAGE_NEW": "Do you want to save changes to the current project before creating a new one?",
+        "MESSAGE_CLOSE": "Do you want to save changes before closing?",
+        "MESSAGE_DEFAULT": "Do you want to save the current project?",
         "CANCEL": "Cancel",
         "SKIP_SAVE": "Skip Save",
         "SAVE_AND_CONTINUE": "Save and Continue"

@@ -505,17 +505,6 @@ export class HeaderComponent {
       return true;
     }
 
-    // 根据不同操作设置不同的提示文本
-    let title = '有未保存的更改';
-    let text = '是否保存当前项目？';
-    if (action === 'open') {
-      text = '在打开新项目前，是否保存当前项目的更改？';
-    } else if (action === 'new') {
-      text = '在创建新项目前，是否保存当前项目的更改？';
-    } else if (action === 'close') {
-      text = '是否在关闭前保存更改？';
-    }
-
     return new Promise<boolean>((resolve) => {
       const modalRef = this.modal.create({
         nzTitle: null,
@@ -524,9 +513,9 @@ export class HeaderComponent {
         nzBodyStyle: {
           padding: '0',
         },
-        nzWidth: '320px',
+        nzWidth: '350px',
         nzContent: UnsaveDialogComponent,
-        nzData: { title, text },
+        nzData: { action },
         // nzDraggable: true,
       });
 

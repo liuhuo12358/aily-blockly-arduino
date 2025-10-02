@@ -162,6 +162,10 @@
     "UNSAVE_DIALOG": {
         "TITLE": "저장되지 않은 변경 사항",
         "MESSAGE": "저장되지 않은 변경 사항이 있습니다. 저장하시겠습니까?",
+        "MESSAGE_OPEN": "새 프로젝트를 열기 전에 현재 프로젝트의 변경 사항을 저장하시겠습니까?",
+        "MESSAGE_NEW": "새 프로젝트를 만들기 전에 현재 프로젝트의 변경 사항을 저장하시겠습니까?",
+        "MESSAGE_CLOSE": "닫기 전에 변경 사항을 저장하시겠습니까?",
+        "MESSAGE_DEFAULT": "현재 프로젝트를 저장하시겠습니까?",
         "CANCEL": "취소",
         "SKIP_SAVE": "저장 건너뛰기",
         "SAVE_AND_CONTINUE": "저장 후 계속"
