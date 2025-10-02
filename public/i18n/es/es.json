@@ -141,5 +141,14 @@
         "IOT": "IoT",
         "OTHERS": "Otros",
         "ALL": "Todas las bibliotecas"
+    },
+    "BOARD_SELECTOR": {
+        "TITLE": "Cambiar placa",
+        "SEARCH_PLACEHOLDER": "Buscar placa...",
+        "EMPTY_LIST": "No se encontraron placas coincidentes",
+        "CANCEL": "Cancelar",
+        "CONFIRM": "Confirmar",
+        "LOADING": "Cambiando placa...",
+        "SWITCH_FAILED": "Error al cambiar placa"
     }
 }

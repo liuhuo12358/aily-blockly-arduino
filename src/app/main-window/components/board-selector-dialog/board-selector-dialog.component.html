@@ -1,6 +1,6 @@
 <div class="prompt-box bborder">
     <div class="header">
-        <div class="title">切换开发板</div>
+        <div class="title">{{ 'BOARD_SELECTOR.TITLE' | translate }}</div>
         <div class="win-btns">
             <div class="btn ccenter close" (click)="cancel()" [class.disabled]="isLoading">
                 <i class="fa-light fa-xmark"></i>
@@ -15,7 +15,7 @@
         } -->
         <!-- 搜索框 -->
         <div class="search-box">
-            <input nz-input [(ngModel)]="searchKeyword" (ngModelChange)="onSearch()" placeholder="搜索开发板..."
+            <input nz-input [(ngModel)]="searchKeyword" (ngModelChange)="onSearch()" [placeholder]="'BOARD_SELECTOR.SEARCH_PLACEHOLDER' | translate"
                 class="search-input" [disabled]="isLoading" />
         </div>
 
@@ -24,7 +24,7 @@
             @if(filteredBoardList.length === 0) {
             <div class="empty-list">
                 <i class="fa-light fa-inbox"></i>
-                <span>未找到匹配的开发板</span>
+                <span>{{ 'BOARD_SELECTOR.EMPTY_LIST' | translate }}</span>
             </div>
             }
             @for(board of filteredBoardList; track board.name) {
@@ -54,9 +54,9 @@
         </div>
 
         <div class="footer">
-            <button nz-button [nzSize]="'small'" nzType="default" (click)="cancel()" [disabled]="isLoading">取消</button>
+            <button nz-button [nzSize]="'small'" nzType="default" (click)="cancel()" [disabled]="isLoading">{{ 'BOARD_SELECTOR.CANCEL' | translate }}</button>
             <button nz-button [nzSize]="'small'" nzType="primary" [disabled]="!selectedBoard || isLoading"
-                [nzLoading]="isLoading" (click)="confirm()">确认</button>
+                [nzLoading]="isLoading" (click)="confirm()">{{ 'BOARD_SELECTOR.CONFIRM' | translate }}</button>
         </div>
     </div>
 </div>

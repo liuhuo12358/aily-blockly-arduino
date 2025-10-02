@@ -144,5 +144,14 @@
         "IOT": "IoT",
         "OTHERS": "Autres",
         "ALL": "Toutes les bibliothèques"
+    },
+    "BOARD_SELECTOR": {
+        "TITLE": "Changer de carte",
+        "SEARCH_PLACEHOLDER": "Rechercher une carte...",
+        "EMPTY_LIST": "Aucune carte correspondante trouvée",
+        "CANCEL": "Annuler",
+        "CONFIRM": "Confirmer",
+        "LOADING": "Changement de carte...",
+        "SWITCH_FAILED": "Échec du changement de carte"
     }
 }

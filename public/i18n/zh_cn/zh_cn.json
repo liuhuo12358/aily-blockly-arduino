@@ -192,5 +192,14 @@
         "CURRENT_BOARD_CORE": "当前开发板内核：",
         "CANCEL": "取消",
         "CONTINUE_INSTALL": "继续安装"
+    },
+    "BOARD_SELECTOR": {
+        "TITLE": "切换开发板",
+        "SEARCH_PLACEHOLDER": "搜索开发板...",
+        "EMPTY_LIST": "未找到匹配的开发板",
+        "CANCEL": "取消",
+        "CONFIRM": "确认",
+        "LOADING": "正在切换开发板...",
+        "SWITCH_FAILED": "切换开发板失败"
     }
 }

@@ -146,5 +146,14 @@
         "AI": "KI",
         "IOT": "IoT",
         "OTHERS": "Andere"
+    },
+    "BOARD_SELECTOR": {
+        "TITLE": "Board wechseln",
+        "SEARCH_PLACEHOLDER": "Board suchen...",
+        "EMPTY_LIST": "Keine passenden Boards gefunden",
+        "CANCEL": "Abbrechen",
+        "CONFIRM": "Bestätigen",
+        "LOADING": "Board wird gewechselt...",
+        "SWITCH_FAILED": "Board-Wechsel fehlgeschlagen"
     }
 }

@@ -137,5 +137,14 @@
         "IOT": "사물인터넷",
         "OTHERS": "기타",
         "ALL": "모든 라이브러리"
+    },
+    "BOARD_SELECTOR": {
+        "TITLE": "보드 전환",
+        "SEARCH_PLACEHOLDER": "보드 검색...",
+        "EMPTY_LIST": "일치하는 보드를 찾을 수 없습니다",
+        "CANCEL": "취소",
+        "CONFIRM": "확인",
+        "LOADING": "보드 전환 중...",
+        "SWITCH_FAILED": "보드 전환 실패"
     }
 }

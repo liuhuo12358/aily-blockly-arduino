@@ -7,6 +7,7 @@ import { NzInputModule } from 'ng-zorro-antd/input';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { ConfigService } from '../../../services/config.service';
 import { ProjectService } from '../../../services/project.service';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 
 @Component({
   selector: 'app-board-selector-dialog',
@@ -14,7 +15,8 @@ import { ProjectService } from '../../../services/project.service';
     CommonModule,
     FormsModule,
     NzButtonModule,
-    NzInputModule
+    NzInputModule,
+    TranslateModule
   ],
   templateUrl: './board-selector-dialog.component.html',
   styleUrl: './board-selector-dialog.component.scss'
@@ -31,7 +33,7 @@ export class BoardSelectorDialogComponent implements OnInit {
   searchKeyword: string = '';
   selectedBoard: any = null;
   isLoading: boolean = false;
-  loadingText: string = '正在切换开发板...';
+  loadingText: string = '';
 
   get resourceUrl() {
     return this.configService.data.resource[0] + '/imgs/boards/';
@@ -39,12 +41,14 @@ export class BoardSelectorDialogComponent implements OnInit {
 
   constructor(
     private configService: ConfigService,
-    private projectService: ProjectService
+    private projectService: ProjectService,
+    private translate: TranslateService
   ) {
 
   }
 
   ngOnInit(): void {
+    this.loadingText = this.translate.instant('BOARD_SELECTOR.LOADING');
     this.boardList = this.data.boardList || [];
     this.filteredBoardList = [...this.boardList];
   }
@@ -81,7 +85,7 @@ export class BoardSelectorDialogComponent implements OnInit {
         this.modal.close();
       } catch (error) {
         console.error('切换开发板失败:', error);
-        this.message.error('切换开发板失败');
+        this.message.error(this.translate.instant('BOARD_SELECTOR.SWITCH_FAILED'));
         this.isLoading = false;
         this.cd.detectChanges();
       }

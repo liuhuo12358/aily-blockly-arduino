@@ -144,5 +144,14 @@
         "WARNINGS": {
             "BETA_VERSION": "ベータ版、未検証、注意して使用"
         }
+    },
+    "BOARD_SELECTOR": {
+        "TITLE": "ボードを切り替え",
+        "SEARCH_PLACEHOLDER": "ボードを検索...",
+        "EMPTY_LIST": "一致するボードが見つかりません",
+        "CANCEL": "キャンセル",
+        "CONFIRM": "確認",
+        "LOADING": "ボードを切り替え中...",
+        "SWITCH_FAILED": "ボードの切り替えに失敗しました"
     }
 }

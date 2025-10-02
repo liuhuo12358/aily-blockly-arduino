@@ -189,5 +189,14 @@
         "CURRENT_BOARD_CORE": "Current board core:",
         "CANCEL": "Cancel",
         "CONTINUE_INSTALL": "Continue Install"
+    },
+    "BOARD_SELECTOR": {
+        "TITLE": "Switch Board",
+        "SEARCH_PLACEHOLDER": "Search board...",
+        "EMPTY_LIST": "No matching boards found",
+        "CANCEL": "Cancel",
+        "CONFIRM": "Confirm",
+        "LOADING": "Switching board...",
+        "SWITCH_FAILED": "Failed to switch board"
     }
 }

@@ -143,5 +143,14 @@
         "AI": "AI",
         "IOT": "物聯網",
         "OTHERS": "其他"
+    },
+    "BOARD_SELECTOR": {
+        "TITLE": "切換開發板",
+        "SEARCH_PLACEHOLDER": "搜索開發板...",
+        "EMPTY_LIST": "未找到匹配的開發板",
+        "CANCEL": "取消",
+        "CONFIRM": "確認",
+        "LOADING": "正在切換開發板...",
+        "SWITCH_FAILED": "切換開發板失敗"
     }
 }
