@@ -25,6 +25,7 @@ interface ProjectPackageData {
   board?: string;
   type?: string;
   framework?: string;
+  cloudId?: string; // 云端项目ID
 }
 
 @Injectable({
