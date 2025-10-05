@@ -48,6 +48,15 @@ export class CloudSpaceComponent {
     );
   }
 
+  // 打开项目
+  openInNewTab(item) {
+    if (!item || !item.id) return;
+    console.log('打开云上项目:', item);
+    this.cloudService.getProjectArchive(item.archive_url).subscribe(res => {
+      console.log('获取云项目归档成功, 准备解压:', res);
+    });
+  }
+
   // 获取云上项目列表
   async getCloudProjects() {
     this.cloudService.getProjects((this.currentPage - 1) * this.pageSize, this.pageSize).subscribe(res => {
@@ -62,14 +71,13 @@ export class CloudSpaceComponent {
             imageUrl = 'imgs/subject.webp';
           }
 
-          this.itemList.push({
-            id: prj.id,
-            name: prj.name,
-            nickname: prj.nickname,
-            description: prj.description,
-            image_url: imageUrl,
-            is_published: prj.is_published,
-          });
+          if (prj.archive_url) {
+            prj.archive_url = this.cloudService.baseUrl + prj.archive_url;
+          }
+
+          prj.image_url = imageUrl;
+
+          this.itemList.push(prj);
         });
         this.totalProjects = res.data.total;
         console.log('获取云上项目列表成功:', this.itemList);
@@ -87,9 +95,94 @@ export class CloudSpaceComponent {
       console.warn('项目路径不存在:', prjPath);
       return;
     }
-    await this.cmdService.runAsync(`7za.exe a -tzip -mx=9 project.7z package.json *.abi`, prjPath, false);
+    
+    const archivePath = `${prjPath}/project.7z`;
+    
+    // 删除已存在的7z文件
+    if (await window['fs'].existsSync(archivePath)) {
+      await window['fs'].unlinkSync(archivePath);
+      console.log('删除已存在的7z文件:', archivePath);
+    }
+    
+    // 检查要打包的文件是否存在
+    const packageJsonPath = `${prjPath}/package.json`;
+    if (!await window['fs'].existsSync(packageJsonPath)) {
+      this.message.error('package.json 文件不存在，无法打包');
+      console.warn('package.json 不存在:', packageJsonPath);
+      return;
+    }
+    
+    console.log('开始打包项目:', prjPath);
+    
+    // 构建更安全的打包命令
+    // 使用绝对路径避免路径问题，并明确指定文件
+    let packCommand = `7za.exe a -t7z -mx=9 "${archivePath}" package.json`;
+    
+    // 检查是否有.abi文件
+    const files = window['fs'].readDirSync(prjPath, { withFileTypes: true });
+    const abiFiles = files.filter(file => file.name.endsWith('.abi'));
+    
+    if (abiFiles.length > 0) {
+      console.log('找到abi文件:', abiFiles.map(f => f.name));
+      // 逐个添加abi文件
+      for (const abiFile of abiFiles) {
+        packCommand += ` "${abiFile.name}"`;
+      }
+    } else {
+      console.log('未找到abi文件，只打包package.json');
+    }
+    
+    console.log('执行打包命令:', packCommand);
+    
+    // 打包文件
+    const result = await this.cmdService.runAsync(packCommand, prjPath, false);
+    
+    console.log('打包命令执行结果:', result);
+    
+    // 检查打包是否成功
+    if (result.type === 'error' || (result.code && result.code !== 0)) {
+      this.message.error('项目打包失败: ' + (result.error || result.data));
+      console.error('7za打包失败:', result);
+      return;
+    }
+    
+    // 等待文件系统完成写入
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    // 验证生成的7z文件
+    if (!window['fs'].existsSync(archivePath)) {
+      this.message.error('7z文件生成失败');
+      console.error('7z文件不存在:', archivePath);
+      return;
+    }
+    
+    // 检查文件大小（多次检查确保文件完整）
+    let fileStats = window['fs'].statSync(archivePath);
+    let retryCount = 0;
+    
+    // 如果文件大小为0，等待一段时间后重试
+    while (fileStats.size === 0 && retryCount < 5) {
+      console.log(`文件大小为0，等待重试... (${retryCount + 1}/5)`);
+      await new Promise(resolve => setTimeout(resolve, 300));
+      fileStats = window['fs'].statSync(archivePath);
+      retryCount++;
+    }
+    
+    if (fileStats.size === 0) {
+      this.message.error('生成的7z文件为空，打包过程可能失败');
+      console.error('7z文件为空:', archivePath);
+      
+      // 尝试手动检查打包命令的输出
+      console.error('打包命令输出:', result.data);
+      return;
+    }
+    
+    console.log('7z文件生成成功:', {
+      path: archivePath,
+      size: fileStats.size
+    });
 
-    return `${prjPath}/project.7z`;
+    return archivePath;
   }
 
   syncProject() {
@@ -118,22 +211,33 @@ export class CloudSpaceComponent {
 
   async syncToCloud() {
     this.isSyncing = true;
-
+    
     // 保存当前项目
     await this.projectService.save(this.projectService.currentProjectPath);
 
     // 获取当前项目数据
     const currentProjectData = this.projectService.currentPackageData;
-    if (!currentProjectData) return;
+    if (!currentProjectData) {
+      this.isSyncing = false;
+      return;
+    }
 
     const archivePath = await this.packageProject(this.projectService.currentProjectPath);
-    if (!archivePath) return;
+    if (!archivePath) {
+      this.isSyncing = false;
+      return;
+    }
+
+    // 等待一小段时间确保文件完全写入
+    await new Promise(resolve => setTimeout(resolve, 200));
+
+    console.log("archivePath:", archivePath);
 
     this.cloudService.syncProject({
       pid: currentProjectData?.cloudId,
       name: currentProjectData.name,
       description: currentProjectData.description,
-      archive: new File([await window['fs'].readFileSync(archivePath)], 'project.7z', { type: 'application/zip' })
+      archive: archivePath
     }).subscribe(async res => {
       if (res && res.status === 200) {
         await this.setCurrentProjectCloudId(res.data.id);
@@ -143,15 +247,15 @@ export class CloudSpaceComponent {
         console.log('同步成功, 云端项目ID:', res.data.id);
       } else {
         console.error('同步失败, 服务器返回错误:', res);
+        this.message.error('同步失败: ' + (res?.messages || '未知错误'));
       }
       this.isSyncing = false;
     }, err => {
       this.isSyncing = false;
       console.error('同步失败:', err);
+      this.message.error('同步失败: ' + err);
     });
-  }
-
-  showEditor = false;
+  }  showEditor = false;
 
   openEditor(item) {
     this.showEditor = true;

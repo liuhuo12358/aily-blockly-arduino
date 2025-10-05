@@ -35,6 +35,7 @@ export const authInterceptor: HttpInterceptorFn = (req: HttpRequest<any>, next: 
 };
 
 async function addTokenHeader(request: HttpRequest<any>, authService: AuthService, token?: string | null): Promise<HttpRequest<any>> {
+  console.log('Auth Interceptor - Adding token to request:', request.url);
   if (!token) {
     token = await authService.getToken2();
   }
