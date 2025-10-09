@@ -7,6 +7,9 @@
                 <!-- @if(example.examples?.length > 0){
                 <div class="collection">合集</div>
                 } -->
+                <div class="downloads">
+                    <i class="fa-regular fa-arrow-down-to-line"></i> {{ example.downloads || '10k+' }}
+                </div>
                 <div class="title">
                     {{ example.nickname }}
                 </div>
@@ -27,9 +30,6 @@
                 <div class="btns">
                     <div class="author">
                         <i class="fa-light fa-user" style="margin-right: 5px;"></i>{{ example.author }}
-                    </div>
-                    <div class="downloads">
-                        <i class="fa-regular fa-arrow-down-to-line"></i> {{ example.downloads || '10k+' }}
                     </div>
                 </div>
                 <div class="btns">
