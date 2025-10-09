@@ -323,6 +323,8 @@ export class BlocklyComponent {
 
       window['Arduino'] = <any>arduinoGenerator;
       (window as any)['Blockly'] = Blockly;
+      // 设置全局工作区引用，供 editBlockTool 使用
+      (window as any)['blocklyWorkspace'] = this.workspace;
       this.workspace.addChangeListener((event) => {
         try {
           this.codeGeneration();

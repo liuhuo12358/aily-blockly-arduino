@@ -32,15 +32,18 @@ import { deleteFolderTool } from './tools/deleteFolderTool';
 import { checkExistsTool } from './tools/checkExistsTool';
 import { getDirectoryTreeTool } from './tools/getDirectoryTreeTool';
 import { fetchTool, FetchToolService } from './tools/fetchTool';
-import {
-  smartBlockTool,
-  connectBlocksTool,
-  createCodeStructureTool,
-  configureBlockTool,
-  variableManagerTool,
-  findBlockTool,
+import { 
+  smartBlockTool, 
+  connectBlocksTool, 
+  createCodeStructureTool, 
+  configureBlockTool, 
+  variableManagerTool, 
+  // findBlockTool,
   deleteBlockTool,
-  getWorkspaceOverviewTool  // 新增工具导入
+  getWorkspaceOverviewTool,  // 新增工具导入
+  getActiveWorkspace,  // 导入工作区检测函数
+  queryBlockDefinitionTool,
+  getBlockConnectionCompatibilityTool
 } from './tools/editBlockTool';
 import { todoWriteTool } from './tools';
 import { NzModalService } from 'ng-zorro-antd/modal';
@@ -71,6 +74,8 @@ import { NzMessageService } from 'ng-zorro-antd/message';
 import { TOOLS } from './tools/tools';
 import { AuthService } from '../../services/auth.service';
 import { resolveObjectURL } from 'buffer';
+import { FloatingTodoComponent } from './components/floating-todo/floating-todo.component';
+import { TodoUpdateService } from './services/todoUpdate.service';
 import { BlocklyService } from '../../editors/blockly-editor/services/blockly.service';
 // import { reloadAbiJsonTool, reloadAbiJsonToolSimple } from './tools';
 
@@ -86,7 +91,8 @@ import { BlocklyService } from '../../editors/blockly-editor/services/blockly.se
     ToolContainerComponent,
     NzResizableModule,
     NzToolTipModule,
-    MenuComponent
+    MenuComponent,
+    FloatingTodoComponent
   ],
   templateUrl: './aily-chat.component.html',
   styleUrl: './aily-chat.component.scss',
@@ -271,7 +277,8 @@ export class AilyChatComponent implements OnDestroy {
     private message: NzMessageService,
     private authService: AuthService,
     private modal: NzModalService,
-    private configService: ConfigService
+    private configService: ConfigService,
+    private todoUpdateService: TodoUpdateService
   ) { }
 
   ngOnInit() {
@@ -282,7 +289,19 @@ export class AilyChatComponent implements OnDestroy {
     this.prjPath = this.projectService.currentProjectPath === this.projectService.projectRootPath ? "" : this.projectService.currentProjectPath;
     this.prjRootPath = this.projectService.projectRootPath;
 
-
+    // 设置全局工具引用，供测试和调试使用
+    (window as any)['editBlockTool'] = {
+      getActiveWorkspace,
+      connectBlocksTool,
+      createCodeStructureTool,
+      configureBlockTool,
+      variableManagerTool,
+      // findBlockTool,
+      deleteBlockTool,
+      getWorkspaceOverviewTool,
+      queryBlockDefinitionTool,
+      getBlockConnectionCompatibilityTool
+    };
 
     // 订阅消息
     this.currentUrl = this.router.url;
@@ -1469,26 +1488,26 @@ ${JSON.stringify(errData)}
                       resultText = `变量操作成功: ${toolArgs.operation}${toolArgs.variableName ? ' ' + toolArgs.variableName : ''}`;
                     }
                     break;
-                  case 'find_block_tool':
-                    console.log('[块查找工具被调用]', toolArgs);
-                    this.appendMessage('aily', `
+//                   case 'find_block_tool':
+//                     console.log('[块查找工具被调用]', toolArgs);
+//                     this.appendMessage('aily', `
 
-\`\`\`aily-state
-{
-  "state": "doing",
-  "text": "正在查找Blockly块...",
-  "id": "${toolCallId}"
-}
-\`\`\`\n\n
-                    `);
-                    toolResult = await findBlockTool(toolArgs);
-                    if (toolResult.is_error) {
-                      resultState = "warn";
-                      resultText = '块查找异常,即将重试';
-                    } else {
-                      resultText = '块查找完成';
-                    }
-                    break;
+// \`\`\`aily-state
+// {
+//   "state": "doing",
+//   "text": "正在查找Blockly块...",
+//   "id": "${toolCallId}"
+// }
+// \`\`\`\n\n
+//                     `);
+//                     toolResult = await findBlockTool(toolArgs);
+//                     if (toolResult.is_error) {
+//                       resultState = "error";
+//                       resultText = '块查找失败: ' + (toolResult.content || '未知错误');
+//                     } else {
+//                       resultText = '块查找完成';
+//                     }
+//                     break;
                   case 'delete_block_tool':
                     console.log('[块删除工具被调用]', toolArgs);
                     this.appendMessage('aily', `
@@ -1537,16 +1556,16 @@ ${JSON.stringify(errData)}
                     break;
                   case 'todo_write_tool':
                     console.log('[TODO工具被调用]', toolArgs);
-                    this.appendMessage('aily', `
+//                     this.appendMessage('aily', `
 
-\`\`\`aily-state
-{
-  "state": "doing", 
-  "text": "正在管理TODO项目...",
-  "id": "${toolCallId}"
-}
-\`\`\`\n\n
-                    `);
+// \`\`\`aily-state
+// {
+//   "state": "doing", 
+//   "text": "正在管理TODO项目...",
+//   "id": "${toolCallId}"
+// }
+// \`\`\`\n\n
+//                     `);
                     // 将当前会话ID传递给todoWriteTool，确保每个会话的TODO数据独立存储
                     const todoArgs = { ...toolArgs, sessionId: this.sessionId };
                     toolResult = await todoWriteTool(todoArgs);
@@ -1608,6 +1627,50 @@ ${JSON.stringify(errData)}
                       // }
                     }
                     break;
+                  case 'queryBlockDefinitionTool':
+                    {
+                      console.log('[块定义查询工具被调用]', toolArgs);
+                      this.appendMessage('aily', `
+
+\`\`\`aily-state
+{
+  "state": "doing",
+  "text": "正在查询块定义信息...",
+  "id": "${toolCallId}"
+}
+\`\`\`\n\n
+                      `);
+                      toolResult = await queryBlockDefinitionTool(this.projectService, toolArgs);
+                      if (toolResult.is_error) {
+                        resultState = "error";
+                        resultText = '块定义查询失败: ' + (toolResult.content || '未知错误');
+                      } else {
+                        resultText = `块定义查询完成: ${toolResult.content}`;
+                      }
+                    }
+                    break;
+                  case 'getBlockConnectionCompatibilityTool':
+                    {
+                      console.log('[块连接兼容性工具被调用]', toolArgs);
+                      this.appendMessage('aily', `
+
+\`\`\`aily-state
+{
+  "state": "doing",
+  "text": "正在分析块连接兼容性...",
+  "id": "${toolCallId}"
+}
+\`\`\`\n\n
+                      `);
+                      toolResult = await getBlockConnectionCompatibilityTool(this.projectService, toolArgs);
+                      if (toolResult.is_error) {
+                        resultState = "error";
+                        resultText = '块连接兼容性分析失败: ' + (toolResult.content || '未知错误');
+                      } else {
+                        resultText = `块连接兼容性分析完成: ${toolResult.content}`;
+                      }
+                    }
+                    break;
                 }
               }
 
@@ -1626,7 +1689,9 @@ ${JSON.stringify(errData)}
               };
             }
 
-            this.toolCallStates[data.tool_id] = resultText;
+            if (data.tool_name != 'todo_write_tool') {
+              this.toolCallStates[data.tool_id] = resultText;
+            }
             this.send("tool", JSON.stringify({
               "type": "tool",
               "tool_id": data.tool_id,
