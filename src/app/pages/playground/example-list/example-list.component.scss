@@ -20,9 +20,10 @@
         flex-direction: column;
         overflow: hidden;
         cursor: pointer;
+        transition: all 0.3s;
 
         &:hover {
-            background: #303a4d;
+            background: #3a3a3a;
         }
 
         .img-box {
@@ -47,25 +48,43 @@
                 border-radius: 3px;
                 font-size: 12px;
             }
+
+            .title {
+                position: absolute;
+                bottom: 0;
+                left: 0;
+                width: 100%;
+                // height: 50px;
+                background: rgba(0, 0, 0, 0.6);
+                color: #fff;
+                padding: 5px;
+                line-height: 18px;
+                font-size: 16px;
+            }
+
         }
 
-        .name {
-            font-size: 16px;
-            font-weight: 600;
-            color: #fff;
-            margin: 7px 0 7px 0;
+        .title-b {
+            font-size: 12px;
+            display: flex;
+
+            >div {
+                color: #c9c9c9;
+                margin-right: 15px;
+            }
         }
 
         .text {
+            margin-top: 10px;
             font-size: 14px;
             color: #ccc;
-            height: 62px;
+            height: 86px;
             white-space: normal;
             overflow: hidden;
-            line-clamp: 3;
+            line-clamp: 4;
             display: -webkit-box;
             -webkit-box-orient: vertical;
-            -webkit-line-clamp: 3;
+            -webkit-line-clamp: 4;
         }
 
         .footer {
@@ -76,22 +95,24 @@
             font-size: 12px;
             color: #aaa;
 
-            .author {
+            .btns{
                 display: flex;
-                align-items: center;
-                color: rgb(79, 123, 228);
+                gap: 10px;
             }
 
-            .state {
-                display: flex;
+            ::ng-deep {
+                .ant-btn-round.ant-btn-sm {
+                    height: 24px;
+                    width: 24px;
+                    font-size: 12px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
 
-                >div {
-                    width: 60px;
-                }
-
-                i {
-                    font-size: 16px;
-                    color: #aaa;
+                    &:hover {
+                        color: #fff;
+                        border-color: #fff;
+                    }
                 }
             }
         }
