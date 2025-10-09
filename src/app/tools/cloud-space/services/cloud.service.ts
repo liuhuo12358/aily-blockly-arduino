@@ -26,6 +26,16 @@ export class CloudService {
 
   constructor(private http: HttpClient, private cmdService: CmdService) { }
 
+  /** 
+   * 获取公开列表
+   */
+  getPublicProjects(page, perPage): Observable<any> {
+    return this.http.get<any>(`${API.cloudPublicProjects}?page=${page}&per_page=${perPage}`)
+      .pipe(
+        catchError(this.handleError)
+      );
+  }
+
   /**
    * 同步（新建/更新）项目
    * @param params 同步参数
@@ -33,14 +43,14 @@ export class CloudService {
    */
   syncProject(params: {
     pid?: string;
-    name?: string;
-    description?: string;
+    projectData?: any; // 新增的项目数据对象
     archive?: string;
   }): Observable<any> {
     const formData = new FormData();
+    if (params.projectData) {
+      formData.append('projectData', JSON.stringify(params.projectData));
+    }
     if (params.pid) formData.append('pid', params.pid);
-    if (params.name) formData.append('name', params.name);
-    if (params.description) formData.append('description', params.description);
     if (params.archive) {
       // 读取二进制文件（不指定编码参数，返回原始Buffer）
       const fileBuffer = window['fs'].readFileSync(params.archive, null);

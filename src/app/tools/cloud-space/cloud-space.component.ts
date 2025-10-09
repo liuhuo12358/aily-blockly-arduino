@@ -61,8 +61,14 @@ export class CloudSpaceComponent {
   openInNewTab(item) {
     if (!item || !item.id) return;
     console.log('打开云上项目:', item);
-    this.cloudService.getProjectArchive(item.archive_url).subscribe(res => {
-      this.projectService.projectOpen(res);
+    this.cloudService.getProjectArchive(item.archive_url).subscribe(async res => {
+      // 直接添加随机数避免重名
+      const randomNum = Math.floor(100000 + Math.random() * 900000);
+      const uniqueName = `${item.nickname || item.name || 'cloud_project'}_${randomNum}`;
+      const targetPath = this.projectService.projectRootPath + '\\' + uniqueName;
+      
+      await this.cmdService.runAsync(`Copy-Item -Path "${res}" -Destination "${targetPath}" -Recurse -Force`);
+      this.projectService.projectOpen(targetPath);
     });
   }
 
@@ -71,7 +77,7 @@ export class CloudSpaceComponent {
     this.cloudService.getProjects((this.currentPage - 1) * this.pageSize, this.pageSize).subscribe(res => {
       if (res && res.status === 200) {
         this.itemList = [];
-        res.data.forEach(prj => {
+        res.data.list.forEach(prj => {
           // 图片url
           let imageUrl = '';
           if (prj.image_url) {
@@ -267,8 +273,7 @@ export class CloudSpaceComponent {
 
     this.cloudService.syncProject({
       pid: currentProjectData?.cloudId,
-      name: currentProjectData.name,
-      description: currentProjectData.description,
+      projectData: currentProjectData,
       archive: archivePath
     }).subscribe(async res => {
       if (res && res.status === 200) {

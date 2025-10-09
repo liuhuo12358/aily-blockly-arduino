@@ -12,6 +12,10 @@ import { NzPaginationModule } from 'ng-zorro-antd/pagination';
 import { NzToolTipModule } from 'ng-zorro-antd/tooltip';
 import { fromEvent, Subject } from 'rxjs';
 import { debounceTime, takeUntil } from 'rxjs/operators';
+import { CloudService } from '../../../tools/cloud-space/services/cloud.service';
+import { ProjectService } from '../../../services/project.service';
+import { CmdService } from '../../../services/cmd.service';
+
 @Component({
   selector: 'app-example-list',
   imports: [
@@ -46,6 +50,9 @@ export class ExampleListComponent implements OnInit, AfterViewInit, OnDestroy {
     private translate: TranslateService,
     private route: ActivatedRoute,
     private playgroundService: PlaygroundService,
+    private cloudService: CloudService,
+    private projectService: ProjectService,
+    private cmdService: CmdService
   ) {
     // 从URL参数中获取搜索关键词（如果有）
     this.route.queryParams.subscribe(params => {
@@ -56,29 +63,59 @@ export class ExampleListComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   ngOnInit() {
-    this.resourceUrl = this.configService.data.resource[0] + "/imgs/examples/";
+    this.getExamples();
+    // this.resourceUrl = this.configService.data.resource[0] + "/imgs/examples/";
 
-    // 如果数据已经加载，直接使用
-    if (this.playgroundService.isLoaded) {
-      this.exampleList = this.playgroundService.processedExamplesList;
-      console.log(this.exampleList);
+    // // 如果数据已经加载，直接使用
+    // if (this.playgroundService.isLoaded) {
+    //   this.exampleList = this.playgroundService.processedExamplesList;
+    //   console.log(this.exampleList);
 
-      // 如果URL中有关键词，执行搜索
-      if (this.keyword) {
-        this.search(this.keyword);
+    //   // 如果URL中有关键词，执行搜索
+    //   if (this.keyword) {
+    //     this.search(this.keyword);
+    //   }
+    // } else {
+    //   // 如果数据未加载，等待加载完成
+    //   this.playgroundService.loadExamplesList().then(() => {
+    //     this.exampleList = this.playgroundService.processedExamplesList;
+    //     console.log(this.exampleList);
+
+    //     // 如果URL中有关键词，执行搜索
+    //     if (this.keyword) {
+    //       this.search(this.keyword);
+    //     }
+    //   });
+    // }
+  }
+
+  getExamples() {
+    this.cloudService.getPublicProjects(this.pageIndex, this.pageSize).subscribe(res => {
+      if (res && res.status === 200) {
+        this.exampleList = []
+        this.total = res.data.total;
+        
+        res.data.list.forEach(prj => {
+          // 图片url
+          let imageUrl = '';
+          if (prj.image_url) {
+            imageUrl = this.cloudService.baseUrl + prj.image_url;
+          } else {
+            imageUrl = 'imgs/subject.webp';
+          }
+
+          // archive_url
+          if (prj.archive_url) {
+            prj.archive_url = this.cloudService.baseUrl + prj.archive_url;
+          } else {
+            prj.archive_url = '';
+          }
+
+          this.exampleList.push(prj);
+        });
+        console.log('获取公开项目列表:', this.exampleList);
       }
-    } else {
-      // 如果数据未加载，等待加载完成
-      this.playgroundService.loadExamplesList().then(() => {
-        this.exampleList = this.playgroundService.processedExamplesList;
-        console.log(this.exampleList);
-
-        // 如果URL中有关键词，执行搜索
-        if (this.keyword) {
-          this.search(this.keyword);
-        }
-      });
-    }
+    });
   }
 
   ngAfterViewInit() {
@@ -150,13 +187,19 @@ export class ExampleListComponent implements OnInit, AfterViewInit, OnDestroy {
   loadExample(index: number) {
     // 设置当前加载的示例索引
     this.loadingExampleIndex = index;
-    
-    // 模拟加载过程（这里替换为实际的加载逻辑）
-    setTimeout(() => {
-      console.log('加载示例:', this.exampleList[index]);
-      // 加载完成后重置loading状态
+
+    const item = this.exampleList[index];
+    console.log('加载示例项目:', item);
+    this.cloudService.getProjectArchive(item.archive_url).subscribe(async res => {
+      // 直接添加随机数避免重名
+      const randomNum = Math.floor(100000 + Math.random() * 900000);
+      const uniqueName = `${item.nickname || item.name || 'cloud_project'}_${randomNum}`;
+      const targetPath = this.projectService.projectRootPath + '\\' + uniqueName;
+
+      await this.cmdService.runAsync(`Copy-Item -Path "${res}" -Destination "${targetPath}" -Recurse -Force`);
+      this.projectService.projectOpen(targetPath);
       this.loadingExampleIndex = null;
-    }, 2000);
+    });
   }
 
   isLoading(index: number): boolean {

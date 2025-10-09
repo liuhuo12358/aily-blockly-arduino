@@ -1,6 +1,6 @@
 const SERVER_URL: string = 'https://aily-chat.diandeng.tech';
-const CHAT_SERVER_URL: string = 'http://114.132.150.141:8000';
-const AUTH_SERVER_URL: string = 'http://114.132.150.141:8001';
+const CHAT_SERVER_URL: string = 'http://127.0.0.1:8000';
+const AUTH_SERVER_URL: string = 'http://127.0.0.1:8001';
 const WORKSPACE_SERVER_URL: string = 'http://127.0.0.1:8002';
 const REGISTRY_URL: string = 'https://registry.diandeng.tech';
 
@@ -29,4 +29,5 @@ export const API = {
   cloudBase: `${WORKSPACE_SERVER_URL}/api/v1/cloud`,
   cloudSync: `${WORKSPACE_SERVER_URL}/api/v1/cloud/sync`,
   cloudProjects: `${WORKSPACE_SERVER_URL}/api/v1/cloud/projects`,
+  cloudPublicProjects: `${WORKSPACE_SERVER_URL}/api/v1/cloud/projects/public`,
 };
