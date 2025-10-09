@@ -53,7 +53,7 @@ export class CloudSpaceComponent {
     if (!item || !item.id) return;
     console.log('打开云上项目:', item);
     this.cloudService.getProjectArchive(item.archive_url).subscribe(res => {
-      console.log('获取云项目归档成功, 准备解压:', res);
+      this.projectService.projectOpen(res);
     });
   }
 
