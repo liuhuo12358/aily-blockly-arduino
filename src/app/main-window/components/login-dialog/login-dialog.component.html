@@ -1,0 +1,66 @@
+<app-base-dialog [title]="'登录'" [showCloseButton]="true" (closeDialog)="onCloseDialog()">
+    <div>
+        <div class="text">登陆后即可使用我们的服务</div>
+        <div class="line"></div>
+        <div class="btns">
+            <div class="item ccenter" (click)="select('github')" [ngClass]="{'active':mode=='github'}">
+                <i class="fa-brands fa-github"></i>
+                Github
+            </div>
+            <!-- <div class="item ccenter" (click)="select('google')" [ngClass]="{'active':mode=='google'}">
+                <i class="fa-brands fa-google"></i>
+                Google
+            </div>
+            <div class="item ccenter" (click)="select('microsoft')" [ngClass]="{'active':mode=='microsoft'}">
+                <i class="fa-brands fa-microsoft"></i>
+                Microsoft
+            </div> -->
+            <div class="item ccenter" (click)="select('wechat')" [ngClass]="{'active':mode=='wechat'}">
+                <i class="fa-brands fa-weixin"></i>
+                WeChat
+            </div>
+        </div>
+        @switch(mode){
+        @case ('github') {
+        <div class="description">
+            <div>
+                登录后您可以：
+                <ul>
+                    <li>免费试用 AI 问答功能</li>
+                    <li>分享你的项目</li>
+                    <li>享受个性化的开发体验</li>
+                </ul>
+                <div class="notice">
+                    <strong>注意：</strong>我们会使用您的 GitHub 账号为我们的几个开源仓库点 star，这有助于支持我们的项目发展。
+                </div>
+            </div>
+            <div class="login-btn">
+                <button nz-button nzType="primary" (click)="loginByGithub()">Github登录</button>
+            </div>
+        </div>
+        }
+        @case ('google') {
+
+        }
+        @case ('wechat') {
+        <div>
+            登录后您可以：
+            <ul>
+                <li>免费试用 AI 问答功能</li>
+                <li>分享你的项目</li>
+                <li>享受个性化的开发体验</li>
+            </ul>
+            <div class="notice">
+                扫描二维码关注本软件公众号进行登录
+            </div>
+        </div>
+        }
+        @case ('microsoft') {
+
+        }
+        @default {
+        <div class="text text2">点击选择登录方式</div>
+        }
+        }
+    </div>
+</app-base-dialog>

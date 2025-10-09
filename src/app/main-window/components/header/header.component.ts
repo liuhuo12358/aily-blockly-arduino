@@ -22,6 +22,7 @@ import { UserComponent } from '../user/user.component';
 import { ConfigService } from '../../../services/config.service';
 import { AuthService } from '../../../services/auth.service';
 import { BoardSelectorDialogComponent } from '../board-selector-dialog/board-selector-dialog.component';
+import { LoginDialogComponent } from '../login-dialog/login-dialog.component';
 
 @Component({
   selector: 'app-header',
@@ -332,12 +333,16 @@ export class HeaderComponent {
         }
         break;
       case 'user-auth':
-        if (event) {
-          this.calculateUserPosition(event);
-        }
         // 在显示用户组件前先同步登录状态
-        await this.authService.checkAndSyncAuthStatus();
-        this.showUser = !this.showUser;
+        let isLogin = await this.authService.checkAndSyncAuthStatus();
+        if (isLogin) {
+          if (event) {
+            this.calculateUserPosition(event);
+          }
+          this.showUser = !this.showUser;
+        } else {
+          this.openLoginDialog();
+        }
         break;
       case 'board-select':
         this.openBoardSelectorDialog();
@@ -542,6 +547,19 @@ export class HeaderComponent {
             break;
         }
       });
+    });
+  }
+
+  openLoginDialog() {
+    const modalRef = this.modal.create({
+      nzTitle: null,
+      nzFooter: null,
+      nzClosable: false,
+      nzBodyStyle: {
+        padding: '0',
+      },
+      nzWidth: '350px',
+      nzContent: LoginDialogComponent
     });
   }
 
