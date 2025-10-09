@@ -8,7 +8,7 @@
                 <div class="collection">合集</div>
                 } -->
                 <div class="downloads">
-                    <i class="fa-regular fa-arrow-down-to-line"></i> {{ example.download_count || '10k+' }}
+                    <i class="fa-regular fa-arrow-down-to-line"></i> {{ example.download_count || '0' }}
                 </div>
                 <div class="title">
                     {{ example.nickname }}
@@ -56,5 +56,5 @@
     </div>
 </div>
 <div class="pagination">
-    <nz-pagination [(nzPageIndex)]="pageIndex" [nzPageSize]="pageSize" [nzTotal]="total"></nz-pagination>
+    <nz-pagination [(nzPageIndex)]="pageIndex" [nzPageSize]="pageSize" [nzTotal]="total" (nzPageIndexChange)="onPageChange($event)"></nz-pagination>
 </div>

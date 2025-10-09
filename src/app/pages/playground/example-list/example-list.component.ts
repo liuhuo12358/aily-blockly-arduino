@@ -209,4 +209,10 @@ export class ExampleListComponent implements OnInit, AfterViewInit, OnDestroy {
   isDisabled(index: number): boolean {
     return this.loadingExampleIndex !== null && this.loadingExampleIndex !== index;
   }
+
+  onPageChange(page: number) {
+    console.log('页码变化:', page);
+    this.pageIndex = page;
+    this.getExamples();
+  }
 }

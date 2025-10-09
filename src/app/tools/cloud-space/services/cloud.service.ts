@@ -30,7 +30,7 @@ export class CloudService {
    * 获取公开列表
    */
   getPublicProjects(page, perPage): Observable<any> {
-    return this.http.get<any>(`${API.cloudPublicProjects}?page=${page}&per_page=${perPage}`)
+    return this.http.get<any>(`${API.cloudPublicProjects}?page=${page}&perPage=${perPage}`)
       .pipe(
         catchError(this.handleError)
       );
@@ -88,8 +88,8 @@ export class CloudService {
    */
   getProjects(skip: number = 0, limit: number = 20): Observable<any> {
     const params = {
-      skip: skip.toString(),
-      limit: limit.toString()
+      page: skip.toString(),
+      perPage: limit.toString()
     };
 
     return this.http.get<any>(this.cloudProjectsUrl, { params })
