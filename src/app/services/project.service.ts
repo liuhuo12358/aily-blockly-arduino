@@ -37,12 +37,24 @@ export class ProjectService {
   // 开发板变更事件通知，只在变更时发出
   boardChangeSubject = new Subject<void>();
 
+  // 当前项目路径的订阅源
+  private currentProjectPathSubject = new BehaviorSubject<string>('');
+  currentProjectPath$ = this.currentProjectPathSubject.asObservable();
+
   currentPackageData: ProjectPackageData = {
     name: 'aily blockly',
   };
 
   projectRootPath: string;
-  currentProjectPath: string;
+  
+  // 当前项目路径的 getter 和 setter
+  get currentProjectPath(): string {
+    return this.currentProjectPathSubject.value;
+  }
+  
+  set currentProjectPath(path: string) {
+    this.currentProjectPathSubject.next(path);
+  }
   currentBoardConfig: any;
   // STM32选择开发板时定义引脚使用
   currentStm32Config: { board: any, variant: any, variant_h: any } = { board: null, variant: null, variant_h: null };
@@ -214,7 +226,7 @@ export class ProjectService {
     };
     this.stateSubject.next('default');
     this.uiService.closeTerminal();
-    this.currentProjectPath = (await window['env'].get("AILY_PROJECT_PATH")).replace('%HOMEPATH%\\Documents', window['path'].getUserDocuments());
+    // this.currentProjectPath = (await window['env'].get("AILY_PROJECT_PATH")).replace('%HOMEPATH%\\Documents', window['path'].getUserDocuments());
     this.router.navigate(['/main/guide'], { replaceUrl: true });
   }
 

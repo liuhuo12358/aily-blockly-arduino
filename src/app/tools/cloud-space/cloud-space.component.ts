@@ -25,9 +25,12 @@ import { NzMessageService } from 'ng-zorro-antd/message';
 export class CloudSpaceComponent {
 
   itemList = []
+  filteredItemList = [] // 过滤后的项目列表
   isSyncing = false;
+  canSync = false; // 是否可以同步（当前有打开项目且项目已保存）
 
   editorProjectData = null;
+  searchKeyword = ''; // 搜索关键词
 
   constructor(
     private uiService: UiService,
@@ -43,9 +46,15 @@ export class CloudSpaceComponent {
   totalProjects = 0;
 
   ngOnInit(): void {
+    this.projectService.currentProjectPath$.subscribe(path => {
+      console.log('当前项目路径变化:', path);
+      this.canSync = !!path;
+    });
     this.getCloudProjects().then(
       () => { console.log('云项目列表获取完成'); }
     );
+    // 初始化时显示所有项目
+    this.filteredItemList = [...this.itemList];
   }
 
   // 打开项目
@@ -81,10 +90,33 @@ export class CloudSpaceComponent {
         });
         this.totalProjects = res.data.total;
         console.log('获取云上项目列表成功:', this.itemList);
+        // 应用搜索过滤
+        this.filterProjects();
       } else {
         console.error('获取云上项目列表失败, 服务器返回错误:', res);
       }
     });
+  }
+
+  // 过滤项目列表
+  filterProjects() {
+    if (!this.searchKeyword || this.searchKeyword.trim() === '') {
+      this.filteredItemList = [...this.itemList];
+    } else {
+      const keyword = this.searchKeyword.toLowerCase().trim();
+      this.filteredItemList = this.itemList.filter(item => {
+        const nickname = (item.nickname || '').toLowerCase();
+        const description = (item.description || '').toLowerCase();
+        const name = (item.name || '').toLowerCase();
+        return nickname.includes(keyword) || description.includes(keyword) || name.includes(keyword);
+      });
+    }
+    console.log('过滤后的项目列表:', this.filteredItemList);
+  }
+
+  // 搜索关键词变化时触发
+  onSearchChange() {
+    this.filterProjects();
   }
 
   // 打包项目
@@ -265,6 +297,12 @@ export class CloudSpaceComponent {
   showSearch = false;
   openSearch() {
     this.showSearch = true;
+  }
+
+  closeSearch() {
+    this.showSearch = false;
+    this.searchKeyword = '';
+    this.filterProjects();
   }
 
   toggleVisibility(item) {
