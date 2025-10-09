@@ -74,7 +74,7 @@ export class CloudSpaceComponent {
 
   // 获取云上项目列表
   async getCloudProjects() {
-    this.cloudService.getProjects((this.currentPage - 1) * this.pageSize, this.pageSize).subscribe(res => {
+    this.cloudService.getProjects(this.currentPage, this.pageSize).subscribe(res => {
       if (res && res.status === 200) {
         this.itemList = [];
         res.data.list.forEach(prj => {
