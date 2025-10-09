@@ -45,3 +45,15 @@
         width: 100%;
     }
 }
+
+.wechat {
+    flex-direction: column;
+
+    .qrcode {
+        width: 156px;
+        height: 156px;
+        border: 1px solid #666;
+        border-radius: 3px;
+        margin-bottom: 15px;
+    }
+}
