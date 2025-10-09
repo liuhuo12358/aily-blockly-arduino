@@ -1,4 +1,4 @@
-<div class="content-box">
+<div class="content-box" #contentBox>
     <div class="example-list">
         @for( example of exampleList;track $index) {
         <div class="example-item">
@@ -56,5 +56,5 @@
     </div>
 </div>
 <div class="pagination">
-    <nz-pagination [(nzPageIndex)]="pageIndex" [nzTotal]="total"></nz-pagination>
+    <nz-pagination [(nzPageIndex)]="pageIndex" [nzPageSize]="pageSize" [nzTotal]="total"></nz-pagination>
 </div>

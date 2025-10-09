@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ViewChild, ElementRef, AfterViewInit, OnDestroy } from '@angular/core';
 import { RouterModule } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -10,6 +10,8 @@ import { ActivatedRoute } from '@angular/router';
 import { PlaygroundService } from '../playground.service';
 import { NzPaginationModule } from 'ng-zorro-antd/pagination';
 import { NzToolTipModule } from 'ng-zorro-antd/tooltip';
+import { fromEvent, Subject } from 'rxjs';
+import { debounceTime, takeUntil } from 'rxjs/operators';
 @Component({
   selector: 'app-example-list',
   imports: [
@@ -25,14 +27,19 @@ import { NzToolTipModule } from 'ng-zorro-antd/tooltip';
   templateUrl: './example-list.component.html',
   styleUrl: './example-list.component.scss'
 })
-export class ExampleListComponent implements OnInit {
+export class ExampleListComponent implements OnInit, AfterViewInit, OnDestroy {
+  @ViewChild('contentBox', { static: false }) contentBox!: ElementRef;
+  
   exampleList: any[] = [];
   resourceUrl: string = '';
   keyword: string = '';
 
   pageIndex: number = 1; // 当前页码
+  pageSize: number = 10; // 每页显示数量，默认值
   total: number = 500; // 总条目数
   loadingExampleIndex: number | null = null; // 当前正在加载的示例索引
+  
+  private destroy$ = new Subject<void>();
 
   constructor(
     private configService: ConfigService,
@@ -72,6 +79,59 @@ export class ExampleListComponent implements OnInit {
         }
       });
     }
+  }
+
+  ngAfterViewInit() {
+    // 初始计算可显示的数量
+    setTimeout(() => {
+      this.calculatePageSize();
+    }, 100);
+
+    // 监听窗口大小变化
+    fromEvent(window, 'resize')
+      .pipe(
+        debounceTime(300),
+        takeUntil(this.destroy$)
+      )
+      .subscribe(() => {
+        this.calculatePageSize();
+      });
+  }
+
+  ngOnDestroy() {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
+
+  /**
+   * 计算容器中可以显示多少个示例项
+   * 每个示例项：280px x 280px，间距10px
+   */
+  calculatePageSize() {
+    if (!this.contentBox) return;
+
+    const container = this.contentBox.nativeElement;
+    const containerWidth = container.clientWidth - 30; // 减去padding (15px * 2)
+    const containerHeight = container.clientHeight - 30; // 减去padding (15px * 2)
+
+    const itemWidth = 280;
+    const itemHeight = 280;
+    const gap = 15; // 根据scss中的gap值
+
+    // 计算每行可以显示多少个
+    const itemsPerRow = Math.floor((containerWidth + gap) / (itemWidth + gap));
+    
+    // 计算可以显示多少行
+    const rows = Math.floor((containerHeight + gap) / (itemHeight + gap));
+
+    // 总共可以显示的数量
+    const calculatedPageSize = itemsPerRow * rows;
+
+    // 至少显示1个
+    this.pageSize = Math.max(1, calculatedPageSize);
+    
+    console.log('Container size:', containerWidth, 'x', containerHeight);
+    console.log('Items per row:', itemsPerRow, 'Rows:', rows, 'Page size:', this.pageSize);
   }
 
   search(keyword = this.keyword) {
