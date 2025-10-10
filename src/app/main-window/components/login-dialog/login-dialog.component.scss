@@ -57,3 +57,49 @@
         margin-bottom: 15px;
     }
 }
+
+.phone-login-box {
+    padding: 10px;
+
+    .item {
+        display: flex;
+        margin-bottom: 15px;
+
+        >div:first-child {
+            width: 40px;
+            line-height: 32px;
+            margin-right: 10px;
+        }
+
+        input {
+            background: #363636;
+            color: rgba(255, 255, 255, 0.7) !important;
+
+            &[type="password"] {
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            }
+        }
+    }
+
+    .actions {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+
+        button {
+            width: 100%;
+
+            &[nz-button][nzType="link"] {
+                padding: 0;
+                height: auto;
+                margin-top: 5px;
+            }
+        }
+    }
+
+    .username {
+        font-weight: 500;
+        font-size: 16px;
+        line-height: 32px;
+    }
+}

@@ -15,10 +15,15 @@
                 <i class="fa-brands fa-microsoft"></i>
                 Microsoft
             </div> -->
-            <div class="item ccenter" (click)="select('wechat')" [ngClass]="{'active':mode=='wechat'}">
+            <!-- <div class="item ccenter" (click)="select('wechat')" [ngClass]="{'active':mode=='wechat'}">
                 <i class="fa-brands fa-weixin"></i>
                 WeChat
+            </div> -->
+            <div class="item ccenter" (click)="select('phone')" [ngClass]="{'active':mode=='phone'}">
+                <i class="fa-light fa-mobile-screen-button"></i>
+                账号密码
             </div>
+
         </div>
         @switch(mode){
         @case ('github') {
@@ -54,6 +59,28 @@
         }
         @case ('microsoft') {
 
+        }
+        @case ('phone') {
+            <div class="phone-login-box">
+                <div class="item">
+                    <div class="ccenter">
+                        <i class="fa-light fa-user"></i>
+                    </div>
+                    <input nz-input spellcheck="false" type="text" placeholder="请输入用户名" [(ngModel)]="inputUsername" />
+                </div>
+                <div class="item">
+                    <div class="ccenter">
+                        <i class="fa-light fa-lock"></i>
+                    </div>
+                    <input nz-input type="password" placeholder="请输入密码" [(ngModel)]="inputPassword" />
+                </div>
+                <div class="actions">
+                    <button nz-button nzType="primary" [nzLoading]="isWaiting" (click)="loginByPhone()">
+                        {{ isWaiting ? '登录中...' : '登录' }}
+                    </button>
+                
+                </div>
+            </div>
         }
         @default {
         <div class="text text2">点击选择登录方式</div>

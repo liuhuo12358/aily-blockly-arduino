@@ -9,6 +9,10 @@ import { CloudService } from './services/cloud.service';
 import { ProjectService } from '../../services/project.service';
 import { CmdService } from '../../services/cmd.service';
 import { NzMessageService } from 'ng-zorro-antd/message';
+import { AuthService } from '../../services/auth.service';
+import { LoginDialogComponent } from '../../main-window/components/login-dialog/login-dialog.component';
+import { NzModalService } from 'ng-zorro-antd/modal';
+import { distinctUntilChanged } from 'rxjs/operators';
 
 @Component({
   selector: 'app-cloud-space',
@@ -31,13 +35,16 @@ export class CloudSpaceComponent {
 
   editorProjectData = null;
   searchKeyword = ''; // 搜索关键词
+  isLoginDialogOpen = false; // 标记登录对话框是否已打开
 
   constructor(
     private uiService: UiService,
     private cloudService: CloudService,
     private projectService: ProjectService,
     private cmdService: CmdService,
-    private message: NzMessageService
+    private message: NzMessageService,
+    private authService: AuthService,
+    private modal: NzModalService
   ) { }
 
   // 分页参数
@@ -50,11 +57,49 @@ export class CloudSpaceComponent {
       console.log('当前项目路径变化:', path);
       this.canSync = !!path;
     });
-    this.getCloudProjects().then(
-      () => { console.log('云项目列表获取完成'); }
-    );
-    // 初始化时显示所有项目
-    this.filteredItemList = [...this.itemList];
+
+    this.authService.checkAndSyncAuthStatus().then((res) => {
+      if (!res) {
+        this.openLoginDialog();
+      }
+    });
+
+    // 检查用户是否登录
+    this.authService.isLoggedIn$
+      .pipe(distinctUntilChanged()) // 只有当登录状态真正改变时才触发
+      .subscribe(isLoggedIn => {
+        if (!isLoggedIn) {
+          this.itemList = [];
+          this.filteredItemList = [];
+        } else {
+          // 用户已登录时关闭可能存在的登录对话框状态标记
+          this.isLoginDialogOpen = false;
+          this.getCloudProjects().then(
+            () => { console.log('云项目列表获取完成'); }
+          );
+          // 初始化时显示所有项目
+          this.filteredItemList = [...this.itemList];
+        }
+      });
+  }
+
+  openLoginDialog() {
+    this.isLoginDialogOpen = true;
+    const modalRef = this.modal.create({
+      nzTitle: null,
+      nzFooter: null,
+      nzClosable: false,
+      nzBodyStyle: {
+        padding: '0',
+      },
+      nzWidth: '350px',
+      nzContent: LoginDialogComponent
+    });
+
+    // 当对话框关闭时重置状态
+    modalRef.afterClose.subscribe(() => {
+      this.isLoginDialogOpen = false;
+    });
   }
 
   // 打开项目
