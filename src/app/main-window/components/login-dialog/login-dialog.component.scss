@@ -1,0 +1,59 @@
+.text {
+    text-align: center;
+    margin-bottom: 10px;
+}
+
+
+.text2 {
+    color: #ccc;
+}
+
+.line {
+    border-bottom: 0.5px solid #666;
+    margin-bottom: 10px;
+}
+
+.btns {
+    display: flex;
+    justify-content: center;
+
+    .item {
+        flex-direction: column;
+        padding: 15px;
+        cursor: pointer;
+        color: #aaa;
+        transition: all 0.3s;
+
+        i {
+            font-size: 30px;
+        }
+
+        &:hover {
+            color: #FFF;
+        }
+
+        &.active {
+            color: #FFF;
+        }
+    }
+}
+
+.login-btn {
+    margin-top: 15px;
+
+    button {
+        width: 100%;
+    }
+}
+
+.wechat {
+    flex-direction: column;
+
+    .qrcode {
+        width: 156px;
+        height: 156px;
+        border: 1px solid #666;
+        border-radius: 3px;
+        margin-bottom: 15px;
+    }
+}
