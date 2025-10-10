@@ -15,6 +15,7 @@ import { debounceTime, takeUntil } from 'rxjs/operators';
 import { CloudService } from '../../../tools/cloud-space/services/cloud.service';
 import { ProjectService } from '../../../services/project.service';
 import { CmdService } from '../../../services/cmd.service';
+import { ElectronService } from '../../../services/electron.service';
 
 @Component({
   selector: 'app-example-list',
@@ -52,7 +53,8 @@ export class ExampleListComponent implements OnInit, AfterViewInit, OnDestroy {
     private playgroundService: PlaygroundService,
     private cloudService: CloudService,
     private projectService: ProjectService,
-    private cmdService: CmdService
+    private cmdService: CmdService,
+    private electronService: ElectronService
   ) {
     // 从URL参数中获取搜索关键词（如果有）
     this.route.queryParams.subscribe(params => {
@@ -96,12 +98,13 @@ export class ExampleListComponent implements OnInit, AfterViewInit, OnDestroy {
         this.total = res.data.total;
         
         res.data.list.forEach(prj => {
-          // 图片url
-          let imageUrl = '';
+          // 图片url - 添加时间戳参数避免缓存
           if (prj.image_url) {
-            imageUrl = this.cloudService.baseUrl + prj.image_url;
+            const timestamp = new Date().getTime();
+            const separator = prj.image_url.includes('?') ? '&' : '?';
+            prj.image_url = this.cloudService.baseUrl + prj.image_url + separator + 't=' + timestamp;
           } else {
-            imageUrl = 'imgs/subject.webp';
+            prj.image_url = 'imgs/subject.webp';
           }
 
           // archive_url
@@ -208,6 +211,13 @@ export class ExampleListComponent implements OnInit, AfterViewInit, OnDestroy {
 
   isDisabled(index: number): boolean {
     return this.loadingExampleIndex !== null && this.loadingExampleIndex !== index;
+  }
+
+  openDoc(index: number) {
+    const item = this.exampleList[index];
+    if (item.doc_url && item.doc_url.trim() !== '') {
+      this.electronService.openUrl(item.doc_url);
+    }
   }
 
   onPageChange(page: number) {

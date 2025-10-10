@@ -65,7 +65,7 @@
             }
         </div>
         @if(showEditor) {
-        <app-cloud-project-editor (close)="showEditor = false" [projectData]="editorProjectData"></app-cloud-project-editor>
+        <app-cloud-project-editor (close)="showEditor = false" (saved)="onProjectSaved()" [projectData]="editorProjectData"></app-cloud-project-editor>
         }
     </div>
 </ng-template>

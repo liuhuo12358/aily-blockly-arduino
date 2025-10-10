@@ -126,7 +126,9 @@ export class CloudSpaceComponent {
           // 图片url
           let imageUrl = '';
           if (prj.image_url) {
-            imageUrl = this.cloudService.baseUrl + prj.image_url;
+            const timestamp = new Date().getTime();
+            const separator = prj.image_url.includes('?') ? '&' : '?';
+            imageUrl = this.cloudService.baseUrl + prj.image_url + separator + 't=' + timestamp;
           } else {
             imageUrl = 'imgs/subject.webp';
           }
@@ -342,6 +344,12 @@ export class CloudSpaceComponent {
   openEditor(item) {
     this.showEditor = true;
     this.editorProjectData = item;
+  }
+
+  // 项目保存成功后的回调
+  onProjectSaved() {
+    // 重新获取项目列表，以获取最新的项目信息（包括更新后的封面图）
+    this.getCloudProjects();
   }
 
   showSearch = false;

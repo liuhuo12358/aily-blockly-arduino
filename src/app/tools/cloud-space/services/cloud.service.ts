@@ -106,11 +106,13 @@ export class CloudService {
   updateProject(projectId: string, params: {
     nickname?: string;
     description?: string;
+    doc_url?: string;
     image?: File;
   }): Observable<any> {
     const formData = new FormData();
     if (params.nickname) formData.append('nickname', params.nickname);
     if (params.description) formData.append('description', params.description);
+    if (params.doc_url) formData.append('doc_url', params.doc_url);
     if (params.image) {
       // 确保为image文件指定正确的文件名
       const fileName = params.image.name || 'image';
