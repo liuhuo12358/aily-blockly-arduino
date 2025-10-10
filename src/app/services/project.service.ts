@@ -1127,7 +1127,7 @@ export class ProjectService {
     try {
       const packageJson = await this.getPackageJson();
       if (!packageJson || !packageJson.projectConfig) {
-        throw new Error('项目配置未找到或格式不正确');
+        return {};
       }
 
       return packageJson.projectConfig;
