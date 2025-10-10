@@ -789,7 +789,7 @@ export class AuthService {
         if (response.status === 200 && response.data) {
           return response.data;
         }
-        throw new Error(response.message || 'Token 交换失败');
+        throw new Error(response.message || '网络超时，请重试');
       }),
       catchError(this.handleError)
     );
@@ -850,7 +850,6 @@ export class AuthService {
       };
 
     } catch (error) {
-      console.error('处理 OAuth 回调失败:', error);
       this.clearOAuthState();
       return {
         success: false,
