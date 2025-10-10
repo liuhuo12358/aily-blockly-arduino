@@ -88,7 +88,6 @@ export class AuthService {
 
             console.log('认证状态:', this.isLoggedInSubject.value);
           }).catch(error => {
-            console.error('获取用户信息失败:', error);
             this.isLoggedInSubject.next(false);
           });
         }, 0);
@@ -102,7 +101,6 @@ export class AuthService {
         // }
       }
     } catch (error) {
-      console.error('初始化认证状态失败:', error);
       await this.clearAuthData();
     }
   }
@@ -152,7 +150,7 @@ export class AuthService {
         this.http.get<CommonResponse>(API.logout, {
           headers: { Authorization: `Bearer ${token}` }
         }).subscribe({
-          error: (error) => console.error('服务器登出失败:', error)
+          error: (error) => console.warn('服务器登出')
         });
       }
     } catch (error) {
