@@ -276,6 +276,14 @@ export class CloudService {
       }
       
       console.log('解压成功，文件数量:', extractedFiles.length);
+
+      // 删除.7z文件，节省空间
+      try {
+        window['fs'].unlinkSync(archivePath);
+        console.log('已删除临时归档文件:', archivePath);
+      } catch (error) {
+        console.warn('删除临时归档文件失败:', error);
+      }
       return extractPath;
     } catch (error) {
       // 清理临时文件
