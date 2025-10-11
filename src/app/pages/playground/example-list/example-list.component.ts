@@ -56,16 +56,21 @@ export class ExampleListComponent implements OnInit, AfterViewInit, OnDestroy {
     private cmdService: CmdService,
     private electronService: ElectronService
   ) {
-    // 从URL参数中获取搜索关键词（如果有）
-    this.route.queryParams.subscribe(params => {
-      if (params['keyword']) {
-        this.keyword = params['keyword'];
-      }
-    });
   }
 
   ngOnInit() {
-    this.getExamples();
+    // 订阅 URL 参数变化并在每次变化时获取示例列表。
+    // queryParams 会立即发出当前值，因此不需要额外的初始 getExamples() 调用，
+    // 这样可以避免组件创建时重复请求。
+    this.route.queryParams
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(params => {
+        console.log('URL参数:', params);
+        this.keyword = params['keyword'] || '';
+        // 当通过 URL 搜索时，重置回第一页
+        this.pageIndex = 1;
+        this.getExamples();
+      });
     // this.resourceUrl = this.configService.data.resource[0] + "/imgs/examples/";
 
     // // 如果数据已经加载，直接使用
@@ -92,7 +97,7 @@ export class ExampleListComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   getExamples() {
-    this.cloudService.getPublicProjects(this.pageIndex, this.pageSize).subscribe(res => {
+    this.cloudService.getPublicProjects(this.pageIndex, this.pageSize, this.keyword).subscribe(res => {
       if (res && res.status === 200) {
         this.exampleList = []
         this.total = res.data.total;
@@ -116,6 +121,7 @@ export class ExampleListComponent implements OnInit, AfterViewInit, OnDestroy {
 
           this.exampleList.push(prj);
         });
+
         console.log('获取公开项目列表:', this.exampleList);
       }
     });
@@ -183,8 +189,9 @@ export class ExampleListComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   clearSearch() {
+    console.log('清除搜索');
     this.keyword = '';
-    this.search();
+    this.getExamples();
   }
 
   loadExample(index: number) {
