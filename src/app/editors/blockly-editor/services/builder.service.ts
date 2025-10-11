@@ -451,6 +451,10 @@ export class _BuilderService {
           this.cmdService.run(compileCommand, null, false).subscribe({
             next: (output: CmdOutput) => {
               console.log('编译命令输出:', output);
+              if (output.type === 'close' && output.code !== 0) {
+                this.isErrored = true;
+                return;
+              }
               if (this.cancelled) {
                 return;
               }
@@ -576,6 +580,8 @@ export class _BuilderService {
                             lastStdErr = trimmedLine;
                             fullStdErr += trimmedLine + '\n';
                             this.isErrored = true;
+                          } else {
+                            fullStdErr += trimmedLine + '\n';
                           }
                         } else {
                           this.logService.update({ "detail": trimmedLine, "state": "doing" });
