@@ -199,7 +199,17 @@ export class ExampleListComponent implements OnInit, AfterViewInit, OnDestroy {
       const uniqueName = `${item.nickname || item.name || 'cloud_project'}_${randomNum}`;
       const targetPath = this.projectService.projectRootPath + '\\' + uniqueName;
 
-      await this.cmdService.runAsync(`Copy-Item -Path "${res}" -Destination "${targetPath}" -Recurse -Force`);
+      // 使用 Move-Item 将下载/临时文件移动到目标项目目录
+      // -Force 用于覆盖同名目标（如果存在）
+      await this.cmdService.runAsync(`Move-Item -Path "${res}" -Destination "${targetPath}" -Force`);
+
+      // 更新 package.json 中的项目信息
+      const packageJson = JSON.parse(this.electronService.readFile(`${targetPath}/package.json`));
+      packageJson.nickname = item.nickname
+      packageJson.description = item.description || ''
+      packageJson.doc_url = item.doc_url || ''
+      this.electronService.writeFile(`${targetPath}/package.json`, JSON.stringify(packageJson, null, 2));
+
       this.projectService.projectOpen(targetPath);
       this.loadingExampleIndex = null;
     });
