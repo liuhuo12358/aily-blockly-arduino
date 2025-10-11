@@ -484,7 +484,7 @@ export class ProjectService {
       const stm32Config = {
         board: this.extractMenuOptions(boardConfig, 'pnum'),
         usb: this.extractMenuOptions(boardConfig, 'usb'),
-        upload_method: this.extractMenuOptions(boardConfig, 'upload_method'),
+        // upload_method: this.extractMenuOptions(boardConfig, 'upload_method'),
       };
 
       // 只保留 name 字段中包含 "Generic" 的选项，其它全部去掉
@@ -867,17 +867,17 @@ export class ProjectService {
               }
             });
           }
-        } else if (menuItem.name === 'STM32.UPLOAD_METHOD' && boardConfig.upload_method) {
-          menuItem.children = boardConfig.upload_method;
-          // 根据当前项目配置设置check状态
-          if (currentProjectConfig.upload_method) {
-            menuItem.children.forEach((child: any) => {
-              child.check = false;
-              if (this.compareConfigs(child.data, currentProjectConfig.upload_method)) {
-                child.check = true;
-              }
-            });
-          }
+        // } else if (menuItem.name === 'STM32.UPLOAD_METHOD' && boardConfig.upload_method) {
+        //   menuItem.children = boardConfig.upload_method;
+        //   // 根据当前项目配置设置check状态
+        //   if (currentProjectConfig.upload_method) {
+        //     menuItem.children.forEach((child: any) => {
+        //       child.check = false;
+        //       if (this.compareConfigs(child.data, currentProjectConfig.upload_method)) {
+        //         child.check = true;
+        //       }
+        //     });
+        //   }
         }
       });
       return STM32_CONFIG_MENU_TEMP;
