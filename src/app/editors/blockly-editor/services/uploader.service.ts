@@ -666,6 +666,9 @@ export class _UploaderService {
 * 取消当前编译过程
 */
   cancel() {
+    if (!this.uploadInProgress) {
+      return;
+    }
     this.cancelled = true;
     this.cmdService.kill(this.streamId || '');
     console.log("取消command: ", this.commandName);
