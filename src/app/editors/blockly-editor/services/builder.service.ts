@@ -94,6 +94,10 @@ export class _BuilderService {
     this.actionService.listen('compile-cancel', (action) => {
       this.cancel();
     }, 'builder-compile-cancel');
+    this.actionService.listen('compile-reset', async (action) => {
+      this.passed = false;
+      this.lastCode = "";
+    }, 'builder-compile-reset');
   }
 
   destroy() {
