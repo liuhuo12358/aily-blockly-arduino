@@ -184,6 +184,14 @@ export class CloudSpaceComponent {
     this.filterProjects();
   }
 
+  // 删除7z文件
+  async delete7zFile(archivePath: string) {
+    if (await window['fs'].existsSync(archivePath)) {
+      await window['fs'].unlinkSync(archivePath);
+      console.log('删除已存在的7z文件:', archivePath);
+    }
+  }
+
   // 打包项目
   async packageProject(prjPath: string): Promise<string | undefined> {
     // 判断路径是否存在
@@ -192,14 +200,9 @@ export class CloudSpaceComponent {
       console.warn('项目路径不存在:', prjPath);
       return;
     }
-    
+
     const archivePath = `${prjPath}/project.7z`;
-    
-    // 删除已存在的7z文件
-    if (await window['fs'].existsSync(archivePath)) {
-      await window['fs'].unlinkSync(archivePath);
-      console.log('删除已存在的7z文件:', archivePath);
-    }
+    await this.delete7zFile(archivePath);
     
     // 检查要打包的文件是否存在
     const packageJsonPath = `${prjPath}/package.json`;
@@ -227,6 +230,15 @@ export class CloudSpaceComponent {
       }
     } else {
       console.log('未找到abi文件，只打包package.json');
+    }
+
+    // 检查是否有partitions.csv文件
+    const partitionFile = files.find(file => file.name.toLowerCase() === 'partitions.csv');
+    if (partitionFile) {
+      console.log('找到partitions.csv文件:', partitionFile.name);
+      packCommand += ` "${partitionFile.name}"`;
+    } else {
+      console.log('未找到partitions.csv文件');
     }
     
     console.log('执行打包命令:', packCommand);
@@ -346,10 +358,12 @@ export class CloudSpaceComponent {
         this.message.error('同步失败: ' + (res?.messages || '未知错误'));
       }
       this.isSyncing = false;
+      this.delete7zFile(archivePath);
     }, err => {
       this.isSyncing = false;
       console.error('同步失败:', err);
       this.message.error('同步失败: ' + err);
+      this.delete7zFile(archivePath);
     });
   }  showEditor = false;
 

@@ -597,14 +597,17 @@ export class HeaderComponent {
         path: this.projectService.currentProjectPath,
       });
 
+      // console.log('选中的分区文件路径：', folderPath);
+
       if (!folderPath) {
         this.message.warning('未选择分区文件，已取消');
         return;
       }
 
       // 执行复制操作，复制到项目根目录下的 'partitions.csv'
-      if (folderPath) {
-        const destPath = window['path'].join(this.projectService.currentProjectPath, 'partitions.csv');
+      const destPath = window['path'].join(this.projectService.currentProjectPath, 'partitions.csv');
+      if (folderPath != destPath) {
+        // console.log('复制分区文件到项目目录:', destPath);
         try {
           window['fs'].copySync(folderPath, destPath);
         } catch (error) {
@@ -612,9 +615,6 @@ export class HeaderComponent {
           this.message.error('复制分区文件失败');
           return;
         }
-      } else {
-        this.message.warning('未选择分区文件，已取消');
-        return;
       }
     }
 

@@ -289,6 +289,9 @@ export class ProjectService {
     // 写入新的package.json
     window['fs'].writeFileSync(packageJsonPath, JSON.stringify(data, null, 2));
 
+    // 更新当前packageData
+    this.currentPackageData = data;
+
     this.boardChangeSubject.next();
   }
 
