@@ -590,33 +590,33 @@ export class HeaderComponent {
     let packageJson = await this.projectService.getPackageJson();
     packageJson['projectConfig'] = packageJson['projectConfig'] || {};
 
-    // 判断是否为PartitionScheme并且值为'custom'，如果是则弹出文件选择
-    if (subItem.key === 'PartitionScheme' && subItem.data.toLowerCase() === 'custom') {
-      const folderPath = await window['ipcRenderer'].invoke('select-file', {
-        title: '选择分区文件',
-        path: this.projectService.currentProjectPath,
-      });
+    // // 判断是否为PartitionScheme并且值为'custom'，如果是则弹出文件选择
+    // if (subItem.key === 'PartitionScheme' && subItem.data.toLowerCase() === 'custom') {
+    //   const folderPath = await window['ipcRenderer'].invoke('select-file', {
+    //     title: '选择分区文件',
+    //     path: this.projectService.currentProjectPath,
+    //   });
 
-      // console.log('选中的分区文件路径：', folderPath);
+    //   // console.log('选中的分区文件路径：', folderPath);
 
-      if (!folderPath) {
-        this.message.warning('未选择分区文件，已取消');
-        return;
-      }
+    //   if (!folderPath) {
+    //     this.message.warning('未选择分区文件，已取消');
+    //     return;
+    //   }
 
-      // 执行复制操作，复制到项目根目录下的 'partitions.csv'
-      const destPath = window['path'].join(this.projectService.currentProjectPath, 'partitions.csv');
-      if (folderPath != destPath) {
-        // console.log('复制分区文件到项目目录:', destPath);
-        try {
-          window['fs'].copySync(folderPath, destPath);
-        } catch (error) {
-          console.warn('复制分区文件失败:', error);
-          this.message.error('复制分区文件失败');
-          return;
-        }
-      }
-    }
+    //   // 执行复制操作，复制到项目根目录下的 'partitions.csv'
+    //   const destPath = window['path'].join(this.projectService.currentProjectPath, 'partitions.csv');
+    //   if (folderPath != destPath) {
+    //     // console.log('复制分区文件到项目目录:', destPath);
+    //     try {
+    //       window['fs'].copySync(folderPath, destPath);
+    //     } catch (error) {
+    //       console.warn('复制分区文件失败:', error);
+    //       this.message.error('复制分区文件失败');
+    //       return;
+    //     }
+    //   }
+    // }
 
     packageJson['projectConfig'][subItem.key] = subItem.data;
     this.projectService.setPackageJson(packageJson);
