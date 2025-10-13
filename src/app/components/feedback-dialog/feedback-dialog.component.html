@@ -1,0 +1,57 @@
+<app-base-dialog 
+    [title]="title"
+    [buttons]="buttons"
+    [showCloseButton]="true"
+    [showFooter]="true"
+    [loading]="isSubmitting"
+    (closeDialog)="onCloseDialog()"
+    (buttonClick)="onButtonClick($event)">
+    
+    <div class="feedback-form">
+        <div class="form-item">
+            <label class="form-label">反馈类型</label>
+            <nz-select 
+                [(ngModel)]="feedbackType" 
+                nzSize="small"
+                class="form-control">
+                @for(type of feedbackTypes; track type.value) {
+                    <nz-option [nzValue]="type.value" [nzLabel]="type.label"></nz-option>
+                }
+            </nz-select>
+        </div>
+
+        <div class="form-item">
+            <label class="form-label">
+                反馈内容
+                <span class="required">*</span>
+            </label>
+            <textarea 
+                nz-input 
+                [(ngModel)]="feedbackContent"
+                placeholder="请详细描述您的问题或建议（至少10个字符）"
+                [rows]="6"
+                class="form-control"
+                [disabled]="isSubmitting">
+            </textarea>
+            <div class="char-count">
+                {{ feedbackContent.length }} 字符
+            </div>
+        </div>
+
+        <div class="form-item">
+            <label class="form-label">联系方式（可选）</label>
+            <input 
+                nz-input 
+                [(ngModel)]="contactInfo"
+                placeholder="邮箱或其他联系方式，方便我们回复您"
+                class="form-control"
+                [disabled]="isSubmitting">
+        </div>
+
+        <div class="tips">
+            <i class="fa-light fa-circle-info"></i>
+            <span>我们会认真阅读每一条反馈，感谢您帮助我们改进产品！</span>
+        </div>
+    </div>
+    
+</app-base-dialog>
