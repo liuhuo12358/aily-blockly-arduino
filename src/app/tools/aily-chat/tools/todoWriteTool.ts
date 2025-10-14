@@ -16,8 +16,9 @@ import {
   optimizeTodoStorage,
   validateTodos
 } from "../utils/todoStorage";
+import { notifyTodoUpdate } from "../services/todoUpdate.service";
 
-export async function todoWriteTool(toolArgs: any): Promise<ToolUseResult & { todos?: any[] }> {
+export async function todoWriteTool(toolArgs: any): Promise<ToolUseResult> {
   let toolResult = null;
   let is_error = false;
 
@@ -35,53 +36,19 @@ export async function todoWriteTool(toolArgs: any): Promise<ToolUseResult & { to
       query 
     } = toolArgs;
 
-    // 生成增强的显示格式
+    // 生成简洁的显示格式，专注于核心信息
     const formatTodoList = (todos: TodoItem[]): string => {
       if (todos.length === 0) {
-        return '📝 **TODO列表为空**\n\n💡 使用 `{"operation": "add", "content": "任务内容", "priority": "high", "tags": ["标签"]}` 添加新任务';
+        return 'TODO列表为空';
       }
 
-      let result = '📝 **TODO列表**\n\n';
-      
-      todos.forEach((todo, index) => {
-        const statusIcon = todo.status === 'completed' ? '✅' : 
-                          todo.status === 'in_progress' ? '🔄' : '⏸️';
-        const priorityIcon = todo.priority === 'high' ? '🔴' : 
-                            todo.priority === 'medium' ? '🟡' : '🟢';
-        
-        const isCompleted = todo.status === 'completed';
-        const todoText = isCompleted ? `~~${todo.content}~~` : `**${todo.content}**`;
-        
-        // 显示标签
-        const tagsDisplay = Array.isArray(todo.tags) && todo.tags.length > 0 
-          ? ` 🏷️[${todo.tags.join(', ')}]` 
-          : '';
-          
-        // 显示预估时间
-        const hoursDisplay = todo.estimatedHours 
-          ? ` ⏱️${todo.estimatedHours}h` 
-          : '';
-          
-        // 显示状态变化
-        const statusChange = todo.previousStatus && todo.previousStatus !== todo.status
-          ? ` (${todo.previousStatus} → ${todo.status})`
-          : '';
-        
-        result += `${index + 1}. ${statusIcon} ${priorityIcon} ${todoText}${tagsDisplay}${hoursDisplay} \`(${todo.id})\`${statusChange}\n`;
+      let result = 'TODO列表:\n\n| ID | priority | content | status |\n| --- | --- | --- | --- |\n';
+
+      todos.forEach((todo) => {
+        result += `| ${todo.id} | ${todo.priority.toUpperCase()} | ${todo.content} | ${todo.status.toUpperCase()} |\n`;
       });
-
-      const stats = getTodoStatistics(sessionId);
-      result += `\n📊 **统计**: 总计${stats.total}项 | ⏸️待处理${stats.byStatus.pending}项 | 🔄进行中${stats.byStatus.in_progress}项 | ✅已完成${stats.byStatus.completed}项`;
       
-      if (stats.estimatedTotalHours > 0) {
-        result += ` | ⏱️预估${stats.estimatedTotalHours}小时`;
-      }
-      
-      if (stats.cacheEfficiency > 0) {
-        result += ` | 📈缓存效率${stats.cacheEfficiency}%`;
-      }
-      
-      return result;
+      return result.trim();
     };
 
     const generateId = (): string => {
@@ -118,6 +85,7 @@ export async function todoWriteTool(toolArgs: any): Promise<ToolUseResult & { to
         }
 
         setTodos(validatedTodos, sessionId);
+        notifyTodoUpdate(sessionId); // 触发UI更新通知
         toolResult = `✅ **TODO列表更新成功**\n\n${formatTodoList(validatedTodos)}`;
         break;
 
@@ -149,6 +117,7 @@ export async function todoWriteTool(toolArgs: any): Promise<ToolUseResult & { to
           }
 
           const updatedTodos = addTodo(newTodo, sessionId);
+          notifyTodoUpdate(sessionId); // 触发UI更新通知
           
           const statusIcon = newTodo.status === 'completed' ? '✅' : 
                             newTodo.status === 'in_progress' ? '🔄' : '⏸️';
@@ -215,6 +184,9 @@ export async function todoWriteTool(toolArgs: any): Promise<ToolUseResult & { to
           }
 
           const updatedTodos = getTodos(sessionId);
+          if (addedCount > 0) {
+            notifyTodoUpdate(sessionId); // 触发UI更新通知
+          }
           
           let resultMessage = `✅ **批量添加完成**: 成功添加${addedCount}个任务`;
           if (failedTasks.length > 0) {
@@ -290,6 +262,7 @@ export async function todoWriteTool(toolArgs: any): Promise<ToolUseResult & { to
           }
 
           const updatedTodos = updateTodo(id, { status: newStatus }, sessionId);
+          notifyTodoUpdate(sessionId); // 触发UI更新通知
           
           const statusText = newStatus === 'completed' ? '完成' : 
                             newStatus === 'in_progress' ? '开始进行' : '重置为待处理';
@@ -316,6 +289,7 @@ export async function todoWriteTool(toolArgs: any): Promise<ToolUseResult & { to
           }
 
           const updatedTodos = deleteTodo(id, sessionId);
+          notifyTodoUpdate(sessionId); // 触发UI更新通知
           toolResult = `✅ **任务删除成功**: ${todo.content}\n\n${formatTodoList(updatedTodos)}`;
         } catch (error) {
           toolResult = `❌ **删除失败**: ${error instanceof Error ? error.message : '未知错误'}`;
@@ -326,12 +300,16 @@ export async function todoWriteTool(toolArgs: any): Promise<ToolUseResult & { to
       case 'clear':
         const count = getTodos(sessionId).length;
         clearTodos(sessionId);
+        if (count > 0) {
+          notifyTodoUpdate(sessionId); // 触发UI更新通知
+        }
         toolResult = `✅ **清空完成**: 删除了${count}个任务`;
         break;
 
       case 'optimize':
         optimizeTodoStorage(sessionId);
         const optimizedTodos = getTodos(sessionId);
+        notifyTodoUpdate(sessionId); // 触发UI更新通知
         toolResult = `✅ **存储优化完成**\n\n${formatTodoList(optimizedTodos)}`;
         break;
 
@@ -370,7 +348,6 @@ export async function todoWriteTool(toolArgs: any): Promise<ToolUseResult & { to
 
   return {
     content: toolResult,
-    is_error,
-    todos: resultTodos
+    is_error
   };
 }

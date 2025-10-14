@@ -13,6 +13,7 @@ export interface ToolUseResult {
     is_error: boolean;
     content: string;
     details?: string;
+    metadata?: any; // 添加 metadata 支持
 }
 
 export const TOOLS = [
@@ -687,44 +688,44 @@ export const TOOLS = [
             required: ['operation']
         }
     },
-    {
-        name: "find_block_tool",
-        description: `块查找工具。在工作区中查找特定的块，支持多种查找条件：块类型、字段值、位置等。返回匹配的块信息。`,
-        input_schema: {
-            type: 'object', 
-            properties: {
-                criteria: {
-                    type: 'object',
-                    properties: {
-                        type: { type: 'string', description: '块类型' },
-                        fields: { type: 'object', description: '字段值匹配' },
-                        position: { 
-                            type: 'object',
-                            properties: {
-                                x: { type: 'number' },
-                                y: { type: 'number' },
-                                tolerance: { type: 'number', description: '位置容差' }
-                            },
-                            description: '位置匹配'
-                        },
-                        connected: { type: 'boolean', description: '是否已连接' }
-                    },
-                    description: '查找条件'
-                },
-                limit: {
-                    type: 'number',
-                    description: '返回结果数量限制',
-                    default: 10
-                },
-                includeMetadata: {
-                    type: 'boolean',
-                    description: '是否包含详细元数据',
-                    default: false
-                }
-            },
-            required: ['criteria']
-        }
-    },
+    // {
+    //     name: "find_block_tool",
+    //     description: `块查找工具。在工作区中查找特定的块，支持多种查找条件：块类型、字段值、位置等。返回匹配的块信息。`,
+    //     input_schema: {
+    //         type: 'object', 
+    //         properties: {
+    //             criteria: {
+    //                 type: 'object',
+    //                 properties: {
+    //                     type: { type: 'string', description: '块类型' },
+    //                     fields: { type: 'object', description: '字段值匹配' },
+    //                     position: { 
+    //                         type: 'object',
+    //                         properties: {
+    //                             x: { type: 'number' },
+    //                             y: { type: 'number' },
+    //                             tolerance: { type: 'number', description: '位置容差' }
+    //                         },
+    //                         description: '位置匹配'
+    //                     },
+    //                     connected: { type: 'boolean', description: '是否已连接' }
+    //                 },
+    //                 description: '查找条件'
+    //             },
+    //             limit: {
+    //                 type: 'number',
+    //                 description: '返回结果数量限制',
+    //                 default: 10
+    //             },
+    //             includeMetadata: {
+    //                 type: 'boolean',
+    //                 description: '是否包含详细元数据',
+    //                 default: false
+    //             }
+    //         },
+    //         required: ['criteria']
+    //     }
+    // },
     {
         name: "delete_block_tool",
         description: `块删除工具。通过块ID删除工作区中的指定块。支持两种删除模式：普通删除（只删除指定块，保留连接的块）和级联删除（删除整个块树，包括所有连接的子块）。`,
@@ -790,6 +791,103 @@ export const TOOLS = [
             required: []
         }
     },
+//     {
+//         name: "queryBlockDefinitionTool",
+//         description: `查询项目中所有库的块定义信息。
+        
+// ## 功能特点
+// - **动态扫描**: 自动扫描当前项目的 node_modules/@aily-project/lib-* 目录中的 block.json 文件
+// - **缓存优化**: 内置缓存机制，避免重复文件读取
+// - **灵活查询**: 支持按块类型、块ID或关键词进行过滤查询
+// - **兼容性分析**: 可查询特定块的连接类型和兼容性信息
+
+// ## 使用场景
+// - 查找可用的块类型和定义
+// - 分析块之间的连接兼容性
+// - 获取块的输入输出配置信息
+// - 调试块连接问题
+
+// ## 查询选项
+// - **blockType**: 按特定块类型筛选
+// - **searchKeyword**: 按关键词搜索块ID或描述
+// - **includeInputs**: 是否包含输入配置详情
+// - **includeOutputs**: 是否包含输出配置详情
+// - **compatibilityCheck**: 检查与指定块的兼容性`,
+//         input_schema: {
+//             type: 'object',
+//             properties: {
+//                 blockType: {
+//                     type: 'string',
+//                     description: '要查询的特定块类型（可选，用于筛选）'
+//                 },
+//                 library: {
+//                     type: 'string',
+//                     description: '要查询的特定库名（可选，用于筛选）'
+//                 },
+//                 connectionType: {
+//                     type: 'string',
+//                     enum: ['input_statement', 'input_value', 'previousStatement', 'nextStatement', 'output'],
+//                     description: '要查询的连接类型（可选）'
+//                 },
+//                 refresh: {
+//                     type: 'boolean',
+//                     description: '是否强制刷新缓存',
+//                     default: false
+//                 },
+//                 useRealData: {
+//                     type: 'boolean',
+//                     description: '是否使用真实数据（需要文件读取）',
+//                     default: false
+//                 },
+//                 scanFiles: {
+//                     type: 'boolean',
+//                     description: '是否扫描实际文件系统',
+//                     default: true
+//                 }
+//             },
+//             required: []
+//         }
+//     },
+//     {
+//         name: "getBlockConnectionCompatibilityTool",
+//         description: `分析块之间的连接兼容性，帮助解决块连接问题。
+
+// ## 功能特点
+// - **连接类型分析**: 详细分析输入输出的连接类型（value、statement等）
+// - **兼容性检查**: 检查两个块之间是否可以连接
+// - **连接建议**: 为连接失败提供解决方案和替代连接方式
+// - **类型映射**: 显示Blockly连接类型的详细信息
+
+// ## 使用场景
+// - 调试块连接失败问题
+// - 查找可连接的块类型
+// - 分析连接类型不匹配的原因
+// - 获取连接建议和替代方案
+
+// ## 分析维度
+// - **输入类型分析**: 分析目标块可接受的输入类型
+// - **输出类型分析**: 分析源块的输出类型
+// - **类型兼容性**: 检查类型是否匹配
+// - **连接建议**: 提供连接方案`,
+//         input_schema: {
+//             type: 'object',
+//             properties: {
+//                 sourceBlockType: {
+//                     type: 'string',
+//                     description: '源块类型（要连接出去的块）'
+//                 },
+//                 targetBlockType: {
+//                     type: 'string',
+//                     description: '目标块类型（要连接到的块）'
+//                 },
+//                 library: {
+//                     type: 'string',
+//                     description: '库名（可选，用于筛选特定库）'
+//                 }
+//             },
+//             required: ['sourceBlockType', 'targetBlockType']
+//         }
+//     },
     {
         name: "todo_write_tool",
         description: `Creates and manages todo items for task tracking and progress management in the current session.
@@ -808,13 +906,32 @@ export const TOOLS = [
 - \`tags\`: 标签数组
 
 示例:
-## 添加任务 (add)
+## 添加单个任务 (add)
 \`\`\`json
 {
   "operation": "add",
   "content": "完成项目文档",
   "priority": "high",
-  "tags": ["文档", "重要"]
+  "status": "pending",
+}
+\`\`\`
+
+## 批量添加任务 (batch_add)
+\`\`\`json
+{
+  "operation": "batch_add",
+  "todos": [
+    {
+      "content": "任务1内容",
+      "priority": "medium",
+      "status": "pending"
+    },
+    {
+      "content": "任务2内容",
+      "priority": "low",
+      "status": "in_progress"
+    }
+  ]
 }
 \`\`\`
 

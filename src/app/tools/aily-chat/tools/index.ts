@@ -17,9 +17,11 @@ export {
   createCodeStructureTool, 
   configureBlockTool, 
   variableManagerTool, 
-  findBlockTool,
+  // findBlockTool,
   deleteBlockTool,
-  getWorkspaceOverviewTool // 新增工具
+  getWorkspaceOverviewTool, // 新增工具
+  queryBlockDefinitionTool,
+  getBlockConnectionCompatibilityTool
 } from './editBlockTool';
 
 // 其他工具
