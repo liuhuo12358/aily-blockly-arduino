@@ -112,9 +112,9 @@ export class _UploaderService {
 
     // 第一步：分割参数并处理基本变量替换和标志提取
     // 使用正则先提取出以[]包裹的标志参数，并从原来的字符串中移除
-    const flagParams = uploadParam.match(/\[([^\]]+)\]/g) || [];
+    const flagParams: string[] = uploadParam.match(/\[([^\]]+)\]/g) || [];
 
-    flagParams.forEach(flag => {
+    flagParams.forEach((flag: string) => {
       if (flag.includes('--use_1200bps_touch')) {
         flags.use_1200bps_touch = true;
       }
