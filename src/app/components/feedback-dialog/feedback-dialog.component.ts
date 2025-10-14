@@ -25,15 +25,29 @@ export class FeedbackDialogComponent {
   readonly modal = inject(NzModalRef);
 
   title = '反馈';
-  
+
   // 反馈类型
   feedbackType: string = 'bug';
+
+  feedbackTarget = [
+    { label: '软件问题', value: 'bug' },
+    { label: '库问题', value: 'feature' },
+    { label: '开发板问题', value: 'question' },
+    { label: '其他', value: 'other' }
+  ];
+
   feedbackTypes = [
     { label: 'Bug 反馈', value: 'bug' },
     { label: '功能建议', value: 'feature' },
     { label: '使用问题', value: 'question' },
     { label: '其他', value: 'other' }
   ];
+
+  projectData = [
+
+  ];
+
+
 
   // 表单数据
   feedbackContent: string = '';
@@ -58,7 +72,7 @@ export class FeedbackDialogComponent {
 
   constructor(
     private message: NzMessageService
-  ) {}
+  ) { }
 
   ngOnInit(): void {
   }
@@ -109,18 +123,18 @@ export class FeedbackDialogComponent {
 
       // TODO: 这里应该调用实际的API提交反馈
       // await this.feedbackService.submitFeedback(feedbackData);
-      
+
       // 模拟提交延迟
       await new Promise(resolve => setTimeout(resolve, 1000));
 
       console.log('反馈数据:', feedbackData);
-      
+
       this.message.success('感谢您的反馈！');
       this.modal.close({ result: 'success', data: feedbackData });
     } catch (error) {
       console.error('提交反馈失败:', error);
       this.message.error('提交失败，请稍后重试');
-      
+
       // 恢复按钮状态
       this.buttons = this.buttons.map(btn => ({
         ...btn,
