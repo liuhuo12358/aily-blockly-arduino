@@ -46,12 +46,12 @@ export class ProjectService {
   };
 
   projectRootPath: string;
-  
+
   // 当前项目路径的 getter 和 setter
   get currentProjectPath(): string {
     return this.currentProjectPathSubject.value;
   }
-  
+
   set currentProjectPath(path: string) {
     this.currentProjectPathSubject.next(path);
   }
@@ -224,7 +224,7 @@ export class ProjectService {
     // 修改当前项目路径
     this.currentProjectPath = path;
     this.currentPackageData = packageJson;
-    this.addRecentlyProject({ name: this.currentPackageData.name, path: path });
+    this.addRecentlyProject({ name: this.currentPackageData.name, path: path, nickname: this.currentPackageData.nickname || this.currentPackageData.name });
   }
 
   async close() {
@@ -248,7 +248,7 @@ export class ProjectService {
     this.configService.save();
   }
 
-  addRecentlyProject(data: { name: string, path: string }) {
+  addRecentlyProject(data: { name: string, path: string, nickname?: string }) {
     let temp: any[] = this.recentlyProjects
     temp.unshift(data);
     temp = temp.filter((item, index) => {
@@ -878,17 +878,17 @@ export class ProjectService {
               }
             });
           }
-        // } else if (menuItem.name === 'STM32.UPLOAD_METHOD' && boardConfig.upload_method) {
-        //   menuItem.children = boardConfig.upload_method;
-        //   // 根据当前项目配置设置check状态
-        //   if (currentProjectConfig.upload_method) {
-        //     menuItem.children.forEach((child: any) => {
-        //       child.check = false;
-        //       if (this.compareConfigs(child.data, currentProjectConfig.upload_method)) {
-        //         child.check = true;
-        //       }
-        //     });
-        //   }
+          // } else if (menuItem.name === 'STM32.UPLOAD_METHOD' && boardConfig.upload_method) {
+          //   menuItem.children = boardConfig.upload_method;
+          //   // 根据当前项目配置设置check状态
+          //   if (currentProjectConfig.upload_method) {
+          //     menuItem.children.forEach((child: any) => {
+          //       child.check = false;
+          //       if (this.compareConfigs(child.data, currentProjectConfig.upload_method)) {
+          //         child.check = true;
+          //       }
+          //     });
+          //   }
         }
       });
       return STM32_CONFIG_MENU_TEMP;
