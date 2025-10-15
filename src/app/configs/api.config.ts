@@ -1,13 +1,13 @@
 const SERVER_URL: string = 'https://aily-chat.diandeng.tech';
-const CHAT_SERVER_URL: string = 'http://114.132.150.141:8100';
-const AUTH_SERVER_URL: string = 'http://114.132.150.141:8101';
-const WORKSPACE_SERVER_URL: string = 'http://114.132.150.141:8102';
+const CHAT_SERVER_URL: string = 'http://127.0.0.1:8000';
+const AUTH_SERVER_URL: string = 'http://127.0.0.1:8001';
+const WORKSPACE_SERVER_URL: string = 'http://127.0.0.1:8002';
 const REGISTRY_URL: string = 'https://registry.diandeng.tech';
 
 export const API = {
   projectList: `${REGISTRY_URL}/-/verdaccio/data/packages`,
   projectSearch: `${REGISTRY_URL}/-/v1/search`,
-  // auth
+  // auth  
   login: `${AUTH_SERVER_URL}/api/v1/auth/login`,
   register: `${AUTH_SERVER_URL}/api/v1/auth/register`,
   logout: `${AUTH_SERVER_URL}/api/v1/auth/logout`,

@@ -853,6 +853,7 @@ ${JSON.stringify(errData)}
   }
 
   ngAfterViewInit(): void {
+    this.chatService.openHistoryFile(this.projectService.currentProjectPath);
     this.scrollToBottom();
     // this.mcpService.init().then(() => {
     //   this.startSession();
@@ -1901,7 +1902,12 @@ ${JSON.stringify(errData)}
         this.isWaiting = false;
         this.isCompleted = true;
 
-        // TODO: 处理停止原因
+        // 保存会话, 如果sessionId存在的话
+        let historyData = this.chatService.historyList.find(h => h.sessionId === this.sessionId);
+        if (!historyData) {
+          historyData = { sessionId: this.sessionId, name: "" };
+        }
+        this.chatService.saveHistoryFile(this.projectService.currentProjectPath || this.projectService.projectRootPath, historyData);
       },
       error: (err) => {
         console.error('流连接出错:', err);
