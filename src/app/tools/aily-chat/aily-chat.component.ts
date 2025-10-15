@@ -650,8 +650,19 @@ export class AilyChatComponent implements OnDestroy {
 
   // 内置工具
   tools: Tool[] = TOOLS;
-  // 上下文
-  context: String = '';
+
+  // 关键信息获取
+  getKeyInfo = () => {
+    return `
+    <keyinfo>
+    项目存放根路径(**rootFolder**): ${this.projectService.projectRootPath || '无'}
+    当前项目路径(**path**): ${this.getCurrentProjectPath() || '无'}
+    appDataPath(**appDataPath**): ${window['path'].getAppDataPath() || '无'}
+    转换后的blockly库存放路径(**blocklylibrariesPath**): ${ window['path'].join(window['path'].getAppDataPath(), 'libraries') || '无'}
+    当前使用的语言(**lang**)： ${this.configService.data.lang || 'zh-cn'}
+    </keyinfo>
+    `
+  }
 
   constructor(
     private uiService: UiService,
@@ -1088,6 +1099,12 @@ ${JSON.stringify(errData)}
    */
   private sendMessageWithRetry(sessionId: string, text: string, sender: string, clear: boolean, retryCount: number): void {
     // msgQueue
+    // 将keyInfo添加到text中的内容之前
+    const keyInfo = this.getKeyInfo();
+    if (keyInfo) {
+      text = keyInfo + '\n\n' + text;
+    }
+
     this.chatService.sendMessage(sessionId, text, sender).subscribe({
       next: (res: any) => {
         console.log("sendRes: ", res);
@@ -1374,8 +1391,6 @@ ${JSON.stringify(errData)}
                       resultState = "warn";
                       resultText = '获取上下文信息异常, 即将重试';
                     } else {
-                      // 将几个路径信息存放到context中
-                      this.context = toolResult.content;
                       resultText = `上下文信息获取成功`;
                     }
                     break;
