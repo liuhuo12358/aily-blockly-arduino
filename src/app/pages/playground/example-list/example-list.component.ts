@@ -10,8 +10,8 @@ import { ActivatedRoute } from '@angular/router';
 import { PlaygroundService } from '../playground.service';
 import { NzPaginationModule } from 'ng-zorro-antd/pagination';
 import { NzToolTipModule } from 'ng-zorro-antd/tooltip';
-import { fromEvent, Subject } from 'rxjs';
-import { debounceTime, takeUntil } from 'rxjs/operators';
+import { Subject } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
 import { CloudService } from '../../../tools/cloud-space/services/cloud.service';
 import { ProjectService } from '../../../services/project.service';
 import { CmdService } from '../../../services/cmd.service';
@@ -133,15 +133,19 @@ export class ExampleListComponent implements OnInit, AfterViewInit, OnDestroy {
       this.calculatePageSize();
     }, 100);
 
-    // 监听窗口大小变化
-    fromEvent(window, 'resize')
-      .pipe(
-        debounceTime(300),
-        takeUntil(this.destroy$)
-      )
-      .subscribe(() => {
+    // 监听 content-box 元素的大小变化
+    if (this.contentBox) {
+      const resizeObserver = new ResizeObserver(() => {
         this.calculatePageSize();
       });
+      
+      resizeObserver.observe(this.contentBox.nativeElement);
+      
+      // 在组件销毁时断开观察
+      this.destroy$.subscribe(() => {
+        resizeObserver.disconnect();
+      });
+    }
   }
 
   ngOnDestroy() {
@@ -171,13 +175,21 @@ export class ExampleListComponent implements OnInit, AfterViewInit, OnDestroy {
     const rows = Math.floor((containerHeight + gap) / (itemHeight + gap));
 
     // 总共可以显示的数量
-    const calculatedPageSize = itemsPerRow * rows;
-
-    // 至少显示1个
-    this.pageSize = Math.max(1, calculatedPageSize);
+    const calculatedPageSize = Math.max(1, itemsPerRow * rows);
     
     console.log('Container size:', containerWidth, 'x', containerHeight);
-    console.log('Items per row:', itemsPerRow, 'Rows:', rows, 'Page size:', this.pageSize);
+    console.log('Items per row:', itemsPerRow, 'Rows:', rows, 'Calculated page size:', calculatedPageSize);
+    
+    // 如果计算出的 pageSize 与当前值不同,更新并重新获取数据
+    if (this.pageSize !== calculatedPageSize) {
+      const oldPageSize = this.pageSize;
+      this.pageSize = calculatedPageSize;
+      console.log(`Page size changed from ${oldPageSize} to ${this.pageSize}, refreshing data...`);
+      
+      // 重置到第一页并重新获取数据
+      this.pageIndex = 1;
+      this.getExamples();
+    }
   }
 
   search(keyword = this.keyword) {
