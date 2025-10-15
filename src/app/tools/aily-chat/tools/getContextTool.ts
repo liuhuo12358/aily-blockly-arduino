@@ -43,19 +43,6 @@ interface GetContextResult {
     readme?: string;
 }
 
-let resultString = `
-## 上下文信息
-- 当前项目的相对路径(**path**): {path}
-- 项目名称(**name**): {name}
-- 项目根文件夹名称(**rootFolder**): {rootFolder}
-- 是否有项目被打开(**opened**): {opened}
-- 应用数据存储路径(**appDataPath**): {appDataPath}
-- Blockly库存储路径(**blocklylibrariesPath**): {blocklylibrariesPath}
-- 项目依赖包(**dependencies**): {dependencies}
-- 开发板相关依赖(**boardDependencies**): {boardDependencies}
-- 编辑模式(**editingMode**): {editingMode}
-`;
-
 /**
  * Get context tool implementation for retrieving environment context information
  */
@@ -75,24 +62,32 @@ export async function getContextTool(prjService: ProjectService, input: GetConte
             result.editingMode = getEditingMode();
         }
 
-        // 构建resultString
-        resultString = resultString.replace('{path}', result.project?.path || 'N/A')
-            .replace('{name}', result.project?.name || 'N/A')
-            .replace('{rootFolder}', result.project?.rootFolder || 'N/A')
-            .replace('{opened}', result.project?.opened ? '是' : '否')
-            .replace('{appDataPath}', result.project?.appDataPath || 'N/A')
-            .replace('{blocklylibrariesPath}', result.project?.blocklylibrariesPath || 'N/A')
-            .replace('{dependencies}', result.project && (result.project as any).dependencies ? JSON.stringify((result.project as any).dependencies, null, 2) : 'N/A')
-            .replace('{boardDependencies}', result.project && (result.project as any).boardDependencies ? JSON.stringify((result.project as any).boardDependencies, null, 2) : 'N/A')
-            .replace('{editingMode}', result.editingMode?.mode || 'N/A');
-        
+        result.readme = `
+## 上下文信息字段说明
+
+### project (项目信息)
+- **path**: 当前项目的相对路径
+- **name**: 项目名称（从 package.json 读取）
+- **rootFolder**: 项目根文件夹名称
+- **opened**: 是否有项目被打开
+- **appDataPath**: 应用数据存储路径
+- **blocklylibrariesPath**: Blockly 库路径（如果存在）
+- **dependencies**: 项目依赖包（从 package.json 读取）
+- **boardDependencies**: 开发板相关依赖（从 package.json 读取）
+
+### editingMode (编辑模式)
+- **mode**: 当前编辑模式
+  - 'blockly': 积木编程模式
+  - 'code': 代码编程模式
+  - 'unknown': 未知模式
+`;
     } catch (error) {
         console.error('Error getting context information:', error);
     }
 
     return {
         is_error,
-        content: resultString.trim()
+        content: JSON.stringify(result, null, 2)
     }
 }
 
@@ -108,30 +103,30 @@ async function getProjectInfo(projectService): Promise<ProjectInfo> {
             rootFolder: prjRootPath || '',
             opened: !!currentProjectPath,
             appDataPath: appDataPath,
-            blocklylibrariesPath: appDataPath ? window['path'].join(appDataPath,'libraries') : ''
+            blocklylibrariesPath: appDataPath ? window['path'].join(appDataPath, 'libraries') : ''
         };
-        
+
         // If current project path is empty, return early
         if (!currentProjectPath) {
             return result;
         }
-        
+
         // Set root folder
         result.rootFolder = window["path"].basename(currentProjectPath);
-        
+
         // Try to read package.json for name and dependencies
         const packageJsonPath = window["path"].join(currentProjectPath, 'package.json');
-        
+
         if (window['fs'].existsSync(packageJsonPath)) {
             const packageJson = JSON.parse(window['fs'].readFileSync(packageJsonPath, 'utf8'));
             result.name = packageJson.name;
-            
+
             // Add dependencies information
             // Note: You might want to update the ProjectInfo interface to include dependencies
             (result as any).dependencies = packageJson.dependencies || {};
             (result as any).boardDependencies = packageJson.boardDependencies || {};
         }
-        
+
         return result;
     } catch (error) {
         console.error('Error getting project info:', error);
@@ -144,14 +139,14 @@ function getEditingMode(): { mode: 'blockly' | 'code' | 'unknown' } {
         // Make sure we're in a browser environment
         if (typeof window !== 'undefined' && window.location) {
             const path = window.location.pathname;
-            
+
             if (path.includes('/main/blockly-editor')) {
                 return { mode: 'blockly' };
             } else if (path.includes('/main/code-editor')) {
                 return { mode: 'code' };
             }
         }
-        
+
         return { mode: 'unknown' };
     } catch (error) {
         console.error('Error determining editing mode:', error);

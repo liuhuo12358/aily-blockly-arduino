@@ -1099,15 +1099,8 @@ ${JSON.stringify(errData)}
    */
   private sendMessageWithRetry(sessionId: string, text: string, sender: string, clear: boolean, retryCount: number): void {
     // msgQueue
-    // 将keyInfo添加到text中的内容之前
-    const keyInfo = this.getKeyInfo();
-    if (keyInfo) {
-      text = keyInfo + '\n\n' + text;
-    }
-
     this.chatService.sendMessage(sessionId, text, sender).subscribe({
       next: (res: any) => {
-        console.log("sendRes: ", res);
         if (res.status === 'success') {
           if (res.data) {
             this.appendMessage('aily', res.data);
@@ -1884,10 +1877,22 @@ ${JSON.stringify(errData)}
               this.completeToolCall(data.tool_id, data.tool_name, finalState, resultText);
             }
 
+            // 获取keyinfo
+            const keyInfo = this.getKeyInfo();
+
+            let toolContent = '';
+            // 拼接到工具结果中返回
+            if (toolResult?.content) {
+               toolContent = `\n${keyInfo}\n\n<toolResult>${toolResult.content}</toolResult>`;
+            }
+
+            // let toolContent = toolResult?.content || '';
+            // console.log(`工具调用结果: `, toolResult, resultText);
+
             this.send("tool", JSON.stringify({
               "type": "tool",
               "tool_id": data.tool_id,
-              "content": toolResult?.content || '',
+              "content": toolContent,
               "resultText": this.makeJsonSafe(resultText),
               "is_error": toolResult.is_error
             }, null, 2), false);
