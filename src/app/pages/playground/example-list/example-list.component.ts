@@ -43,6 +43,7 @@ export class ExampleListComponent implements OnInit, AfterViewInit, OnDestroy {
   pageSize: number = 10; // 每页显示数量，默认值
   total: number = 500; // 总条目数
   loadingExampleIndex: number | null = null; // 当前正在加载的示例索引
+  private pageSizeCalculated: boolean = false; // 标记 pageSize 是否已计算
   
   private destroy$ = new Subject<void>();
 
@@ -69,7 +70,10 @@ export class ExampleListComponent implements OnInit, AfterViewInit, OnDestroy {
         this.keyword = params['keyword'] || '';
         // 当通过 URL 搜索时，重置回第一页
         this.pageIndex = 1;
-        this.getExamples();
+        // 只有在 pageSize 已计算后才获取数据
+        if (this.pageSizeCalculated) {
+          this.getExamples();
+        }
       });
     // this.resourceUrl = this.configService.data.resource[0] + "/imgs/examples/";
 
@@ -189,7 +193,13 @@ export class ExampleListComponent implements OnInit, AfterViewInit, OnDestroy {
       // 重置到第一页并重新获取数据
       this.pageIndex = 1;
       this.getExamples();
+    } else if (!this.pageSizeCalculated) {
+      // 第一次计算完成后，即使值没变也要获取数据
+      this.getExamples();
     }
+    
+    // 标记 pageSize 已计算
+    this.pageSizeCalculated = true;
   }
 
   search(keyword = this.keyword) {
