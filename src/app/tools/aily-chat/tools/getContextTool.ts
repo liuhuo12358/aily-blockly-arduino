@@ -43,6 +43,19 @@ interface GetContextResult {
     readme?: string;
 }
 
+let resultString = `
+## 上下文信息
+- 当前项目的相对路径(**path**): {path}
+- 项目名称(**name**): {name}
+- 项目根文件夹名称(**rootFolder**): {rootFolder}
+- 是否有项目被打开(**opened**): {opened}
+- 应用数据存储路径(**appDataPath**): {appDataPath}
+- Blockly库存储路径(**blocklylibrariesPath**): {blocklylibrariesPath}
+- 项目依赖包(**dependencies**): {dependencies}
+- 开发板相关依赖(**boardDependencies**): {boardDependencies}
+- 编辑模式(**editingMode**): {editingMode}
+`;
+
 /**
  * Get context tool implementation for retrieving environment context information
  */
@@ -62,32 +75,24 @@ export async function getContextTool(prjService: ProjectService, input: GetConte
             result.editingMode = getEditingMode();
         }
 
-        result.readme = `
-## 上下文信息字段说明
-
-### project (项目信息)
-- **path**: 当前项目的相对路径
-- **name**: 项目名称（从 package.json 读取）
-- **rootFolder**: 项目根文件夹名称
-- **opened**: 是否有项目被打开
-- **appDataPath**: 应用数据存储路径
-- **blocklylibrariesPath**: Blockly 库路径（如果存在）
-- **dependencies**: 项目依赖包（从 package.json 读取）
-- **boardDependencies**: 开发板相关依赖（从 package.json 读取）
-
-### editingMode (编辑模式)
-- **mode**: 当前编辑模式
-  - 'blockly': 积木编程模式
-  - 'code': 代码编程模式
-  - 'unknown': 未知模式
-`;
+        // 构建resultString
+        resultString = resultString.replace('{path}', result.project?.path || 'N/A')
+            .replace('{name}', result.project?.name || 'N/A')
+            .replace('{rootFolder}', result.project?.rootFolder || 'N/A')
+            .replace('{opened}', result.project?.opened ? '是' : '否')
+            .replace('{appDataPath}', result.project?.appDataPath || 'N/A')
+            .replace('{blocklylibrariesPath}', result.project?.blocklylibrariesPath || 'N/A')
+            .replace('{dependencies}', result.project && (result.project as any).dependencies ? JSON.stringify((result.project as any).dependencies, null, 2) : 'N/A')
+            .replace('{boardDependencies}', result.project && (result.project as any).boardDependencies ? JSON.stringify((result.project as any).boardDependencies, null, 2) : 'N/A')
+            .replace('{editingMode}', result.editingMode?.mode || 'N/A');
+        
     } catch (error) {
         console.error('Error getting context information:', error);
     }
 
     return {
         is_error,
-        content: JSON.stringify(result, null, 2)
+        content: resultString.trim()
     }
 }
 

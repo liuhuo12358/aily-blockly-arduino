@@ -342,7 +342,7 @@ export class AilyChatComponent implements OnDestroy {
 
     switch (cleanToolName) {
       case 'create_project':
-        return "正在创建项目...";
+        return "创建项目...";
       case 'execute_command':
         const commandParts = args.command?.split(' ') || [];
         let displayCommand = args.command || 'unknown';
@@ -353,81 +353,81 @@ export class AilyChatComponent implements OnDestroy {
             displayCommand = commandParts[0];
           }
         }
-        return `正在执行: ${displayCommand}`;
+        return `执行: ${displayCommand}`;
       case 'get_context':
-        return "正在获取上下文信息...";
+        return "获取上下文信息...";
       case 'list_directory':
         const distFolderName = args.path ? this.getLastFolderName(args.path) : 'unknown';
-        return `正在获取${distFolderName}目录内容`;
+        return `获取${distFolderName}目录内容`;
       case 'read_file':
         const readFileName = args.path ? this.getFileName(args.path) : 'unknown';
-        return `正在读取: ${readFileName}`;
+        return `读取: ${readFileName}`;
       case 'create_file':
         const createFileName = args.path ? this.getFileName(args.path) : 'unknown';
-        return `正在创建: ${createFileName}`;
+        return `创建: ${createFileName}`;
       case 'create_folder':
         const createFolderName = args.path ? this.getLastFolderName(args.path) : 'unknown';
-        return `正在创建: ${createFolderName}`;
+        return `创建: ${createFolderName}`;
       case 'edit_file':
         const editFileName = args.path ? this.getFileName(args.path) : 'unknown';
-        return `正在编辑: ${editFileName}`;
+        return `编辑: ${editFileName}`;
       case 'delete_file':
         const deleteFileName = args.path ? this.getFileName(args.path) : 'unknown';
-        return `正在删除: ${deleteFileName}`;
+        return `删除: ${deleteFileName}`;
       case 'delete_folder':
         const deleteFolderName = args.path ? this.getLastFolderName(args.path) : 'unknown';
-        return `正在删除: ${deleteFolderName}`;
+        return `删除: ${deleteFolderName}`;
       case 'check_exists':
         const checkFileName = args.path ? this.getFileName(args.path) : '';
         const checkFolderName = args.path ? this.getLastFolderName(args.path) : '';
-        return checkFileName ? `正在检查文件是否存在: ${checkFileName}` : `正在检查文件夹是否存在: ${checkFolderName}`;
+        return checkFileName ? `检查文件是否存在: ${checkFileName}` : `检查文件夹是否存在: ${checkFolderName}`;
       case 'get_directory_tree':
         const treeFolderName = args.path ? this.getLastFolderName(args.path) : 'unknown';
-        return `正在获取目录树: ${treeFolderName}`;
+        return `获取目录树: ${treeFolderName}`;
       case 'fetch':
         const fetchUrl = args.url ? this.getUrlDisplayName(args.url) : 'unknown';
-        return `正在进行网络请求: ${fetchUrl}`;
+        return `进行网络请求: ${fetchUrl}`;
       case 'reload_project':
-        return "正在重新加载项目...";
+        return `重新加载项目...`;
       case 'edit_abi_file':
         if (args.replaceStartLine !== undefined) {
           if (args.replaceEndLine !== undefined && args.replaceEndLine !== args.replaceStartLine) {
-            return `正在替换ABI文件第 ${args.replaceStartLine}-${args.replaceEndLine} 行内容...`;
+            return `替换ABI文件第 ${args.replaceStartLine}-${args.replaceEndLine} 行内容...`;
           } else {
-            return `正在替换ABI文件第 ${args.replaceStartLine} 行内容...`;
+            return `替换ABI文件第 ${args.replaceStartLine} 行内容...`;
           }
         } else if (args.insertLine !== undefined) {
-          return `正在ABI文件第 ${args.insertLine} 行插入内容...`;
+          return `ABI文件第 ${args.insertLine} 行插入内容...`;
         } else if (args.replaceMode === false) {
-          return "正在向ABI文件末尾追加内容...";
+          return "向ABI文件末尾追加内容...";
         }
-        return "正在编辑ABI文件...";
+        return "编辑ABI文件...";
       case 'reload_abi_json':
-        return "正在重新加载Blockly工作区数据...";
+        return "重新加载Blockly工作区数据...";
       case 'smart_block_tool':
-        return `正在操作Blockly块: ${args.type || 'unknown'}`;
+        return `操作Blockly块: ${args.type || 'unknown'}`;
       case 'connect_blocks_tool':
-        return "正在连接Blockly块...";
+        return "连接Blockly块...";
       case 'create_code_structure_tool':
-        return `正在创建代码结构: ${args.structure || 'unknown'}`;
+        return `创建代码结构: ${args.structure || 'unknown'}`;
       case 'configure_block_tool':
-        return "正在配置Blockly块...";
+        return "配置Blockly块...";
       case 'variable_manager_tool':
         const operation = args.operation;
         const operationText = operation === 'create' ? '创建' : 
                             operation === 'delete' ? '删除' : 
                             operation === 'rename' ? '重命名' : '列出';
-        return `正在${operationText}变量...`;
+        return `${operationText}变量...`;
       case 'delete_block_tool':
-        return "正在删除Blockly块...";
+        return "删除Blockly块...";
       case 'get_workspace_overview_tool':
-        return "正在分析工作区全览...";
+        return "分析工作区全览...";
       case 'queryBlockDefinitionTool':
-        return "正在查询块定义信息...";
+        return "查询块定义信息...";
       case 'getBlockConnectionCompatibilityTool':
-        return "正在分析块连接兼容性...";
+        return "分析块连接兼容性...";
       default:
-        return `正在执行工具: ${cleanToolName}`;
+        return `执行工具: ${cleanToolName}`;
     }
   }
 
@@ -650,6 +650,8 @@ export class AilyChatComponent implements OnDestroy {
 
   // 内置工具
   tools: Tool[] = TOOLS;
+  // 上下文
+  context: String = '';
 
   constructor(
     private uiService: UiService,
@@ -1085,6 +1087,7 @@ ${JSON.stringify(errData)}
    * @param retryCount 剩余重试次数
    */
   private sendMessageWithRetry(sessionId: string, text: string, sender: string, clear: boolean, retryCount: number): void {
+    // msgQueue
     this.chatService.sendMessage(sessionId, text, sender).subscribe({
       next: (res: any) => {
         console.log("sendRes: ", res);
@@ -1142,6 +1145,8 @@ ${JSON.stringify(errData)}
     this.chatService.cancelTask(this.sessionId).subscribe((res: any) => {
       if (res.status === 'success') {
         console.log('任务已取消:', res);
+        this.isWaiting = false;
+        this.isCompleted = true;
       } else {
         console.error('取消任务失败:', res);
       }
@@ -1369,6 +1374,8 @@ ${JSON.stringify(errData)}
                       resultState = "warn";
                       resultText = '获取上下文信息异常, 即将重试';
                     } else {
+                      // 将几个路径信息存放到context中
+                      this.context = toolResult.content;
                       resultText = `上下文信息获取成功`;
                     }
                     break;
@@ -1889,7 +1896,7 @@ ${JSON.stringify(errData)}
 \`\`\`\n\n
 
           `);
-          // 调用取消函数
+          // 调用取消函数 
           this.stop();
         }
       },
@@ -1903,11 +1910,16 @@ ${JSON.stringify(errData)}
         this.isCompleted = true;
 
         // 保存会话, 如果sessionId存在的话
-        let historyData = this.chatService.historyList.find(h => h.sessionId === this.sessionId);
-        if (!historyData) {
-          historyData = { sessionId: this.sessionId, name: "" };
+        try {
+          console.log("historyList: ", this.chatService.historyList);
+          let historyData = this.chatService.historyList.find(h => h.sessionId === this.sessionId);
+          if (!historyData) {
+            historyData = [{ sessionId: this.sessionId, name: "" }];
+          }
+          this.chatService.saveHistoryFile(this.projectService.currentProjectPath || this.projectService.projectRootPath, historyData);
+        } catch (error) {
+          console.warn("Error getting history data:", error);
         }
-        this.chatService.saveHistoryFile(this.projectService.currentProjectPath || this.projectService.projectRootPath, historyData);
       },
       error: (err) => {
         console.error('流连接出错:', err);
@@ -2358,7 +2370,7 @@ ${JSON.stringify(errData)}
 
     // 将整个资源描述文本包裹在context标签中
     if (text) {
-      text = `<context>\n${text}</context>`;
+      text = `<context>\n${text}\n</context>`;
     }
 
     return text.trim();

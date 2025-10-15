@@ -40,6 +40,7 @@ export class ChatService {
   openHistoryFile(prjPath: string) {
     // 打开项目下的.history文件
     const historyPath = prjPath + '/.history';
+    console.log("打开.history文件: ", historyPath);
     if (window['fs'].existsSync(historyPath)) {
       this.historyList = JSON.parse(window['fs'].readFileSync(historyPath, 'utf-8'));
     }
@@ -49,6 +50,7 @@ export class ChatService {
   saveHistoryFile(prjPath: string, historyData: any) {
     // 保存项目下的.history文件
     const historyPath = prjPath + '/.history';
+    console.log("保存.history文件: ", historyPath, historyData);
     window['fs'].writeFileSync(historyPath, JSON.stringify(historyData, null, 2), 'utf-8');
   }
 
