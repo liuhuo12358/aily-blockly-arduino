@@ -45,6 +45,8 @@ export class MenuComponent {
   activeSubmenuIndex: number | null = null;
   submenuTimeout: any = null;
   submenuPosition = { left: '0px', top: '0px' };
+  submenuMaxHeight = 'none';
+  submenuOverflow = 'visible';
 
   constructor(private router: Router) { }
 
@@ -150,6 +152,34 @@ export class MenuComponent {
         left: left + 'px',
         top: top - 2 + 'px'
       };
+
+      // 计算子菜单高度
+      this.calculateSubmenuHeight(top);
+    }
+  }
+
+  // 计算子菜单最大高度
+  calculateSubmenuHeight(submenuTop: number) {
+    const windowHeight = window.innerHeight;
+    const submenuTopFromWindow = submenuTop;
+
+    // 预估子菜单项数量和高度
+    const submenuItems = this.menuList[this.activeSubmenuIndex]?.children || [];
+    const itemHeight = 30; // 每个菜单项高度
+    const padding = 6; // 上下padding (3px * 2)
+    const estimatedSubmenuHeight = submenuItems.length * itemHeight + padding;
+
+    // 计算最大可用高度 (窗口高度 - 子菜单顶部距离 - 底部预留空间)
+    const bottomPadding = 10; // 底部预留空间
+    const maxAvailableHeight = windowHeight - submenuTopFromWindow - bottomPadding;
+
+    // 如果预估高度超过最大可用高度,启用滚动
+    if (estimatedSubmenuHeight > maxAvailableHeight) {
+      this.submenuMaxHeight = maxAvailableHeight + 'px';
+      this.submenuOverflow = 'auto';
+    } else {
+      this.submenuMaxHeight = 'none';
+      this.submenuOverflow = 'visible';
     }
   }
 
