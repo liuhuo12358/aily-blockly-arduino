@@ -144,37 +144,6 @@ export class ElectronService {
   }
 
   /**
-   * 显示成功通知
-   * @param title 通知标题
-   * @param body 通知内容
-   */
-  async notifySuccess(title: string, body: string) {
-    return await this.showNotification(title, body);
-  }
-
-  /**
-   * 显示错误通知
-   * @param title 通知标题
-   * @param body 通知内容
-   */
-  async notifyError(title: string, body: string) {
-    return await this.showNotification(title, body, {
-      timeoutType: 'never'
-    });
-  }
-
-  /**
-   * 显示信息通知（静音）
-   * @param title 通知标题
-   * @param body 通知内容
-   */
-  async notifyInfo(title: string, body: string) {
-    return await this.showNotification(title, body, {
-      silent: true
-    });
-  }
-
-  /**
    * 检查是否支持通知
    * @returns Promise<boolean>
    */
