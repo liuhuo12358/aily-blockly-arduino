@@ -162,9 +162,9 @@ export class GuideComponent implements OnInit, AfterViewInit {
   test() {
     console.log(this.electronService.isWindowFocused());
     setTimeout(() => {
-      if (!this.electronService.isWindowFocused()) {
-        this.electronService.notifySuccess('测试', '开发阶段刷卡JFK拉萨机');
-      }
+      // if (!this.electronService.isWindowFocused()) {
+      //   this.electronService.notify('测试', '开发阶段刷卡JFK拉萨机');
+      // }
     }, 12000)
   }
 }
