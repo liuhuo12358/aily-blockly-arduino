@@ -464,5 +464,92 @@ contextBridge.exposeInMainWorld("electronAPI", {
           .catch((error) => reject(error));
       });
     }
+  },
+
+  // 代码检查器 (Code Linter) API
+  codeLinter: {
+    /**
+     * 创建临时文件
+     */
+    createTempFile: (content, extension) => {
+      return ipcRenderer.invoke("linter-create-temp-file", content, extension);
+    },
+
+    /**
+     * 删除临时文件
+     */
+    deleteTempFile: (filePath) => {
+      return ipcRenderer.invoke("linter-delete-temp-file", filePath);
+    },
+
+    /**
+     * 执行命令行工具
+     */
+    executeCommand: (command, args, timeout) => {
+      return ipcRenderer.invoke("linter-execute-command", command, args, timeout);
+    },
+
+    /**
+     * 检查工具可用性
+     */
+    checkToolAvailability: (tool) => {
+      return ipcRenderer.invoke("linter-check-tool", tool);
+    },
+
+    /**
+     * 获取系统信息
+     */
+    getSystemInfo: () => {
+      return ipcRenderer.invoke("linter-get-system-info");
+    },
+
+    /**
+     * 查找Arduino安装路径
+     */
+    findArduinoPath: () => {
+      return ipcRenderer.invoke("linter-find-arduino-path");
+    },
+
+    /**
+     * 获取Arduino包含路径
+     */
+    getArduinoIncludes: (board = 'esp32') => {
+      return ipcRenderer.invoke("linter-get-arduino-includes", board);
+    },
+
+    /**
+     * 获取开发板特定包含路径
+     */
+    getBoardIncludes: (options) => {
+      return ipcRenderer.invoke("linter-get-board-includes", options);
+    },
+
+    /**
+     * 加载aily-project项目配置
+     */
+    loadProjectConfig: (projectPath) => {
+      return ipcRenderer.invoke("linter-load-project-config", projectPath);
+    },
+
+    /**
+     * 获取开发板宏定义
+     */
+    getBoardDefines: (board) => {
+      return ipcRenderer.invoke("linter-get-board-defines", board);
+    },
+
+    /**
+     * 获取支持的开发板列表
+     */
+    getSupportedBoards: () => {
+      return ipcRenderer.invoke("linter-get-supported-boards");
+    },
+
+    /**
+     * 获取编译器路径
+     */
+    getCompilerPaths: () => {
+      return ipcRenderer.invoke("linter-get-compiler-paths");
+    }
   }
 });

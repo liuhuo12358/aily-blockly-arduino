@@ -1235,3 +1235,148 @@ ipcMain.handle("ripgrep-search-content", async (event, params) => {
     };
   }
 });
+
+// ============================================
+// 代码检查器 (Code Linter) 功能
+// ============================================
+const { CodeLinterElectron } = require('./code-linter');
+const codeLinter = new CodeLinterElectron();
+
+// 创建临时文件
+ipcMain.handle("linter-create-temp-file", async (event, content, extension) => {
+  try {
+    const tempPath = await codeLinter.createTempFile(content, extension);
+    return tempPath;
+  } catch (error) {
+    console.error('创建临时文件失败:', error);
+    throw error;
+  }
+});
+
+// 删除临时文件
+ipcMain.handle("linter-delete-temp-file", async (event, filePath) => {
+  try {
+    await codeLinter.deleteTempFile(filePath);
+    return true;
+  } catch (error) {
+    console.error('删除临时文件失败:', error);
+    return false;
+  }
+});
+
+// 执行命令行工具
+ipcMain.handle("linter-execute-command", async (event, command, args, timeout) => {
+  try {
+    const result = await codeLinter.executeCommand(command, args, timeout);
+    return result;
+  } catch (error) {
+    console.error('执行命令失败:', error);
+    throw error;
+  }
+});
+
+// 检查工具可用性
+ipcMain.handle("linter-check-tool", async (event, tool) => {
+  try {
+    const available = await codeLinter.checkToolAvailability(tool);
+    return available;
+  } catch (error) {
+    console.error('检查工具可用性失败:', error);
+    return false;
+  }
+});
+
+// 获取系统信息
+ipcMain.handle("linter-get-system-info", async (event) => {
+  try {
+    const info = codeLinter.getSystemInfo();
+    return info;
+  } catch (error) {
+    console.error('获取系统信息失败:', error);
+    return null;
+  }
+});
+
+// 查找Arduino路径
+ipcMain.handle("linter-find-arduino-path", async (event) => {
+  try {
+    const arduinoPath = await codeLinter.findArduinoPath();
+    return arduinoPath;
+  } catch (error) {
+    console.error('查找Arduino路径失败:', error);
+    return null;
+  }
+});
+
+// 获取Arduino包含路径
+ipcMain.handle("linter-get-arduino-includes", async (event, board) => {
+  try {
+    const includes = await codeLinter.getArduinoIncludes(board);
+    return includes;
+  } catch (error) {
+    console.error('获取Arduino包含路径失败:', error);
+    return [];
+  }
+});
+
+// 获取开发板特定包含路径 (新增)
+ipcMain.handle("linter-get-board-includes", async (event, options) => {
+  try {
+    const { board, customCorePath, thirdPartyLibs, projectPath } = options;
+    const includes = await codeLinter.getBoardSpecificIncludes(board, customCorePath, thirdPartyLibs, projectPath);
+    return includes;
+  } catch (error) {
+    console.error('获取开发板包含路径失败:', error);
+    return [];
+  }
+});
+
+// 加载aily-project项目配置 (新增)
+ipcMain.handle("linter-load-project-config", async (event, projectPath) => {
+  try {
+    const config = await codeLinter.loadAilyProjectConfig(projectPath);
+    return config;
+  } catch (error) {
+    console.error('加载项目配置失败:', error);
+    return { isAilyProject: false };
+  }
+});
+
+// 获取开发板默认宏定义 (新增)
+ipcMain.handle("linter-get-board-defines", async (event, board) => {
+  try {
+    const defines = codeLinter.getBoardDefines(board);
+    return defines;
+  } catch (error) {
+    console.error('获取开发板宏定义失败:', error);
+    return [];
+  }
+});
+
+// 获取支持的开发板列表 (新增)
+ipcMain.handle("linter-get-supported-boards", async (event) => {
+  try {
+    const boards = [
+      { id: 'esp32', name: 'ESP32 Dev Module', platform: 'ESP32' },
+      { id: 'esp8266', name: 'NodeMCU 1.0 (ESP-12E)', platform: 'ESP8266' },
+      { id: 'arduino_uno', name: 'Arduino Uno', platform: 'AVR' },
+      { id: 'arduino_nano', name: 'Arduino Nano', platform: 'AVR' },
+      { id: 'arduino_mega', name: 'Arduino Mega 2560', platform: 'AVR' }
+    ];
+    return boards;
+  } catch (error) {
+    console.error('获取支持的开发板失败:', error);
+    return [];
+  }
+});
+
+// 获取编译器路径
+ipcMain.handle("linter-get-compiler-paths", async (event) => {
+  try {
+    const compilerPaths = codeLinter.getCompilerPaths();
+    return compilerPaths;
+  } catch (error) {
+    console.error('获取编译器路径失败:', error);
+    return {};
+  }
+});
