@@ -457,7 +457,8 @@ export class ProjectService {
         flashMode: this.extractMenuOptions(boardConfig, 'FlashMode'),
         flashSize: this.extractMenuOptions(boardConfig, 'FlashSize'),
         partitionScheme: this.extractMenuOptions(boardConfig, 'PartitionScheme'),
-        cdcOnBoot: this.extractMenuOptions(boardConfig, 'CDCOnBoot')
+        cdcOnBoot: this.extractMenuOptions(boardConfig, 'CDCOnBoot'),
+        psram: this.extractMenuOptions(boardConfig, 'PSRAM')
       };
 
       return esp32Config;
@@ -801,6 +802,17 @@ export class ProjectService {
             menuItem.children.forEach((child: any) => {
               child.check = false;
               if (this.compareConfigs(child.data, currentProjectConfig.CDCOnBoot)) {
+                child.check = true;
+              }
+            });
+          }
+        } else if (menuItem.name === 'ESP32.PSRAM' && boardConfig.psram) {
+          menuItem.children = boardConfig.psram;
+          // 根据当前项目配置设置check状态
+          if (currentProjectConfig.PSRAM) {
+            menuItem.children.forEach((child: any) => {
+              child.check = false;
+              if (this.compareConfigs(child.data, currentProjectConfig.PSRAM)) {
                 child.check = true;
               }
             });
