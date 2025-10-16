@@ -122,7 +122,13 @@ export class MenuComponent {
     // 计算目标菜单项在可见项中的索引
     for (let i = 0; i <= index; i++) {
       const item = this.menuList[i];
-      if (!item.sep && this.showInRouter(item)) {
+      // 跳过分隔符
+      if (item.sep) {
+        continue;
+      }
+      // 检查是否应该渲染这个菜单项
+      const shouldRender = (item.children && item.children.length > 0) || (!item.children && this.showInRouter(item));
+      if (shouldRender) {
         if (i === index) {
           targetItemIndex = visibleItemCount;
         }
@@ -137,12 +143,12 @@ export class MenuComponent {
       const itemRect = menuItemElement.getBoundingClientRect();
 
       // 子菜单显示在主菜单右侧
-      const left = this.position.x + this.width + 2;
-      const top = this.position.y + (itemRect.top - menuBoxRect.top);
+      const left = menuBoxRect.right + 2;
+      const top = itemRect.top;
 
       this.submenuPosition = {
         left: left + 'px',
-        top: top - 3 + 'px'
+        top: top - 2 + 'px'
       };
     }
   }
