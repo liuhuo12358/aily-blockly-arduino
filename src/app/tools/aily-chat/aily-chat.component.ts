@@ -660,6 +660,7 @@ export class AilyChatComponent implements OnDestroy {
     appDataPath(**appDataPath**): ${window['path'].getAppDataPath() || '无'}
     转换后的blockly库存放路径(**blocklylibrariesPath**): ${ window['path'].join(window['path'].getAppDataPath(), 'libraries') || '无'}
     当前使用的语言(**lang**)： ${this.configService.data.lang || 'zh-cn'}
+    操作系统(**os**): ${window['platform'].type() || 'unknown'}
     </keyinfo>
     `
   }
@@ -1335,7 +1336,7 @@ ${JSON.stringify(errData)}
                       }
                     }
 
-                    this.startToolCall(toolCallId, data.tool_name, `正在执行: ${displayCommand}`, toolArgs);
+                    this.startToolCall(toolCallId, data.tool_name, `执行: ${displayCommand}`, toolArgs);
                     // Check if cwd is specified, otherwise use project paths
                     if (!toolArgs.cwd) {
                       toolArgs.cwd = this.projectService.currentProjectPath || this.projectService.projectRootPath;
@@ -1378,7 +1379,7 @@ ${JSON.stringify(errData)}
                     break;
                   case 'get_context':
                     // console.log('[获取上下文信息工具被调用]', toolArgs);
-                    this.startToolCall(toolCallId, data.tool_name, "正在获取上下文信息...", toolArgs);
+                    this.startToolCall(toolCallId, data.tool_name, "获取上下文信息...", toolArgs);
                     toolResult = await getContextTool(this.projectService, toolArgs);
                     if (toolResult.is_error) {
                       resultState = "warn";
@@ -1390,7 +1391,7 @@ ${JSON.stringify(errData)}
                   case 'list_directory':
                     // console.log('[列出目录工具被调用]', toolArgs);
                     const distFolderName = this.getLastFolderName(toolArgs.path);
-                    this.startToolCall(toolCallId, data.tool_name, `正在获取${distFolderName}目录内容`, toolArgs);
+                    this.startToolCall(toolCallId, data.tool_name, `获取${distFolderName}目录内容`, toolArgs);
                     toolResult = await listDirectoryTool(toolArgs);
                     if (toolResult.is_error) {
                       resultState = "warn";
@@ -1402,7 +1403,7 @@ ${JSON.stringify(errData)}
                   case 'read_file':
                     // console.log('[读取文件工具被调用]', toolArgs);
                     let readFileName = this.getFileName(toolArgs.path);
-                    this.startToolCall(toolCallId, data.tool_name, `正在读取: ${readFileName}`, toolArgs);
+                    this.startToolCall(toolCallId, data.tool_name, `读取: ${readFileName}`, toolArgs);
                     toolResult = await readFileTool(toolArgs);
                     if (toolResult.is_error) {
                       resultState = "warn";
@@ -1414,7 +1415,7 @@ ${JSON.stringify(errData)}
                   case 'create_file':
                     // console.log('[创建文件工具被调用]', toolArgs);
                     let createFileName = this.getFileName(toolArgs.path);
-                    this.startToolCall(toolCallId, data.tool_name, `正在创建: ${createFileName}`, toolArgs);
+                    this.startToolCall(toolCallId, data.tool_name, `创建: ${createFileName}`, toolArgs);
                     toolResult = await createFileTool(toolArgs);
                     if (toolResult.is_error) {
                       resultState = "warn";
@@ -1426,7 +1427,7 @@ ${JSON.stringify(errData)}
                   case 'create_folder':
                     // console.log('[创建文件夹工具被调用]', toolArgs);
                     let createFolderName = this.getLastFolderName(toolArgs.path);
-                    this.startToolCall(toolCallId, data.tool_name, `正在创建: ${createFolderName}`, toolArgs);
+                    this.startToolCall(toolCallId, data.tool_name, `创建: ${createFolderName}`, toolArgs);
                     toolResult = await createFolderTool(toolArgs);
                     if (toolResult.is_error) {
                       resultState = "warn";
@@ -1438,7 +1439,7 @@ ${JSON.stringify(errData)}
                   case 'edit_file':
                     // console.log('[编辑文件工具被调用]', toolArgs);
                     let editFileName = this.getFileName(toolArgs.path);
-                    this.startToolCall(toolCallId, data.tool_name, `正在编辑: ${editFileName}`, toolArgs);
+                    this.startToolCall(toolCallId, data.tool_name, `编辑: ${editFileName}`, toolArgs);
                     toolResult = await editFileTool(toolArgs);
                     if (toolResult.is_error) {
                       resultState = "warn";
@@ -1450,7 +1451,7 @@ ${JSON.stringify(errData)}
                   case 'delete_file':
                     // console.log('[删除文件工具被调用]', toolArgs);
                     let deleteFileName = this.getFileName(toolArgs.path);
-                    this.startToolCall(toolCallId, data.tool_name, `正在删除: ${deleteFileName}`, toolArgs);
+                    this.startToolCall(toolCallId, data.tool_name, `删除: ${deleteFileName}`, toolArgs);
                     toolResult = await deleteFileTool(toolArgs);
                     if (toolResult.is_error) {
                       resultState = "warn";
@@ -1462,7 +1463,7 @@ ${JSON.stringify(errData)}
                   case 'delete_folder':
                     // console.log('[删除文件夹工具被调用]', toolArgs);
                     let deleteFolderName = this.getLastFolderName(toolArgs.path);
-                    this.startToolCall(toolCallId, data.tool_name, `正在删除: ${deleteFolderName}`, toolArgs);
+                    this.startToolCall(toolCallId, data.tool_name, `删除: ${deleteFolderName}`, toolArgs);
                     toolResult = await deleteFolderTool(toolArgs);
                     if (toolResult.is_error) {
                       resultState = "warn";
@@ -1474,11 +1475,11 @@ ${JSON.stringify(errData)}
                   case 'check_exists':
                     // console.log('[检查存在性工具被调用]', toolArgs);
                     // Determine if the path is likely a file or folder
-                    let stateText = "正在检查路径是否存在";
+                    let stateText = "检查路径是否存在";
                     let checkFileName = this.getFileName(toolArgs.path);
                     let checkFolderName = this.getLastFolderName(toolArgs.path);
 
-                    const doingText = checkFileName ? `正在检查文件是否存在: ${checkFileName}` : `正在检查文件夹是否存在: ${checkFolderName}`;
+                    const doingText = checkFileName ? `检查文件是否存在: ${checkFileName}` : `检查文件夹是否存在: ${checkFolderName}`;
                     const errText = checkFileName ? `检查文件 ${checkFileName} 是否存在失败: ` : `检查文件夹 ${checkFolderName} 是否存在失败: `;
                     const successText = checkFileName ? `文件 ${checkFileName} 存在` : `文件夹 ${checkFolderName} 存在`;
 
@@ -1494,7 +1495,7 @@ ${JSON.stringify(errData)}
                   case 'get_directory_tree':
                     // console.log('[获取目录树工具被调用]', toolArgs);
                     let treeFolderName = this.getLastFolderName(toolArgs.path);
-                    this.startToolCall(toolCallId, data.tool_name, `正在获取目录树: ${treeFolderName}`, toolArgs);
+                    this.startToolCall(toolCallId, data.tool_name, `获取目录树: ${treeFolderName}`, toolArgs);
                     toolResult = await getDirectoryTreeTool(toolArgs);
                     if (toolResult.is_error) {
                       resultState = "error";
@@ -1506,7 +1507,7 @@ ${JSON.stringify(errData)}
                   case 'fetch':
                     // console.log('[网络请求工具被调用]', toolArgs);
                     const fetchUrl = this.getUrlDisplayName(toolArgs.url);
-                    this.startToolCall(toolCallId, data.tool_name, `正在进行网络请求: ${fetchUrl}`, toolArgs);
+                    this.startToolCall(toolCallId, data.tool_name, `进行网络请求: ${fetchUrl}`, toolArgs);
                     toolResult = await fetchTool(this.fetchToolService, toolArgs);
                     if (toolResult.is_error) {
                       resultState = "error";
@@ -1522,23 +1523,23 @@ ${JSON.stringify(errData)}
                     break;
                   case 'reload_project':
                     // console.log('[重新加载项目工具被调用]', toolArgs);
-                    this.startToolCall(toolCallId, data.tool_name, "正在重新加载项目...", toolArgs);
+                    this.startToolCall(toolCallId, data.tool_name, "重新加载项目...", toolArgs);
                     break;
                   case 'edit_abi_file':
                     console.log('[编辑ABI文件工具被调用]', toolArgs);
 
                     // 根据操作模式生成不同的状态文本
-                    let abiOperationText = "正在编辑ABI文件...";
+                    let abiOperationText = "编辑ABI文件...";
                     if (toolArgs.replaceStartLine !== undefined) {
                       if (toolArgs.replaceEndLine !== undefined && toolArgs.replaceEndLine !== toolArgs.replaceStartLine) {
-                        abiOperationText = `正在替换ABI文件第 ${toolArgs.replaceStartLine}-${toolArgs.replaceEndLine} 行内容...`;
+                        abiOperationText = `替换ABI文件第 ${toolArgs.replaceStartLine}-${toolArgs.replaceEndLine} 行内容...`;
                       } else {
-                        abiOperationText = `正在替换ABI文件第 ${toolArgs.replaceStartLine} 行内容...`;
+                        abiOperationText = `替换ABI文件第 ${toolArgs.replaceStartLine} 行内容...`;
                       }
                     } else if (toolArgs.insertLine !== undefined) {
-                      abiOperationText = `正在ABI文件第 ${toolArgs.insertLine} 行插入内容...`;
+                      abiOperationText = `ABI文件第 ${toolArgs.insertLine} 行插入内容...`;
                     } else if (toolArgs.replaceMode === false) {
-                      abiOperationText = "正在向ABI文件末尾追加内容...";
+                      abiOperationText = "向ABI文件末尾追加内容...";
                     }
 
                     this.startToolCall(toolCallId, data.tool_name, abiOperationText, toolArgs);
@@ -1612,7 +1613,7 @@ ${JSON.stringify(errData)}
                     break;
                   case 'reload_abi_json':
                     console.log('[重新加载ABI JSON工具被调用]', toolArgs);
-                    this.startToolCall(toolCallId, data.tool_name, "正在重新加载Blockly工作区数据...", toolArgs);
+                    this.startToolCall(toolCallId, data.tool_name, "重新加载Blockly工作区数据...", toolArgs);
                     // 导入工具函数
                     const { ReloadAbiJsonToolService } = await import('./tools/reloadAbiJsonTool');
                     const reloadAbiJsonService = new ReloadAbiJsonToolService(this.blocklyService, this.projectService);
@@ -1639,7 +1640,7 @@ ${JSON.stringify(errData)}
                     console.log('  - 父级连接:', toolArgs.parentConnection);
                     console.log('  - 创建变量:', toolArgs.createVariables);
 
-                    this.startToolCall(toolCallId, data.tool_name, `正在操作Blockly块: ${toolArgs.type}`, toolArgs);
+                    this.startToolCall(toolCallId, data.tool_name, `操作Blockly块: ${toolArgs.type}`, toolArgs);
                     toolResult = await smartBlockTool(toolArgs);
                     console.log('✅ 智能块工具执行结果:', toolResult);
                     if (toolResult.is_error) {
@@ -1651,7 +1652,7 @@ ${JSON.stringify(errData)}
                     break;
                   case 'connect_blocks_tool':
                     console.log('[块连接工具被调用]', toolArgs);
-                    this.startToolCall(toolCallId, data.tool_name, "正在连接Blockly块...", toolArgs);
+                    this.startToolCall(toolCallId, data.tool_name, "连接Blockly块...", toolArgs);
                     toolResult = await connectBlocksTool(toolArgs);
                     if (toolResult.is_error) {
                       resultState = "warn";
@@ -1662,7 +1663,7 @@ ${JSON.stringify(errData)}
                     break;
                   case 'create_code_structure_tool':
                     console.log('[代码结构创建工具被调用]', toolArgs);
-                    this.startToolCall(toolCallId, data.tool_name, `正在创建代码结构: ${toolArgs.structure}`, toolArgs);
+                    this.startToolCall(toolCallId, data.tool_name, `创建代码结构: ${toolArgs.structure}`, toolArgs);
                     toolResult = await createCodeStructureTool(toolArgs);
                     if (toolResult.is_error) {
                       resultState = "warn";
@@ -1673,7 +1674,7 @@ ${JSON.stringify(errData)}
                     break;
                   case 'configure_block_tool':
                     console.log('[块配置工具被调用]', toolArgs);
-                    this.startToolCall(toolCallId, data.tool_name, "正在配置Blockly块...", toolArgs);
+                    this.startToolCall(toolCallId, data.tool_name, "配置Blockly块...", toolArgs);
                     toolResult = await configureBlockTool(toolArgs);
                     if (toolResult.is_error) {
                       resultState = "warn";
@@ -1684,7 +1685,7 @@ ${JSON.stringify(errData)}
                     break;
                   case 'variable_manager_tool':
                     console.log('[变量管理工具被调用]', toolArgs);
-                    this.startToolCall(toolCallId, data.tool_name, `正在${toolArgs.operation === 'create' ? '创建' : toolArgs.operation === 'delete' ? '删除' : toolArgs.operation === 'rename' ? '重命名' : '列出'}变量...`, toolArgs);
+                    this.startToolCall(toolCallId, data.tool_name, `${toolArgs.operation === 'create' ? '创建' : toolArgs.operation === 'delete' ? '删除' : toolArgs.operation === 'rename' ? '重命名' : '列出'}变量...`, toolArgs);
                     toolResult = await variableManagerTool(toolArgs);
                     if (toolResult.is_error) {
                       resultState = "warn";
@@ -1700,7 +1701,7 @@ ${JSON.stringify(errData)}
 // \`\`\`aily-state
 // {
 //   "state": "doing",
-//   "text": "正在查找Blockly块...",
+//   "text": "查找Blockly块...",
 //   "id": "${toolCallId}"
 // }
 // \`\`\`\n\n
@@ -1715,7 +1716,7 @@ ${JSON.stringify(errData)}
 //                     break;
                   case 'delete_block_tool':
                     console.log('[块删除工具被调用]', toolArgs);
-                    this.startToolCall(toolCallId, data.tool_name, "正在删除Blockly块...", toolArgs);
+                    this.startToolCall(toolCallId, data.tool_name, "删除Blockly块...", toolArgs);
                     toolResult = await deleteBlockTool(toolArgs);
                     if (toolResult.is_error) {
                       resultState = "warn";
@@ -1726,7 +1727,7 @@ ${JSON.stringify(errData)}
                     break;
                   case 'get_workspace_overview_tool':
                     console.log('[工作区全览工具被调用]', toolArgs);
-                    this.startToolCall(toolCallId, data.tool_name, "正在分析工作区全览...", toolArgs);
+                    this.startToolCall(toolCallId, data.tool_name, "分析工作区全览...", toolArgs);
                     toolResult = await getWorkspaceOverviewTool(toolArgs);
                     if (toolResult.is_error) {
                       resultState = "warn";
@@ -1748,7 +1749,7 @@ ${JSON.stringify(errData)}
 // \`\`\`aily-state
 // {
 //   "state": "doing", 
-//   "text": "正在管理TODO项目...",
+//   "text": "管理TODO项目...",
 //   "id": "${toolCallId}"
 // }
 // \`\`\`\n\n
@@ -1817,7 +1818,7 @@ ${JSON.stringify(errData)}
                   case 'queryBlockDefinitionTool':
                     {
                       console.log('[块定义查询工具被调用]', toolArgs);
-                      this.startToolCall(toolCallId, data.tool_name, "正在查询块定义信息...", toolArgs);
+                      this.startToolCall(toolCallId, data.tool_name, "查询块定义信息...", toolArgs);
                       toolResult = await queryBlockDefinitionTool(this.projectService, toolArgs);
                       if (toolResult.is_error) {
                         resultState = "error";
@@ -1830,7 +1831,7 @@ ${JSON.stringify(errData)}
                   case 'getBlockConnectionCompatibilityTool':
                     {
                       console.log('[块连接兼容性工具被调用]', toolArgs);
-                      this.startToolCall(toolCallId, data.tool_name, "正在分析块连接兼容性...", toolArgs);
+                      this.startToolCall(toolCallId, data.tool_name, "分析块连接兼容性...", toolArgs);
                       toolResult = await getBlockConnectionCompatibilityTool(this.projectService, toolArgs);
                       if (toolResult.is_error) {
                         resultState = "error";
