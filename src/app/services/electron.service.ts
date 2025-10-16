@@ -117,7 +117,7 @@ export class ElectronService {
    * @param options 可选配置
    * @returns Promise<{success: boolean, result?: any, error?: string}>
    */
-  async showNotification(title: string, body: string, options?: {
+  async notify(title: string, body: string, options?: {
     icon?: string;
     silent?: boolean;
     timeoutType?: 'default' | 'never';
