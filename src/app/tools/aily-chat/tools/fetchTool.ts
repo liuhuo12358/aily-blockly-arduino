@@ -1,6 +1,7 @@
 import { HttpClient, HttpHeaders, HttpResponse } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { firstValueFrom, timeout } from 'rxjs';
+import { injectTodoReminder } from './todoWriteTool';
 
 export interface FetchToolArgs {
   url: string;
@@ -270,5 +271,6 @@ export class FetchToolService {
 }
 
 export async function fetchTool(fetchService: FetchToolService, args: FetchToolArgs): Promise<FetchToolResult> {
-  return await fetchService.executeFetch(args);
+  const toolResult = await fetchService.executeFetch(args);
+  return injectTodoReminder(toolResult, 'fetchTool');
 }

@@ -1,6 +1,7 @@
 import { ToolUseResult } from "./tools";
 import { ProjectService } from "../../../services/project.service";
 import { ConfigService } from '../../../services/config.service';
+import { injectTodoReminder } from "./todoWriteTool";
 
 export async function newProjectTool(prjRootPath: string, toolArgs: any, prjService: ProjectService, configService: ConfigService): Promise<ToolUseResult> {
     let toolResult = null;
@@ -37,9 +38,10 @@ export async function newProjectTool(prjRootPath: string, toolArgs: any, prjServ
         toolResult = `创建项目失败: ${e.message}`;
         is_error = true;
     } finally {
-        return {
+        const toolResults = {
             is_error,
             content: toolResult
         };
+        return injectTodoReminder(toolResults, 'newProjectTool');
     }
 }

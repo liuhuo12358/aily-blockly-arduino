@@ -1198,3 +1198,64 @@ function cleanupOldInstances() {
 }
 
 cleanupOldInstances();
+
+// ============================================
+// Ripgrep 搜索功能
+// ============================================
+const ripgrep = require('./ripgrep');
+
+// 检查 ripgrep 是否可用
+ipcMain.handle("ripgrep-check-available", async (event) => {
+  try {
+    const available = await ripgrep.isRipgrepAvailable();
+    return available;
+  } catch (error) {
+    console.error('检查 ripgrep 可用性失败:', error);
+    return false;
+  }
+});
+
+// 使用 ripgrep 搜索文件内容
+ipcMain.handle("ripgrep-search-files", async (event, params) => {
+  try {
+    const result = await ripgrep.searchFiles(params);
+    return result;
+  } catch (error) {
+    console.error('Ripgrep 搜索失败:', error);
+    return {
+      success: false,
+      numFiles: 0,
+      filenames: [],
+      error: error.message
+    };
+  }
+});
+
+// 列出所有内容文件
+ipcMain.handle("ripgrep-list-files", async (event, searchPath, limit = 1000) => {
+  try {
+    const result = await ripgrep.listAllContentFiles(searchPath, limit);
+    return result;
+  } catch (error) {
+    console.error('列出文件失败:', error);
+    return {
+      success: false,
+      files: []
+    };
+  }
+});
+
+// 搜索文件内容并返回匹配的行
+ipcMain.handle("ripgrep-search-content", async (event, params) => {
+  try {
+    const result = await ripgrep.searchContent(params);
+    return result;
+  } catch (error) {
+    console.error('搜索内容失败:', error);
+    return {
+      success: false,
+      matches: [],
+      error: error.message
+    };
+  }
+});
