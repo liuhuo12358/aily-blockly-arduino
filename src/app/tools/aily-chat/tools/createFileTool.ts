@@ -43,7 +43,7 @@ export async function createFileTool(
     }
 ): Promise<ToolUseResult> {
     try {
-        let { path: filePath, content = '', encoding = 'utf-8', overwrite = false } = params;
+        let { path: filePath, content = '', encoding = 'utf-8', overwrite = true } = params;
         
         // 路径规范化
         filePath = normalizePath(filePath);
