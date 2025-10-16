@@ -660,7 +660,7 @@ export class AilyChatComponent implements OnDestroy {
     appDataPath(**appDataPath**): ${window['path'].getAppDataPath() || '无'}
     转换后的blockly库存放路径(**blocklylibrariesPath**): ${ window['path'].join(window['path'].getAppDataPath(), 'libraries') || '无'}
     当前使用的语言(**lang**)： ${this.configService.data.lang || 'zh-cn'}
-    操作系统(**os**): ${window['platform'].type() || 'unknown'}
+    操作系统(**os**): ${window['platform'].type || 'unknown'}
     </keyinfo>
     `
   }
