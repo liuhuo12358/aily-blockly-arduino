@@ -873,7 +873,8 @@ ${JSON.stringify(errData)}
   }
 
   ngAfterViewInit(): void {
-    this.chatService.openHistoryFile(this.projectService.currentProjectPath);
+    this.chatService.openHistoryFile(this.projectService.currentProjectPath || this.projectService.projectRootPath);
+    this.HistoryList = this.chatService.historyList;
     this.scrollToBottom();
     // this.mcpService.init().then(() => {
     //   this.startSession();
@@ -1165,7 +1166,7 @@ ${JSON.stringify(errData)}
         this.isWaiting = false;
         this.isCompleted = true;
       } else {
-        console.error('取消任务失败:', res);
+        console.warn('取消任务失败:', res);
       }
     });
   }
@@ -2144,9 +2145,9 @@ ${JSON.stringify(errData)}
           console.log("historyList: ", this.chatService.historyList);
           let historyData = this.chatService.historyList.find(h => h.sessionId === this.sessionId);
           if (!historyData) {
-            historyData = [{ sessionId: this.sessionId, name: "" }];
+            this.chatService.historyList.push({ sessionId: this.sessionId, name: "q" + Date.now() });
           }
-          this.chatService.saveHistoryFile(this.projectService.currentProjectPath || this.projectService.projectRootPath, historyData);
+          this.chatService.saveHistoryFile(this.projectService.currentProjectPath || this.projectService.projectRootPath);
         } catch (error) {
           console.warn("Error getting history data:", error);
         }
@@ -2174,6 +2175,7 @@ ${JSON.stringify(errData)}
   getHistory(): void {
     if (!this.sessionId) return;
 
+    this.list = [];
     console.log('获取历史消息，sessionId:', this.sessionId);
     this.chatService.getHistory(this.sessionId).subscribe((res: any) => {
       console.log('get history', res);
@@ -2309,7 +2311,7 @@ ${JSON.stringify(errData)}
     }
   }
 
-  HistoryList: IMenuItem[] = [
+  HistoryList: any[] = [
     // {
     //   name: '如何学习arduino如何学习arduino如何学习arduino'
     // },
@@ -2625,7 +2627,14 @@ ${JSON.stringify(errData)}
   }
 
   menuClick(e) {
-
+    console.log('选择了历史会话:', e);
+    console.log("CurrentSessionId: ", this.chatService.currentSessionId)
+    if (this.chatService.currentSessionId !== e.sessionId) {
+      this.chatService.currentSessionId = e.sessionId;
+      this.getHistory();
+      this.isCompleted = true;
+      this.closeMenu();
+    }
   }
 
   // 模式选择相关方法

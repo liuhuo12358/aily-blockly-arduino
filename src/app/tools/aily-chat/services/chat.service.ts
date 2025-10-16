@@ -23,7 +23,7 @@ export interface ChatTextMessage {
 export class ChatService {
 
   currentMode = 'ask'; // 默认为代理模式
-  historyList: any[] = [];
+  historyList = [];
 
   currentSessionId = this.historyList.length > 0 ? this.historyList[0].sessionId : '';
 
@@ -47,11 +47,11 @@ export class ChatService {
   }
 
   // 保存.history
-  saveHistoryFile(prjPath: string, historyData: any) {
+  saveHistoryFile(prjPath: string) {
     // 保存项目下的.history文件
     const historyPath = prjPath + '/.history';
-    console.log("保存.history文件: ", historyPath, historyData);
-    window['fs'].writeFileSync(historyPath, JSON.stringify(historyData, null, 2), 'utf-8');
+    console.log("保存.history文件: ", historyPath, this.historyList);
+    window['fs'].writeFileSync(historyPath, JSON.stringify(this.historyList, null, 2), 'utf-8');
   }
 
 

@@ -47,7 +47,7 @@ class TodoManager {
   }
 
   private constructor() {
-    console.log('🎯 TodoManager 初始化');
+    // console.log('🎯 TodoManager 初始化');
   }
 
   /**
