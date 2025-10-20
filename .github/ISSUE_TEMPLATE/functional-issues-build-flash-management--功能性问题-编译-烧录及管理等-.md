@@ -57,8 +57,10 @@ assignees: ''
   }
 }
 ```
-- Error Logs or Bug Descriptions/报错日志内容或者问题描述:
+**Error Logs or Bug Descriptions/报错日志内容或者问题描述**
+- Error Logs(报错日志):
 ```
 Error Log if available/报错日志(如果有)
 ```
+- Bug Descriptions(问题描述):
 A clear and concise description of what the bug is/请清晰简洁的描述错误内容.
