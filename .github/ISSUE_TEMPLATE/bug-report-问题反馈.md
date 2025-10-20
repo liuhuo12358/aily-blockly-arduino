@@ -1,5 +1,5 @@
 ---
-name: Build&Uplaod Error Report/编译及烧录问题
+name: Bug report/问题反馈
 about: Create a report to help us improve
 title: ''
 labels: bug

@@ -1,8 +1,8 @@
 ---
-name: Build&Uplaod Error Report/编译及烧录问题
-about: Create a report to help us improve
+name: Custom issue template/其他问题
+about: Describe this issue template's purpose here.
 title: ''
-labels: bug
+labels: ''
 assignees: ''
 
 ---
