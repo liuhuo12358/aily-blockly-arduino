@@ -1,5 +1,5 @@
 ---
-name: Functional Issues(Build/Flash/Management)/功能性问题(编译、烧录及管理等)
+name: Build&Uplaod Error Report/编译及烧录问题
 about: Create a report to help us improve
 title: ''
 labels: bug
