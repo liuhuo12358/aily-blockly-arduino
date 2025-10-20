@@ -122,7 +122,8 @@ export class FeedbackDialogComponent {
         content: this.feedbackContent.trim(),
         contact: this.contactInfo.trim(),
         timestamp: new Date().toISOString(),
-        userAgent: navigator.userAgent
+        userAgent: navigator.userAgent,
+        email: this.email.trim()
       };
 
       this.feedbackService.submitFeedback(feedbackData).subscribe(res => {
