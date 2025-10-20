@@ -8,6 +8,8 @@ import { NzSelectModule } from 'ng-zorro-antd/select';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { BaseDialogComponent, DialogButton } from '../base-dialog/base-dialog.component';
 import { FeedbackService } from '../../services/feedback.service';
+import { ElectronService } from '../../services/electron.service';
+import { NzRadioModule } from 'ng-zorro-antd/radio';
 
 @Component({
   selector: 'app-feedback-dialog',
@@ -17,6 +19,7 @@ import { FeedbackService } from '../../services/feedback.service';
     NzButtonModule,
     NzInputModule,
     NzSelectModule,
+    NzRadioModule,
     BaseDialogComponent
   ],
   templateUrl: './feedback-dialog.component.html',
@@ -25,30 +28,19 @@ import { FeedbackService } from '../../services/feedback.service';
 export class FeedbackDialogComponent {
   readonly modal = inject(NzModalRef);
 
-  title = '反馈';
-
   // 反馈类型
   feedbackType: string = 'bug';
 
-  feedbackTarget = [
-    { label: '软件问题', value: 'bug' },
-    { label: '库问题', value: 'feature' },
-    { label: '开发板问题', value: 'question' },
-    { label: '其他', value: 'other' }
-  ];
-
   feedbackTypes = [
-    { label: 'Bug 反馈', value: 'bug' },
+    { label: 'Bug反馈', value: 'bug' },
+    { label: '编译/上传问题', value: 'build&upload' },
+    { label: '其他问题', value: 'other' },
     { label: '功能建议', value: 'feature' },
-    { label: '使用问题', value: 'question' },
-    { label: '其他', value: 'other' }
   ];
 
   projectData = [
 
   ];
-
-
 
   // 表单数据
   feedbackTitle: string = '';
@@ -58,13 +50,15 @@ export class FeedbackDialogComponent {
   // 提交状态
   isSubmitting: boolean = false;
 
+  email: string = '';
+
   // 配置对话框按钮
   buttons: DialogButton[] = [
-    {
-      text: '取消',
-      type: 'default',
-      action: 'cancel'
-    },
+    // {
+    //   text: '取消',
+    //   type: 'default',
+    //   action: 'cancel'
+    // },
     {
       text: '提交',
       type: 'primary',
@@ -74,7 +68,8 @@ export class FeedbackDialogComponent {
 
   constructor(
     private message: NzMessageService,
-    private feedbackService: FeedbackService
+    private feedbackService: FeedbackService,
+    private electronService: ElectronService
   ) { }
 
   ngOnInit(): void {
@@ -162,5 +157,9 @@ export class FeedbackDialogComponent {
         loading: false
       }));
     }
+  }
+
+  openUrl() {
+    this.electronService.openUrl('https://github.com/ailyProject/aily-blockly/issues');
   }
 }

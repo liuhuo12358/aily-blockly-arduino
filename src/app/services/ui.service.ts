@@ -5,6 +5,8 @@ import { filter, Subject } from 'rxjs';
 import { ElectronService } from './electron.service';
 import { TerminalService } from '../tools/terminal/terminal.service';
 import { NavigationEnd, Router } from '@angular/router';
+import { FeedbackDialogComponent } from '../components/feedback-dialog/feedback-dialog.component';
+import { NzModalService } from 'ng-zorro-antd/modal';
 
 @Injectable({
   providedIn: 'root',
@@ -35,7 +37,8 @@ export class UiService {
   constructor(
     private electronService: ElectronService,
     private terminalService: TerminalService,
-    private router: Router
+    private router: Router,
+    private modal: NzModalService
   ) { }
 
 
@@ -184,6 +187,27 @@ export class UiService {
   // 关闭当前窗口
   closeWindow() {
     window['iWindow'].close();
+  }
+
+
+  openFeedback() {
+    const modalRef = this.modal.create({
+      nzTitle: null,
+      nzFooter: null,
+      nzClosable: false,
+      nzBodyStyle: {
+        padding: '0',
+      },
+      nzContent: FeedbackDialogComponent,
+      nzWidth: '520px',
+    });
+
+    // 处理反馈结果
+    modalRef.afterClose.subscribe(result => {
+      if (result?.result === 'success') {
+        console.log('反馈已提交:', result.data);
+      }
+    });
   }
 }
 
