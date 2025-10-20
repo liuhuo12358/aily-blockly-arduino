@@ -87,6 +87,15 @@ export class FeedbackDialogComponent {
     }
   }
 
+  // 验证邮箱格式
+  private isValidEmail(email: string): boolean {
+    if (!email || email.trim() === '') {
+      return true; // 邮箱是选填的,空值也是有效的
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email.trim());
+  }
+
   // 提交反馈
   async submitFeedback(): Promise<void> {
     // 验证反馈内容
@@ -102,6 +111,12 @@ export class FeedbackDialogComponent {
 
     if (this.feedbackContent.trim().length < 10) {
       this.message.warning('反馈内容至少需要10个字符');
+      return;
+    }
+
+    // 验证邮箱格式
+    if (!this.isValidEmail(this.email)) {
+      this.message.warning('请输入有效的邮箱地址');
       return;
     }
 
