@@ -83,6 +83,7 @@ import { AuthService } from '../../services/auth.service';
 import { resolveObjectURL } from 'buffer';
 import { FloatingTodoComponent } from './components/floating-todo/floating-todo.component';
 import { TodoUpdateService } from './services/todoUpdate.service';
+import { ArduinoLintService } from './services/arduino-lint.service';
 import { BlocklyService } from '../../editors/blockly-editor/services/blockly.service';
 // import { reloadAbiJsonTool, reloadAbiJsonToolSimple } from './tools';
 
@@ -285,7 +286,8 @@ export class AilyChatComponent implements OnDestroy {
     private authService: AuthService,
     private modal: NzModalService,
     private configService: ConfigService,
-    private todoUpdateService: TodoUpdateService
+    private todoUpdateService: TodoUpdateService,
+    private arduinoLintService: ArduinoLintService
   ) { }
 
   ngOnInit() {
