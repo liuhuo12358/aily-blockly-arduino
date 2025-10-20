@@ -1332,5 +1332,29 @@ When in doubt, use this tool. Being proactive with task management demonstrates 
             },
             required: ['blockTypes', 'libraryNames']
         }
+    // },
+    // {
+    //     name: 'arduino_syntax_check',
+    //     description: `检查Arduino代码的语法正确性。用于验证生成的Arduino代码是否有语法错误，特别是检测未声明的变量。`,
+    //     input_schema: {
+    //         type: 'object',
+    //         properties: {
+    //             code: {
+    //                 type: 'string',
+    //                 description: 'Arduino C++代码内容'
+    //             },
+    //             timeout: {
+    //                 type: 'number',
+    //                 default: 3000,
+    //                 description: '检查超时时间（毫秒）'
+    //             },
+    //             enableWarnings: {
+    //                 type: 'boolean',
+    //                 default: true,
+    //                 description: '是否启用警告检查'
+    //             }
+    //         },
+    //         required: ['code']
+    //     }
     }
 ]

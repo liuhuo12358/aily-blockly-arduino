@@ -2,6 +2,7 @@ import { arduinoGenerator } from "../../../editors/blockly-editor/components/blo
 import { ToolUseResult } from "./tools";
 import { jsonrepair } from 'jsonrepair';
 import { injectTodoReminder } from './todoWriteTool';
+import { ArduinoSyntaxTool } from "./arduinoSyntaxTool";
 declare const Blockly: any;
 
 /**
@@ -4134,6 +4135,7 @@ export async function getWorkspaceOverviewTool(args?: any): Promise<ToolUseResul
     }
 
     // 生成完整代码
+    let lintResult = null;
     if (includeCode) {
       try {
         if ((window as any).Arduino && (window as any).Arduino.workspaceToCode) {
@@ -4150,6 +4152,112 @@ export async function getWorkspaceOverviewTool(args?: any): Promise<ToolUseResul
           }
           generatedCode = codeLines.length > 0 ? codeLines.join('\n\n') : '// 无可用代码内容';
         }
+
+        // 如果代码生成成功且不是错误信息，进行代码检测
+        if (generatedCode && 
+            !generatedCode.includes('无代码生成') && 
+            !generatedCode.includes('无可用代码内容') &&
+            !generatedCode.includes('工作区代码生成失败')) {
+          
+          console.log('🔍 开始进行Arduino语法检测...');
+          try {
+            // 使用Arduino语法检测工具
+            const arduinoTool = new ArduinoSyntaxTool();
+            const syntaxCheckResult = await arduinoTool.use({
+              code: generatedCode,
+              timeout: 5000,
+              enableWarnings: true
+            });
+            
+            if (syntaxCheckResult) {
+              const content = syntaxCheckResult.content || '';
+              const isValid = !syntaxCheckResult.is_error && content.includes('✅ **Arduino代码语法检查通过**');
+              
+              // 从内容中提取错误和警告信息
+              const errors: any[] = [];
+              const warnings: any[] = [];
+              
+              if (syntaxCheckResult.is_error) {
+                // 解析错误信息
+                const errorLines = content.split('\n').filter(line => 
+                  line.includes('**第') && line.includes('行') && line.includes('列**')
+                );
+                
+                errorLines.forEach(line => {
+                  const match = line.match(/\*\*第(\d+)行，第(\d+)列\*\*：(.+)/);
+                  if (match) {
+                    errors.push({
+                      line: parseInt(match[1]),
+                      column: parseInt(match[2]),
+                      message: match[3].trim(),
+                      severity: 'error' as const,
+                      source: 'arduino-syntax-tool'
+                    });
+                  }
+                });
+                
+                // 如果没有解析到具体错误，添加通用错误
+                if (errors.length === 0) {
+                  errors.push({
+                    line: 1,
+                    column: 1,
+                    message: content,
+                    severity: 'error' as const,
+                    source: 'arduino-syntax-tool'
+                  });
+                }
+              }
+              
+              lintResult = {
+                isValid: isValid,
+                errors: errors,
+                warnings: warnings,
+                duration: 0, // 工具内部已包含耗时信息
+                language: 'arduino',
+                toolUsed: 'arduino-syntax-tool'
+              };
+              
+              console.log('✅ Arduino语法检测完成:', {
+                isValid,
+                errorCount: errors.length,
+                warningCount: warnings.length
+              });
+            } else {
+              console.warn('⚠️ Arduino语法检测返回空结果');
+              lintResult = {
+                isValid: false,
+                errors: [{ 
+                  line: 1, 
+                  column: 1, 
+                  message: 'Arduino语法检测返回空结果', 
+                  severity: 'warning' as const,
+                  source: 'arduino-syntax-tool' 
+                }],
+                warnings: [],
+                duration: 0,
+                language: 'arduino',
+                toolUsed: 'arduino-syntax-tool'
+              };
+            }
+            
+          } catch (lintError) {
+            console.warn('⚠️ Arduino语法检测失败:', lintError);
+            lintResult = {
+              isValid: false,
+              errors: [{ 
+                line: 1, 
+                column: 1, 
+                message: `Arduino语法检测失败: ${lintError}`, 
+                severity: 'warning' as const,
+                source: 'syntax-check-error' 
+              }],
+              warnings: [],
+              duration: 0,
+              language: 'arduino',
+              toolUsed: 'arduino-syntax-tool'
+            };
+          }
+        }
       } catch (error) {
         generatedCode = `// 工作区代码生成失败: ${error}`;
       }
@@ -4164,7 +4272,8 @@ export async function getWorkspaceOverviewTool(args?: any): Promise<ToolUseResul
       rootBlocks,
       allBlocks: allBlocksInfo,
       structureTree,
-      generatedCode
+      generatedCode,
+      lintResult
     };
 
     let textOutput = '';
@@ -4748,6 +4857,32 @@ function formatWorkspaceOverviewText(
     lines.push(structure.generatedCode);
     lines.push('```');
     lines.push('');
+    
+    // 语法检测结果
+    if (structure.lintResult) {
+      lines.push('🔍 Arduino语法检测结果:');
+      if (structure.lintResult.isValid) {
+        lines.push('  ✅ 语法检查通过，代码无错误');
+        lines.push(`  ⏱️ 检查耗时: ${structure.lintResult.duration || 0}ms`);
+        lines.push(`  🔧 检查工具: ${structure.lintResult.toolUsed || 'unknown'}`);
+      } else {
+        lines.push('  ❌ 发现语法问题:');
+        if (structure.lintResult.errors && structure.lintResult.errors.length > 0) {
+          structure.lintResult.errors.forEach((error: any, index: number) => {
+            lines.push(`    ${index + 1}. 第${error.line}行，第${error.column}列: ${error.message}`);
+          });
+        }
+        if (structure.lintResult.warnings && structure.lintResult.warnings.length > 0) {
+          lines.push('  ⚠️ 警告信息:');
+          structure.lintResult.warnings.forEach((warning: any, index: number) => {
+            lines.push(`    ${index + 1}. 第${warning.line}行，第${warning.column}列: ${warning.message}`);
+          });
+        }
+        lines.push(`  ⏱️ 检查耗时: ${structure.lintResult.duration || 0}ms`);
+        lines.push(`  🔧 检查工具: ${structure.lintResult.toolUsed || 'unknown'}`);
+      }
+      lines.push('');
+    }
   }
 
   return lines.join('\n');

@@ -52,6 +52,7 @@ import {
   verifyBlockExistenceTool
 } from './tools/editBlockTool';
 import { todoWriteTool } from './tools';
+// import { arduinoSyntaxTool } from './tools/arduinoSyntaxTool';
 import { NzModalService } from 'ng-zorro-antd/modal';
 import { ConfigService } from '../../services/config.service';
 
@@ -1862,6 +1863,29 @@ ${JSON.stringify(errData)}
                       }
                     }
                     break;
+//                   case 'arduino_syntax_check':
+//                     console.log('🔍 [Arduino语法检查工具被调用]', toolArgs);
+                    
+//                     this.appendMessage('aily', `
+
+// \`\`\`aily-state
+// {
+//   "state": "doing",
+//   "text": "正在检查Arduino代码语法...",
+//   "id": "${toolCallId}"
+// }
+// \`\`\`\n\n
+//                     `);
+                    
+//                     toolResult = await arduinoSyntaxTool.use(toolArgs);
+//                     if (toolResult.is_error) {
+//                       resultState = "warn";
+//                       resultText = '代码语法检查发现问题';
+//                     } else {
+//                       resultState = "success";
+//                       resultText = 'Arduino代码语法检查通过';
+//                     }
+//                     break;
                 }
               }
 
