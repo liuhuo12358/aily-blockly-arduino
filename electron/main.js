@@ -23,7 +23,7 @@ const OAUTH_STATE_FILE = 'oauth-instances.json';
 function getOAuthStateFilePath() {
   // 获取原始用户数据路径（在设置实例隔离之前的路径）
   let originalUserDataPath;
-  
+
   if (shouldUseMultiInstance()) {
     // 在多实例模式下，需要获取原始的用户数据路径
     const currentPath = app.getPath('userData');
@@ -37,7 +37,7 @@ function getOAuthStateFilePath() {
   } else {
     originalUserDataPath = app.getPath('userData');
   }
-  
+
   return path.join(originalUserDataPath, OAUTH_STATE_FILE);
 }
 
@@ -46,21 +46,21 @@ function registerOAuthInstance(state) {
   try {
     const stateFilePath = getOAuthStateFilePath();
     const currentUserDataPath = app.getPath('userData');
-    
+
     const instanceInfo = {
       instanceId: process.pid, // 使用进程ID作为实例标识
       userDataPath: currentUserDataPath,
       timestamp: Date.now(),
       state: state
     };
-    
+
     console.log('注册OAuth实例信息:', {
       state,
       instanceId: instanceInfo.instanceId,
       userDataPath: currentUserDataPath,
       stateFilePath
     });
-    
+
     let oauthStates = {};
     if (fs.existsSync(stateFilePath)) {
       try {
@@ -70,9 +70,9 @@ function registerOAuthInstance(state) {
         oauthStates = {};
       }
     }
-    
+
     oauthStates[state] = instanceInfo;
-    
+
     // 清理超过10分钟的过期状态
     const now = Date.now();
     Object.keys(oauthStates).forEach(key => {
@@ -80,17 +80,17 @@ function registerOAuthInstance(state) {
         delete oauthStates[key];
       }
     });
-    
+
     // 确保状态文件目录存在
     const stateFileDir = path.dirname(stateFilePath);
     if (!fs.existsSync(stateFileDir)) {
       fs.mkdirSync(stateFileDir, { recursive: true });
     }
-    
+
     fs.writeFileSync(stateFilePath, JSON.stringify(oauthStates, null, 2));
     console.log('已注册OAuth状态:', state, '实例ID:', instanceInfo.instanceId);
     console.log('OAuth状态文件内容:', oauthStates);
-    
+
     return instanceInfo;
   } catch (error) {
     console.error('注册OAuth实例失败:', error);
@@ -103,21 +103,21 @@ function findOAuthInstance(state) {
   try {
     const stateFilePath = getOAuthStateFilePath();
     console.log('查找OAuth实例，状态文件路径:', stateFilePath);
-    
+
     if (!fs.existsSync(stateFilePath)) {
       console.log('OAuth状态文件不存在:', stateFilePath);
       return null;
     }
-    
+
     const oauthStates = JSON.parse(fs.readFileSync(stateFilePath, 'utf8'));
     console.log('OAuth状态文件内容:', oauthStates);
     console.log('查找状态:', state);
-    
+
     const instanceInfo = oauthStates[state];
-    
+
     if (instanceInfo) {
       console.log('找到匹配的实例信息:', instanceInfo);
-      
+
       // 检查实例是否仍然存在（通过检查用户数据目录）
       if (fs.existsSync(instanceInfo.userDataPath)) {
         console.log('目标实例目录存在:', instanceInfo.userDataPath);
@@ -131,7 +131,7 @@ function findOAuthInstance(state) {
     } else {
       console.log('未找到匹配的实例信息，可用状态:', Object.keys(oauthStates));
     }
-    
+
     return null;
   } catch (error) {
     console.error('查找OAuth实例失败:', error);
@@ -148,7 +148,7 @@ function sendOAuthCallbackToInstance(instanceInfo, callbackData) {
       ...callbackData,
       timestamp: Date.now()
     }));
-    
+
     console.log('已将OAuth回调数据写入目标实例文件:', callbackFilePath);
     return true;
   } catch (error) {
@@ -187,7 +187,7 @@ function shouldUseMultiInstance() {
 if (shouldUseMultiInstance()) {
   // 检查是否是协议启动
   const isProtocolLaunch = process.argv.some(arg => arg.startsWith(`${PROTOCOL}://`));
-  
+
   if (!isProtocolLaunch) {
     // 只有非协议启动才设置实例隔离
     setupUniqueUserDataPath();
@@ -252,7 +252,7 @@ handleCommandLineArgs(process.argv);
 
 function handleProtocol(url) {
   console.log('收到协议链接:', url);
-  
+
   try {
     const urlObj = new URL(url);
 
@@ -263,7 +263,7 @@ function handleProtocol(url) {
     if (urlObj.hostname && urlObj.hostname !== '') {
       fullPath = '/' + urlObj.hostname + urlObj.pathname;
     }
-    
+
     // 检查是否是OAuth回调（使用完整路径）
     if (fullPath === '/auth/callback') {
       const searchParams = urlObj.searchParams;
@@ -271,9 +271,9 @@ function handleProtocol(url) {
       const state = searchParams.get('state');
       const error = searchParams.get('error');
       const errorDescription = searchParams.get('error_description');
-      
+
       console.log('OAuth回调参数:', { code, state, error, errorDescription });
-      
+
       // 构建回调数据
       const callbackData = {
         code,
@@ -281,13 +281,13 @@ function handleProtocol(url) {
         error,
         error_description: errorDescription
       };
-      
+
       // 如果有state，尝试找到对应的实例
       if (state) {
         const targetInstance = findOAuthInstance(state);
         if (targetInstance) {
           console.log('找到目标实例:', targetInstance.instanceId, '当前实例路径:', app.getPath('userData'));
-          
+
           // 如果目标实例就是当前实例
           if (targetInstance.userDataPath === app.getPath('userData')) {
             console.log('OAuth回调属于当前实例');
@@ -336,7 +336,7 @@ function handleProtocol(url) {
       } else {
         console.warn('OAuth回调缺少state参数');
       }
-      
+
       // 如果没有找到对应实例或没有state，在当前实例处理
       console.log('在当前实例处理OAuth回调');
       if (mainWindow && mainWindow.webContents) {
@@ -351,10 +351,10 @@ function handleProtocol(url) {
         // 如果窗口不存在，存储回调数据以便稍后处理
         global.pendingOAuthCallback = callbackData;
       }
-      
+
       return;
     }
-    
+
     // 处理其他协议链接
     // dialog.showMessageBox({ message: `收到协议：${url}` });
   } catch (error) {
@@ -383,10 +383,11 @@ let userConf;
 function loadEnv() {
   // 将child目录添加到环境变量PATH中
   const childPath = path.join(__dirname, "..", "child")
-  const nodePath = path.join(childPath, "node")
+  const nodePath = path.join(childPath, isDarwin ? "node/bin" : "node")
 
   // 只保留PowerShell路径，移除其他系统PATH
   let customPath = nodePath + path.delimiter + childPath;
+  console.log('====customPath:', customPath)
 
   if (isWin32) {
     // 添加必要的系统路径
@@ -404,12 +405,18 @@ function loadEnv() {
       }
     });
   }
+  if (isDarwin) {
+    customPath += path.delimiter + '/bin';
+  } else if (isLinux) {
+    customPath += path.delimiter + '/bin';
+  }
 
   // 完全替换PATH
   process.env.PATH = customPath;
 
   // 读取config.json文件
   const configPath = path.join(__dirname, 'config', "config.json");
+  console.log('====configPath:', configPath);
   const conf = JSON.parse(fs.readFileSync(configPath));
 
   // 设置系统默认的应用数据目录
@@ -465,6 +472,7 @@ function loadEnv() {
   process.env.AILY_BUILDER_PATH = path.join(childPath, "aily-builder");
   // 全局npm包路径
   process.env.AILY_NPM_PREFIX = process.env.AILY_APPDATA_PATH;
+  console.log("====process.env.AILY_NPM_PREFIX:", process.env.AILY_NPM_PREFIX)
   // 默认全局编译器路径
   process.env.AILY_COMPILERS_PATH = path.join(
     process.env.AILY_APPDATA_PATH,
@@ -488,6 +496,8 @@ function loadEnv() {
   if (fs.existsSync(ninjaPath)) {
     process.env.PATH = `${process.env.PATH}${path.delimiter}${ninjaPath}`;
   }
+
+  console.log("====process.env:", process.env)
 }
 
 
@@ -638,11 +648,11 @@ function createWindow() {
       }
     }, 2000);
   }
-  
+
   // 在多实例模式下，监听OAuth回调文件的变化
   if (shouldUseMultiInstance()) {
     const callbackFilePath = path.join(app.getPath('userData'), 'oauth-callback.json');
-    
+
     // 检查是否已有OAuth回调文件
     if (fs.existsSync(callbackFilePath)) {
       try {
@@ -662,7 +672,7 @@ function createWindow() {
         console.error('处理OAuth回调文件失败:', error);
       }
     }
-    
+
     // 监听OAuth回调文件的创建
     const callbackDir = path.dirname(callbackFilePath);
     if (fs.existsSync(callbackDir)) {
@@ -676,7 +686,7 @@ function createWindow() {
                 console.log('检测到OAuth回调文件变化，发送回调数据');
                 if (mainWindow && mainWindow.webContents) {
                   mainWindow.webContents.send('oauth-callback', callbackData);
-                  
+
                   // 将窗口置前显示
                   if (mainWindow.isMinimized()) {
                     mainWindow.restore();
@@ -703,7 +713,7 @@ const gotTheLock = app.requestSingleInstanceLock();
 if (shouldUseMultiInstance()) {
   // 多实例模式：检查是否是协议启动
   const isProtocolLaunch = process.argv.some(arg => arg.startsWith(`${PROTOCOL}://`));
-  
+
   if (isProtocolLaunch) {
     // 协议启动时，检查是否已有其他实例能处理
     if (!gotTheLock) {
@@ -720,28 +730,28 @@ if (shouldUseMultiInstance()) {
       app.releaseSingleInstanceLock();
     }
   }
-  
+
   // 监听second-instance事件，用于处理协议链接
   app.on('second-instance', (event, commandLine, workingDirectory) => {
     console.log('收到second-instance事件，命令行参数:', commandLine);
-    
+
     // 查找协议链接
     const protocolUrl = commandLine.find(arg => arg.startsWith(`${PROTOCOL}://`));
     if (protocolUrl) {
       console.log('在second-instance中处理协议链接:', protocolUrl);
       handleProtocol(protocolUrl);
-      
+
       // 处理协议后不要置前窗口，让具体的处理逻辑决定
       return;
     } else {
       // 处理其他类型的启动参数（如.abi文件、路由参数等）
       handleCommandLineArgs(commandLine);
-      
+
       // 如果有待处理的文件或路由，更新主窗口
       if (pendingFileToOpen || pendingRoute) {
         updateMainWindowWithPendingData();
       }
-      
+
       // 将现有窗口置前
       if (mainWindow) {
         if (mainWindow.isMinimized()) {
@@ -769,13 +779,13 @@ if (shouldUseMultiInstance()) {
       } else {
         // 处理其他类型的启动参数（如.abi文件、路由参数等）
         handleCommandLineArgs(commandLine);
-        
+
         // 如果有待处理的文件或路由，更新主窗口
         if (pendingFileToOpen || pendingRoute) {
           updateMainWindowWithPendingData();
         }
       }
-      
+
       // 将现有窗口置前
       if (mainWindow) {
         if (mainWindow.isMinimized()) {
@@ -794,7 +804,7 @@ app.on("ready", () => {
   } catch (error) {
     console.error("loadEnv error: ", error);
   }
-  
+
   // 检查是否是协议启动
   const protocolUrl = process.argv.find(arg => arg.startsWith(`${PROTOCOL}://`));
   if (protocolUrl) {
@@ -804,7 +814,7 @@ app.on("ready", () => {
       handleProtocol(protocolUrl);
     }, 1000);
   }
-  
+
   // 创建主窗口
   createWindow();
   listenMoveResize();

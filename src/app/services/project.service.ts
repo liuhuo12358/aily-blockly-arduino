@@ -6,6 +6,7 @@ import { NzMessageService } from 'ng-zorro-antd/message';
 import { pinyin } from "pinyin-pro";
 import { Router } from '@angular/router';
 import { CmdService } from './cmd.service';
+import { CrossPlatformCmdService } from './cross-platform-cmd.service';
 import { generateDateString } from '../func/func';
 import { ConfigService } from './config.service';
 import { ESP32_CONFIG_MENU } from '../configs/esp32.config';
@@ -13,6 +14,8 @@ import { STM32_CONFIG_MENU } from '../configs/stm32.config';
 import { ActionService } from './action.service';
 import { PlatformService } from './platform.service';
 import { NewProjectData } from '../pages/project-new/project-new.component';
+
+const { pt } = (window as any)['electronAPI'].platform;
 
 interface ProjectPackageData {
   name: string;
@@ -65,6 +68,7 @@ export class ProjectService {
     private message: NzMessageService,
     private router: Router,
     private cmdService: CmdService,
+    private crossPlatformCmdService: CrossPlatformCmdService,
     private configService: ConfigService,
     private actionService: ActionService,
     private platformService: PlatformService,
@@ -125,11 +129,11 @@ export class ProjectService {
 
     this.uiService.updateFooterState({ state: 'doing', text: '正在创建项目...' });
     await this.cmdService.runAsync(`npm install ${boardPackage} --prefix "${appDataPath}"`);
-    const templatePath = `${appDataPath}\\node_modules\\${newProjectData.board.name}\\template`;
+    const templatePath = `${appDataPath}${pt}node_modules${pt}${newProjectData.board.name}${pt}template`;
     // 创建项目目录
-    await this.cmdService.runAsync(`mkdir -p "${projectPath}"`);
+    await this.crossPlatformCmdService.createDirectory(projectPath, true);
     // 复制模板文件到项目目录
-    await this.cmdService.runAsync(`cp -r "${templatePath}\\*" "${projectPath}"`);
+    await this.crossPlatformCmdService.copyItem(`${templatePath}${pt}*`, projectPath, true, true);
 
     // 3. 修改package.json文件
     const packageJson = JSON.parse(window['fs'].readFileSync(`${projectPath}/package.json`));
