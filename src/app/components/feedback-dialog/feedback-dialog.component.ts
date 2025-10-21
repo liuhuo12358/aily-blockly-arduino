@@ -10,6 +10,10 @@ import { BaseDialogComponent, DialogButton } from '../base-dialog/base-dialog.co
 import { FeedbackService } from '../../services/feedback.service';
 import { ElectronService } from '../../services/electron.service';
 import { NzRadioModule } from 'ng-zorro-antd/radio';
+import { ProjectService } from '../../services/project.service';
+import { LogService } from '../../services/log.service';
+
+import { version } from '../../../../package.json';
 
 @Component({
   selector: 'app-feedback-dialog',
@@ -69,7 +73,9 @@ export class FeedbackDialogComponent {
   constructor(
     private message: NzMessageService,
     private feedbackService: FeedbackService,
-    private electronService: ElectronService
+    private electronService: ElectronService,
+    private projectService: ProjectService,
+    private logService: LogService
   ) { }
 
   ngOnInit(): void {
@@ -85,6 +91,78 @@ export class FeedbackDialogComponent {
     } else if (action === 'submit') {
       this.submitFeedback();
     }
+  }
+
+  // 获取基本信息
+  async getBasicInfo(): Promise<string> {
+    const currentPackageJson = await this.projectService.getPackageJson();
+    const dependencies = currentPackageJson?.dependencies || {};
+
+    // 如果有依赖项,添加缩进使其在代码块中正确显示
+    const dependenciesStr = dependencies && Object.keys(dependencies).length > 0
+      ? JSON.stringify(dependencies, null, 2).split('\n').map(line => `  ${line}`).join('\n')
+      : "  无";
+
+    return `
+**Basic Information/基本信息**
+- Operation System Version: ${window['platform'].type}
+- Aily Blockly Version: ${version}
+- Project Package Json/项目依赖包:
+\`\`\`json
+${dependenciesStr}
+\`\`\`
+    `;
+  }
+
+  // 获取错误日志
+  getErrorLogs(): string {
+    // 获取最近十条错误日志
+    const errorLogs = this.logService.list
+      .filter(log => log.state === 'error')
+      .sort((a, b) => b.timestamp! - a.timestamp!)
+      .slice(0, 10);
+    
+    const errorLogsStr = errorLogs.length > 0
+      ? errorLogs.map(log => `  - [${log.timestamp}] ${log.detail}`).join('\n')
+      : "  无";
+
+    return `
+**Error Logs or Bug Descriptions/报错日志内容或者问题描述**
+- Error Logs(报错日志):
+
+\`\`\`plaintext
+${errorLogsStr}
+\`\`\`
+    `;
+  }
+
+  // 问题描述
+  getIssueDescription(): string {
+    const descriptionStr = this.feedbackContent
+      ? this.feedbackContent.split('\n').map(line => `  ${line}`).join('\n')
+      : "  无";
+
+    return `
+- Bug Descriptions(问题描述):
+
+\`\`\`plaintext
+${descriptionStr}
+\`\`\`
+    `;
+  }
+
+  // 功能建议
+  getFeatureSuggestion(): string {
+    const descriptionStr = this.feedbackContent
+      ? this.feedbackContent.split('\n').map(line => `  ${line}`).join('\n')
+      : "  无";
+
+    return `
+**Feature Suggestions(功能建议)**
+\`\`\`plaintext
+${descriptionStr}
+\`\`\`
+    `;
   }
 
   // 提交反馈
@@ -114,12 +192,31 @@ export class FeedbackDialogComponent {
       loading: btn.action === 'submit'
     }));
 
+    let basicInfo = '';
+    let errorLogs = '';
+    let content = '';
+
+    if (this.feedbackType != 'feature') {
+      // 获取基本信息
+      basicInfo = await this.getBasicInfo();
+      // 获取错误日志
+      errorLogs = this.getErrorLogs();
+
+      // 获取问题描述
+      const issueDescription = this.getIssueDescription();
+      content = basicInfo + '\n' + errorLogs + '\n' + issueDescription;
+    } else {
+      // 获取功能建议内容
+      const featureSuggestion = this.getFeatureSuggestion();
+      content = featureSuggestion;
+    }
+
     try {
       // 构建反馈数据
       const feedbackData = {
         label: this.feedbackType,
         title: this.feedbackTitle.trim(),
-        content: this.feedbackContent.trim(),
+        content: content,
         contact: this.contactInfo.trim(),
         timestamp: new Date().toISOString(),
         userAgent: navigator.userAgent,
