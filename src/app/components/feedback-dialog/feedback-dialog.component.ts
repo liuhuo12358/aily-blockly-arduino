@@ -120,7 +120,7 @@ ${dependenciesStr}
     const errorLogs = this.logService.list
       .filter(log => log.state === 'error')
       .sort((a, b) => b.timestamp! - a.timestamp!)
-      .slice(0, 10);
+      .slice(0, 20);
     
     const errorLogsStr = errorLogs.length > 0
       ? errorLogs.map(log => `  - [${log.timestamp}] ${log.detail}`).join('\n')
