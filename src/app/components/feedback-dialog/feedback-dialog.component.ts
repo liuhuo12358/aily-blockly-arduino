@@ -104,10 +104,10 @@ export class FeedbackDialogComponent {
       : "  无";
 
     return `
-**Basic Information/基本信息**
-- Operation System Version: ${window['platform'].type}
-- Aily Blockly Version: ${version}
-- Project Package Json/项目依赖包:
+**Basic Information**
+- OS Version: ${window['platform'].type}
+- Software Version: ${version}
+- Project Dependencies:
 \`\`\`json
 ${dependenciesStr}
 \`\`\`
@@ -124,11 +124,11 @@ ${dependenciesStr}
     
     const errorLogsStr = errorLogs.length > 0
       ? errorLogs.map(log => `  - [${log.timestamp}] ${log.detail}`).join('\n')
-      : "  无";
+      : "  null";
 
     return `
-**Error Logs or Bug Descriptions/报错日志内容或者问题描述**
-- Error Logs(报错日志):
+**Error Logs && Bug Descriptions**
+- Error Logs:
 
 \`\`\`plaintext
 ${errorLogsStr}
@@ -140,10 +140,10 @@ ${errorLogsStr}
   getIssueDescription(): string {
     const descriptionStr = this.feedbackContent
       ? this.feedbackContent.split('\n').map(line => `  ${line}`).join('\n')
-      : "  无";
+      : "  null";
 
     return `
-- Bug Descriptions(问题描述):
+- Bug Descriptions:
 
 \`\`\`plaintext
 ${descriptionStr}
@@ -155,10 +155,10 @@ ${descriptionStr}
   getFeatureSuggestion(): string {
     const descriptionStr = this.feedbackContent
       ? this.feedbackContent.split('\n').map(line => `  ${line}`).join('\n')
-      : "  无";
+      : "  null";
 
     return `
-**Feature Suggestions(功能建议)**
+**Feature Suggestions**
 \`\`\`plaintext
 ${descriptionStr}
 \`\`\`
