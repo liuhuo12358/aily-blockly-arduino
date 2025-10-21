@@ -662,6 +662,33 @@ export class HeaderComponent {
     this.showUser = false;
   }
 
+
+  portListPosition = { x: 40, y: 40 };
+  calculatePortListPosition(event: MouseEvent) {
+    const target = event.target as HTMLElement;
+    const rect = target.getBoundingClientRect();
+
+    // 计算端口列表的位置，使其显示在点击元素的下方
+    this.portListPosition = {
+      x: rect.left + 10, // 向左偏移一些，使其更好对齐
+      y: rect.bottom + 10
+    };
+
+    // 确保端口列表不会超出窗口边界
+    const windowWidth = window.innerWidth;
+    const windowHeight = window.innerHeight;
+    const portListWidth = 300; // 端口列表的宽度
+    const portListHeight = 400; // 端口列表的高度
+
+    if (this.portListPosition.x + portListWidth > windowWidth) {
+      this.portListPosition.x = windowWidth - portListWidth - 3;
+    }
+
+    if (this.portListPosition.y + portListHeight > windowHeight) {
+      this.portListPosition.y = windowHeight - portListHeight - 3;
+    }
+  }
+
   async openBoardSelectorDialog() {
     // 获取开发板列表
     let boardList = await this.configService.loadBoardList();
