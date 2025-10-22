@@ -380,23 +380,28 @@ let mainWindow;
 let userConf;
 
 // 检查Node
-async function checkNodePath(childPath) {
+function checkNodePath(childPath) {
+  const child_process = require("child_process");
   childPath = escapePath(childPath);
   const nodePath = path.join(childPath, "node");
   if (!fs.existsSync(nodePath)) {
-    return new Promise((resolve, reject) => {
-      const child_process = require("child_process");
-      let nodeZipPath = path.join(childPath, "node-v22.19.0-darwin-arm64.tar.xz");
-      const command = `tar -xzf ${nodeZipPath} -C ${childPath} && mv ${nodeZipPath.replace('.tar.xz', '')} ${nodePath}`;
-      try {
-        child_process.execSync(command, {stdio: 'inherit'});
-        console.log('安装解压node成功！');
-        resolve(true);
-      } catch (error) {
-        console.error("安装解压node失败，错误码:", error);
-        reject(error);
-      }
-    });
+    const nodeZipPath = path.join(childPath, "node-v22.19.0-darwin-arm64.tar.xz");
+    try {
+      child_process.execSync(`tar -xzf ${nodeZipPath} -C ${childPath} && mv ${nodeZipPath.replace('.tar.xz', '')} ${nodePath}`, {stdio: 'inherit'});
+      console.log('安装解压node成功！');
+    } catch (error) {
+      console.error("安装解压node失败，错误码:", error);
+    }
+  }
+  const ailyBuilderPath = path.join(childPath, "aily-builder");
+  if (!fs.existsSync(ailyBuilderPath)) {
+    const ailyBuilderZipPath = path.join(childPath, "aily-builder-1.0.5.7z");
+    try {
+      child_process.execSync(`mkdir -p ${ailyBuilderPath} && tar -xzf ${ailyBuilderZipPath} -C ${ailyBuilderPath}`, {stdio: 'inherit'});
+      console.log('安装解压aily-builder成功！');
+    } catch (error) {
+      console.error("安装解压aily-builder失败，错误码:", error);
+    }
   }
 }
 
