@@ -111,7 +111,6 @@ export class FeedbackDialogComponent {
       : `  ${this.translate.instant('FEEDBACK_DIALOG.NO_DEPENDENCIES')}`;
 
     return `
-**Basic Information**
 - OS Version: ${window['platform'].type}
 - Software Version: ${version}
 - Project Dependencies:
@@ -133,10 +132,7 @@ ${dependenciesStr}
       ? errorLogs.map(log => `  - [${log.timestamp}] ${log.detail}`).join('\n')
       : "  null";
 
-    return `
-**Error Logs && Bug Descriptions**
-- Error Logs:
-
+    return `- Error Logs:
 \`\`\`plaintext
 ${errorLogsStr}
 \`\`\`
@@ -149,9 +145,7 @@ ${errorLogsStr}
       ? this.feedbackContent.split('\n').map(line => `  ${line}`).join('\n')
       : "  null";
 
-    return `
-- Bug Descriptions:
-
+    return `**Issue Descriptions:**
 \`\`\`plaintext
 ${descriptionStr}
 \`\`\`
@@ -164,8 +158,7 @@ ${descriptionStr}
       ? this.feedbackContent.split('\n').map(line => `  ${line}`).join('\n')
       : "  null";
 
-    return `
-**Feature Suggestions**
+    return `**Feature Suggestions**
 \`\`\`plaintext
 ${descriptionStr}
 \`\`\`
@@ -231,7 +224,7 @@ ${descriptionStr}
       const feedbackData = {
         label: this.feedbackType,
         title: this.feedbackTitle.trim(),
-        content: content,
+        content: content + `\n> This issue was sent by the user using the built-in feedback function.`,
         contact: this.contactInfo.trim(),
         timestamp: new Date().toISOString(),
         userAgent: navigator.userAgent,
