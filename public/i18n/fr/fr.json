@@ -144,7 +144,8 @@
         "AI": "IA",
         "IOT": "IoT",
         "OTHERS": "Autres",
-        "ALL": "Toutes les bibliothèques"
+        "ALL": "Toutes les bibliothèques",
+        "LIB_IN_USE": "Cette bibliothèque est actuellement utilisée. Veuillez supprimer les blocs associés de l'espace de travail avant de supprimer cette bibliothèque"
     },
     "BOARD_SELECTOR": {
         "TITLE": "Changer de carte",

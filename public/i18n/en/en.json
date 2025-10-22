@@ -184,7 +184,8 @@
         "ROBOT": "Robot",
         "AI": "AI",
         "IOT": "IoT",
-        "OTHERS": "Others"
+        "OTHERS": "Others",
+        "LIB_IN_USE": "This library is currently in use. Please remove related blocks from the workspace before removing this library"
     },
     "COMPATIBILITY_DIALOG": {
         "TITLE": "Library Compatibility Notice",

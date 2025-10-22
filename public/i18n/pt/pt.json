@@ -141,7 +141,8 @@
         "AI": "IA",
         "IOT": "IoT",
         "OTHERS": "Outros",
-        "ALL": "Todas as bibliotecas"
+        "ALL": "Todas as bibliotecas",
+        "LIB_IN_USE": "Esta biblioteca está atualmente em uso. Por favor, remova os blocos relacionados do espaço de trabalho antes de remover esta biblioteca"
     },
     "BOARD_SELECTOR": {
         "TITLE": "Trocar Placa",
