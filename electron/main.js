@@ -426,7 +426,7 @@ function loadEnv() {
     process.env.AILY_BUILDER_BUILD_PATH = path.join(os.homedir(), "AppData", "Local", "aily-builder", "project");
   } else if (isDarwin) {
     // 设置macOS的环境变量
-    process.env.AILY_APPDATA_PATH = conf["appdata_path"]["darwin"];
+    process.env.AILY_APPDATA_PATH = conf["appdata_path"]["darwin"].replace('~', os.homedir());
   } else {
     // 设置Linux的环境变量
     process.env.AILY_APPDATA_PATH = conf["appdata_path"]["linux"];
