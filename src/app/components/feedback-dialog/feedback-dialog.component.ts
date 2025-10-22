@@ -121,7 +121,7 @@ ${dependenciesStr}
       .filter(log => log.state === 'error')
       .sort((a, b) => b.timestamp! - a.timestamp!)
       .slice(0, 20);
-    
+
     const errorLogsStr = errorLogs.length > 0
       ? errorLogs.map(log => `  - [${log.timestamp}] ${log.detail}`).join('\n')
       : "  null";
@@ -219,7 +219,7 @@ ${descriptionStr}
 
       // 获取问题描述
       const issueDescription = this.getIssueDescription();
-      content = basicInfo + '\n' + errorLogs + '\n' + issueDescription;
+      content = issueDescription + '\n' + basicInfo + '\n' + errorLogs;
     } else {
       // 获取功能建议内容
       const featureSuggestion = this.getFeatureSuggestion();
