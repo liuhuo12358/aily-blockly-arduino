@@ -1041,32 +1041,26 @@ ${JSON.stringify(errData)}
       return;
     }
 
-
-
-    // 发送消息时重新启用自动滚动
-    this.autoScrollEnabled = true;
-
-    // if (this.isCompleted) {
-    //   console.log('上次会话已完成，需要重新启动会话');
-    //   await this.resetChat();
-    // }
-
     this.send('user', this.inputValue.trim(), true);
-    this.inputValue = ''; // 发送后清空输入框
     this.selectContent = [];
+    this.inputValue = "";
   }
 
   resetChat(): Promise<void> {
     return this.startSession();
   }
 
-  send(sender: string, content: string, clear: boolean = true): void {
+  async send(sender: string, content: string, clear: boolean = true): Promise<void> {
+    if (this.isCompleted) {
+        console.log('上次会话已完成，需要重新启动会话');
+        await this.resetChat();
+    }
+
+    // 发送消息时重新启用自动滚动
+    this.autoScrollEnabled = true;
+      
     let text = content.trim();
     if (!this.sessionId || !text) return;
-
-    if (this.isCompleted) {
-      this.resetChat();
-    }
 
     if (sender === 'user') {
       if (this.isWaiting) {
@@ -2199,11 +2193,6 @@ ${JSON.stringify(errData)}
     if (event.ctrlKey && event.key === 'Enter') {
       if (this.isWaiting) {
         return;
-      }
-
-      if (this.isCompleted) {
-        console.log('上次会话已完成，需要重新启动会话');
-        await this.resetChat();
       }
 
       this.send("user", this.inputValue.trim(), true);
