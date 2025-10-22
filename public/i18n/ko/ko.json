@@ -25,6 +25,7 @@
         "EXAMPLES": "예제 프로그램",
         "UPDATE": "업데이트 확인",
         "USER_AUTH": "사용자 서비스",
+        "USER_SPACE": "클라우드 스페이스",
         "LIB_MANAGER": "라이브러리 관리자"
     },
     "ESP32": {

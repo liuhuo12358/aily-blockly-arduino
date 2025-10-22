@@ -25,6 +25,7 @@
         "EXAMPLES": "Beispiele",
         "UPDATE": "Nach Updates suchen",
         "USER_AUTH": "Benutzerdienst",
+        "USER_SPACE": "Cloud-Speicher",
         "LIB_MANAGER": "Bibliotheksverwaltung"
     },
     "ESP32": {

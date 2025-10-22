@@ -25,6 +25,7 @@
         "EXAMPLES": "Exemples",
         "UPDATE": "Vérifier les mises à jour",
         "USER_AUTH": "Service Utilisateur",
+        "USER_SPACE": "Espace Cloud",
         "LIB_MANAGER": "Gestionnaire de Bibliothèques"
     },
     "ESP32": {

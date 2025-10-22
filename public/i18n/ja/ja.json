@@ -25,6 +25,7 @@
         "EXAMPLES": "サンプルプログラム",
         "UPDATE": "アップデートを確認",
         "USER_AUTH": "ユーザーサービス",
+        "USER_SPACE": "クラウドスペース",
         "LIB_MANAGER": "ライブラリマネージャー"
     },
     "ESP32": {

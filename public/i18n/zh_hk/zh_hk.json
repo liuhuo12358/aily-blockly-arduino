@@ -25,6 +25,7 @@
         "EXAMPLES": "範例程式",
         "UPDATE": "檢查更新",
         "USER_AUTH": "用戶服務",
+        "USER_SPACE": "雲空間",
         "LIB_MANAGER": "庫管理"
     },
     "ESP32": {

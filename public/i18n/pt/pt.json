@@ -25,6 +25,7 @@
         "EXAMPLES": "Programas de exemplo",
         "UPDATE": "Verificar atualizações",
         "USER_AUTH": "Serviço do Usuário",
+        "USER_SPACE": "Espaço na Nuvem",
         "LIB_MANAGER": "Gerenciador de Bibliotecas"
     },
     "ESP32": {
