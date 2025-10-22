@@ -379,15 +379,39 @@ const { registerToolsHandlers } = require("./tools");
 let mainWindow;
 let userConf;
 
+// 检查Node
+async function checkNodePath(childPath) {
+  childPath = escapePath(childPath);
+  const nodePath = path.join(childPath, "node");
+  if (!fs.existsSync(nodePath)) {
+    return new Promise((resolve, reject) => {
+      const child_process = require("child_process");
+      let nodeZipPath = path.join(childPath, "node-v22.19.0-darwin-arm64.tar.xz");
+      const command = `tar -xzf ${nodeZipPath} -C ${childPath} && mv ${nodeZipPath.replace('.tar.xz', '')} ${nodePath}`;
+      try {
+        child_process.execSync(command, {stdio: 'inherit'});
+        console.log('安装解压node成功！');
+        resolve(true);
+      } catch (error) {
+        console.error("安装解压node失败，错误码:", error);
+        reject(error);
+      }
+    });
+  }
+}
+
+function escapePath(path) {
+  return path.replace(/(\s|[()&|;<>`$\\])/g, '\\$1');
+}
+
 // 环境变量加载
 function loadEnv() {
   // 将child目录添加到环境变量PATH中
-  const childPath = path.join(__dirname, "..", "child")
-  const nodePath = path.join(childPath, isDarwin ? "node/bin" : "node")
+  const childPath = path.join(__dirname, "..", "child");
+  const nodePath = path.join(childPath, isDarwin ? "node/bin" : "node");
 
   // 只保留PowerShell路径，移除其他系统PATH
   let customPath = nodePath + path.delimiter + childPath;
-  console.log('====customPath:', customPath)
 
   if (isWin32) {
     // 添加必要的系统路径
@@ -406,7 +430,15 @@ function loadEnv() {
     });
   }
   if (isDarwin) {
-    customPath += path.delimiter + '/bin';
+    const systemPaths = [
+      '/bin',
+      '/usr/bin'
+    ];
+    systemPaths.forEach(sysPath => {
+      if (fs.existsSync(sysPath)) {
+        customPath += path.delimiter + sysPath;
+      }
+    });
   } else if (isLinux) {
     customPath += path.delimiter + '/bin';
   }
@@ -416,7 +448,6 @@ function loadEnv() {
 
   // 读取config.json文件
   const configPath = path.join(__dirname, 'config', "config.json");
-  console.log('====configPath:', configPath);
   const conf = JSON.parse(fs.readFileSync(configPath));
 
   // 设置系统默认的应用数据目录
@@ -427,6 +458,7 @@ function loadEnv() {
   } else if (isDarwin) {
     // 设置macOS的环境变量
     process.env.AILY_APPDATA_PATH = conf["appdata_path"]["darwin"].replace('~', os.homedir());
+    checkNodePath(childPath);
   } else {
     // 设置Linux的环境变量
     process.env.AILY_APPDATA_PATH = conf["appdata_path"]["linux"];
@@ -472,7 +504,6 @@ function loadEnv() {
   process.env.AILY_BUILDER_PATH = path.join(childPath, "aily-builder");
   // 全局npm包路径
   process.env.AILY_NPM_PREFIX = process.env.AILY_APPDATA_PATH;
-  console.log("====process.env.AILY_NPM_PREFIX:", process.env.AILY_NPM_PREFIX)
   // 默认全局编译器路径
   process.env.AILY_COMPILERS_PATH = path.join(
     process.env.AILY_APPDATA_PATH,
