@@ -184,7 +184,8 @@
         "ROBOT": "机器人",
         "AI": "AI",
         "IOT": "物联网",
-        "OTHERS": "其他"
+        "OTHERS": "其他",
+        "LIB_IN_USE": "该库正在被使用，请先在工作区删除相关块，再移除本库"
     },
     "COMPATIBILITY_DIALOG": {
         "TITLE": "库兼容性提示",
