@@ -12,6 +12,7 @@ import { ElectronService } from '../../services/electron.service';
 import { NzRadioModule } from 'ng-zorro-antd/radio';
 import { ProjectService } from '../../services/project.service';
 import { LogService } from '../../services/log.service';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 
 import { version } from '../../../../package.json';
 
@@ -24,6 +25,7 @@ import { version } from '../../../../package.json';
     NzInputModule,
     NzSelectModule,
     NzRadioModule,
+    TranslateModule,
     BaseDialogComponent
   ],
   templateUrl: './feedback-dialog.component.html',
@@ -35,12 +37,14 @@ export class FeedbackDialogComponent {
   // 反馈类型
   feedbackType: string = 'bug';
 
-  feedbackTypes = [
-    { label: 'Bug反馈', value: 'bug' },
-    { label: '编译/上传问题', value: 'build&upload' },
-    { label: '其他问题', value: 'other' },
-    { label: '功能建议', value: 'feature' },
-  ];
+  get feedbackTypes() {
+    return [
+      { label: this.translate.instant('FEEDBACK_DIALOG.TYPE_BUG'), value: 'bug' },
+      { label: this.translate.instant('FEEDBACK_DIALOG.TYPE_BUILD_UPLOAD'), value: 'build&upload' },
+      { label: this.translate.instant('FEEDBACK_DIALOG.TYPE_OTHER'), value: 'other' },
+      { label: this.translate.instant('FEEDBACK_DIALOG.TYPE_FEATURE'), value: 'feature' },
+    ];
+  }
 
   projectData = [
 
@@ -57,25 +61,28 @@ export class FeedbackDialogComponent {
   email: string = '';
 
   // 配置对话框按钮
-  buttons: DialogButton[] = [
-    // {
-    //   text: '取消',
-    //   type: 'default',
-    //   action: 'cancel'
-    // },
-    {
-      text: '提交',
-      type: 'primary',
-      action: 'submit'
-    }
-  ];
+  get buttons(): DialogButton[] {
+    return [
+      // {
+      //   text: this.translate.instant('FEEDBACK_DIALOG.CANCEL'),
+      //   type: 'default',
+      //   action: 'cancel'
+      // },
+      {
+        text: 'FEEDBACK_DIALOG.SUBMIT',
+        type: 'primary',
+        action: 'submit'
+      }
+    ];
+  }
 
   constructor(
     private message: NzMessageService,
     private feedbackService: FeedbackService,
     private electronService: ElectronService,
     private projectService: ProjectService,
-    private logService: LogService
+    private logService: LogService,
+    private translate: TranslateService
   ) { }
 
   ngOnInit(): void {
@@ -101,7 +108,7 @@ export class FeedbackDialogComponent {
     // 如果有依赖项,添加缩进使其在代码块中正确显示
     const dependenciesStr = dependencies && Object.keys(dependencies).length > 0
       ? JSON.stringify(dependencies, null, 2).split('\n').map(line => `  ${line}`).join('\n')
-      : "  无";
+      : `  ${this.translate.instant('FEEDBACK_DIALOG.NO_DEPENDENCIES')}`;
 
     return `
 **Basic Information**
@@ -178,34 +185,27 @@ ${descriptionStr}
   async submitFeedback(): Promise<void> {
     // 验证反馈内容
     if (!this.feedbackContent || this.feedbackContent.trim() === '') {
-      this.message.warning('请输入反馈内容');
+      this.message.warning(this.translate.instant('FEEDBACK_DIALOG.WARNING_CONTENT_EMPTY'));
       return;
     }
 
     if (!this.feedbackTitle || this.feedbackTitle.trim() === '') {
-      this.message.warning('请输入反馈标题');
+      this.message.warning(this.translate.instant('FEEDBACK_DIALOG.WARNING_TITLE_EMPTY'));
       return;
     }
 
     if (this.feedbackContent.trim().length < 10) {
-      this.message.warning('反馈内容至少需要10个字符');
+      this.message.warning(this.translate.instant('FEEDBACK_DIALOG.WARNING_CONTENT_TOO_SHORT'));
       return;
     }
 
     // 验证邮箱格式
     if (!this.isValidEmail(this.email)) {
-      this.message.warning('请输入有效的邮箱地址');
+      this.message.warning(this.translate.instant('FEEDBACK_DIALOG.WARNING_INVALID_EMAIL'));
       return;
     }
 
     this.isSubmitting = true;
-
-    // 更新按钮状态
-    this.buttons = this.buttons.map(btn => ({
-      ...btn,
-      disabled: btn.action === 'cancel',
-      loading: btn.action === 'submit'
-    }));
 
     let basicInfo = '';
     let errorLogs = '';
@@ -239,36 +239,18 @@ ${descriptionStr}
       };
 
       this.feedbackService.submitFeedback(feedbackData).subscribe(res => {
-        this.message.success('感谢您的反馈！');
+        this.message.success(this.translate.instant('FEEDBACK_DIALOG.SUCCESS_MESSAGE'));
         this.modal.close({ result: 'success', data: feedbackData });
         this.isSubmitting = false;
-        // 恢复按钮状态
-        this.buttons = this.buttons.map(btn => ({
-          ...btn,
-          disabled: false,
-          loading: false
-        }));
       }, err => {
         console.warn('提交反馈失败:', err);
-        this.message.error('提交失败，请稍后重试');
+        this.message.error(this.translate.instant('FEEDBACK_DIALOG.ERROR_SUBMIT_FAILED'));
         this.isSubmitting = false;
-        // 恢复按钮状态
-        this.buttons = this.buttons.map(btn => ({
-          ...btn,
-          disabled: false,
-          loading: false
-        }));
       });
     } catch (error) {
       console.warn('提交反馈失败:', error);
-      this.message.error('提交失败，请稍后重试');
+      this.message.error(this.translate.instant('FEEDBACK_DIALOG.ERROR_SUBMIT_FAILED'));
       this.isSubmitting = false;
-      // 恢复按钮状态
-      this.buttons = this.buttons.map(btn => ({
-        ...btn,
-        disabled: false,
-        loading: false
-      }));
     }
   }
 
