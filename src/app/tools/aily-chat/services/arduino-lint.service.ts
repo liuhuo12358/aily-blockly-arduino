@@ -57,6 +57,8 @@ export interface LintError {
 export class ArduinoLintService {
 
   private lintInProgress = false;
+  private lintSessionCount = 0; // 跟踪lint会话次数
+  private readonly CLEANUP_INTERVAL = 10; // 每10次lint后执行一次清理
 
   constructor(
     private cmdService: CmdService,
@@ -183,7 +185,7 @@ export class ArduinoLintService {
   }
 
   /**
-   * 准备临时环境 - 复用项目的 .temp 目录
+   * 准备临时环境 - 复用项目的 .temp 目录，包含库准备
    */
   private async prepareTempEnvironment(code: string): Promise<{
     tempPath: string;
@@ -218,9 +220,12 @@ export class ArduinoLintService {
         console.log(`✅ 创建 libraries 目录: ${librariesPath}`);
       }
 
-      // 写入代码到 sketch.ino 文件
+      // 准备项目库文件（新增：关键的库准备步骤）
+      await this.prepareProjectLibraries(librariesPath);
+
+      // 高效写入代码到 sketch.ino 文件（覆盖模式，无需预先删除）
       await window['fs'].writeFileSync(sketchFilePath, code);
-      console.log(`✅ 写入代码到: ${sketchFilePath}`);
+      console.log(`✅ 写入代码到: ${sketchFilePath} (${code.length} 字符)`);
 
       console.log(`✅ 临时环境准备完成，复用项目 .temp 目录: ${tempPath}`);
 
@@ -587,23 +592,56 @@ export class ArduinoLintService {
   }
 
   /**
-   * 清理临时文件 - 只清理 lint 相关的文件，不删除整个 .temp 目录
+   * 清理临时文件 - 智能清理策略，避免频繁IO操作
+   * 采用定期清理模式，只在特定条件下才执行实际清理
    */
   private async cleanupTempFiles(tempPath: string): Promise<void> {
     try {
-      // 只删除我们创建的 sketch.ino 文件，不删除整个目录
+      this.lintSessionCount++;
+      
+      // 智能清理策略：只在特定条件下执行清理
+      const shouldCleanup = (
+        this.lintSessionCount % this.CLEANUP_INTERVAL === 0 || // 每N次清理一次
+        this.lintInProgress === false // 或者在非并发状态下
+      );
+      
+      if (shouldCleanup) {
+        const sketchFilePath = tempPath + '/sketch/sketch.ino';
+        
+        if (window['path'].isExists(sketchFilePath)) {
+          await window['fs'].unlinkSync(sketchFilePath);
+          console.log(`🧹 定期清理临时文件: sketch.ino (第${this.lintSessionCount}次lint)`);
+        }
+      } else {
+        console.log(`✅ lint会话 #${this.lintSessionCount} 完成（跳过清理以提升性能）`);
+      }
+      
+      console.log('📝 临时文件保留策略: 减少IO开销，下次覆盖写入');
+    } catch (error) {
+      console.warn('清理检查失败:', error);
+      // 不抛出错误，避免影响主要功能
+    }
+  }
+
+  /**
+   * 手动清理临时文件 - 提供给用户的显式清理方法
+   */
+  async forceCleanupTempFiles(): Promise<void> {
+    try {
+      const currentProjectPath = this.projectService.currentProjectPath;
+      const tempPath = currentProjectPath + '/.temp';
       const sketchFilePath = tempPath + '/sketch/sketch.ino';
       
       if (window['path'].isExists(sketchFilePath)) {
         await window['fs'].unlinkSync(sketchFilePath);
-        console.log('✅ 清理 lint 临时文件: sketch.ino');
+        console.log('🧹 手动清理 lint 临时文件完成');
       }
       
-      // 注意：不删除 .temp 目录本身，因为可能被其他功能使用
-      console.log('✅ lint 临时文件清理完成（保留 .temp 目录结构）');
+      // 重置计数器
+      this.lintSessionCount = 0;
     } catch (error) {
-      console.warn('清理 lint 临时文件失败:', error);
-      // 不抛出错误，避免影响主要功能
+      console.error('手动清理失败:', error);
+      throw error;
     }
   }
 
@@ -657,11 +695,294 @@ export class ArduinoLintService {
     available: boolean;
     inProgress: boolean;
     version: string;
+    sessionCount: number;
+    nextCleanupIn: number;
   } {
     return {
       available: this.isAvailable(),
       inProgress: this.lintInProgress,
-      version: 'aily-builder-lint-simple'
+      version: 'aily-builder-lint-optimized',
+      sessionCount: this.lintSessionCount,
+      nextCleanupIn: this.CLEANUP_INTERVAL - (this.lintSessionCount % this.CLEANUP_INTERVAL)
     };
+  }
+
+  /**
+   * 准备项目库文件 - 简化版本，专门为lint优化
+   * 参考BuilderService的库处理逻辑，但针对lint需求简化
+   */
+  private async prepareProjectLibraries(librariesPath: string): Promise<void> {
+    try {
+      console.log('🔧 开始准备项目库文件...');
+
+      // 获取项目依赖
+      const packageJson = await this.projectService.getPackageJson();
+      const dependencies = packageJson.dependencies || {};
+
+      // 获取所有库
+      const libsList: string[] = [];
+      Object.entries(dependencies).forEach(([key, version]) => {
+        if (key.startsWith('@aily-project/lib-') && !key.startsWith('@aily-project/lib-core')) {
+          libsList.push(key);
+        }
+      });
+
+      if (libsList.length === 0) {
+        console.log('📦 项目无需要处理的库文件');
+        return;
+      }
+
+      console.log(`📦 检测到 ${libsList.length} 个项目库: ${libsList.join(', ')}`);
+
+      // 处理每个库
+      const processResults: Array<{lib: string, success: boolean, error?: string}> = [];
+
+      for (const lib of libsList) {
+        try {
+          const result = await this.processLibraryForLint(lib, librariesPath);
+          processResults.push({ lib, success: result.success, error: result.error });
+          
+          if (result.success) {
+            console.log(`✅ 库 ${lib} 处理成功`);
+          } else {
+            console.warn(`⚠️ 库 ${lib} 处理失败: ${result.error}`);
+          }
+        } catch (error: any) {
+          console.warn(`⚠️ 库 ${lib} 处理异常: ${error.message}`);
+          processResults.push({ lib, success: false, error: error.message });
+        }
+      }
+
+      // 输出处理结果统计
+      const successCount = processResults.filter(r => r.success).length;
+      const failureCount = processResults.length - successCount;
+      
+      console.log(`📊 库处理完成: 成功 ${successCount}/${processResults.length}，失败 ${failureCount}`);
+      
+      if (failureCount > 0) {
+        const failedLibs = processResults.filter(r => !r.success).map(r => r.lib);
+        console.warn(`❌ 处理失败的库: ${failedLibs.join(', ')}`);
+      }
+
+    } catch (error: any) {
+      console.error('❌ 准备项目库文件失败:', error);
+      throw new Error(`库准备失败: ${error.message}`);
+    }
+  }
+
+  /**
+   * 为lint处理单个库 - 简化版本
+   * @param lib 库名称
+   * @param librariesPath 目标libraries路径
+   * @returns 处理结果
+   */
+  private async processLibraryForLint(lib: string, librariesPath: string): Promise<{
+    success: boolean;
+    error?: string;
+    targetNames?: string[];
+  }> {
+    try {
+      const currentProjectPath = this.projectService.currentProjectPath;
+      
+      // 准备源码路径
+      let sourcePath = `${currentProjectPath}/node_modules/${lib}/src`;
+      
+      // 如果没有src文件夹，尝试解压
+      if (!window['path'].isExists(sourcePath)) {
+        const sourceZipPath = `${currentProjectPath}/node_modules/${lib}/src.7z`;
+        if (!window['path'].isExists(sourceZipPath)) {
+          console.warn(`库 ${lib} 没有src目录或src.7z文件`);
+          return { success: true }; // 不是错误，只是这个库可能不需要源码
+        }
+        
+        try {
+          console.log(`📦 解压库 ${lib}...`);
+          await this.cmdService.runAsync(`7za x "${sourceZipPath}" -o"${sourcePath}" -y`);
+        } catch (error) {
+          console.error(`解压库 ${lib} 失败:`, error);
+          return { success: false, error: `解压失败: ${error.message}` };
+        }
+      }
+
+      // 处理嵌套src目录
+      sourcePath = this.resolveNestedSrcPath(sourcePath);
+
+      if (!window['fs'].existsSync(sourcePath)) {
+        console.warn(`库 ${lib} 源码路径不存在: ${sourcePath}`);
+        return { success: true }; // 不是错误
+      }
+
+      // 检查是否包含头文件
+      const hasHeaderFiles = await this.checkForHeaderFiles(sourcePath);
+      
+      if (hasHeaderFiles) {
+        // 整个目录复制
+        return await this.copyLibraryWithHeaders(lib, sourcePath, librariesPath);
+      } else {
+        // 逐个目录复制
+        return await this.copyLibraryDirectories(lib, sourcePath, librariesPath);
+      }
+
+    } catch (error: any) {
+      console.error(`处理库 ${lib} 失败:`, error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
+   * 解析嵌套的src目录结构
+   */
+  private resolveNestedSrcPath(sourcePath: string): string {
+    if (!window['fs'].existsSync(sourcePath)) {
+      return sourcePath;
+    }
+    
+    try {
+      const srcContents = window['fs'].readDirSync(sourcePath);
+      if (srcContents.length === 1) {
+        const firstItem = srcContents[0];
+        const itemName = typeof firstItem === 'object' && firstItem !== null ? firstItem.name : firstItem;
+
+        if (itemName === 'src' && window['fs'].isDirectory(`${sourcePath}/${itemName}`)) {
+          console.log(`检测到嵌套src目录，使用 ${sourcePath}/src 作为源路径`);
+          return `${sourcePath}/src`;
+        }
+      }
+    } catch (error) {
+      console.warn(`解析嵌套src路径失败:`, error);
+    }
+    
+    return sourcePath;
+  }
+
+  /**
+   * 检查目录下是否包含头文件
+   */
+  private async checkForHeaderFiles(sourcePath: string): Promise<boolean> {
+    if (!window['fs'].existsSync(sourcePath)) {
+      return false;
+    }
+    
+    try {
+      const files = window['fs'].readDirSync(sourcePath);
+      
+      for (const file of files) {
+        const fileName = typeof file === 'object' && file !== null ? file.name : file;
+        
+        if (fileName.endsWith('.h') || fileName.endsWith('.hpp')) {
+          return true;
+        }
+      }
+      
+      return false;
+    } catch (error) {
+      console.warn('检查头文件失败:', error);
+      return false;
+    }
+  }
+
+  /**
+   * 复制包含头文件的库 - 优化版本，避免重复复制
+   */
+  private async copyLibraryWithHeaders(lib: string, sourcePath: string, librariesPath: string): Promise<{
+    success: boolean;
+    error?: string;
+    targetNames?: string[];
+  }> {
+    try {
+      console.log(`库 ${lib} 包含头文件，整体复制`);
+      const targetName = lib.split('@aily-project/')[1];
+      const targetPath = `${librariesPath}/${targetName}`;
+
+      // 性能优化：如果目标路径已存在，跳过复制
+      let shouldCopy = true;
+      if (window['path'].isExists(targetPath)) {
+        console.log(`♻️ 库 ${lib} 目标路径已存在，跳过复制以节省时间: ${targetPath}`);
+        shouldCopy = false;
+      }
+
+      // 仅在需要时执行复制操作
+      if (shouldCopy) {
+        await this.cmdService.runAsync(`Copy-Item -Path "${sourcePath}" -Destination "${targetPath}" -Recurse -Force`);
+        console.log(`✅ 库 ${lib} 复制完成: ${targetPath}`);
+      } else {
+        console.log(`✅ 库 ${lib} 复用已存在文件，节省IO时间`);
+      }
+
+      return {
+        success: true,
+        targetNames: [targetName]
+      };
+    } catch (error: any) {
+      console.error(`复制库 ${lib} 失败:`, error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
+   * 复制不包含头文件的库（逐个目录）- 优化版本，避免重复复制
+   */
+  private async copyLibraryDirectories(lib: string, sourcePath: string, librariesPath: string): Promise<{
+    success: boolean;
+    error?: string;
+    targetNames?: string[];
+  }> {
+    try {
+      console.log(`库 ${lib} 不包含头文件，逐个复制目录`);
+      const targetNames: string[] = [];
+      const copyOperations: Array<{source: string, target: string, itemName: string}> = [];
+
+      if (!window['fs'].existsSync(sourcePath)) {
+        return { success: true, targetNames: [] };
+      }
+
+      const items = window['fs'].readDirSync(sourcePath);
+
+      for (const item of items) {
+        const itemName = typeof item === 'object' && item !== null ? item.name : item;
+        const fullSourcePath = `${sourcePath}/${itemName}`;
+
+        if (window['fs'].isDirectory(fullSourcePath)) {
+          const targetPath = `${librariesPath}/${itemName}`;
+
+          // 性能优化：检查目标路径是否已存在
+          let shouldCopy = true;
+          if (window['path'].isExists(targetPath)) {
+            console.log(`♻️ 目录 ${itemName} 已存在，跳过复制以节省时间`);
+            shouldCopy = false;
+          }
+
+          if (shouldCopy) {
+            copyOperations.push({
+              source: fullSourcePath,
+              target: targetPath,
+              itemName: itemName
+            });
+          }
+          
+          targetNames.push(itemName);
+        }
+      }
+
+      // 批量执行需要的复制操作
+      if (copyOperations.length > 0) {
+        console.log(`📦 需要复制 ${copyOperations.length}/${targetNames.length} 个目录`);
+        
+        for (const op of copyOperations) {
+          await this.cmdService.runAsync(`Copy-Item -Path "${op.source}" -Destination "${op.target}" -Recurse -Force`);
+          console.log(`✅ 复制目录: ${op.itemName}`);
+        }
+      } else {
+        console.log(`✅ 所有目录已存在，无需复制，节省了大量IO时间`);
+      }
+
+      return {
+        success: true,
+        targetNames
+      };
+    } catch (error: any) {
+      console.error(`复制库目录 ${lib} 失败:`, error);
+      return { success: false, error: error.message };
+    }
   }
 }
