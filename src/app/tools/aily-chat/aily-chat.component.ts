@@ -141,6 +141,8 @@ export class AilyChatComponent implements OnDestroy {
   prjRootPath = '';
   prjPath = '';
 
+  currentUserGroup = [];
+
   windowInfo = 'AI助手';
 
   isCompleted = false;
@@ -719,7 +721,11 @@ export class AilyChatComponent implements OnDestroy {
     );
 
     this.authService.initializeAuth().then((res) => {
-      console.log('AuthService initialized:', res);
+      // 初始化完成后的处理
+    });
+
+    this.authService.userInfo$.subscribe(userInfo => {
+      this.currentUserGroup = userInfo?.groups || [];
     });
 
     // 订阅登录状态变化
@@ -741,7 +747,8 @@ export class AilyChatComponent implements OnDestroy {
             // 获取历史记录
             this.getHistory();
           }).catch((err) => {
-            console.error("startSession error: ", err);
+            // console.error("startSession error: ", err);
+            
           });
         }
 
@@ -962,10 +969,6 @@ ${JSON.stringify(errData)}
       return Promise.resolve();
     }
 
-    console.log('开始启动会话...', {
-      currentSessionId: this.sessionId,
-      isSessionStarting: this.isSessionStarting
-    });
     this.isSessionStarting = true;
 
     if (!this.mcpInitialized) {
@@ -996,12 +999,10 @@ ${JSON.stringify(errData)}
             this.isSessionStarting = false;
             resolve();
           } else {
-            console.log("startSession failed: ", res);
+            let errData = {"message": res.message || '启动会话失败，请稍后重试。'}
             this.appendMessage('error', `
 \`\`\`aily-error
-{
-  "message": ${res.message || '启动会话失败，请稍后重试。'}
-}
+${JSON.stringify(errData)}
 \`\`\`\n\n`)
             this.isSessionStarting = false;
             reject(new Error(res.message || '启动会话失败'));
@@ -2136,7 +2137,6 @@ ${JSON.stringify(errData)}
 
         // 保存会话, 如果sessionId存在的话
         try {
-          console.log("historyList: ", this.chatService.historyList);
           let historyData = this.chatService.historyList.find(h => h.sessionId === this.sessionId);
           if (!historyData) {
             this.chatService.historyList.push({ sessionId: this.sessionId, name: "q" + Date.now() });
@@ -2701,11 +2701,17 @@ ${JSON.stringify(errData)}
    * @param mode 要切换到的模式
    */
   private async switchToMode(mode: string) {
-    // // 暂禁止切换为agent模式
-    // if (mode === 'agent') {
-    //   this.message.warning('当前账号暂时无法使用该模式！');
-    //   return;
-    // }
+    if (mode === this.currentMode) {
+      return;
+    }
+
+    // 暂禁止切换为agent模式
+    if (mode === 'agent') {
+      if (!(this.currentUserGroup.includes('pro') || this.currentUserGroup.includes('admin'))) {
+        this.message.warning('当前账号暂时无法使用该模式！');
+        return;
+      }
+    }
     this.chatService.currentMode = mode;
     console.log('切换AI模式为:', this.currentMode);
     await this.stopAndCloseSession();
