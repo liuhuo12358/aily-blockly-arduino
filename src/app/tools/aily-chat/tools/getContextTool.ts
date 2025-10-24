@@ -13,7 +13,7 @@ interface ProjectInfo {
     rootFolder?: string;
     opened?: boolean;
     appDataPath?: string;
-    // blocklylibrariesPath?: string;
+    blocklylibrariesPath?: string;
 }
 
 interface PlatformInfo {
@@ -105,30 +105,30 @@ async function getProjectInfo(projectService): Promise<ProjectInfo> {
             rootFolder: prjRootPath || '',
             opened: !!currentProjectPath,
             appDataPath: appDataPath,
-            // blocklylibrariesPath: appDataPath ? window['path'].join(appDataPath,'libraries') : ''
+            blocklylibrariesPath: appDataPath ? window['path'].join(appDataPath, 'libraries') : ''
         };
-        
+
         // If current project path is empty, return early
         if (!currentProjectPath) {
             return result;
         }
-        
+
         // Set root folder
         result.rootFolder = window["path"].basename(currentProjectPath);
-        
+
         // Try to read package.json for name and dependencies
         const packageJsonPath = window["path"].join(currentProjectPath, 'package.json');
-        
+
         if (window['fs'].existsSync(packageJsonPath)) {
             const packageJson = JSON.parse(window['fs'].readFileSync(packageJsonPath, 'utf8'));
             result.name = packageJson.name;
-            
+
             // Add dependencies information
             // Note: You might want to update the ProjectInfo interface to include dependencies
             (result as any).dependencies = packageJson.dependencies || {};
             (result as any).boardDependencies = packageJson.boardDependencies || {};
         }
-        
+
         return result;
     } catch (error) {
         console.error('Error getting project info:', error);
@@ -141,14 +141,14 @@ function getEditingMode(): { mode: 'blockly' | 'code' | 'unknown' } {
         // Make sure we're in a browser environment
         if (typeof window !== 'undefined' && window.location) {
             const path = window.location.pathname;
-            
+
             if (path.includes('/main/blockly-editor')) {
                 return { mode: 'blockly' };
             } else if (path.includes('/main/code-editor')) {
                 return { mode: 'code' };
             }
         }
-        
+
         return { mode: 'unknown' };
     } catch (error) {
         console.error('Error determining editing mode:', error);

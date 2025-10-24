@@ -94,6 +94,10 @@ export class _BuilderService {
     this.actionService.listen('compile-cancel', (action) => {
       this.cancel();
     }, 'builder-compile-cancel');
+    this.actionService.listen('compile-reset', async (action) => {
+      this.passed = false;
+      this.lastCode = "";
+    }, 'builder-compile-reset');
   }
 
   destroy() {
@@ -360,29 +364,55 @@ export class _BuilderService {
 
           compilerParam = compilerParamList.join(' ');
 
-          // 获取和解析项目编译参数
-          let buildProperties = '';
-          try {
-            const projectConfig = await this.projectService.getProjectConfig();
-            if (projectConfig) {
-              const buildPropertyParams: string[] = [];
+        // 获取和解析项目编译参数
+        let buildProperties = '';
+        try {
+          const projectConfig = await this.projectService.getProjectConfig();
+          if (projectConfig) {
+            const buildPropertyParams: string[] = [];
 
-              // 遍历配置对象，解析编译参数
-              Object.values(projectConfig).forEach((configSection: any) => {
-                if (configSection && typeof configSection === 'object') {
-                  // 遍历每个配置段（如 build、upload 等）
-                  Object.entries(configSection).forEach(([sectionKey, sectionValue]: [string, any]) => {
-                    // 排除upload等非编译相关的配置段
-                    if (sectionKey == 'upload') return;
-                    if (sectionValue && typeof sectionValue === 'object') {
-                      // 遍历具体的配置项
-                      Object.entries(sectionValue).forEach(([key, value]: [string, any]) => {
-                        buildPropertyParams.push(`--build-property ${sectionKey}.${key}=${value}`);
-                      });
-                    }
-                  });
+            
+            // projectConfig是个JSON对象，包含多个配置段
+            // 遍历输出每一个key及其值
+            Object.entries(projectConfig).forEach(([key, value]) => {
+              if (value !== null && value !== undefined && value !== '') {
+                // if (/upload/i.test(key)) return; // 跳过包含 upload 的配置项
+                buildPropertyParams.push(`--board-options ${key}=${value}`);
+                console.log(`解析配置: --board-options ${key}=${value}`);
+              }
+
+              if (key === 'PartitionScheme' && value === 'custom') {
+                // 判断项目目录下分区文件是否存在
+                const partitionFilePath = this.currentProjectPath + '/partitions.csv';
+                if (!window['path'].isExists(partitionFilePath)) {
+                  this.handleCompileError('选择了自定义分区方案，但未找到 partitions.csv 分区文件');
                 }
-              });
+                // 复制自定义分区文件到临时目录
+                const destPartitionFilePath = sketchPath + '/partitions.csv';
+                try {
+                  this.cmdService.runAsync(`Copy-Item -Path "${partitionFilePath}" -Destination "${destPartitionFilePath}" -Force`);
+                } catch (error) {
+                  this.handleCompileError('复制分区文件失败:', error);
+                }
+              }
+            });
+
+            // // 遍历配置对象，解析编译参数
+            // Object.values(projectConfig).forEach((configSection: any) => {
+            //   if (configSection && typeof configSection === 'object') {
+            //     // 遍历每个配置段（如 build、upload 等）
+            //     Object.entries(configSection).forEach(([sectionKey, sectionValue]: [string, any]) => {
+            //       // 排除upload等非编译相关的配置段
+            //       if (sectionKey == 'upload') return;
+            //       if (sectionValue && typeof sectionValue === 'object') {
+            //         // 遍历具体的配置项
+            //         Object.entries(sectionValue).forEach(([key, value]: [string, any]) => {
+            //           buildPropertyParams.push(`--build-property ${sectionKey}.${key}=${value}`);
+            //         });
+            //       }
+            //     });
+            //   }
+            // });
 
               buildProperties = buildPropertyParams.join(' ');
               if (buildProperties) {
@@ -440,6 +470,10 @@ export class _BuilderService {
           this.cmdService.run(compileCommand, null, false).subscribe({
             next: (output: CmdOutput) => {
               console.log('编译命令输出:', output);
+              if (output.type === 'close' && output.code !== 0) {
+                this.isErrored = true;
+                return;
+              }
               if (this.cancelled) {
                 return;
               }
@@ -565,6 +599,8 @@ export class _BuilderService {
                             lastStdErr = trimmedLine;
                             fullStdErr += trimmedLine + '\n';
                             this.isErrored = true;
+                          } else {
+                            fullStdErr += trimmedLine + '\n';
                           }
                         } else {
                           this.logService.update({ "detail": trimmedLine, "state": "doing" });
@@ -592,7 +628,6 @@ export class _BuilderService {
               reject({ state: 'error', text: error.message });
             },
             complete: () => {
-              console.log('编译命令执行完成');
               if (this.buildCompleted) {
                 console.log('编译命令执行完成');
                 // 计算编译耗时

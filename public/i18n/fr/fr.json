@@ -29,10 +29,16 @@
     },
     "ESP32": {
         "UPLOAD_SPEED": "Vitesse de téléchargement",
+        "UPLOAD_MODE": "Méthode de Téléversement",
         "FLASH_MODE": "Mode Flash",
         "FLASH_SIZE": "Taille Flash",
         "PARTITION_SCHEME": "Schéma de partition",
         "CDC_ON_BOOT": "USB CDC au démarrage"
+    },
+    "STM32": {
+        "BOARD": "Sélection du modèle de la carte",
+        "USB": "Paramètres USB",
+        "UPLOAD_METHOD": "Méthode de Téléversement"
     },
     "GUIDE": {
         "START": "Démarrer",
@@ -92,6 +98,7 @@
             "DEV": "dev"
         },
         "FORM": {
+            "DEVMODE": "Cadre de développement",
             "BOARD": "Carte",
             "PROJECT_NAME": "Nom du Projet",
             "SAVE_PATH": "Chemin de Sauvegarde",
@@ -137,5 +144,33 @@
         "IOT": "IoT",
         "OTHERS": "Autres",
         "ALL": "Toutes les bibliothèques"
+    },
+    "BOARD_SELECTOR": {
+        "TITLE": "Changer de carte",
+        "SEARCH_PLACEHOLDER": "Rechercher une carte...",
+        "EMPTY_LIST": "Aucune carte correspondante trouvée",
+        "CANCEL": "Annuler",
+        "CONFIRM": "Confirmer",
+        "LOADING": "Changement de carte...",
+        "SWITCH_FAILED": "Échec du changement de carte"
+    },
+    "UPDATE_DIALOG": {
+        "TITLE": "Mise à jour du logiciel",
+        "DOWNLOAD_FAILED": "Échec du téléchargement",
+        "REMIND_LATER": "Rappeler plus tard",
+        "SKIP_VERSION": "Ignorer cette version",
+        "UPDATE_NOW": "Mettre à jour maintenant",
+        "CANCEL_DOWNLOAD": "Annuler le téléchargement",
+        "INSTALL_LATER": "Installer plus tard",
+        "INSTALL_NOW": "Installer maintenant",
+        "CLOSE": "Fermer",
+        "RETRY": "Réessayer"
+    },
+    "UNSAVE_DIALOG": {
+        "TITLE": "Modifications non enregistrées",
+        "MESSAGE": "Vous avez des modifications non enregistrées. Voulez-vous les enregistrer ?",
+        "CANCEL": "Annuler",
+        "SKIP_SAVE": "Ignorer l'enregistrement",
+        "SAVE_AND_CONTINUE": "Enregistrer et continuer"
     }
 }

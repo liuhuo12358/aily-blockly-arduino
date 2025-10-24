@@ -1,5 +1,6 @@
 import { Component, Input, OnInit, OnDestroy } from '@angular/core';
 import { PinmapComponent } from '../../app-store/pinmap/pinmap.component';
+import { FeedbackDialogComponent } from '../feedback-dialog/feedback-dialog.component';
 import { NzModalModule, NzModalService } from 'ng-zorro-antd/modal';
 import { NzToolTipModule } from 'ng-zorro-antd/tooltip';
 import { CommonModule } from '@angular/common';
@@ -9,6 +10,7 @@ import { Subscription } from 'rxjs';
 import { filter } from 'rxjs/operators';
 import { ElectronService } from '../../services/electron.service';
 import { NzMessageService } from 'ng-zorro-antd/message';
+import { UiService } from '../../services/ui.service';
 @Component({
   selector: 'app-float-sider',
   imports: [
@@ -30,7 +32,8 @@ export class FloatSiderComponent implements OnInit, OnDestroy {
     private projectService: ProjectService,
     private router: Router,
     private electronService: ElectronService,
-    private message: NzMessageService
+    private message: NzMessageService,
+    private uiService: UiService
   ) { }
 
   ngOnInit() {
@@ -94,5 +97,13 @@ export class FloatSiderComponent implements OnInit, OnDestroy {
       return;
     }
     this.electronService.openUrl(data.url)
+  }
+
+  openSettings() {
+
+  }
+
+  openFeedback() {
+    this.uiService.openFeedback();
   }
 }

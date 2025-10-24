@@ -11,6 +11,12 @@ export let ESP32_CONFIG_MENU: IMenuItem[] = [
         children: []
     },
     {
+        name: 'ESP32.UPLOAD_MODE',
+        data: {},
+        icon: "fa-light fa-cloud-arrow-up",
+        children: []
+    },
+    {
         name: 'ESP32.FLASH_MODE',
         data: {},
         icon: 'fa-light fa-tablet-rugged',
@@ -34,4 +40,10 @@ export let ESP32_CONFIG_MENU: IMenuItem[] = [
         icon: "fa-light fa-hard-drive",
         children: []
     },
+    {
+        name: 'ESP32.PSRAM',
+        data: {},
+        icon: "fa-light fa-memory",
+        children: []
+    }
 ]

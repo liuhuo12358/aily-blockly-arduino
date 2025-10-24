@@ -158,4 +158,17 @@ export class GuideComponent implements OnInit, AfterViewInit {
     }, 1000);
 
   }
+
+  test() {
+    console.log(this.electronService.isWindowFocused());
+    setTimeout(() => {
+      // if (!this.electronService.isWindowFocused()) {
+      //   this.electronService.notify('测试', '开发阶段刷卡JFK拉萨机');
+      // }
+    }, 12000)
+  }
+
+  openFeedback() {
+    this.uiService.openFeedback();
+  }
 }

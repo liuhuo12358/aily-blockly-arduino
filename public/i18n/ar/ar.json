@@ -29,10 +29,16 @@
     },
     "ESP32": {
         "UPLOAD_SPEED": "سرعة الرفع",
+        "UPLOAD_MODE": "طريقة الرفع",
         "FLASH_MODE": "وضع الفلاش",
         "FLASH_SIZE": "حجم الفلاش",
         "PARTITION_SCHEME": "مخطط التقسيم",
         "CDC_ON_BOOT": "USB CDC عند التشغيل"
+    },
+    "STM32": {
+        "BOARD": "اختيار نموذج اللوحة",
+        "USB": "إعدادات USB",
+        "UPLOAD_METHOD": "طريقة الرفع"
     },
     "GUIDE": {
         "START": "البدء",
@@ -92,6 +98,7 @@
             "DEV": "تطوير"
         },
         "FORM": {
+            "DEVMODE": "إطار التطوير",
             "BOARD": "اللوحة",
             "PROJECT_NAME": "اسم المشروع",
             "SAVE_PATH": "مسار الحفظ",
@@ -134,5 +141,33 @@
         "IOT": "إنترنت الأشياء",
         "OTHERS": "أخرى",
         "ALL": "كل المكتبات"
+    },
+    "BOARD_SELECTOR": {
+        "TITLE": "تبديل اللوحة",
+        "SEARCH_PLACEHOLDER": "ابحث عن لوحة...",
+        "EMPTY_LIST": "لم يتم العثور على لوحات مطابقة",
+        "CANCEL": "إلغاء",
+        "CONFIRM": "تأكيد",
+        "LOADING": "جاري تبديل اللوحة...",
+        "SWITCH_FAILED": "فشل تبديل اللوحة"
+    },
+    "UPDATE_DIALOG": {
+        "TITLE": "تحديث البرنامج",
+        "DOWNLOAD_FAILED": "فشل التنزيل",
+        "REMIND_LATER": "تذكير لاحقًا",
+        "SKIP_VERSION": "تخطي هذا الإصدار",
+        "UPDATE_NOW": "التحديث الآن",
+        "CANCEL_DOWNLOAD": "إلغاء التنزيل",
+        "INSTALL_LATER": "التثبيت لاحقًا",
+        "INSTALL_NOW": "التثبيت الآن",
+        "CLOSE": "إغلاق",
+        "RETRY": "إعادة المحاولة"
+    },
+    "UNSAVE_DIALOG": {
+        "TITLE": "تغييرات غير محفوظة",
+        "MESSAGE": "لديك تغييرات غير محفوظة. هل تريد حفظها؟",
+        "CANCEL": "إلغاء",
+        "SKIP_SAVE": "تخطي الحفظ",
+        "SAVE_AND_CONTINUE": "الحفظ والمتابعة"
     }
 }
