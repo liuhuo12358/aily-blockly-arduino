@@ -14,6 +14,34 @@ declare const Blockly: any;
 // 类型定义
 // =============================================================================
 
+function generateErrorInfo() {
+  return `
+  # How to Generate Blockly Code
+  STEP 1: List target libraries
+  - Identify every library used in the blocks, including core libraries.
+  STEP 2: Read library readme
+  - For each library, read the README.md or use an analysis tool to understand its purpose and main features.
+  STEP 3: Create Blockly code
+  - Based on the identified libraries, use smart_block_tool and create_code_structure_tool to build the Blockly code structure.
+  STEP 4: Gathering tool feedback
+  - Tool responses may include:
+    - workspaceOverview: A summary of the current Blockly workspace structure.
+    - cppCode: The generated C++ code from the Blockly workspace.
+  - If code generation fails, check for syntax errors and fix them.
+  - Analyze code logic consistency with intended functionality.
+  STEP 5: Troubleshooting
+  - Review the generated code and ensure all libraries are correctly referenced.
+  - Iterate through the process until successful code generation is achieved.
+  `;
+}
+
+function generateSuccessInfo() {
+  return `
+  Analyze the code logic to ensure it aligns with the intended functionality of the blocks.
+  Ensure code structure follows best practices for readability and maintainability.
+  `;
+}
+
 interface Position {
   x?: number;
   y?: number;
@@ -893,9 +921,13 @@ function getFieldTypeInfo(block: any, fieldName: string): {
   }
 }
 
-function configureBlockFields(block: any, fields: FieldConfig): void {
-  if (!fields) return;
-  
+function configureBlockFields(block: any, fields: FieldConfig): {
+  configSuccess: boolean;
+} {
+  if (!fields) return { configSuccess: false };
+
+  let configSuccess = false;
+
   try {
     for (const [fieldName, value] of Object.entries(fields)) {
       if (value !== undefined && value !== null) {
@@ -923,17 +955,39 @@ function configureBlockFields(block: any, fields: FieldConfig): void {
             // 🔧 变量字段：进行智能变量处理（field_variable类型）
             console.log(`🔧 检测到变量字段 (${fieldTypeInfo.fieldType})，开始智能处理: ${fieldName} = ${actualValue}`);
             
-            // 🎯 尝试从字段配置中提取变量类型信息
-            let variableType: string | undefined = undefined;
-            if (typeof value === 'object' && value !== null && (value as any).type) {
-              variableType = (value as any).type;
-              console.log(`🔍 从字段配置提取变量类型: ${variableType}`);
+            // ⚠️ 关键修复：检查是否已经是变量ID，避免重复处理
+            // 变量ID通常是长的特殊字符串，不是简单的变量名
+            const workspace = block.workspace || getActiveWorkspace();
+            const variableMap = workspace?.getVariableMap?.();
+            
+            let finalVariableId: string | null = null;
+            
+            // 首先检查这个值是否已经是一个有效的变量ID
+            if (variableMap) {
+              const existingVarById = variableMap.getVariableById?.(actualValue);
+              if (existingVarById) {
+                console.log(`✅ 检测到值已经是变量ID: ${actualValue}`);
+                finalVariableId = actualValue;
+              }
             }
             
-            const variableId = handleVariableField(block, actualValue, true, variableType);
-            if (variableId) {
-              block.setFieldValue(variableId, fieldName);
-              console.log(`✅ 变量字段设置成功: ${fieldName} = ${variableId} (变量名: ${actualValue})`);
+            // 如果不是ID，才需要查找或创建变量
+            if (!finalVariableId) {
+              console.log(`🔍 值不是现有变量ID，尝试查找或创建变量: ${actualValue}`);
+              
+              let variableType: string | undefined = undefined;
+              if (typeof value === 'object' && value !== null && (value as any).type) {
+                variableType = (value as any).type;
+                console.log(`🔍 从字段配置提取变量类型: ${variableType}`);
+              }
+              
+              finalVariableId = handleVariableField(block, actualValue, true, variableType);
+            }
+            
+            if (finalVariableId) {
+              block.setFieldValue(finalVariableId, fieldName);
+              console.log(`✅ 变量字段设置成功: ${fieldName} = ${finalVariableId} (原始值: ${actualValue})`);
+              configSuccess = true;
             } else {
               console.warn(`⚠️ 变量字段处理失败，使用原值: ${fieldName} = ${actualValue}`);
               block.setFieldValue(actualValue, fieldName);
@@ -944,12 +998,13 @@ function configureBlockFields(block: any, fields: FieldConfig): void {
             console.log(`📋 检测到下拉菜单字段 (${fieldTypeInfo.fieldType})，设置选项: ${fieldName} = ${actualValue}`);
             block.setFieldValue(actualValue, fieldName);
             console.log(`✅ 下拉菜单设置成功: ${fieldName} = ${actualValue}`);
-            
+            configSuccess = true;
           } else {
             // 📋 常规字段：直接设置值
             console.log(`📋 常规字段处理: ${fieldName} = ${actualValue} (类型: ${fieldTypeInfo.fieldType || '未知'})`);
             block.setFieldValue(actualValue, fieldName);
             console.log(`✅ 字段设置成功: ${fieldName} = ${actualValue}`);
+            configSuccess = true;
           }
         } catch (fieldError) {
           console.warn(`⚠️ 字段设置失败: ${fieldName}`, fieldError);
@@ -959,6 +1014,8 @@ function configureBlockFields(block: any, fields: FieldConfig): void {
   } catch (error) {
     console.warn('配置字段时出错:', error);
   }
+
+  return { configSuccess };
 }
 
 /**
@@ -989,6 +1046,13 @@ function handleVariableField(block: any, variableName: string, returnId: boolean
     }
     
     console.log(`📋 变量映射对象:`, variableMap);
+
+    // ⚠️ 关键检查：如果输入的已经是一个变量ID，直接返回，不要重复处理！
+    const possibleExistingVar = variableMap.getVariableById?.(variableName);
+    if (possibleExistingVar) {
+      console.log(`✅ 输入值已经是有效的变量ID: ${variableName}，直接返回`);
+      return variableName; // 直接返回这个ID，不做任何处理
+    }
 
     // 1. 首先尝试按名称查找现有变量 - 使用多种方法确保查找准确
     console.log(`🔍 开始查找变量: "${variableName}"`);
@@ -1050,7 +1114,7 @@ function handleVariableField(block: any, variableName: string, returnId: boolean
     console.log(`🆕 变量不存在，创建新变量: ${variableName}`);
     
     // 根据提供的类型或块类型推断变量类型
-    let finalVariableType = variableType || 'any'; // 使用提供的类型，如果没有则默认为'any'
+    let finalVariableType = variableType || ''; // 使用提供的类型，如果没有则默认为''
     
     if (!variableType && block.type) {
       // 从块类型推断变量类型
@@ -1297,7 +1361,22 @@ async function smartInsertBlock(
         
         if (!requiredConnection) {
           const connectionType = isStatementInput ? 'previousConnection' : 'outputConnection';
-          throw new Error(`新块 ${newBlock.type} 没有所需的 ${connectionType}，无法连接到输入 "${inputName}"`);
+          const blockCategory = isStatementInput ? '语句块' : '表达式块';
+          const expectedType = isStatementInput ? '语句块（如digital_write、serial_println等）' : '表达式块（如math_number、variable_get等）';
+          const inputCategory = isStatementInput ? '语句输入' : '值输入';
+          
+          console.error(`❌ 连接类型不匹配详细分析:`);
+          console.error(`  - 目标输入: "${inputName}" (${inputCategory}, 类型: ${inputConnection.type})`);
+          console.error(`  - 新块类型: ${newBlock.type} (${newBlock.outputConnection ? '表达式块' : newBlock.previousConnection ? '语句块' : '无连接块'})`);
+          console.error(`  - 需要的连接: ${connectionType}`);
+          console.error(`  - 期望块类型: ${expectedType}`);
+          console.error(`  - 块连接情况: outputConnection=${!!newBlock.outputConnection}, previousConnection=${!!newBlock.previousConnection}`);
+          
+          throw new Error(`🔌 连接失败：块 "${newBlock.type}" 是${newBlock.outputConnection ? '表达式块' : '语句块'}，但输入 "${inputName}" 需要${blockCategory}。\n` +
+                         `💡 建议：\n` + 
+                         `  - 如果要设置参数值，请使用值输入端口\n` +
+                         `  - 如果要执行动作，请使用支持语句连接的块\n` +
+                         `  - 检查块类型是否正确匹配输入要求`);
         }
         
         // 🆕 检测块链（只对语句连接有意义）
@@ -1642,10 +1721,11 @@ export async function smartBlockTool(args: SmartBlockArgs): Promise<SmartBlockRe
     const { overview: workspaceOverview, cppCode, isError } = await getWorkspaceOverviewInfo();
 
     // 生成增强的结果消息
-    let enhancedMessage = `✅ 成功创建智能块 ${type}`;
-    if (result.totalBlocks && result.totalBlocks > 1) {
-      enhancedMessage += `，包含 ${result.totalBlocks} 个块`;
-    }
+    // let enhancedMessage = `✅ 完成创建智能块 ${type}`;
+    // if (result.totalBlocks && result.totalBlocks > 1) {
+    //   enhancedMessage += `，包含 ${result.totalBlocks} 个块`;
+    // }
+    let enhancedMessage = `✅ 完成创建智能块`;
     
     // 🔧 如果有变量字段，添加处理信息
     if (parsedFields) {
@@ -1684,7 +1764,8 @@ export async function smartBlockTool(args: SmartBlockArgs): Promise<SmartBlockRe
     const errorResult = {
       is_error: true,
       content: `智能块工具执行失败: ${(error as Error).message}`,
-      details: `请确保已阅读该block所属library的Readme，或者使用工具分析了这个库的块定义。`
+      // details: `<system-reminder>${generateErrorInfo()}</system-reminder>`
+      details: ``
     };
     
     // 注入todo提醒
@@ -2888,7 +2969,7 @@ export async function createCodeStructureTool(
     console.log(`� 使用动态结构定义创建: ${structure}`);
     const rootBlock = await createDynamicStructure(workspace, config, blockPosition, createdBlocks, connections);
 
-    if (rootBlock) {
+    if (rootBlock.block) {
       // 处理插入位置
       console.log('🔗 检查插入位置条件:');
       console.log('- insertPosition:', insertPosition);
@@ -2917,7 +2998,14 @@ export async function createCodeStructureTool(
         workspaceOverview: isError ? null : workspaceOverview
       };
 
-      toolResult = `✅ 成功创建 ${structure} 代码结构
+      toolResult = ``;
+      if (rootBlock.error) {
+        toolResult += `⚠️ 注意: 在创建过程中遇到一些问题，部分块创建失败或者连接错误！请仔细检查并修复这些问题，务必读取相关库的readme。\n`
+      } else {
+        // toolResult += `✅ 成功创建 ${structure} 代码结构`;
+        toolResult += `✅ 创建完成代码结构 `;
+      }
+        toolResult += `
 
 📊 创建结果概览:
 - 结构名称: ${structure}
@@ -2932,7 +3020,8 @@ ${workspaceOverview}`;
 
   } catch (error) {
     is_error = true;
-    toolResult = `创建代码结构失败: ${error instanceof Error ? error.message : String(error)}，请确保已阅读该block所属library的Readme，或者使用工具分析了这个库的块定义。`;
+    // toolResult = `创建代码结构失败: ${error instanceof Error ? error.message : String(error)}，<system-reminder>${generateErrorInfo()}</system-reminder>`;
+    toolResult = `创建代码结构失败: ${error instanceof Error ? error.message : String(error)}`;
     console.error('❌ createCodeStructureTool 执行失败:', error);
   }
 
@@ -3317,8 +3406,9 @@ ${workspaceOverview}`;
   } catch (error) {
     console.error('❌ 连接失败:', error);
     return {
-      is_error: true,
-      content: `❌ 连接失败: ${error instanceof Error ? error.message : String(error)}`
+          is_error: true,
+          // content: `❌ 连接失败: ${error instanceof Error ? error.message : String(error)}，<system-reminder>${generateErrorInfo()}</system-reminder>`,
+          content: `❌ 连接失败: ${error instanceof Error ? error.message : String(error)}`
     };
   }
 }
@@ -5083,6 +5173,11 @@ function formatWorkspaceOverviewText(
   
   lines.push('');
   
+  if (statistics.totalBlocks > 2 || statistics.isolatedBlocks > 0) {
+    lines.push(`⚠️ 注意: 工作区包含较多块或孤立块，建议检查结构完整性，如果有需要请优化设计以提升代码质量`);
+    lines.push('');
+  }
+  
   // 变量信息
   if (structure.variables && structure.variables.length > 0) {
     lines.push('📝 变量列表:');
@@ -5119,7 +5214,8 @@ function formatWorkspaceOverviewText(
     if (structure.lintResult) {
       lines.push('🔍 Arduino语法检测结果:');
       if (structure.lintResult.isValid) {
-        lines.push('  ✅ 语法检查通过，代码无错误');
+        lines.push(`  <system-reminder>${generateSuccessInfo()}</system-reminder>`);
+        lines.push('  ✅ 语法检查通过，代码无错误，但是必须对代码进行深入分析以确保逻辑正确:');
         lines.push(`  ⏱️ 检查耗时: ${structure.lintResult.duration || 0}ms`);
         lines.push(`  🔧 检查工具: ${structure.lintResult.toolUsed || 'unknown'}`);
         if (structure.lintResult.mode) {
@@ -5312,14 +5408,21 @@ export async function configureBlockTool(args: any): Promise<ToolUseResult> {
     let fieldsUpdated: string[] = [];
     const inputsUpdated: string[] = [];
 
+    let check: boolean = false;
+
     // 配置字段
     if (fields) {
       console.log('🏷️ 开始更新字段...');
       try {
         // 使用我们修复的 configureBlockFields 函数
-        configureBlockFields(targetBlock, fields);
-        fieldsUpdated = Object.keys(fields);
-        console.log(`✅ 字段更新完成: ${fieldsUpdated.join(', ')}`);
+        let callback = configureBlockFields(targetBlock, fields);
+        check = callback.configSuccess;
+        if (check) {
+          fieldsUpdated = Object.keys(fields);
+          console.log(`✅ 字段更新完成: ${fieldsUpdated.join(', ')}`);
+        } else {
+          console.warn(`❌ 字段更新失败`);
+        }
       } catch (error) {
         console.warn('字段配置时出错:', error);
       }
@@ -5330,11 +5433,17 @@ export async function configureBlockTool(args: any): Promise<ToolUseResult> {
       console.log('🔌 输入配置暂不支持（可以在此扩展）');
     }
 
-    const message = `✅ 块配置成功: ${targetBlock.type} [${blockId}] ${fieldsUpdated.length > 0 ? `，更新字段: ${fieldsUpdated.join(', ')}` : ''}`;
+    let message = ``;
+    if (check) {
+      message += `✅ 块配置成功: ${targetBlock.type} [${blockId}] ${fieldsUpdated.length > 0 ? `，更新字段: ${fieldsUpdated.join(', ')}` : ''}`;
+    } else {
+      message += `⚠️ 块配置部分失败，请检查提供的字段和值是否正确。请阅读库readme以获取支持的字段列表。`;
+    }
+    // const message = `✅ 块配置成功: ${targetBlock.type} [${blockId}] ${fieldsUpdated.length > 0 ? `，更新字段: ${fieldsUpdated.join(', ')}` : ''}`;
     console.log(message);
 
     return {
-      is_error: false,
+      is_error: check ? false : true,
       content: message,
       details: JSON.stringify({
         blockId: targetBlock.id,
@@ -6822,8 +6931,50 @@ async function createDynamicStructure(
   if (!config.structureDefinition) {
     throw new Error('动态结构必须提供 structureDefinition 配置');
   }
+
+  let createError = false;
   
-  const { rootBlock: rootConfig, additionalBlocks = [], connectionRules = [] } = config.structureDefinition;
+  // 🔧 自动修复：检测错误嵌套的 additionalBlocks 和 connectionRules
+  let structureDefinition = { ...config.structureDefinition };
+  
+  console.log('🔍 检查结构定义是否需要修复...');
+  console.log('原始structureDefinition:', JSON.stringify(structureDefinition, null, 2));
+  
+  // 检查 rootBlock 是否错误地包含了 additionalBlocks 和 connectionRules
+  if (structureDefinition.rootBlock) {
+    let needsFix = false;
+    const rootBlock = { ...structureDefinition.rootBlock };
+    
+    // 检测并提取错误嵌套的 additionalBlocks
+    if (rootBlock.additionalBlocks) {
+      console.log('🔧 检测到 additionalBlocks 错误嵌套在 rootBlock 中，正在提取...');
+      if (!structureDefinition.additionalBlocks) {
+        structureDefinition.additionalBlocks = rootBlock.additionalBlocks;
+      }
+      delete rootBlock.additionalBlocks;
+      needsFix = true;
+    }
+    
+    // 检测并提取错误嵌套的 connectionRules
+    if (rootBlock.connectionRules) {
+      console.log('🔧 检测到 connectionRules 错误嵌套在 rootBlock 中，正在提取...');
+      if (!structureDefinition.connectionRules) {
+        structureDefinition.connectionRules = rootBlock.connectionRules;
+      }
+      delete rootBlock.connectionRules;
+      needsFix = true;
+    }
+    
+    if (needsFix) {
+      structureDefinition.rootBlock = rootBlock;
+      console.log('✅ 结构定义已自动修复');
+      console.log('修复后的structureDefinition:', JSON.stringify(structureDefinition, null, 2));
+    } else {
+      console.log('✅ 结构定义格式正确，无需修复');
+    }
+  }
+  
+  const { rootBlock: rootConfig, additionalBlocks = [], connectionRules = [] } = structureDefinition;
   
   // 预分析连接规则，确定每个块需要的输入
   const blockInputRequirements = analyzeInputRequirements(connectionRules);
@@ -6855,6 +7006,7 @@ async function createDynamicStructure(
     console.log(`🗂️ 根块映射键设置: 'root', '${rootBlock.type}' → ${rootBlock.type}[${rootBlock.id}]`);
   } else {
     console.error(`❌ 根块创建失败: ${rootConfig.type}`);
+    createError = true;
   }
   
   // 2. 创建附加块
@@ -6878,6 +7030,7 @@ async function createDynamicStructure(
       console.log(`🗂️ 附加块映射键设置: '${blockKey}', '${block.type}' → ${block.type}[${block.id}]`);
     } else {
       console.error(`❌ 附加块创建失败: ${blockConfig.type}`);
+      createError = true;
     }
   }
   
@@ -6986,10 +7139,11 @@ async function createDynamicStructure(
       }
     } catch (error) {
       console.error(`❌ 连接块时出错:`, error);
+      createError = true;
     }
   }
-  
-  return rootResult?.block || null;
+
+  return { block:rootResult?.block || null, error: createError };
 }
 
 /**
