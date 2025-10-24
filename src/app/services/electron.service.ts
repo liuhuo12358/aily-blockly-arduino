@@ -220,4 +220,25 @@ export class ElectronService {
     }
   }
 
+  private _isWindowFullScreen: boolean | null = null;
+
+  /**
+   * 窗口全屏状态
+   * @returns boolean
+   */
+  isWindowFullScreen() {
+    if (this.isElectron) {
+      try {
+        window['ipcRenderer'].invoke('window-is-full-screen').then((state: boolean) => {
+          this._isWindowFullScreen = state;
+        });
+        return this._isWindowFullScreen;
+      } catch (error) {
+        console.warn('获取全屏状态失败:', error);
+        return false;
+      }
+    }
+    return false;
+  }
+
 }

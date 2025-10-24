@@ -14,6 +14,10 @@ $header-inner-height: 38px;
   &.darwin {
     padding-left: 80px;
 
+    &.full-screen {
+      padding-left: 0;
+    }
+
     .win-btns {
       display: none;
     }

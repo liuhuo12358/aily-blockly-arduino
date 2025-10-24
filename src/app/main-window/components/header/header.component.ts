@@ -46,6 +46,10 @@ export class HeaderComponent {
     return this.platformService.isMac();
   }
 
+  get isWindowFullScreen() {
+    return this.electronService.isWindowFullScreen();
+  }
+
   get projectData() {
     return this.projectService.currentPackageData;
   }

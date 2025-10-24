@@ -112,6 +112,12 @@ function registerWindowHandlers(mainWindow) {
         }
     });
 
+    // 监听获取全屏状态的请求
+    ipcMain.handle('window-is-full-screen', (event) => {
+        const senderWindow = BrowserWindow.fromWebContents(event.sender);
+        return senderWindow.isFullScreen();
+    });
+
     // 检查窗口是否获得焦点（同步）
     ipcMain.on("window-is-focused", (event) => {
         const senderWindow = BrowserWindow.fromWebContents(event.sender);
