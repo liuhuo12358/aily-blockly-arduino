@@ -2,6 +2,7 @@ import { arduinoGenerator } from "../../../editors/blockly-editor/components/blo
 import { ToolUseResult } from "./tools";
 import { jsonrepair } from 'jsonrepair';
 import { injectTodoReminder } from './todoWriteTool';
+import { ArduinoSyntaxTool } from "./arduinoSyntaxTool";
 declare const Blockly: any;
 
 /**
@@ -12,6 +13,34 @@ declare const Blockly: any;
 // =============================================================================
 // 类型定义
 // =============================================================================
+
+function generateErrorInfo() {
+  return `
+  # How to Generate Blockly Code
+  STEP 1: List target libraries
+  - Identify every library used in the blocks, including core libraries.
+  STEP 2: Read library readme
+  - For each library, read the README.md or use an analysis tool to understand its purpose and main features.
+  STEP 3: Create Blockly code
+  - Based on the identified libraries, use smart_block_tool and create_code_structure_tool to build the Blockly code structure.
+  STEP 4: Gathering tool feedback
+  - Tool responses may include:
+    - workspaceOverview: A summary of the current Blockly workspace structure.
+    - cppCode: The generated C++ code from the Blockly workspace.
+  - If code generation fails, check for syntax errors and fix them.
+  - Analyze code logic consistency with intended functionality.
+  STEP 5: Troubleshooting
+  - Review the generated code and ensure all libraries are correctly referenced.
+  - Iterate through the process until successful code generation is achieved.
+  `;
+}
+
+function generateSuccessInfo() {
+  return `
+  Analyze the code logic to ensure it aligns with the intended functionality of the blocks.
+  Ensure code structure follows best practices for readability and maintainability.
+  `;
+}
 
 interface Position {
   x?: number;
@@ -892,9 +921,13 @@ function getFieldTypeInfo(block: any, fieldName: string): {
   }
 }
 
-function configureBlockFields(block: any, fields: FieldConfig): void {
-  if (!fields) return;
-  
+function configureBlockFields(block: any, fields: FieldConfig): {
+  configSuccess: boolean;
+} {
+  if (!fields) return { configSuccess: false };
+
+  let configSuccess = false;
+
   try {
     for (const [fieldName, value] of Object.entries(fields)) {
       if (value !== undefined && value !== null) {
@@ -922,17 +955,39 @@ function configureBlockFields(block: any, fields: FieldConfig): void {
             // 🔧 变量字段：进行智能变量处理（field_variable类型）
             console.log(`🔧 检测到变量字段 (${fieldTypeInfo.fieldType})，开始智能处理: ${fieldName} = ${actualValue}`);
             
-            // 🎯 尝试从字段配置中提取变量类型信息
-            let variableType: string | undefined = undefined;
-            if (typeof value === 'object' && value !== null && (value as any).type) {
-              variableType = (value as any).type;
-              console.log(`🔍 从字段配置提取变量类型: ${variableType}`);
+            // ⚠️ 关键修复：检查是否已经是变量ID，避免重复处理
+            // 变量ID通常是长的特殊字符串，不是简单的变量名
+            const workspace = block.workspace || getActiveWorkspace();
+            const variableMap = workspace?.getVariableMap?.();
+            
+            let finalVariableId: string | null = null;
+            
+            // 首先检查这个值是否已经是一个有效的变量ID
+            if (variableMap) {
+              const existingVarById = variableMap.getVariableById?.(actualValue);
+              if (existingVarById) {
+                console.log(`✅ 检测到值已经是变量ID: ${actualValue}`);
+                finalVariableId = actualValue;
+              }
             }
             
-            const variableId = handleVariableField(block, actualValue, true, variableType);
-            if (variableId) {
-              block.setFieldValue(variableId, fieldName);
-              console.log(`✅ 变量字段设置成功: ${fieldName} = ${variableId} (变量名: ${actualValue})`);
+            // 如果不是ID，才需要查找或创建变量
+            if (!finalVariableId) {
+              console.log(`🔍 值不是现有变量ID，尝试查找或创建变量: ${actualValue}`);
+              
+              let variableType: string | undefined = undefined;
+              if (typeof value === 'object' && value !== null && (value as any).type) {
+                variableType = (value as any).type;
+                console.log(`🔍 从字段配置提取变量类型: ${variableType}`);
+              }
+              
+              finalVariableId = handleVariableField(block, actualValue, true, variableType);
+            }
+            
+            if (finalVariableId) {
+              block.setFieldValue(finalVariableId, fieldName);
+              console.log(`✅ 变量字段设置成功: ${fieldName} = ${finalVariableId} (原始值: ${actualValue})`);
+              configSuccess = true;
             } else {
               console.warn(`⚠️ 变量字段处理失败，使用原值: ${fieldName} = ${actualValue}`);
               block.setFieldValue(actualValue, fieldName);
@@ -943,12 +998,13 @@ function configureBlockFields(block: any, fields: FieldConfig): void {
             console.log(`📋 检测到下拉菜单字段 (${fieldTypeInfo.fieldType})，设置选项: ${fieldName} = ${actualValue}`);
             block.setFieldValue(actualValue, fieldName);
             console.log(`✅ 下拉菜单设置成功: ${fieldName} = ${actualValue}`);
-            
+            configSuccess = true;
           } else {
             // 📋 常规字段：直接设置值
             console.log(`📋 常规字段处理: ${fieldName} = ${actualValue} (类型: ${fieldTypeInfo.fieldType || '未知'})`);
             block.setFieldValue(actualValue, fieldName);
             console.log(`✅ 字段设置成功: ${fieldName} = ${actualValue}`);
+            configSuccess = true;
           }
         } catch (fieldError) {
           console.warn(`⚠️ 字段设置失败: ${fieldName}`, fieldError);
@@ -958,6 +1014,8 @@ function configureBlockFields(block: any, fields: FieldConfig): void {
   } catch (error) {
     console.warn('配置字段时出错:', error);
   }
+
+  return { configSuccess };
 }
 
 /**
@@ -988,6 +1046,13 @@ function handleVariableField(block: any, variableName: string, returnId: boolean
     }
     
     console.log(`📋 变量映射对象:`, variableMap);
+
+    // ⚠️ 关键检查：如果输入的已经是一个变量ID，直接返回，不要重复处理！
+    const possibleExistingVar = variableMap.getVariableById?.(variableName);
+    if (possibleExistingVar) {
+      console.log(`✅ 输入值已经是有效的变量ID: ${variableName}，直接返回`);
+      return variableName; // 直接返回这个ID，不做任何处理
+    }
 
     // 1. 首先尝试按名称查找现有变量 - 使用多种方法确保查找准确
     console.log(`🔍 开始查找变量: "${variableName}"`);
@@ -1049,7 +1114,7 @@ function handleVariableField(block: any, variableName: string, returnId: boolean
     console.log(`🆕 变量不存在，创建新变量: ${variableName}`);
     
     // 根据提供的类型或块类型推断变量类型
-    let finalVariableType = variableType || 'any'; // 使用提供的类型，如果没有则默认为'any'
+    let finalVariableType = variableType || ''; // 使用提供的类型，如果没有则默认为''
     
     if (!variableType && block.type) {
       // 从块类型推断变量类型
@@ -1124,11 +1189,63 @@ function checkConnectionCompatibility(connection1: any, connection2: any): boole
 }
 
 /**
+ * 获取块的完整块链（包括连接的下一个块）
+ */
+function getBlockChain(block: any): any[] {
+  const chain = [block];
+  let currentBlock = block;
+  
+  // 沿着 next 连接收集所有后续块
+  while (currentBlock.nextConnection && currentBlock.nextConnection.targetBlock()) {
+    currentBlock = currentBlock.nextConnection.targetBlock();
+    chain.push(currentBlock);
+  }
+  
+  console.log(`🔗 检测到块链，包含 ${chain.length} 个块: ${chain.map(b => b.type).join(' → ')}`);
+  return chain;
+}
+
+/**
+ * 移动整条块链到新位置
+ */
+function moveBlockChain(chain: any[], newParentConnection: any): { success: boolean; movedBlocks: string[] } {
+  if (chain.length === 0) return { success: false, movedBlocks: [] };
+  
+  const firstBlock = chain[0];
+  const movedBlockTypes: string[] = [];
+  
+  try {
+    disableBlocklyEvents();
+    
+    // 断开第一个块的现有连接
+    if (firstBlock.previousConnection && firstBlock.previousConnection.targetConnection) {
+      firstBlock.previousConnection.disconnect();
+    }
+    
+    // 将第一个块连接到新位置
+    if (newParentConnection && firstBlock.previousConnection) {
+      newParentConnection.connect(firstBlock.previousConnection);
+      movedBlockTypes.push(...chain.map(block => block.type));
+      console.log(`✅ 块链移动成功: ${movedBlockTypes.join(' → ')}`);
+      return { success: true, movedBlocks: movedBlockTypes };
+    }
+    
+    return { success: false, movedBlocks: [] };
+  } catch (error) {
+    console.error('❌ 块链移动失败:', error);
+    return { success: false, movedBlocks: [] };
+  } finally {
+    enableBlocklyEvents();
+  }
+}
+
+/**
  * 智能块插入功能 - 支持自动后移已连接的块
  */
 interface SmartInsertResult {
   smartInsertion: boolean;
   autoMovedBlock: string | null;
+  movedBlockChain?: string[];
 }
 
 async function smartInsertBlock(
@@ -1150,35 +1267,72 @@ async function smartInsertBlock(
         if (existingNextBlock) {
           console.log(`🔄 检测到已有后续块: ${existingNextBlock.type}(${existingNextBlock.id})`);
           
+          // 🆕 检测要移动的块是否是块链的一部分
+          const newBlockChain = getBlockChain(newBlock);
+          const shouldMoveChain = newBlockChain.length > 1;
+          
           // 断开现有连接
           if (parentBlock.nextConnection && parentBlock.nextConnection.targetConnection) {
             parentBlock.nextConnection.disconnect();
           }
           
-          // 连接新块到父块
+          // 断开要移动的块链的现有连接
+          if (newBlock.previousConnection && newBlock.previousConnection.targetConnection) {
+            newBlock.previousConnection.disconnect();
+          }
+          
+          // 连接新块（块链）到父块
           if (parentBlock.nextConnection && newBlock.previousConnection) {
             disableBlocklyEvents();
             try {
               parentBlock.nextConnection.connect(newBlock.previousConnection);
               console.log('✅ 新块已连接到父块');
               
-              // 将原后续块连接到新块的末尾
-              if (newBlock.nextConnection && existingNextBlock.previousConnection) {
-                newBlock.nextConnection.connect(existingNextBlock.previousConnection);
-                console.log('✅ 原后续块已重新连接到新块');
-                return { smartInsertion: true, autoMovedBlock: existingNextBlock.type };
+              // 找到块链的末尾块来连接原后续块
+              const lastBlockInChain = newBlockChain[newBlockChain.length - 1];
+              
+              // 将原后续块连接到块链的末尾
+              if (lastBlockInChain.nextConnection && existingNextBlock.previousConnection) {
+                lastBlockInChain.nextConnection.connect(existingNextBlock.previousConnection);
+                console.log('✅ 原后续块已重新连接到块链末尾');
+                
+                if (shouldMoveChain) {
+                  return { 
+                    smartInsertion: true, 
+                    autoMovedBlock: existingNextBlock.type,
+                    movedBlockChain: newBlockChain.map(b => b.type)
+                  };
+                } else {
+                  return { smartInsertion: true, autoMovedBlock: existingNextBlock.type };
+                }
               }
             } finally {
               enableBlocklyEvents();
             }
           }
         } else {
-          // 没有现有连接，直接连接
+          // 没有现有连接，但仍然需要检查是否移动块链
+          const newBlockChain = getBlockChain(newBlock);
+          const shouldMoveChain = newBlockChain.length > 1;
+          
+          // 断开要移动的块链的现有连接
+          if (newBlock.previousConnection && newBlock.previousConnection.targetConnection) {
+            newBlock.previousConnection.disconnect();
+          }
+          
           if (parentBlock.nextConnection && newBlock.previousConnection) {
             disableBlocklyEvents();
             try {
               parentBlock.nextConnection.connect(newBlock.previousConnection);
-              console.log('✅ 新块已直接连接');
+              console.log(`✅ 新块${shouldMoveChain ? '链' : ''}已直接连接`);
+              
+              if (shouldMoveChain) {
+                return { 
+                  smartInsertion: true, 
+                  autoMovedBlock: null,
+                  movedBlockChain: newBlockChain.map(b => b.type)
+                };
+              }
             } finally {
               enableBlocklyEvents();
             }
@@ -1207,32 +1361,68 @@ async function smartInsertBlock(
         
         if (!requiredConnection) {
           const connectionType = isStatementInput ? 'previousConnection' : 'outputConnection';
-          throw new Error(`新块 ${newBlock.type} 没有所需的 ${connectionType}，无法连接到输入 "${inputName}"`);
+          const blockCategory = isStatementInput ? '语句块' : '表达式块';
+          const expectedType = isStatementInput ? '语句块（如digital_write、serial_println等）' : '表达式块（如math_number、variable_get等）';
+          const inputCategory = isStatementInput ? '语句输入' : '值输入';
+          
+          console.error(`❌ 连接类型不匹配详细分析:`);
+          console.error(`  - 目标输入: "${inputName}" (${inputCategory}, 类型: ${inputConnection.type})`);
+          console.error(`  - 新块类型: ${newBlock.type} (${newBlock.outputConnection ? '表达式块' : newBlock.previousConnection ? '语句块' : '无连接块'})`);
+          console.error(`  - 需要的连接: ${connectionType}`);
+          console.error(`  - 期望块类型: ${expectedType}`);
+          console.error(`  - 块连接情况: outputConnection=${!!newBlock.outputConnection}, previousConnection=${!!newBlock.previousConnection}`);
+          
+          throw new Error(`🔌 连接失败：块 "${newBlock.type}" 是${newBlock.outputConnection ? '表达式块' : '语句块'}，但输入 "${inputName}" 需要${blockCategory}。\n` +
+                         `💡 建议：\n` + 
+                         `  - 如果要设置参数值，请使用值输入端口\n` +
+                         `  - 如果要执行动作，请使用支持语句连接的块\n` +
+                         `  - 检查块类型是否正确匹配输入要求`);
         }
+        
+        // 🆕 检测块链（只对语句连接有意义）
+        const newBlockChain = isStatementInput ? getBlockChain(newBlock) : [newBlock];
+        const shouldMoveChain = newBlockChain.length > 1;
         
         // 检查是否已有连接的块
         const existingConnectedBlock = inputConnection.connection.targetBlock();
         if (existingConnectedBlock) {
           console.log(`🔄 检测到输入 "${inputName}" 已有连接块: ${existingConnectedBlock.type}(${existingConnectedBlock.id})`);
           
+          // 如果要移动的是块链，需要先断开块链的现有连接
+          if (shouldMoveChain && newBlock.previousConnection && newBlock.previousConnection.targetConnection) {
+            newBlock.previousConnection.disconnect();
+          }
+          
           disableBlocklyEvents();
           try {
             // 断开现有连接
             inputConnection.connection.disconnect();
             
-            // 连接新块
+            // 连接新块（块链的第一个块）
             inputConnection.connection.connect(requiredConnection);
-            console.log(`✅ 新块已连接到输入 (${isStatementInput ? '语句' : '值'}连接)`);
+            console.log(`✅ 新块${shouldMoveChain ? '链' : ''}已连接到输入 (${isStatementInput ? '语句' : '值'}连接)`);
             
-            // 如果是语句连接且新块有后续连接，尝试将原有块连接到新块的后面
-            if (isStatementInput && newBlock.nextConnection && existingConnectedBlock.previousConnection) {
-              console.log(`🔗 尝试将原有块连接到新块后面`);
-              try {
-                newBlock.nextConnection.connect(existingConnectedBlock.previousConnection);
-                console.log('✅ 原有块已重新连接到新块后面');
-                return { smartInsertion: true, autoMovedBlock: existingConnectedBlock.type };
-              } catch (error) {
-                console.warn('⚠️ 无法重新连接原有块到后面:', error);
+            // 如果是语句连接，尝试将原有块连接到块链的后面
+            if (isStatementInput) {
+              const lastBlockInChain = newBlockChain[newBlockChain.length - 1];
+              if (lastBlockInChain.nextConnection && existingConnectedBlock.previousConnection) {
+                console.log(`🔗 尝试将原有块连接到块链后面`);
+                try {
+                  lastBlockInChain.nextConnection.connect(existingConnectedBlock.previousConnection);
+                  console.log('✅ 原有块已重新连接到块链后面');
+                  
+                  if (shouldMoveChain) {
+                    return { 
+                      smartInsertion: true, 
+                      autoMovedBlock: existingConnectedBlock.type,
+                      movedBlockChain: newBlockChain.map(b => b.type)
+                    };
+                  } else {
+                    return { smartInsertion: true, autoMovedBlock: existingConnectedBlock.type };
+                  }
+                } catch (error) {
+                  console.warn('⚠️ 无法重新连接原有块到后面:', error);
+                }
               }
             }
             // 如果是值连接且新块有输入，尝试将原有块连接到新块的输入
@@ -1259,13 +1449,33 @@ async function smartInsertBlock(
             enableBlocklyEvents();
           }
           
-          return { smartInsertion: true, autoMovedBlock: null };
+          if (shouldMoveChain) {
+            return { 
+              smartInsertion: true, 
+              autoMovedBlock: null,
+              movedBlockChain: newBlockChain.map(b => b.type)
+            };
+          } else {
+            return { smartInsertion: true, autoMovedBlock: null };
+          }
         } else {
-          // 没有现有连接，直接连接
+          // 没有现有连接，但仍需要处理块链移动
+          if (shouldMoveChain && newBlock.previousConnection && newBlock.previousConnection.targetConnection) {
+            newBlock.previousConnection.disconnect();
+          }
+          
           disableBlocklyEvents();
           try {
             inputConnection.connection.connect(requiredConnection);
-            console.log(`✅ 新块已直接连接到输入 (${isStatementInput ? '语句' : '值'}连接)`);
+            console.log(`✅ 新块${shouldMoveChain ? '链' : ''}已直接连接到输入 (${isStatementInput ? '语句' : '值'}连接)`);
+            
+            if (shouldMoveChain) {
+              return { 
+                smartInsertion: true, 
+                autoMovedBlock: null,
+                movedBlockChain: newBlockChain.map(b => b.type)
+              };
+            }
           } catch (connectError) {
             console.error('❌ 直接连接失败:', connectError);
             throw connectError;
@@ -1511,10 +1721,11 @@ export async function smartBlockTool(args: SmartBlockArgs): Promise<SmartBlockRe
     const { overview: workspaceOverview, cppCode, isError } = await getWorkspaceOverviewInfo();
 
     // 生成增强的结果消息
-    let enhancedMessage = `✅ 成功创建智能块 ${type}`;
-    if (result.totalBlocks && result.totalBlocks > 1) {
-      enhancedMessage += `，包含 ${result.totalBlocks} 个块`;
-    }
+    // let enhancedMessage = `✅ 完成创建智能块 ${type}`;
+    // if (result.totalBlocks && result.totalBlocks > 1) {
+    //   enhancedMessage += `，包含 ${result.totalBlocks} 个块`;
+    // }
+    let enhancedMessage = `✅ 完成创建智能块`;
     
     // 🔧 如果有变量字段，添加处理信息
     if (parsedFields) {
@@ -1553,7 +1764,8 @@ export async function smartBlockTool(args: SmartBlockArgs): Promise<SmartBlockRe
     const errorResult = {
       is_error: true,
       content: `智能块工具执行失败: ${(error as Error).message}`,
-      details: `请确保已阅读该block所属library的Readme，或者使用工具分析了这个库的块定义。`
+      // details: `<system-reminder>${generateErrorInfo()}</system-reminder>`
+      details: ``
     };
     
     // 注入todo提醒
@@ -2443,15 +2655,28 @@ function getHighestInputNumber(inputNames: string[]): number {
 /**
  * 配置块的输入
  */
-async function configureBlockInputs(workspace: any, block: any, inputs: InputConfig, blockMap?: Map<string, any>): Promise<string[]> {
+async function configureBlockInputs(workspace: any, block: any, inputs: InputConfig, blockMap?: Map<string, any>): Promise<{ updatedInputs: string[], extractedNext?: any }> {
   const updatedInputs: string[] = [];
+  let extractedNext: any = undefined;
 
   console.log('🔌 configureBlockInputs 开始执行');
-  console.log('� 输入配置数据:', JSON.stringify(inputs, null, 2));
+  console.log('📦 输入配置数据:', JSON.stringify(inputs, null, 2));
   console.log('🧱 目标块信息:', { id: block.id, type: block.type });
 
   try {
+    // 检测并提取错误嵌套的"next"配置
+    const processedInputs = { ...inputs };
     for (const [inputName, inputConfig] of Object.entries(inputs)) {
+      if (inputName === 'next') {
+        console.log('🔍 检测到错误嵌套的"next"配置，正在提取...');
+        extractedNext = inputConfig;
+        delete processedInputs[inputName];
+        console.log('✅ 成功提取错误嵌套的"next"配置:', JSON.stringify(extractedNext, null, 2));
+        break;
+      }
+    }
+
+    for (const [inputName, inputConfig] of Object.entries(processedInputs)) {
       console.log(`\n🔍 处理输入: ${inputName}`);
       console.log('输入配置:', JSON.stringify(inputConfig, null, 2));
       
@@ -2526,7 +2751,7 @@ async function configureBlockInputs(workspace: any, block: any, inputs: InputCon
     console.error('❌ 配置块输入时出错:', error);
   }
 
-  return updatedInputs;
+  return { updatedInputs, extractedNext };
 }
 
 /**
@@ -2582,8 +2807,15 @@ async function createBlockFromConfig(workspace: any, config: BlockConfig | strin
     
     if (config.inputs) {
       console.log('🔌 配置块输入...');
-      await configureBlockInputs(workspace, block, config.inputs, blockMap);
+      const inputResult = await configureBlockInputs(workspace, block, config.inputs, blockMap);
       console.log('✅ 块输入配置完成');
+      
+      // 如果从inputs中提取了错误嵌套的next配置，将其添加到config中
+      if (inputResult.extractedNext) {
+        console.log('🔧 自动修复：将提取的next配置应用到config中...');
+        config.next = inputResult.extractedNext;
+        console.log('✅ next配置已自动修复并添加到config中');
+      }
     }
     
     // 处理next连接
@@ -2737,7 +2969,7 @@ export async function createCodeStructureTool(
     console.log(`� 使用动态结构定义创建: ${structure}`);
     const rootBlock = await createDynamicStructure(workspace, config, blockPosition, createdBlocks, connections);
 
-    if (rootBlock) {
+    if (rootBlock.block) {
       // 处理插入位置
       console.log('🔗 检查插入位置条件:');
       console.log('- insertPosition:', insertPosition);
@@ -2766,7 +2998,14 @@ export async function createCodeStructureTool(
         workspaceOverview: isError ? null : workspaceOverview
       };
 
-      toolResult = `✅ 成功创建 ${structure} 代码结构
+      toolResult = ``;
+      if (rootBlock.error) {
+        toolResult += `⚠️ 注意: 在创建过程中遇到一些问题，部分块创建失败或者连接错误！请仔细检查并修复这些问题，务必读取相关库的readme。\n`
+      } else {
+        // toolResult += `✅ 成功创建 ${structure} 代码结构`;
+        toolResult += `✅ 创建完成代码结构 `;
+      }
+        toolResult += `
 
 📊 创建结果概览:
 - 结构名称: ${structure}
@@ -2781,7 +3020,8 @@ ${workspaceOverview}`;
 
   } catch (error) {
     is_error = true;
-    toolResult = `创建代码结构失败: ${error instanceof Error ? error.message : String(error)}，请确保已阅读该block所属library的Readme，或者使用工具分析了这个库的块定义。`;
+    // toolResult = `创建代码结构失败: ${error instanceof Error ? error.message : String(error)}，<system-reminder>${generateErrorInfo()}</system-reminder>`;
+    toolResult = `创建代码结构失败: ${error instanceof Error ? error.message : String(error)}`;
     console.error('❌ createCodeStructureTool 执行失败:', error);
   }
 
@@ -3099,11 +3339,21 @@ export async function connectBlocksTool(args: ConnectBlocksArgs): Promise<Connec
 
     // 生成结果消息
     let message = '';
-    if (result.smartInsertion && result.autoMovedBlock) {
+    if (result.smartInsertion && result.movedBlockChain && result.movedBlockChain.length > 1) {
+      // 移动了块链
+      if (result.autoMovedBlock) {
+        message = `✅ 智能插入成功: 块链 "${result.movedBlockChain.join(' → ')}" 插入到 "${containerBlockObj.type}"，自动后移了 "${result.autoMovedBlock}" 块`;
+      } else {
+        message = `✅ 智能插入成功: 块链 "${result.movedBlockChain.join(' → ')}" 插入到 "${containerBlockObj.type}"`;
+      }
+    } else if (result.smartInsertion && result.autoMovedBlock) {
+      // 移动了单个块并后移了其他块
       message = `✅ 智能插入成功: "${contentBlockObj.type}" 插入到 "${containerBlockObj.type}"，自动后移了 "${result.autoMovedBlock}" 块`;
     } else if (result.smartInsertion) {
+      // 智能插入但没有后移
       message = `✅ 智能插入成功: "${contentBlockObj.type}" 插入到 "${containerBlockObj.type}"`;
     } else {
+      // 普通连接
       message = `✅ 连接成功: "${containerBlockObj.type}" 和 "${contentBlockObj.type}"`;
     }
 
@@ -3156,8 +3406,9 @@ ${workspaceOverview}`;
   } catch (error) {
     console.error('❌ 连接失败:', error);
     return {
-      is_error: true,
-      content: `❌ 连接失败: ${error instanceof Error ? error.message : String(error)}`
+          is_error: true,
+          // content: `❌ 连接失败: ${error instanceof Error ? error.message : String(error)}，<system-reminder>${generateErrorInfo()}</system-reminder>`,
+          content: `❌ 连接失败: ${error instanceof Error ? error.message : String(error)}`
     };
   }
 }
@@ -4134,6 +4385,7 @@ export async function getWorkspaceOverviewTool(args?: any): Promise<ToolUseResul
     }
 
     // 生成完整代码
+    let lintResult = null;
     if (includeCode) {
       try {
         if ((window as any).Arduino && (window as any).Arduino.workspaceToCode) {
@@ -4150,6 +4402,209 @@ export async function getWorkspaceOverviewTool(args?: any): Promise<ToolUseResul
           }
           generatedCode = codeLines.length > 0 ? codeLines.join('\n\n') : '// 无可用代码内容';
         }
+
+        // 如果代码生成成功且不是错误信息，进行代码检测
+        if (generatedCode && 
+            !generatedCode.includes('无代码生成') && 
+            !generatedCode.includes('无可用代码内容') &&
+            !generatedCode.includes('工作区代码生成失败')) {
+          
+          console.log('🔍 开始进行Arduino语法检测...');
+          
+          // 详细的环境诊断
+          console.log('🔧 环境诊断:');
+          console.log('- window.ng:', !!((window as any)['ng']));
+          console.log('- window.path:', !!((window as any)['path']));
+          console.log('- window.env:', !!((window as any)['env']));
+          
+          // 检查 Angular injector
+          let injectorAvailable = false;
+          try {
+            const injector = (window as any)['ng']?.getInjector?.(document.body);
+            injectorAvailable = !!injector;
+            console.log('- Angular injector:', injectorAvailable ? '✅ 可用' : '❌ 不可用');
+          } catch (error) {
+            console.log('- Angular injector: ❌ 获取失败 -', error.message);
+          }
+          
+          // 检查 aily-builder 路径
+          let ailyBuilderAvailable = false;
+          try {
+            if ((window as any)['path']) {
+              const path = (window as any)['path'].getAilyBuilderPath();
+              ailyBuilderAvailable = !!path;
+              console.log('- aily-builder 路径:', path || '❌ 未设置');
+              if (path) {
+                const exists = (window as any)['path'].isExists(path + '/index.js');
+                console.log('- index.js 存在:', exists ? '✅' : '❌');
+              }
+            }
+          } catch (error) {
+            console.log('- aily-builder 检查: ❌ 失败 -', error.message);
+          }
+          
+          // 如果环境不就绪，等待更长时间
+          if (!injectorAvailable) {
+            console.log('⏳ Angular 环境未就绪，等待 5 秒...');
+            await new Promise(resolve => setTimeout(resolve, 5000));
+          }
+          
+          try {
+            // 使用新的 Arduino Lint 服务进行语法检测
+            console.log('🔍 使用 Arduino Lint 服务进行语法检测...');
+            
+            const arduinoLintService = (window as any)['arduinoLintService'];
+            if (!arduinoLintService) {
+              console.warn('⚠️ Arduino Lint 服务不可用，回退到原有工具');
+              
+              // 回退到原有的 ArduinoSyntaxTool
+              const arduinoTool = new ArduinoSyntaxTool();
+              console.log('✅ ArduinoSyntaxTool 创建成功 (回退模式)');
+              
+              const syntaxCheckResult = await arduinoTool.use({
+                code: generatedCode,
+                timeout: 10000
+              });
+              
+              if (syntaxCheckResult) {
+                const content = syntaxCheckResult.content || '';
+                const isValid = !syntaxCheckResult.is_error && content.includes('✅ **Arduino代码语法检查通过**');
+                
+                // 从内容中提取错误和警告信息
+                const errors: any[] = [];
+                const warnings: any[] = [];
+                
+                if (syntaxCheckResult.is_error) {
+                  // 解析错误信息
+                  const errorLines = content.split('\n').filter(line => 
+                    line.includes('**第') && line.includes('行') && line.includes('列**')
+                  );
+                  
+                  errorLines.forEach(line => {
+                    const match = line.match(/\*\*第(\d+)行，第(\d+)列\*\*：(.+)/);
+                    if (match) {
+                      errors.push({
+                        line: parseInt(match[1]),
+                        column: parseInt(match[2]),
+                        message: match[3].trim(),
+                        severity: 'error' as const,
+                        source: 'arduino-syntax-tool'
+                      });
+                    }
+                  });
+                  
+                  // 如果没有解析到具体错误，添加通用错误
+                  if (errors.length === 0) {
+                    errors.push({
+                      line: 1,
+                      column: 1,
+                      message: content,
+                      severity: 'error' as const,
+                      source: 'arduino-syntax-tool'
+                    });
+                  }
+                }
+                
+                lintResult = {
+                  isValid: isValid,
+                  errors: errors,
+                  warnings: warnings,
+                  duration: 0,
+                  language: 'arduino',
+                  toolUsed: 'arduino-syntax-tool'
+                };
+                
+                console.log('✅ Arduino语法检测完成 (回退模式):', {
+                  isValid: isValid,
+                  errorCount: errors.length,
+                  warningCount: warnings.length
+                });
+              } else {
+                console.warn('⚠️ Arduino语法检测返回空结果 (回退模式)');
+                lintResult = {
+                  isValid: false,
+                  errors: [{ 
+                    line: 1, 
+                    column: 1, 
+                    message: 'Arduino语法检测返回空结果', 
+                    severity: 'warning' as const,
+                    source: 'arduino-syntax-tool' 
+                  }],
+                  warnings: [],
+                  duration: 0,
+                  language: 'arduino',
+                  toolUsed: 'arduino-syntax-tool'
+                };
+              }
+            } else {
+              // 使用新的 Arduino Lint 服务
+              console.log('✅ 使用 Arduino Lint 服务');
+              
+              const lintStartTime = Date.now();
+              const lintServiceResult = await arduinoLintService.checkSyntax(generatedCode, {
+                mode: 'auto',
+                format: 'json'
+              });
+              const lintDuration = Date.now() - lintStartTime;
+              
+              console.log('📋 Arduino Lint 服务结果:', lintServiceResult);
+              
+              // 详细日志，帮助调试
+              console.log('🔍 详细分析 lint 结果:');
+              console.log('  - success:', lintServiceResult.success);
+              console.log('  - errors:', lintServiceResult.errors);
+              console.log('  - warnings:', lintServiceResult.warnings);
+              console.log('  - notes:', lintServiceResult.notes);
+              
+              lintResult = {
+                isValid: lintServiceResult.success && lintServiceResult.errors.length === 0,
+                errors: lintServiceResult.errors || [],
+                warnings: lintServiceResult.warnings || [],
+                notes: lintServiceResult.notes || [],
+                duration: lintDuration,
+                language: 'arduino',
+                toolUsed: 'aily-builder-lint',
+                mode: lintServiceResult.mode || 'auto'
+              };
+              
+              console.log('✅ Arduino语法检测完成 (aily-builder):', {
+                isValid: lintResult.isValid,
+                errorCount: lintResult.errors.length,
+                warningCount: lintResult.warnings.length,
+                noteCount: (lintResult.notes || []).length,
+                duration: lintDuration
+              });
+              
+              // 如果没有错误但标记为无效，可能是其他问题
+              if (!lintResult.isValid && lintResult.errors.length === 0) {
+                console.warn('⚠️ 检测标记为失败但没有具体错误信息，添加通用错误');
+                lintResult.errors.push({
+                  line: 1,
+                  column: 1,
+                  message: '编译失败，但未提供具体错误信息。请检查代码语法和依赖项。',
+                  severity: 'error',
+                  source: 'aily-builder-lint'
+                });
+              }
+            }           
+          } catch (lintError) {
+            console.warn('⚠️ Arduino语法检测失败:', lintError);
+            lintResult = {
+              isValid: false,
+              errors: [{ 
+                line: 1, 
+                column: 1, 
+                message: `Arduino语法检测失败: ${lintError}`, 
+                severity: 'warning' as const,
+                source: 'syntax-check-error' 
+              }],
+              warnings: [],
+              duration: 0,
+              language: 'arduino',
+              toolUsed: 'arduino-syntax-tool'
+            };
+          }
+        }
       } catch (error) {
         generatedCode = `// 工作区代码生成失败: ${error}`;
       }
@@ -4164,7 +4619,8 @@ export async function getWorkspaceOverviewTool(args?: any): Promise<ToolUseResul
       rootBlocks,
       allBlocks: allBlocksInfo,
       structureTree,
-      generatedCode
+      generatedCode,
+      lintResult
     };
 
     let textOutput = '';
@@ -4717,6 +5173,11 @@ function formatWorkspaceOverviewText(
   
   lines.push('');
   
+  if (statistics.totalBlocks > 2 || statistics.isolatedBlocks > 0) {
+    lines.push(`⚠️ 注意: 工作区包含较多块或孤立块，建议检查结构完整性，如果有需要请优化设计以提升代码质量`);
+    lines.push('');
+  }
+  
   // 变量信息
   if (structure.variables && structure.variables.length > 0) {
     lines.push('📝 变量列表:');
@@ -4748,6 +5209,77 @@ function formatWorkspaceOverviewText(
     lines.push(structure.generatedCode);
     lines.push('```');
     lines.push('');
+    
+    // 语法检测结果
+    if (structure.lintResult) {
+      lines.push('🔍 Arduino语法检测结果:');
+      if (structure.lintResult.isValid) {
+        lines.push(`  <system-reminder>${generateSuccessInfo()}</system-reminder>`);
+        lines.push('  ✅ 语法检查通过，代码无错误，但是必须对代码进行深入分析以确保逻辑正确:');
+        lines.push(`  ⏱️ 检查耗时: ${structure.lintResult.duration || 0}ms`);
+        lines.push(`  🔧 检查工具: ${structure.lintResult.toolUsed || 'unknown'}`);
+        if (structure.lintResult.mode) {
+          lines.push(`  📊 检测模式: ${structure.lintResult.mode}`);
+        }
+        
+        // 显示警告（即使通过检查也可能有警告）
+        if (structure.lintResult.warnings && structure.lintResult.warnings.length > 0) {
+          lines.push('  ⚠️ 注意事项:');
+          structure.lintResult.warnings.forEach((warning: any, index: number) => {
+            lines.push(`    ${index + 1}. 第${warning.line}行，第${warning.column}列: ${warning.message}`);
+          });
+        }
+        
+        // 显示注释信息
+        if (structure.lintResult.notes && structure.lintResult.notes.length > 0) {
+          lines.push('  📝 提示信息:');
+          structure.lintResult.notes.forEach((note: any, index: number) => {
+            lines.push(`    ${index + 1}. 第${note.line}行，第${note.column}列: ${note.message}`);
+          });
+        }
+      } else {
+        lines.push('  ❌ 发现语法问题:');
+        
+        // 显示错误数量统计
+        const errorCount = structure.lintResult.errors ? structure.lintResult.errors.length : 0;
+        const warningCount = structure.lintResult.warnings ? structure.lintResult.warnings.length : 0;
+        const noteCount = structure.lintResult.notes ? structure.lintResult.notes.length : 0;
+        
+        lines.push(`  📊 问题统计: ${errorCount} 个错误, ${warningCount} 个警告, ${noteCount} 个提示`);
+        
+        if (structure.lintResult.errors && structure.lintResult.errors.length > 0) {
+          lines.push('  🚨 错误详情:');
+          structure.lintResult.errors.forEach((error: any, index: number) => {
+            const severity = error.severity ? `[${error.severity.toUpperCase()}]` : '[ERROR]';
+            const location = error.line ? `第${error.line}行` + (error.column ? `，第${error.column}列` : '') : '位置未知';
+            lines.push(`    ${index + 1}. ${severity} ${location}: ${error.message || '未知错误'}`);
+            if (error.file && !error.file.includes('sketch.ino')) {
+              lines.push(`       文件: ${error.file}`);
+            }
+          });
+        } else {
+          lines.push('  ⚠️ 未找到具体错误信息，可能是编译失败或其他问题');
+        }
+        if (structure.lintResult.warnings && structure.lintResult.warnings.length > 0) {
+          lines.push('  ⚠️ 警告信息:');
+          structure.lintResult.warnings.forEach((warning: any, index: number) => {
+            lines.push(`    ${index + 1}. 第${warning.line}行，第${warning.column}列: ${warning.message}`);
+          });
+        }
+        if (structure.lintResult.notes && structure.lintResult.notes.length > 0) {
+          lines.push('  📝 提示信息:');
+          structure.lintResult.notes.forEach((note: any, index: number) => {
+            lines.push(`    ${index + 1}. 第${note.line}行，第${note.column}列: ${note.message}`);
+          });
+        }
+        lines.push(`  ⏱️ 检查耗时: ${structure.lintResult.duration || 0}ms`);
+        lines.push(`  🔧 检查工具: ${structure.lintResult.toolUsed || 'unknown'}`);
+        if (structure.lintResult.mode) {
+          lines.push(`  📊 检测模式: ${structure.lintResult.mode}`);
+        }
+      }
+      lines.push('');
+    }
   }
 
   return lines.join('\n');
@@ -4876,14 +5408,21 @@ export async function configureBlockTool(args: any): Promise<ToolUseResult> {
     let fieldsUpdated: string[] = [];
     const inputsUpdated: string[] = [];
 
+    let check: boolean = false;
+
     // 配置字段
     if (fields) {
       console.log('🏷️ 开始更新字段...');
       try {
         // 使用我们修复的 configureBlockFields 函数
-        configureBlockFields(targetBlock, fields);
-        fieldsUpdated = Object.keys(fields);
-        console.log(`✅ 字段更新完成: ${fieldsUpdated.join(', ')}`);
+        let callback = configureBlockFields(targetBlock, fields);
+        check = callback.configSuccess;
+        if (check) {
+          fieldsUpdated = Object.keys(fields);
+          console.log(`✅ 字段更新完成: ${fieldsUpdated.join(', ')}`);
+        } else {
+          console.warn(`❌ 字段更新失败`);
+        }
       } catch (error) {
         console.warn('字段配置时出错:', error);
       }
@@ -4894,11 +5433,17 @@ export async function configureBlockTool(args: any): Promise<ToolUseResult> {
       console.log('🔌 输入配置暂不支持（可以在此扩展）');
     }
 
-    const message = `✅ 块配置成功: ${targetBlock.type} [${blockId}] ${fieldsUpdated.length > 0 ? `，更新字段: ${fieldsUpdated.join(', ')}` : ''}`;
+    let message = ``;
+    if (check) {
+      message += `✅ 块配置成功: ${targetBlock.type} [${blockId}] ${fieldsUpdated.length > 0 ? `，更新字段: ${fieldsUpdated.join(', ')}` : ''}`;
+    } else {
+      message += `⚠️ 块配置部分失败，请检查提供的字段和值是否正确。请阅读库readme以获取支持的字段列表。`;
+    }
+    // const message = `✅ 块配置成功: ${targetBlock.type} [${blockId}] ${fieldsUpdated.length > 0 ? `，更新字段: ${fieldsUpdated.join(', ')}` : ''}`;
     console.log(message);
 
     return {
-      is_error: false,
+      is_error: check ? false : true,
       content: message,
       details: JSON.stringify({
         blockId: targetBlock.id,
@@ -6386,8 +6931,50 @@ async function createDynamicStructure(
   if (!config.structureDefinition) {
     throw new Error('动态结构必须提供 structureDefinition 配置');
   }
+
+  let createError = false;
   
-  const { rootBlock: rootConfig, additionalBlocks = [], connectionRules = [] } = config.structureDefinition;
+  // 🔧 自动修复：检测错误嵌套的 additionalBlocks 和 connectionRules
+  let structureDefinition = { ...config.structureDefinition };
+  
+  console.log('🔍 检查结构定义是否需要修复...');
+  console.log('原始structureDefinition:', JSON.stringify(structureDefinition, null, 2));
+  
+  // 检查 rootBlock 是否错误地包含了 additionalBlocks 和 connectionRules
+  if (structureDefinition.rootBlock) {
+    let needsFix = false;
+    const rootBlock = { ...structureDefinition.rootBlock };
+    
+    // 检测并提取错误嵌套的 additionalBlocks
+    if (rootBlock.additionalBlocks) {
+      console.log('🔧 检测到 additionalBlocks 错误嵌套在 rootBlock 中，正在提取...');
+      if (!structureDefinition.additionalBlocks) {
+        structureDefinition.additionalBlocks = rootBlock.additionalBlocks;
+      }
+      delete rootBlock.additionalBlocks;
+      needsFix = true;
+    }
+    
+    // 检测并提取错误嵌套的 connectionRules
+    if (rootBlock.connectionRules) {
+      console.log('🔧 检测到 connectionRules 错误嵌套在 rootBlock 中，正在提取...');
+      if (!structureDefinition.connectionRules) {
+        structureDefinition.connectionRules = rootBlock.connectionRules;
+      }
+      delete rootBlock.connectionRules;
+      needsFix = true;
+    }
+    
+    if (needsFix) {
+      structureDefinition.rootBlock = rootBlock;
+      console.log('✅ 结构定义已自动修复');
+      console.log('修复后的structureDefinition:', JSON.stringify(structureDefinition, null, 2));
+    } else {
+      console.log('✅ 结构定义格式正确，无需修复');
+    }
+  }
+  
+  const { rootBlock: rootConfig, additionalBlocks = [], connectionRules = [] } = structureDefinition;
   
   // 预分析连接规则，确定每个块需要的输入
   const blockInputRequirements = analyzeInputRequirements(connectionRules);
@@ -6419,6 +7006,7 @@ async function createDynamicStructure(
     console.log(`🗂️ 根块映射键设置: 'root', '${rootBlock.type}' → ${rootBlock.type}[${rootBlock.id}]`);
   } else {
     console.error(`❌ 根块创建失败: ${rootConfig.type}`);
+    createError = true;
   }
   
   // 2. 创建附加块
@@ -6442,6 +7030,7 @@ async function createDynamicStructure(
       console.log(`🗂️ 附加块映射键设置: '${blockKey}', '${block.type}' → ${block.type}[${block.id}]`);
     } else {
       console.error(`❌ 附加块创建失败: ${blockConfig.type}`);
+      createError = true;
     }
   }
   
@@ -6550,10 +7139,11 @@ async function createDynamicStructure(
       }
     } catch (error) {
       console.error(`❌ 连接块时出错:`, error);
+      createError = true;
     }
   }
-  
-  return rootResult?.block || null;
+
+  return { block:rootResult?.block || null, error: createError };
 }
 
 /**

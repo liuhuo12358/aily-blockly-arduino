@@ -74,13 +74,13 @@ export const TOOLS = [
     // },
     {
         name: "read_file",
-        description: `读取指定文件的内容。支持文本文件的读取，可指定编码格式。`,
+        description: `读取指定文件的内容，需文件完整路径，建议优先使用grep工具。支持文本文件的读取，可指定编码格式。`,
         input_schema: {
             type: 'object',
             properties: {
                 path: {
                     type: 'string',
-                    description: '要读取的文件路径'
+                    description: '要读取的文件完整路径'
                 },
                 encoding: {
                     type: 'string',
@@ -93,13 +93,13 @@ export const TOOLS = [
     },
     {
         name: "create_file",
-        description: `创建新文件并写入内容。如果目录不存在会自动创建。可选择是否覆盖已存在的文件。`,
+        description: `创建新文件并写入内容，需文件完整路径。如果目录不存在会自动创建。可选择是否覆盖已存在的文件。`,
         input_schema: {
             type: 'object',
             properties: {
                 path: {
                     type: 'string',
-                    description: '要创建的文件路径'
+                    description: '要创建的文件完整路径'
                 },
                 content: {
                     type: 'string',
@@ -247,30 +247,30 @@ export const TOOLS = [
     //         required: ['path']
     //     }
     // },
-    {
-        name: "get_directory_tree",
-        description: `获取指定目录的树状结构，可控制遍历深度和是否包含文件。适合了解项目结构。`,
-        input_schema: {
-            type: 'object',
-            properties: {
-                path: {
-                    type: 'string',
-                    description: '要获取树状结构的目录路径'
-                },
-                maxDepth: {
-                    type: 'number',
-                    description: '最大遍历深度',
-                    default: 3
-                },
-                includeFiles: {
-                    type: 'boolean',
-                    description: '是否包含文件（false时只显示文件夹）',
-                    default: true
-                }
-            },
-            required: ['path']
-        }
-    },
+    // {
+    //     name: "get_directory_tree",
+    //     description: `获取指定目录的树状结构，可控制遍历深度和是否包含文件。适合了解项目结构。`,
+    //     input_schema: {
+    //         type: 'object',
+    //         properties: {
+    //             path: {
+    //                 type: 'string',
+    //                 description: '要获取树状结构的目录路径'
+    //             },
+    //             maxDepth: {
+    //                 type: 'number',
+    //                 description: '最大遍历深度',
+    //                 default: 3
+    //             },
+    //             includeFiles: {
+    //                 type: 'boolean',
+    //                 description: '是否包含文件（false时只显示文件夹）',
+    //                 default: true
+    //             }
+    //         },
+    //         required: ['path']
+    //     }
+    // },
     {
         name: "grep_tool",
         description: `- Fast content search tool that works with any codebase size
@@ -334,7 +334,7 @@ support two modes:
                 maxLineLength: {
                     type: 'number',
                     description: '每行最大字符长度（100-2000）。用于控制返回内容的长度，避免单行超大文件（如压缩JSON）返回过多数据。推荐值：500',
-                    default: 500
+                    default: 100
                 },
                 maxResults: {
                     type: 'number',
@@ -498,7 +498,7 @@ support two modes:
     // },
     {
         name: "smart_block_tool",
-        description: `智能块创建、配置Blockly工作区中的块。使用工具前必须确保已经读取了将要使用的block所属库的Readme，任何一个核心库也不例外，如:lib-core-variables/time/io等也必须读取其Readme。
+        description: `智能块创建、配置Blockly工作区中的块。<system-reminder>使用工具前必须确保已经读取了将要使用的block所属库的Readme</system-reminder>。
 基本语法:
 基本语法
 \`\`\`json
@@ -632,7 +632,7 @@ support two modes:
     },
     {
         name: "create_code_structure_tool", 
-        description: `动态结构创建工具，使用工具前必须确保已经读取了将要使用的block所属库的Readme，任何一个核心库也不例外，如:lib-core-variables/time/io等也必须读取其Readme。建议分步生成代码，如：全局变量-初始化-loop-回调函数 类似的方式分步骤生成代码块，同时不建议一次性生成超过10个block的代码块。使用动态结构处理器创建任意复杂的代码块结构，支持自定义块组合和连接规则。
+        description: `动态结构创建工具，<system-reminder>使用工具前必须确保已经读取了将要使用的block所属库的Readme</system-reminder>。建议分步生成代码，如：全局变量-初始化-loop-回调函数 不要一次性生成超过10个block的代码块。使用动态结构处理器创建任意复杂的代码块结构，支持自定义块组合和连接规则。
 基本语法:
 \`\`\`json
 {
@@ -862,7 +862,7 @@ support two modes:
     // },
     {
         name: "delete_block_tool",
-        description: `块删除工具，如果使用connect_blocks_tool重新连接能解决则优先使用块连接工具。通过块ID删除工作区中的指定块。支持两种删除模式：普通删除（只删除指定块，保留连接的块）和级联删除（删除整个块树，包括所有连接的子块）。`,
+        description: `块删除工具，如果使用connect_blocks_tool重新连接能解决则优先使用块连接工具。通过块ID删除工作区中的指定块。支持两种删除模式：普通删除（只删除指定块，保留连接的块，推荐使用）和级联删除（删除整个块树，包括所有连接的子块）。`,
         input_schema: {
             type: 'object',
             properties: {
@@ -1025,6 +1025,67 @@ support two modes:
     {
         name: "todo_write_tool",
         description: `Creates and manages todo items for task tracking and progress management in the current session.
+Use this tool to create and manage todo items for tracking tasks and progress. This tool provides comprehensive todo management:
+
+## When to Use This Tool
+
+Use this tool proactively in these scenarios:
+
+1. **Complex multi-step tasks** - When a task requires 3 or more distinct steps or actions
+2. **Non-trivial and complex tasks** - Tasks that require careful planning or multiple operations
+3. **User explicitly requests todo list** - When the user directly asks you to use the todo list
+4. **User provides multiple tasks** - When users provide a list of things to be done (numbered or comma-separated)
+5. **After receiving new instructions** - Immediately capture user requirements as todos
+6. **When you start working on a task** - Mark it as in_progress BEFORE beginning work. Ideally you should only have one todo as in_progress at a time
+7. **After completing a task** - Mark it as completed and add any new follow-up tasks discovered during implementation
+
+## When NOT to Use This Tool
+
+Skip using this tool when:
+1. There is only a single, straightforward task
+2. The task is trivial and tracking it provides no organizational benefit
+3. The task can be completed in less than 3 trivial steps
+4. The task is purely conversational or informational
+
+## Task States and Management
+
+1. **Task States**: Use these states to track progress:
+   - pending: Task not yet started
+   - in_progress: Currently working on (limit to ONE task at a time)
+   - completed: Task finished successfully
+
+2. **Task Management**:
+   - Update task status in real-time as you work
+   - Mark tasks complete IMMEDIATELY after finishing (don't batch completions)
+   - Only have ONE task in_progress at any time
+   - Complete current tasks before starting new ones
+   - Remove tasks that are no longer relevant from the list entirely
+
+3. **Task Completion Requirements**:
+   - ONLY mark a task as completed when you have FULLY accomplished it
+   - If you encounter errors, blockers, or cannot finish, keep the task as in_progress
+   - When blocked, create a new task describing what needs to be resolved
+   - Never mark a task as completed if:
+     - Tests are failing
+     - Implementation is partial
+     - You encountered unresolved errors
+     - You couldn't find necessary files or dependencies
+
+4. **Task Breakdown**:
+   - Create specific, actionable items
+   - Break complex tasks into smaller, manageable steps
+   - Use clear, descriptive task names
+
+## Tool Capabilities
+
+- **Create new todos**: Add tasks with content, priority, and status
+- **Update existing todos**: Modify any aspect of a todo (status, priority, content)
+- **Delete todos**: Remove completed or irrelevant tasks
+- **Batch operations**: Update multiple todos in a single operation
+- **Clear all todos**: Reset the entire todo list
+
+When in doubt, use this tool. Being proactive with task management demonstrates attentiveness and ensures you complete all requirements successfully.
+
 请求参数
 ## 必填字段
 - \`operation\`: 操作类型 (add|list|update|toggle|delete|query|stats|clear|optimize)
@@ -1100,67 +1161,6 @@ support two modes:
 }
 \`\`\`
 状态循环：\`pending\` → \`in_progress\` → \`completed\`
-
-Use this tool to create and manage todo items for tracking tasks and progress. This tool provides comprehensive todo management:
-
-## When to Use This Tool
-
-Use this tool proactively in these scenarios:
-
-1. **Complex multi-step tasks** - When a task requires 3 or more distinct steps or actions
-2. **Non-trivial and complex tasks** - Tasks that require careful planning or multiple operations
-3. **User explicitly requests todo list** - When the user directly asks you to use the todo list
-4. **User provides multiple tasks** - When users provide a list of things to be done (numbered or comma-separated)
-5. **After receiving new instructions** - Immediately capture user requirements as todos
-6. **When you start working on a task** - Mark it as in_progress BEFORE beginning work. Ideally you should only have one todo as in_progress at a time
-7. **After completing a task** - Mark it as completed and add any new follow-up tasks discovered during implementation
-
-## When NOT to Use This Tool
-
-Skip using this tool when:
-1. There is only a single, straightforward task
-2. The task is trivial and tracking it provides no organizational benefit
-3. The task can be completed in less than 3 trivial steps
-4. The task is purely conversational or informational
-
-## Task States and Management
-
-1. **Task States**: Use these states to track progress:
-   - pending: Task not yet started
-   - in_progress: Currently working on (limit to ONE task at a time)
-   - completed: Task finished successfully
-
-2. **Task Management**:
-   - Update task status in real-time as you work
-   - Mark tasks complete IMMEDIATELY after finishing (don't batch completions)
-   - Only have ONE task in_progress at any time
-   - Complete current tasks before starting new ones
-   - Remove tasks that are no longer relevant from the list entirely
-
-3. **Task Completion Requirements**:
-   - ONLY mark a task as completed when you have FULLY accomplished it
-   - If you encounter errors, blockers, or cannot finish, keep the task as in_progress
-   - When blocked, create a new task describing what needs to be resolved
-   - Never mark a task as completed if:
-     - Tests are failing
-     - Implementation is partial
-     - You encountered unresolved errors
-     - You couldn't find necessary files or dependencies
-
-4. **Task Breakdown**:
-   - Create specific, actionable items
-   - Break complex tasks into smaller, manageable steps
-   - Use clear, descriptive task names
-
-## Tool Capabilities
-
-- **Create new todos**: Add tasks with content, priority, and status
-- **Update existing todos**: Modify any aspect of a todo (status, priority, content)
-- **Delete todos**: Remove completed or irrelevant tasks
-- **Batch operations**: Update multiple todos in a single operation
-- **Clear all todos**: Reset the entire todo list
-
-When in doubt, use this tool. Being proactive with task management demonstrates attentiveness and ensures you complete all requirements successfully.
 `,
         input_schema: {
             type: 'object',
@@ -1278,7 +1278,7 @@ When in doubt, use this tool. Being proactive with task management demonstrates 
     },
     {
         name: 'analyze_library_blocks',
-        description: `分析指定库的块定义和使用模式。深入解析库文件，提取块定义、生成器逻辑、工具箱配置等信息，生成完整的库知识图谱。在库对应的readme不存在或者描述不准确的情况下使用这个工具来补充和完善库的文档说明。`,
+        description: `分析指定库的块定义和使用模式，在库对应的readme不存在或者描述不准确的情况下使用这个工具来补充和完善库的文档说明。深入解析库文件，提取块定义、生成器逻辑、工具箱配置等信息，生成完整的库知识图谱。`,
         input_schema: {
             type: 'object',
             properties: {
@@ -1326,5 +1326,29 @@ When in doubt, use this tool. Being proactive with task management demonstrates 
             },
             required: ['blockTypes', 'libraryNames']
         }
+    // },
+    // {
+    //     name: 'arduino_syntax_check',
+    //     description: `检查Arduino代码的语法正确性。用于验证生成的Arduino代码是否有语法错误，特别是检测未声明的变量。`,
+    //     input_schema: {
+    //         type: 'object',
+    //         properties: {
+    //             code: {
+    //                 type: 'string',
+    //                 description: 'Arduino C++代码内容'
+    //             },
+    //             timeout: {
+    //                 type: 'number',
+    //                 default: 3000,
+    //                 description: '检查超时时间（毫秒）'
+    //             },
+    //             enableWarnings: {
+    //                 type: 'boolean',
+    //                 default: true,
+    //                 description: '是否启用警告检查'
+    //             }
+    //         },
+    //         required: ['code']
+    //     }
     }
 ]

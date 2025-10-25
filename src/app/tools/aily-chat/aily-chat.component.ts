@@ -52,6 +52,7 @@ import {
   verifyBlockExistenceTool
 } from './tools/editBlockTool';
 import { todoWriteTool } from './tools';
+// import { arduinoSyntaxTool } from './tools/arduinoSyntaxTool';
 import { NzModalService } from 'ng-zorro-antd/modal';
 import { ConfigService } from '../../services/config.service';
 
@@ -95,6 +96,7 @@ import { AuthService } from '../../services/auth.service';
 import { resolveObjectURL } from 'buffer';
 import { FloatingTodoComponent } from './components/floating-todo/floating-todo.component';
 import { TodoUpdateService } from './services/todoUpdate.service';
+import { ArduinoLintService } from './services/arduino-lint.service';
 import { BlocklyService } from '../../editors/blockly-editor/services/blockly.service';
 // import { reloadAbiJsonTool, reloadAbiJsonToolSimple } from './tools';
 
@@ -686,7 +688,8 @@ export class AilyChatComponent implements OnDestroy {
     private authService: AuthService,
     private modal: NzModalService,
     private configService: ConfigService,
-    private todoUpdateService: TodoUpdateService
+    private todoUpdateService: TodoUpdateService,
+    private arduinoLintService: ArduinoLintService
   ) { }
 
   ngOnInit() {
@@ -2046,6 +2049,29 @@ ${JSON.stringify(errData)}
                       }
                     }
                     break;
+//                   case 'arduino_syntax_check':
+//                     console.log('🔍 [Arduino语法检查工具被调用]', toolArgs);
+                    
+//                     this.appendMessage('aily', `
+
+// \`\`\`aily-state
+// {
+//   "state": "doing",
+//   "text": "正在检查Arduino代码语法...",
+//   "id": "${toolCallId}"
+// }
+// \`\`\`\n\n
+//                     `);
+                    
+//                     toolResult = await arduinoSyntaxTool.use(toolArgs);
+//                     if (toolResult.is_error) {
+//                       resultState = "warn";
+//                       resultText = '代码语法检查发现问题';
+//                     } else {
+//                       resultState = "success";
+//                       resultText = 'Arduino代码语法检查通过';
+//                     }
+//                     break;
                 }
               }
 
@@ -2063,6 +2089,28 @@ ${JSON.stringify(errData)}
                 is_error: true,
                 content: resultText
               };
+            }
+
+            let toolContent = '';
+            // 拼接到工具结果中返回
+            if (toolResult?.content && this.chatService.currentMode === 'agent') {
+                toolContent = `\n请不要经验主义或者过于自信，Blockly块创建必须遵循以下流程：
+1. 先列出计划使用的所有库(不可跳过以\`lib-core\`开始的库，特别是lib-core-logic lib-core-variables lib-core-time等基础库)
+2. 逐一读取每个库的README确定块存在
+3. 使用smart_block_tool和create_code_structure_tool创建对应代码块
+4. 检查工具反馈结果
+5. 修复结构或逻辑问题(多次修复仍然有误时，分析是否遗漏了相关库readme的阅读)
+- 如果发现问题，请及时修复，不要继续往下走
+- 推荐优先使用connect_blocks_tool修改连接关系
+- 全局变量请作为独立块创建
+- 避免批量删除块
+6. 重复直至完成
+JSON务必保留必要的换行和缩进格式，否则可能导致解析失败。
+<toolResult>${toolResult.content}</toolResult>`;
+            } else {
+              toolContent = `
+Your role is ASK (Advisory & Quick Support) - you provide analysis, recommendations, and guidance ONLY. You do NOT execute actual tasks or changes.
+<toolResult>${toolResult.content}</toolResult>`;
             }
 
             // 显示工具完成状态（除了 todo_write_tool）
@@ -2086,11 +2134,11 @@ ${JSON.stringify(errData)}
             // 获取keyinfo
             const keyInfo = this.getKeyInfo();
 
-            let toolContent = '';
+            // let toolContent = '';
             // 拼接到工具结果中返回
-            if (toolResult?.content) {
-               toolContent = `\n${keyInfo}\n\n<toolResult>${toolResult.content}</toolResult>`;
-            }
+            // if (toolResult?.content) {
+            //    toolContent = `\n${keyInfo}\n\n<toolResult>${toolResult.content}</toolResult>`;
+            // }
 
             // let toolContent = toolResult?.content || '';
             // console.log(`工具调用结果: `, toolResult, resultText);
