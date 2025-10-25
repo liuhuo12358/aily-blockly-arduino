@@ -53,7 +53,7 @@ export class ArduinoSyntaxTool {
 
       // 检查 lint 服务是否可用
       if (!this.lintService) {
-        console.error('❌ lintService 实例不存在');
+        console.warn('❌ lintService 实例不存在');
         return {
           is_error: true,
           content: '❌ **Arduino Lint 服务不可用**\n\n可能原因：\n1. 服务未正确注册到全局对象\n2. 服务初始化失败\n\n请检查浏览器控制台获取详细错误信息。'
@@ -65,7 +65,7 @@ export class ArduinoSyntaxTool {
       console.log('- 服务可用性结果:', isServiceAvailable);
       
       if (!isServiceAvailable) {
-        console.error('❌ aily-builder 不可用');
+        console.warn('❌ aily-builder 不可用');
         const status = this.lintService.getStatus();
         console.log('- 服务状态:', status);
         return {
@@ -84,7 +84,7 @@ export class ArduinoSyntaxTool {
       return this.formatLintResult(result);
 
     } catch (error: any) {
-      console.error('Arduino语法检查工具执行失败:', error);
+      console.warn('Arduino语法检查工具执行失败:', error);
       return {
         is_error: true,
         content: `❌ **语法检查执行失败**
@@ -233,7 +233,7 @@ export class ArduinoSyntaxTool {
         errors: []
       };
     } catch (error) {
-      console.error('快速检查失败:', error);
+      console.warn('快速检查失败:', error);
       return {
         hasErrors: true,
         errors: ['检查失败']

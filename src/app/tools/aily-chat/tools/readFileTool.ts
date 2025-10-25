@@ -84,7 +84,7 @@ export async function readFileTool(
         };
         return injectTodoReminder(toolResult, 'readFileTool');
     } catch (error: any) {
-        console.error("读取文件失败:", error);
+        console.warn("读取文件失败:", error);
         
         let errorMessage = `读取文件失败: ${error.message}`;
         if (error.code) {

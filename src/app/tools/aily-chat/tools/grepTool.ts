@@ -61,7 +61,7 @@ async function searchWithRipgrep(
             durationMs: result.durationMs
         };
     } catch (error) {
-        console.error('Ripgrep 搜索错误:', error);
+        console.warn('Ripgrep 搜索错误:', error);
         return null;
     }
 }
@@ -410,7 +410,7 @@ export async function grepTool(
                 };
                 return injectTodoReminder(toolResult, 'grepTool');
             } catch (error: any) {
-                console.error('searchContent 失败:', error);
+                console.warn('searchContent 失败:', error);
                 // 降级到文件名模式
                 console.log('降级到文件名搜索模式');
             }
@@ -499,7 +499,7 @@ export async function grepTool(
         
         return injectTodoReminder(toolResult, 'grepTool');
     } catch (error: any) {
-        console.error("Grep搜索失败:", error);
+        console.warn("Grep搜索失败:", error);
         
         let errorMessage = `搜索失败: ${error.message}`;
         if (error.code) {

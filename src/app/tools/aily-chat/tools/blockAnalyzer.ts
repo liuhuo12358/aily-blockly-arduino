@@ -183,7 +183,7 @@ export class BlockAnalyzer {
       return result;
       
     } catch (error) {
-      console.error(`❌ 分析库失败: ${libraryName}`, error);
+      console.warn(`❌ 分析库失败: ${libraryName}`, error);
       throw new Error(`分析库 ${libraryName} 失败: ${error.message}`);
     }
   }
@@ -956,7 +956,7 @@ export class BlockAnalyzer {
       
       return libraryNames;
     } catch (error) {
-      console.error('读取 package.json 失败:', error);
+      console.warn('读取 package.json 失败:', error);
       return [];
     }
   }
@@ -1183,7 +1183,7 @@ export class BlockAnalyzer {
       return null;
       
     } catch (error) {
-      console.error('获取项目路径时出错:', error);
+      console.warn('获取项目路径时出错:', error);
       return null;
     }
   }

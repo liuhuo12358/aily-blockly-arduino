@@ -750,7 +750,7 @@ export class AilyChatComponent implements OnDestroy {
             // 获取历史记录
             this.getHistory();
           }).catch((err) => {
-            // console.error("startSession error: ", err);
+            // console.warn("startSession error: ", err);
             
           });
         }
@@ -765,7 +765,7 @@ export class AilyChatComponent implements OnDestroy {
           try {
             await this.stopAndCloseSession();
           } catch (error) {
-            console.error('清理会话时出错:', error);
+            console.warn('清理会话时出错:', error);
           }
 
           // 重置所有相关状态
@@ -852,7 +852,7 @@ ${JSON.stringify(errData)}
               resolve();
             },
             error: (err) => {
-              console.error('取消对话失败:', err);
+              console.warn('取消对话失败:', err);
               resolve(); // 即使失败也继续
             }
           });
@@ -866,14 +866,14 @@ ${JSON.stringify(errData)}
               resolve();
             },
             error: (err) => {
-              console.error('关闭时关闭会话失败:', err);
+              console.warn('关闭时关闭会话失败:', err);
               resolve(); // 即使失败也继续
             }
           });
         });
       }
     } catch (error) {
-      console.error('关闭会话过程中出错:', error);
+      console.warn('关闭会话过程中出错:', error);
     }
   }
 
@@ -1118,7 +1118,7 @@ ${JSON.stringify(errData)}
         }
       },
       error: (error) => {
-        console.error('发送消息失败:', error);
+        console.warn('发送消息失败:', error);
 
         // 检查是否是502错误且还有重试次数
         if (error.status === 502 && retryCount > 0) {
@@ -1273,12 +1273,12 @@ ${JSON.stringify(errData)}
 
                 toolArgs = JSON.parse(processedString);
               } catch (e) {
-                console.error('JSON解析失败，尝试备用方法:', e);
+                console.warn('JSON解析失败，尝试备用方法:', e);
                 try {
                   // 备用方案：使用Function构造器
                   toolArgs = new Function('return ' + data.tool_args)();
                 } catch (e2) {
-                  console.error('所有解析方法都失败:', e2);
+                  console.warn('所有解析方法都失败:', e2);
                   this.send("tool", JSON.stringify({
                     "type": "tool_result",
                     "tool_id": data.tool_id,
@@ -2082,7 +2082,7 @@ ${JSON.stringify(errData)}
                 resultState = "warn";
               }
             } catch (error) {
-              console.error('工具执行出错:', error);
+              console.warn('工具执行出错:', error);
               resultState = "error";
               resultText = `工具执行出错: ${error.message || '未知错误'}`;
               toolResult = {
@@ -2134,14 +2134,12 @@ Your role is ASK (Advisory & Quick Support) - you provide analysis, recommendati
             // 获取keyinfo
             const keyInfo = this.getKeyInfo();
 
-            // let toolContent = '';
             // 拼接到工具结果中返回
-            // if (toolResult?.content) {
-            //    toolContent = `\n${keyInfo}\n\n<toolResult>${toolResult.content}</toolResult>`;
-            // }
+            if (toolResult?.content) {
+               toolContent = `\n${keyInfo}\n\n<toolResult>${toolResult.content}</toolResult>`;
+            }
 
-            // let toolContent = toolResult?.content || '';
-            // console.log(`工具调用结果: `, toolResult, resultText);
+            console.log(`工具调用结果: `, toolResult, resultText);
 
             this.send("tool", JSON.stringify({
               "type": "tool",
@@ -2195,7 +2193,7 @@ Your role is ASK (Advisory & Quick Support) - you provide analysis, recommendati
         }
       },
       error: (err) => {
-        console.error('流连接出错:', err);
+        console.warn('流连接出错:', err);
         // 设置最后一条AI消息状态为done（如果存在）
         if (this.list.length > 0 && this.list[this.list.length - 1].role === 'aily') {
           this.list[this.list.length - 1].state = 'done';
@@ -2403,7 +2401,7 @@ Your role is ASK (Advisory & Quick Support) - you provide analysis, recommendati
           },
           error: (err) => {
             clearTimeout(timeout);
-            console.error('停止会话失败:', err);
+            console.warn('停止会话失败:', err);
             resolve(); // 即使失败也继续
           }
         });
@@ -2430,13 +2428,13 @@ Your role is ASK (Advisory & Quick Support) - you provide analysis, recommendati
           },
           error: (err) => {
             clearTimeout(timeout);
-            console.error('关闭会话失败:', err);
+            console.warn('关闭会话失败:', err);
             resolve(); // 即使失败也继续
           }
         });
       });
     } catch (error) {
-      console.error('停止和关闭会话失败:', error);
+      console.warn('停止和关闭会话失败:', error);
       throw error; // 抛出错误，让调用者处理
     }
   }
@@ -2475,7 +2473,7 @@ Your role is ASK (Advisory & Quick Support) - you provide analysis, recommendati
       await this.startSession();
 
     } catch (error) {
-      console.error('新会话启动失败:', error);
+      console.warn('新会话启动失败:', error);
 
       // 即使失败也要确保标志位重置
       this.isSessionStarting = false;

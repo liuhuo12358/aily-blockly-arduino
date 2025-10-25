@@ -51,7 +51,7 @@ export async function executeCommandTool(cmdService: CmdService, data: any): Pro
                     output += textOutput;
                 },
                 error: (err) => {
-                    console.error(`Command error: ${err}`);
+                    console.warn(`Command error: ${err}`);
                     is_error = true;
                     reject(err);
                 },
@@ -65,7 +65,7 @@ export async function executeCommandTool(cmdService: CmdService, data: any): Pro
         toolResult = result || '命令执行完成';
         
     } catch (e) {
-        console.error('执行command命令失败:', e);
+        console.warn('执行command命令失败:', e);
         toolResult = `执行command命令失败: ${e.message}`;
         is_error = true;
     } finally {

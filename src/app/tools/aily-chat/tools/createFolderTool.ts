@@ -83,7 +83,7 @@ export async function createFolderTool(
         };
         return injectTodoReminder(toolResult, 'createFolderTool');
     } catch (error: any) {
-        console.error("创建文件夹失败:", error);
+        console.warn("创建文件夹失败:", error);
         
         let errorMessage = `创建文件夹失败: ${error.message}`;
         if (error.code) {

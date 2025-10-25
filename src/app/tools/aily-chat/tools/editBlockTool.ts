@@ -702,7 +702,7 @@ export function getActiveWorkspace(): any {
   }
 
   // 所有方法都失败了
-  console.error('❌ 所有工作区查找方法都失败了');
+  console.warn('❌ 所有工作区查找方法都失败了');
   console.log('🔍 调试信息:');
   console.log('- window.blocklyWorkspace:', !!(window as any).blocklyWorkspace);
   console.log('- window.angularComponentRef:', !!(window as any).angularComponentRef);
@@ -802,13 +802,13 @@ async function createBlockSafely(
 
           resolve(block);
         } catch (error) {
-          console.error('createBlockSafely 内部错误:', error);
+          console.warn('createBlockSafely 内部错误:', error);
           reject(error);
         }
       }, 50);
     });
   } catch (error) {
-    console.error('createBlockSafely 错误:', error);
+    console.warn('createBlockSafely 错误:', error);
     throw error;
   }
 }
@@ -1151,12 +1151,12 @@ function handleVariableField(block: any, variableName: string, returnId: boolean
       
       return returnId ? variable.getId() : variableName;
     } else {
-      console.error(`❌ 变量创建失败: ${variableName}`);
+      console.warn(`❌ 变量创建失败: ${variableName}`);
       return null;
     }
     
   } catch (error) {
-    console.error('❌ 处理变量字段时出错:', error);
+    console.warn('❌ 处理变量字段时出错:', error);
     return null;
   }
 }
@@ -1232,7 +1232,7 @@ function moveBlockChain(chain: any[], newParentConnection: any): { success: bool
     
     return { success: false, movedBlocks: [] };
   } catch (error) {
-    console.error('❌ 块链移动失败:', error);
+    console.warn('❌ 块链移动失败:', error);
     return { success: false, movedBlocks: [] };
   } finally {
     enableBlocklyEvents();
@@ -1365,12 +1365,12 @@ async function smartInsertBlock(
           const expectedType = isStatementInput ? '语句块（如digital_write、serial_println等）' : '表达式块（如math_number、variable_get等）';
           const inputCategory = isStatementInput ? '语句输入' : '值输入';
           
-          console.error(`❌ 连接类型不匹配详细分析:`);
-          console.error(`  - 目标输入: "${inputName}" (${inputCategory}, 类型: ${inputConnection.type})`);
-          console.error(`  - 新块类型: ${newBlock.type} (${newBlock.outputConnection ? '表达式块' : newBlock.previousConnection ? '语句块' : '无连接块'})`);
-          console.error(`  - 需要的连接: ${connectionType}`);
-          console.error(`  - 期望块类型: ${expectedType}`);
-          console.error(`  - 块连接情况: outputConnection=${!!newBlock.outputConnection}, previousConnection=${!!newBlock.previousConnection}`);
+          console.warn(`❌ 连接类型不匹配详细分析:`);
+          console.warn(`  - 目标输入: "${inputName}" (${inputCategory}, 类型: ${inputConnection.type})`);
+          console.warn(`  - 新块类型: ${newBlock.type} (${newBlock.outputConnection ? '表达式块' : newBlock.previousConnection ? '语句块' : '无连接块'})`);
+          console.warn(`  - 需要的连接: ${connectionType}`);
+          console.warn(`  - 期望块类型: ${expectedType}`);
+          console.warn(`  - 块连接情况: outputConnection=${!!newBlock.outputConnection}, previousConnection=${!!newBlock.previousConnection}`);
           
           throw new Error(`🔌 连接失败：块 "${newBlock.type}" 是${newBlock.outputConnection ? '表达式块' : '语句块'}，但输入 "${inputName}" 需要${blockCategory}。\n` +
                          `💡 建议：\n` + 
@@ -1443,7 +1443,7 @@ async function smartInsertBlock(
               }
             }
           } catch (connectError) {
-            console.error('❌ 连接失败:', connectError);
+            console.warn('❌ 连接失败:', connectError);
             throw connectError;
           } finally {
             enableBlocklyEvents();
@@ -1477,7 +1477,7 @@ async function smartInsertBlock(
               };
             }
           } catch (connectError) {
-            console.error('❌ 直接连接失败:', connectError);
+            console.warn('❌ 直接连接失败:', connectError);
             throw connectError;
           } finally {
             enableBlocklyEvents();
@@ -1540,7 +1540,7 @@ async function smartInsertBlock(
     
     return { smartInsertion: false, autoMovedBlock: null };
   } catch (error) {
-    console.error('智能插入失败:', error);
+    console.warn('智能插入失败:', error);
     throw error;
   }
 }
@@ -1574,7 +1574,7 @@ function findBlock(workspace: any, reference: BlockReference): any {
     
     return null;
   } catch (error) {
-    console.error('查找块时出错:', error);
+    console.warn('查找块时出错:', error);
     return null;
   }
 }
@@ -1614,7 +1614,7 @@ export async function smartBlockTool(args: SmartBlockArgs): Promise<SmartBlockRe
           console.log(`✅ position 设为默认值: ${JSON.stringify(parsedPosition)}`);
         }
       } catch (error) {
-        console.error(`❌ position 解析失败: ${(error as Error).message}`);
+        console.warn(`❌ position 解析失败: ${(error as Error).message}`);
         parsedPosition = { x: 0, y: 0 };
       }
     } else if (position && typeof position === 'object') {
@@ -1633,7 +1633,7 @@ export async function smartBlockTool(args: SmartBlockArgs): Promise<SmartBlockRe
           console.log(`✅ fields 修复为: ${JSON.stringify(parsedFields)}`);
         }
       } catch (error) {
-        console.error(`❌ fields 解析失败: ${(error as Error).message}`);
+        console.warn(`❌ fields 解析失败: ${(error as Error).message}`);
         parsedFields = {};
       }
     } else if (fields && typeof fields === 'object') {
@@ -1653,11 +1653,11 @@ export async function smartBlockTool(args: SmartBlockArgs): Promise<SmartBlockRe
             parsedInputs = JSON.parse(fixResult.fixed);
             console.log(`✅ inputs JSON 解析成功: ${JSON.stringify(parsedInputs)}`);
           } catch (parseError) {
-            console.error(`❌ 修复后的 JSON 仍然无法解析: ${(parseError as Error).message}`);
+            console.warn(`❌ 修复后的 JSON 仍然无法解析: ${(parseError as Error).message}`);
             parsedInputs = {};
           }
         } else {
-          console.error(`❌ JSON 修复失败: ${fixResult.error}`);
+          console.warn(`❌ JSON 修复失败: ${fixResult.error}`);
           parsedInputs = {};
         }
       }
@@ -1675,7 +1675,7 @@ export async function smartBlockTool(args: SmartBlockArgs): Promise<SmartBlockRe
           console.log(`✅ parentConnection 修复为: ${JSON.stringify(parsedParentConnection)}`);
         }
       } catch (error) {
-        console.error(`❌ parentConnection 解析失败: ${(error as Error).message}`);
+        console.warn(`❌ parentConnection 解析失败: ${(error as Error).message}`);
         parsedParentConnection = undefined;
       }
     } else if (parentConnection && typeof parentConnection === 'object') {
@@ -1760,7 +1760,7 @@ export async function smartBlockTool(args: SmartBlockArgs): Promise<SmartBlockRe
     // 注入todo提醒
     return injectTodoReminder(toolResult, 'smartBlockTool');
   } catch (error) {
-    console.error('❌ 智能块工具执行失败:', error);
+    console.warn('❌ 智能块工具执行失败:', error);
     const errorResult = {
       is_error: true,
       content: `智能块工具执行失败: ${(error as Error).message}`,
@@ -1867,11 +1867,11 @@ async function connectToParent(
         return false;
       }
     } else {
-      console.error(`❌ 不支持的连接类型: ${connectionConfig.connectionType}`);
+      console.warn(`❌ 不支持的连接类型: ${connectionConfig.connectionType}`);
       return false;
     }
   } catch (error) {
-    console.error(`❌ 连接到父块时出错:`, error);
+    console.warn(`❌ 连接到父块时出错:`, error);
     return false;
   }
 }
@@ -2321,7 +2321,7 @@ async function applyDynamicExtraState(block: any, extraState: any, dynamicSuppor
             console.log(`✅ 手动创建输入 DO${i}`);
           }
         } catch (error) {
-          console.error(`❌ 手动创建 controls_elseif 输入失败:`, error);
+          console.warn(`❌ 手动创建 controls_elseif 输入失败:`, error);
         }
       }
     }
@@ -2395,7 +2395,7 @@ async function validateAndCreateInputs(block: any, expectedInputs: string[], inp
         }
         console.log(`✅ 手动创建输入 ${inputName} 成功`);
       } catch (error) {
-        console.error(`❌ 手动创建输入 ${inputName} 失败:`, error);
+        console.warn(`❌ 手动创建输入 ${inputName} 失败:`, error);
       }
     }
   });
@@ -2419,7 +2419,7 @@ async function manuallyCreateInputs(block: any, count: number, prefix: string, i
         }
         console.log(`✅ 手动创建输入 ${inputName} 成功`);
       } catch (error) {
-        console.error(`❌ 手动创建输入 ${inputName} 失败:`, error);
+        console.warn(`❌ 手动创建输入 ${inputName} 失败:`, error);
       }
     }
   }
@@ -2631,7 +2631,7 @@ async function extendBlockWithDynamicInputs(block: any, inputsConfig: any): Prom
     }
     
   } catch (error) {
-    console.error('❌ 扩展动态输入时出错:', error);
+    console.warn('❌ 扩展动态输入时出错:', error);
   }
 }
 
@@ -2702,7 +2702,7 @@ async function configureBlockInputs(workspace: any, block: any, inputs: InputCon
               console.warn(`⚠️ 子块 ${childBlock.type} 没有可用的连接点`);
             }
           } else {
-            console.error(`❌ 子块创建失败或输入没有连接点`);
+            console.warn(`❌ 子块创建失败或输入没有连接点`);
           }
         } else if (inputConfig.shadow) {
           console.log('👤 创建影子块...');
@@ -2725,13 +2725,13 @@ async function configureBlockInputs(workspace: any, block: any, inputs: InputCon
               console.warn(`⚠️ 影子块 ${shadowBlock.type} 没有可用的连接点`);
             }
           } else {
-            console.error(`❌ 影子块创建失败或输入没有连接点`);
+            console.warn(`❌ 影子块创建失败或输入没有连接点`);
           }
         } else {
           console.log(`ℹ️ 输入 "${inputName}" 没有块或影子配置`);
         }
       } else {
-        console.error(`❌ 输入 "${inputName}" 在块 ${block.type} 中不存在`);
+        console.warn(`❌ 输入 "${inputName}" 在块 ${block.type} 中不存在`);
         // 列出可用的输入
         const availableInputs = [];
         if (block.inputList) {
@@ -2748,7 +2748,7 @@ async function configureBlockInputs(workspace: any, block: any, inputs: InputCon
     
     console.log(`✅ configureBlockInputs 完成，更新了 ${updatedInputs.length} 个输入: ${updatedInputs.join(', ')}`);
   } catch (error) {
-    console.error('❌ 配置块输入时出错:', error);
+    console.warn('❌ 配置块输入时出错:', error);
   }
 
   return { updatedInputs, extractedNext };
@@ -2783,7 +2783,7 @@ async function createBlockFromConfig(workspace: any, config: BlockConfig | strin
     const block = await createBlockSafely(workspace, config.type, position, false);
     
     if (!block) {
-      console.error(`❌ 块创建失败: ${config.type}`);
+      console.warn(`❌ 块创建失败: ${config.type}`);
       return { block: null, totalBlocks: 0 };
     }
     
@@ -2839,7 +2839,7 @@ async function createBlockFromConfig(workspace: any, config: BlockConfig | strin
     console.log(`🎉 createBlockFromConfig 完成: ${config.type}`);
     return { block, totalBlocks };
   } catch (error) {
-    console.error('❌ 从配置创建块时出错:', error);
+    console.warn('❌ 从配置创建块时出错:', error);
     return { block: null, totalBlocks: 0 };
   }
 }
@@ -2944,7 +2944,7 @@ export async function createCodeStructureTool(
       }
 
     } catch (parseError) {
-      console.error('❌ 参数解析失败:', parseError);
+      console.warn('❌ 参数解析失败:', parseError);
       throw new Error(`参数解析失败: ${parseError instanceof Error ? parseError.message : String(parseError)}`);
     }
 
@@ -3022,7 +3022,7 @@ ${workspaceOverview}`;
     is_error = true;
     // toolResult = `创建代码结构失败: ${error instanceof Error ? error.message : String(error)}，<system-reminder>${generateErrorInfo()}</system-reminder>`;
     toolResult = `创建代码结构失败: ${error instanceof Error ? error.message : String(error)}`;
-    console.error('❌ createCodeStructureTool 执行失败:', error);
+    console.warn('❌ createCodeStructureTool 执行失败:', error);
   }
 
   console.log('📤 返回结果:', { content: toolResult, is_error, metadata });
@@ -3404,7 +3404,7 @@ ${workspaceOverview}`;
     };
 
   } catch (error) {
-    console.error('❌ 连接失败:', error);
+    console.warn('❌ 连接失败:', error);
     return {
           is_error: true,
           // content: `❌ 连接失败: ${error instanceof Error ? error.message : String(error)}，<system-reminder>${generateErrorInfo()}</system-reminder>`,
@@ -3498,7 +3498,7 @@ async function getWorkspaceOverviewInfo(includeCode = true, includeTree = true):
       return { overview, cppCode: '', isError: true };
     }
   } catch (error) {
-    console.error('❌ 获取工作区概览出错:', error);
+    console.warn('❌ 获取工作区概览出错:', error);
     return { 
       overview: '❌ 工作区概览获取出错', 
       cppCode: '', 
@@ -3602,7 +3602,7 @@ function detectStatementInput(block: any): string | null {
     console.log('❌ 未找到任何语句输入端口');
     return null;
   } catch (error) {
-    console.error('❌ 检测语句输入失败:', error);
+    console.warn('❌ 检测语句输入失败:', error);
     return null;
   }
 }
@@ -4161,7 +4161,7 @@ ${workspaceOverview}`;
     }
 
   } catch (error) {
-    console.error('❌ 删除块失败:', error);
+    console.warn('❌ 删除块失败:', error);
     return {
       is_error: true,
       content: `❌ 删除块失败: ${error instanceof Error ? error.message : String(error)}`
@@ -4679,7 +4679,7 @@ export async function getWorkspaceOverviewTool(args?: any): Promise<ToolUseResul
     return injectTodoReminder(result, 'getWorkspaceOverviewTool');
 
   } catch (error) {
-    console.error('❌ 获取工作区概览失败:', error);
+    console.warn('❌ 获取工作区概览失败:', error);
     const errorResult = {
       is_error: true,
       content: `❌ 获取工作区概览失败: ${error.message}`,
@@ -5308,7 +5308,7 @@ export async function generateCodeTool(): Promise<ToolUseResult> {
     return injectTodoReminder(result, 'generateCodeTool');
 
   } catch (error) {
-    console.error('❌ 代码生成失败:', error);
+    console.warn('❌ 代码生成失败:', error);
     const errorResult = {
       is_error: true,
       content: `❌ 代码生成失败: ${error.message}`,
@@ -5344,14 +5344,14 @@ export async function configureBlockTool(args: any): Promise<ToolUseResult> {
             fields = JSON.parse(fixResult.fixed);
             console.log(`✅ fields 修复成功: ${JSON.stringify(fields)}`);
           } else {
-            console.error(`❌ fields 修复失败: ${fixResult.error}`);
+            console.warn(`❌ fields 修复失败: ${fixResult.error}`);
             fields = null;
           }
         } else {
           fields = null;
         }
       } catch (error) {
-        console.error(`❌ fields 解析失败: ${(error as Error).message}`);
+        console.warn(`❌ fields 解析失败: ${(error as Error).message}`);
         fields = null;
       }
     }
@@ -5369,12 +5369,12 @@ export async function configureBlockTool(args: any): Promise<ToolUseResult> {
             inputs = JSON.parse(fixResult.fixed);
             console.log(`✅ inputs 修复成功: ${JSON.stringify(inputs)}`);
           } catch (parseError) {
-            console.error(`❌ 修复后的 JSON 仍然无法解析: ${(parseError as Error).message}`);
+            console.warn(`❌ 修复后的 JSON 仍然无法解析: ${(parseError as Error).message}`);
             inputs = null;
           }
         } else {
-          console.error(`❌ JSON 修复失败: ${fixResult.error}`);
-          console.error(`❌ 尝试的修复: ${fixResult.changes.join(', ')}`);
+          console.warn(`❌ JSON 修复失败: ${fixResult.error}`);
+          console.warn(`❌ 尝试的修复: ${fixResult.changes.join(', ')}`);
           inputs = null;
         }
       } else {
@@ -5454,7 +5454,7 @@ export async function configureBlockTool(args: any): Promise<ToolUseResult> {
     };
 
   } catch (error) {
-    console.error('❌ 配置块失败:', error);
+    console.warn('❌ 配置块失败:', error);
     return {
       is_error: true,
       content: `❌ 配置块失败: ${error instanceof Error ? error.message : String(error)}`
@@ -5529,7 +5529,7 @@ export async function configureBlockTool(args: any): Promise<ToolUseResult> {
 //     throw new Error(`未知的操作: ${action}`);
 
 //   } catch (error) {
-//     console.error('❌ 变量管理失败:', error);
+//     console.warn('❌ 变量管理失败:', error);
 //     return {
 //       is_error: true,
 //       content: `❌ 变量管理失败: ${error.message}`,
@@ -5878,7 +5878,7 @@ export async function findBlockTool(args: any): Promise<ToolUseResult> {
 
     return injectTodoReminder(toolResult, 'findBlockTool');
   } catch (error) {
-    console.error('❌ 查找块失败:', error);
+    console.warn('❌ 查找块失败:', error);
     const toolResult = {
       is_error: true,
       content: `❌ 查找块失败: ${error.message}`,
@@ -6091,7 +6091,7 @@ async function scanBlockDefinitions(projectService?: any): Promise<Map<string, B
     return definitions;
     
   } catch (error) {
-    console.error('❌ 扫描块定义文件失败:', error);
+    console.warn('❌ 扫描块定义文件失败:', error);
     console.log('📋 错误详情:', error);
     
     // 如果扫描失败，返回预定义的块信息作为后备
@@ -6276,7 +6276,7 @@ export async function queryBlockDefinitionTool(projectService: any, args: {
 
     return injectTodoReminder(toolResult, 'queryBlockDefinitionTool');
   } catch (error) {
-    console.error('❌ 块定义查询失败:', error);
+    console.warn('❌ 块定义查询失败:', error);
     const toolResult = {
       is_error: true,
       content: `❌ 块定义查询失败: ${error instanceof Error ? error.message : String(error)}`
@@ -6723,7 +6723,7 @@ function formatBlockDefinitionResults(results: BlockConnectionInfo[], queryParam
 //     };
 
 //   } catch (error) {
-//     console.error('❌ 连接兼容性查询失败:', error);
+//     console.warn('❌ 连接兼容性查询失败:', error);
 //     return {
 //       is_error: true,
 //       content: `❌ 连接兼容性查询失败: ${error instanceof Error ? error.message : String(error)}`
@@ -6888,7 +6888,7 @@ async function getCurrentWorkspace(): Promise<any> {
 
     throw new Error('未找到活动的 Blockly 工作区');
   } catch (error) {
-    console.error('❌ 获取工作区失败:', error);
+    console.warn('❌ 获取工作区失败:', error);
     throw error;
   }
 }
@@ -7005,7 +7005,7 @@ async function createDynamicStructure(
     
     console.log(`🗂️ 根块映射键设置: 'root', '${rootBlock.type}' → ${rootBlock.type}[${rootBlock.id}]`);
   } else {
-    console.error(`❌ 根块创建失败: ${rootConfig.type}`);
+    console.warn(`❌ 根块创建失败: ${rootConfig.type}`);
     createError = true;
   }
   
@@ -7029,7 +7029,7 @@ async function createDynamicStructure(
       
       console.log(`🗂️ 附加块映射键设置: '${blockKey}', '${block.type}' → ${block.type}[${block.id}]`);
     } else {
-      console.error(`❌ 附加块创建失败: ${blockConfig.type}`);
+      console.warn(`❌ 附加块创建失败: ${blockConfig.type}`);
       createError = true;
     }
   }
@@ -7138,7 +7138,7 @@ async function createDynamicStructure(
         console.warn(`  可用的块键: [${Array.from(blockMap.keys()).join(', ')}]`);
       }
     } catch (error) {
-      console.error(`❌ 连接块时出错:`, error);
+      console.warn(`❌ 连接块时出错:`, error);
       createError = true;
     }
   }
@@ -7388,9 +7388,9 @@ async function handleBlockInsertion(
           console.log(`  - 类型兼容: ${isCompatible}`);
           
           if (!isCompatible) {
-            console.error(`❌ 连接类型不兼容！`);
-            console.error(`  需要: 输入连接类型=3, 块连接类型=4`);
-            console.error(`  实际: 输入连接类型=${inputConnType}, 块连接类型=${blockConnType}`);
+            console.warn(`❌ 连接类型不兼容！`);
+            console.warn(`  需要: 输入连接类型=3, 块连接类型=4`);
+            console.warn(`  实际: 输入连接类型=${inputConnType}, 块连接类型=${blockConnType}`);
             return;
           }
           
@@ -7410,8 +7410,8 @@ async function handleBlockInsertion(
             statementInput.connection.connect(block.previousConnection);
             console.log(`✅ statement 插入成功: ${actualInputName}`);
           } catch (connectError) {
-            console.error(`❌ statement 连接异常:`, connectError);
-            console.error(`异常详情:`, connectError.message || connectError);
+            console.warn(`❌ statement 连接异常:`, connectError);
+            console.warn(`异常详情:`, connectError.message || connectError);
           }
         } else {
           console.warn(`❌ statement 连接失败 - 连接点检查:`);
@@ -7430,9 +7430,9 @@ async function handleBlockInsertion(
           }
         }
       } else {
-        console.error(`❌ statement 插入失败: 无法确定目标输入名`);
-        console.error(`  目标块类型: ${targetBlock.type}`);
-        console.error(`  请检查目标块是否为容器块（如 setup, loop 等）`);
+        console.warn(`❌ statement 插入失败: 无法确定目标输入名`);
+        console.warn(`  目标块类型: ${targetBlock.type}`);
+        console.warn(`  请检查目标块是否为容器块（如 setup, loop 等）`);
       }
       break;
       
@@ -7549,7 +7549,7 @@ async function getCurrentProjectInfo(projectService?: any): Promise<{
     };
     
   } catch (error) {
-    console.error('获取项目信息失败:', error);
+    console.warn('获取项目信息失败:', error);
     return {
       projectPath: null,
       nodeModulesPath: null,
@@ -7841,7 +7841,7 @@ export async function analyzeLibraryBlocksTool(
     console.log(`✅ 库块分析完成: ${Object.keys(libraryResults).length} 个库, ${totalBlocks} 个块`);
 
   } catch (error) {
-    console.error('❌ analyzeLibraryBlocksTool 执行失败:', error);
+    console.warn('❌ analyzeLibraryBlocksTool 执行失败:', error);
     toolResult = `库块分析失败: ${error.message}`;
     is_error = true;
   }
@@ -7976,7 +7976,7 @@ export async function analyzeLibraryBlocksTool(
 //     console.log(`✅ 智能块序列生成完成: ${sequenceResult.sequence.length} 个块`);
 
 //   } catch (error) {
-//     console.error('❌ intelligentBlockSequenceTool 执行失败:', error);
+//     console.warn('❌ intelligentBlockSequenceTool 执行失败:', error);
 //     toolResult = `智能块序列生成失败: ${error.message}`;
 //     is_error = true;
 //   }
@@ -8116,7 +8116,7 @@ export async function verifyBlockExistenceTool(
     console.log(`✅ 块存在性验证完成: ${existingCount}/${blockTypes.length} 存在`);
 
   } catch (error) {
-    console.error('❌ verifyBlockExistenceTool 执行失败:', error);
+    console.warn('❌ verifyBlockExistenceTool 执行失败:', error);
     toolResult = `块存在性验证失败: ${error.message}`;
     is_error = true;
   }

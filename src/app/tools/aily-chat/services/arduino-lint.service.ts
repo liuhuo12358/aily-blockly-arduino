@@ -123,7 +123,7 @@ export class ArduinoLintService {
       }
 
     } catch (error: any) {
-      console.error('❌ Arduino 语法检查失败:', error);
+      console.warn('❌ Arduino 语法检查失败:', error);
       
       return {
         success: false,
@@ -179,7 +179,7 @@ export class ArduinoLintService {
 
       return await this.checkSyntax(code, options);
     } catch (error: any) {
-      console.error('检查当前工作区失败:', error);
+      console.warn('检查当前工作区失败:', error);
       throw error;
     }
   }
@@ -236,7 +236,7 @@ export class ArduinoLintService {
         librariesPath
       };
     } catch (error: any) {
-      console.error('准备 lint 环境失败:', error);
+      console.warn('准备 lint 环境失败:', error);
       throw new Error(`准备检查环境失败: ${error.message}`);
     }
   }
@@ -278,7 +278,7 @@ export class ArduinoLintService {
             }
           },
           error: (error) => {
-            console.error('📋 cmdService 执行错误:', error);
+            console.warn('📋 cmdService 执行错误:', error);
             reject(new Error(`命令执行失败: ${error.message || error}`));
           },
           complete: () => {
@@ -293,7 +293,7 @@ export class ArduinoLintService {
       });
 
     } catch (error: any) {
-      console.error('执行 lint 失败:', error);
+      console.warn('执行 lint 失败:', error);
       throw error;
     }
   }
@@ -459,7 +459,7 @@ export class ArduinoLintService {
         return this.parseHumanFormat(output, executionTime, mode);
       }
     } catch (error) {
-      console.error('解析 lint 结果失败:', error);
+      console.warn('解析 lint 结果失败:', error);
       return {
         success: false,
         errors: [{
@@ -640,7 +640,7 @@ export class ArduinoLintService {
       // 重置计数器
       this.lintSessionCount = 0;
     } catch (error) {
-      console.error('手动清理失败:', error);
+      console.warn('手动清理失败:', error);
       throw error;
     }
   }
@@ -683,7 +683,7 @@ export class ArduinoLintService {
       
       return indexJsExists;
     } catch (error) {
-      console.error('检查 aily-builder 可用性失败:', error);
+      console.warn('检查 aily-builder 可用性失败:', error);
       return false;
     }
   }
@@ -765,7 +765,7 @@ export class ArduinoLintService {
       }
 
     } catch (error: any) {
-      console.error('❌ 准备项目库文件失败:', error);
+      console.warn('❌ 准备项目库文件失败:', error);
       throw new Error(`库准备失败: ${error.message}`);
     }
   }
@@ -799,7 +799,7 @@ export class ArduinoLintService {
           console.log(`📦 解压库 ${lib}...`);
           await this.cmdService.runAsync(`7za x "${sourceZipPath}" -o"${sourcePath}" -y`);
         } catch (error) {
-          console.error(`解压库 ${lib} 失败:`, error);
+          console.warn(`解压库 ${lib} 失败:`, error);
           return { success: false, error: `解压失败: ${error.message}` };
         }
       }
@@ -824,7 +824,7 @@ export class ArduinoLintService {
       }
 
     } catch (error: any) {
-      console.error(`处理库 ${lib} 失败:`, error);
+      console.warn(`处理库 ${lib} 失败:`, error);
       return { success: false, error: error.message };
     }
   }
@@ -914,7 +914,7 @@ export class ArduinoLintService {
         targetNames: [targetName]
       };
     } catch (error: any) {
-      console.error(`复制库 ${lib} 失败:`, error);
+      console.warn(`复制库 ${lib} 失败:`, error);
       return { success: false, error: error.message };
     }
   }
@@ -981,7 +981,7 @@ export class ArduinoLintService {
         targetNames
       };
     } catch (error: any) {
-      console.error(`复制库目录 ${lib} 失败:`, error);
+      console.warn(`复制库目录 ${lib} 失败:`, error);
       return { success: false, error: error.message };
     }
   }

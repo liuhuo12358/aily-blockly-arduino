@@ -79,7 +79,7 @@ async function searchWithGlob(
         };
         
     } catch (error) {
-        console.error('[Glob] 搜索失败:', error);
+        console.warn('[Glob] 搜索失败:', error);
         return null;
     }
 }
@@ -128,7 +128,7 @@ function searchWithGlobSync(
         };
         
     } catch (error) {
-        console.error('[Glob Sync] 搜索失败:', error);
+        console.warn('[Glob Sync] 搜索失败:', error);
         return null;
     }
 }
@@ -242,7 +242,7 @@ export default async function globTool(params: {
         
         return injectTodoReminder(toolResult, 'globTool');
     } catch (error) {
-        console.error('[Glob Tool] 执行错误:', error);
+        console.warn('[Glob Tool] 执行错误:', error);
         const toolResult = {
             is_error: true,
             content: `执行错误: ${error instanceof Error ? error.message : String(error)}`

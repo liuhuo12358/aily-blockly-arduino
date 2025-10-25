@@ -102,7 +102,7 @@ export async function listDirectoryTool(
         };
         return injectTodoReminder(toolResult, 'listDirectoryTool');
     } catch (error: any) {
-        console.error("列出目录内容失败:", error);
+        console.warn("列出目录内容失败:", error);
         
         let errorMessage = `列出目录内容失败: ${error.message}`;
         if (error.code) {

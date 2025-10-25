@@ -208,7 +208,7 @@ export class FetchToolService {
       };
 
     } catch (error: any) {
-      console.error('Fetch工具执行失败:', error);
+      console.warn('Fetch工具执行失败:', error);
       
       let errorMessage = '网络请求失败';
       if (error.status === 0) {

@@ -34,7 +34,7 @@ export async function newProjectTool(prjRootPath: string, toolArgs: any, prjServ
         });
         toolResult = `项目 "${prjName}" 创建成功！项目路径为${prjRootPath}\\${prjName}`;
     } catch (e) {
-        console.error('创建项目失败:', e);
+        console.warn('创建项目失败:', e);
         toolResult = `创建项目失败: ${e.message}`;
         is_error = true;
     } finally {

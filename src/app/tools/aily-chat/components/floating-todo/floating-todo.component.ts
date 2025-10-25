@@ -83,7 +83,7 @@ export class FloatingTodoComponent implements OnInit, OnDestroy, OnChanges {
       }
 
     } catch (error) {
-      console.error('[TODO Panel] TodoUpdateService 初始化失败:', error);
+      console.warn('[TODO Panel] TodoUpdateService 初始化失败:', error);
     }
   }
 
@@ -96,7 +96,7 @@ export class FloatingTodoComponent implements OnInit, OnDestroy, OnChanges {
     //   console.log('[TODO Panel] ✅ isCollapsed:', this.isCollapsed);
     //   console.log('[TODO Panel] ✅ 组件状态检查 - todoList存在:', !!this.todoList, 'length:', this.todoList?.length);
     } catch (error) {
-      console.error('[TODO Panel] 加载TODO列表失败:', error);
+      console.warn('[TODO Panel] 加载TODO列表失败:', error);
     }
   }
 
@@ -139,7 +139,7 @@ export class FloatingTodoComponent implements OnInit, OnDestroy, OnChanges {
         console.log('[TODO Panel] 加载初始TODO列表为空');
       }
     } catch (error) {
-      console.error('[TODO Panel] 加载初始TODO失败:', error);
+      console.warn('[TODO Panel] 加载初始TODO失败:', error);
       this.todoList = [];
     }
   }
@@ -176,7 +176,7 @@ export class FloatingTodoComponent implements OnInit, OnDestroy, OnChanges {
       const sessionId = this.sessionId || 'default';
       this.todoUpdateService.triggerTodoUpdate(sessionId);
     } catch (error) {
-      console.error('[TODO Panel] 更新TODO状态失败:', error);
+      console.warn('[TODO Panel] 更新TODO状态失败:', error);
     }
   }
 
@@ -216,7 +216,7 @@ export class FloatingTodoComponent implements OnInit, OnDestroy, OnChanges {
       
       console.log('[TODO Panel] ✅ 成功清空所有TODO项');
     } catch (error) {
-      console.error('[TODO Panel] ❌ 清空TODO项失败:', error);
+      console.warn('[TODO Panel] ❌ 清空TODO项失败:', error);
     }
   }
 }

@@ -223,7 +223,7 @@ export async function fileOperationsTool(
                         return injectTodoReminder(toolResult, 'fileOperationsTool');
                     }
                 } catch (createError) {
-                    console.error('文件创建失败:', createError);
+                    console.warn('文件创建失败:', createError);
                     toolResult = { 
                         is_error: true, 
                         content: `文件创建失败: ${createError.message}\n路径: ${filePath}\n目录: ${window['path'].dirname(filePath)}` 
@@ -239,7 +239,7 @@ export async function fileOperationsTool(
                     toolResult = { is_error, content: `File updated at: ${filePath}` };
                     return injectTodoReminder(toolResult, 'fileOperationsTool');
                 } catch (editError) {
-                    console.error('文件编辑失败:', editError);
+                    console.warn('文件编辑失败:', editError);
                     toolResult = { 
                         is_error: true, 
                         content: `文件编辑失败: ${editError.message}\n路径: ${filePath}` 
@@ -335,9 +335,9 @@ export async function fileOperationsTool(
                 return injectTodoReminder(toolResult, 'fileOperationsTool');
         }
     } catch (error: any) {
-        console.error("File operation error:", error);
-        console.error("错误堆栈:", error.stack);
-        console.error("操作参数:", JSON.stringify(params, null, 2));
+        console.warn("File operation error:", error);
+        console.warn("错误堆栈:", error.stack);
+        console.warn("操作参数:", JSON.stringify(params, null, 2));
         
         // 提供更详细的错误信息
         let errorMessage = `文件操作失败: ${error.message}`;

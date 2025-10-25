@@ -169,7 +169,7 @@ export async function getDirectoryTreeTool(
         };
         return injectTodoReminder(toolResult, 'getDirectoryTreeTool');
     } catch (error: any) {
-        console.error("获取目录树失败:", error);
+        console.warn("获取目录树失败:", error);
         
         let errorMessage = `获取目录树失败: ${error.message}`;
         if (error.code) {

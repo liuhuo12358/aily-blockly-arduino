@@ -274,7 +274,7 @@ export async function editFileTool(
         };
         return injectTodoReminder(toolResult, 'editFileTool');
     } catch (error: any) {
-        console.error("编辑文件失败:", error);
+        console.warn("编辑文件失败:", error);
         
         let errorMessage = `编辑文件失败: ${error.message}`;
         if (error.code) {

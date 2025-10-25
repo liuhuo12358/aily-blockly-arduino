@@ -83,7 +83,7 @@ export async function getContextTool(prjService: ProjectService, input: GetConte
   - 'unknown': 未知模式
 `;
     } catch (error) {
-        console.error('Error getting context information:', error);
+        console.warn('Error getting context information:', error);
     }
 
     const toolResult = {
@@ -131,7 +131,7 @@ async function getProjectInfo(projectService): Promise<ProjectInfo> {
 
         return result;
     } catch (error) {
-        console.error('Error getting project info:', error);
+        console.warn('Error getting project info:', error);
         return { path: process.cwd() };
     }
 }
@@ -151,7 +151,7 @@ function getEditingMode(): { mode: 'blockly' | 'code' | 'unknown' } {
 
         return { mode: 'unknown' };
     } catch (error) {
-        console.error('Error determining editing mode:', error);
+        console.warn('Error determining editing mode:', error);
         return { mode: 'unknown' };
     }
 }

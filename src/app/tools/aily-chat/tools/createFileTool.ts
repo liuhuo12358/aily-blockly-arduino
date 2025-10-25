@@ -87,7 +87,7 @@ export async function createFileTool(
         };
         return injectTodoReminder(toolResult, 'createFileTool');
     } catch (error: any) {
-        console.error("创建文件失败:", error);
+        console.warn("创建文件失败:", error);
         
         let errorMessage = `创建文件失败: ${error.message}`;
         if (error.code) {
