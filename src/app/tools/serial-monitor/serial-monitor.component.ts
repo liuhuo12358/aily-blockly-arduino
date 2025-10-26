@@ -246,12 +246,25 @@ export class SerialMonitorComponent {
       let boardname = this.currentBoard.replace(' 2560', ' ').replace(' R3', '');
       this.boardKeywords = [boardname];
     }
-    this.showPortList = !this.showPortList;
     this.getDevicePortList();
+    this.showPortList = !this.showPortList;
   }
 
   async getDevicePortList() {
-    this.portList = await this.serialService.getSerialPorts();
+    let ports = await this.serialService.getSerialPorts();
+    if (ports && ports.length > 0) {
+      this.portList = ports;
+    } else {
+      this.portList = [
+        {
+          name: 'Device not found',
+          text: '',
+          type: 'serial',
+          icon: 'fa-light fa-triangle-exclamation',
+          disabled: true,
+        }
+      ]
+    }
     this.cd.detectChanges();
   }
 
