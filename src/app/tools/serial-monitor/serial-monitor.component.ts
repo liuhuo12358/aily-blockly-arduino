@@ -163,7 +163,7 @@ export class SerialMonitorComponent {
 
   ) { }
 
-  ngOnInit() {
+  async ngOnInit() {
     this.currentUrl = this.router.url;
     if (this.serialService.currentPort) {
       // this.windowInfo = this.serialService.currentPort;
@@ -196,7 +196,25 @@ export class SerialMonitorComponent {
         this.switchValue = false;
         this.serialMonitorService.disconnect();
       }
-    })
+    });
+
+    // 检查并设置默认串口
+    this.checkAndSetDefaultPort();
+  }
+
+
+  // 检查串口列表并设置默认串口
+  private async checkAndSetDefaultPort() {
+    try {
+      const ports = await this.serialService.getSerialPorts();
+      if (ports && ports.length === 1 && !this.currentPort) {
+        // 只有一个串口且当前没有选择串口时，设为默认
+        this.currentPort = ports[0].name;
+        this.cd.detectChanges();
+      }
+    } catch (error) {
+      console.warn('获取串口列表失败:', error);
+    }
   }
 
   // 处理滚动事件
