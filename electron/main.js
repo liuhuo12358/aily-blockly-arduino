@@ -508,7 +508,7 @@ function loadEnv() {
   // npm registry
   process.env.AILY_NPM_REGISTRY = conf["npm_registry"][0];
   // 7za path
-  process.env.AILY_7ZA_PATH = path.join(childPath, isWin32 ? "7za.exe" : "7zz")
+  process.env.AILY_7ZA_PATH = path.join(childPath, isWin32 ? "7za.exe" : "7za");
   // aily builder path
   process.env.AILY_BUILDER_PATH = path.join(childPath, "aily-builder");
   // 全局npm包路径
