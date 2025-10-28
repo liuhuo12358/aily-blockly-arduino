@@ -17,8 +17,6 @@ export class SerialService {
   async getSerialPorts(): Promise<PortItem[]> {
     if (this.electronService.isElectron) {
       const currentSerialPortList = await window['SerialPort'].list();
-      
-      console.log('currentSerialPortList', currentSerialPortList);
 
       let serialList: PortItem[] = [];
 
@@ -50,8 +48,6 @@ export class SerialService {
       } else if (window['platform'].isLinux) {
         //
       }
-
-      console.log('serialList', serialList);
       
       return serialList;
     } else {
