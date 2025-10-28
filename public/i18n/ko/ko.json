@@ -1,5 +1,6 @@
 {
     "MENU": {
+        "MENU": "메뉴",
         "PROJECT_NEW": "새 프로젝트",
         "PROJECT_OPEN": "프로젝트 열기",
         "PROJECT_SAVE": "프로젝트 저장",

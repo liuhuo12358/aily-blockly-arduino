@@ -1,5 +1,6 @@
 {
     "MENU": {
+        "MENU": "Menu",
         "PROJECT_NEW": "Nouveau Projet",
         "PROJECT_OPEN": "Ouvrir Projet",
         "PROJECT_SAVE": "Sauvegarder Projet",
