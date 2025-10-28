@@ -61,6 +61,12 @@ export class SerialMonitorComponent {
   // 虚拟滚动数据源
   datasource;
 
+  // 保存滚动处理函数的引用，用于正确移除监听器
+  private boundHandleScroll = this.handleScroll.bind(this);
+
+  // 标记是否为程序触发的滚动，避免自动滚动被误关闭
+  private isProgrammaticScroll = false;
+
   get viewMode() {
     return this.serialMonitorService.viewMode;
   }
@@ -213,6 +219,13 @@ export class SerialMonitorComponent {
       this.handleDataUpdate();
     });
 
+    // 添加滚动事件监听，用于检测用户手动滚动
+    setTimeout(() => {
+      if (this.scrollContainer && this.scrollContainer.nativeElement) {
+        this.scrollContainer.nativeElement.addEventListener('scroll', this.boundHandleScroll);
+      }
+    }, 100);
+
     // 检查并设置默认串口
     this.checkAndSetDefaultPort();
 
@@ -231,44 +244,50 @@ export class SerialMonitorComponent {
 
   // 处理数据更新
   private handleDataUpdate() {
-    setTimeout(() => {
-      this.cd.detectChanges();
-      
-      const currentDataCount = this.dataList.length;
+    const currentDataCount = this.dataList.length;
 
-      // 如果数据被清空
-      if (currentDataCount === 0) {
-        if (this.datasource.adapter) {
-          this.datasource.adapter.reload(0);
-        }
-        return;
+    // 如果数据被清空
+    if (currentDataCount === 0) {
+      if (this.datasource && this.datasource.adapter) {
+        this.datasource.adapter.reload(0);
       }
+      return;
+    }
 
-      // 重新加载并滚动到底部
+    // 如果adapter还未初始化，直接返回
+    if (!this.datasource || !this.datasource.adapter) {
+      return;
+    }
+
+    // 如果自动滚动开启，重新加载到最后一条并滚动到底部
+    if (this.autoScroll) {
+      // 在整个更新过程中标记为程序触发的滚动
+      this.isProgrammaticScroll = true;
+
       const startIndex = currentDataCount - 1;
-      if (this.datasource.adapter) {
-        this.datasource.adapter.reload(startIndex).then(() => {
-          if (this.autoScroll) {
-            this.scrollToBottom();
-          }
-        });
-      }
-    }, 10);
+      // 使用 relax 方法避免频繁重绘
+      this.datasource.adapter.relax(() => {
+        this.datasource.adapter.reload(startIndex);
+      });
+      // 延迟滚动，确保数据已加载
+      setTimeout(() => {
+        this.scrollToBottom();
+        // 更长的延迟以确保所有滚动事件都已触发
+        setTimeout(() => {
+          this.isProgrammaticScroll = false;
+        }, 200);
+      }, 50);
+    }
+    // 如果不自动滚动，不做任何操作，虚拟滚动会在用户滚动时自动加载新数据
   }
 
-  @ViewChild('logBox', { static: false }) logBoxRef!: ElementRef<HTMLDivElement>;
   scrollToBottom() {
-    setTimeout(() => {
-      requestAnimationFrame(() => {
-        if (this.logBoxRef) {
-          const element = this.logBoxRef.nativeElement;
-          element.scrollTop = element.scrollHeight;
-        } else if (this.scrollContainer) {
-          const element = this.scrollContainer.nativeElement;
-          element.scrollTop = element.scrollHeight;
-        }
-      });
-    }, 100);
+    if (this.scrollContainer && this.scrollContainer.nativeElement) {
+      setTimeout(() => {
+        const element = this.scrollContainer.nativeElement;
+        element.scrollTop = element.scrollHeight;
+      }, 100);
+    }
   }
 
 
@@ -288,6 +307,11 @@ export class SerialMonitorComponent {
 
   // 处理滚动事件
   handleScroll(event) {
+    // 如果是程序触发的滚动，忽略此事件
+    if (this.isProgrammaticScroll) {
+      return;
+    }
+
     const scrollElement = event.target;
     const scrollTop = scrollElement.scrollTop;
     const maxScrollTop = scrollElement.scrollHeight - scrollElement.clientHeight;
@@ -303,6 +327,10 @@ export class SerialMonitorComponent {
   }
 
   ngOnDestroy() {
+    // 移除滚动事件监听
+    if (this.scrollContainer && this.scrollContainer.nativeElement) {
+      this.scrollContainer.nativeElement.removeEventListener('scroll', this.boundHandleScroll);
+    }
     this.serialMonitorService.disconnect();
   }
 
@@ -420,6 +448,17 @@ export class SerialMonitorComponent {
 
   changeViewMode(name) {
     this.serialMonitorService.viewMode[name] = !this.serialMonitorService.viewMode[name];
+
+    // 如果用户重新开启自动滚动，立即滚动到底部
+    if (name === 'autoScroll' && this.serialMonitorService.viewMode[name]) {
+      this.isProgrammaticScroll = true;
+      setTimeout(() => {
+        this.scrollToBottom();
+        setTimeout(() => {
+          this.isProgrammaticScroll = false;
+        }, 200);
+      }, 50);
+    }
   }
 
   clearView() {
