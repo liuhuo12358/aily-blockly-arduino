@@ -147,6 +147,7 @@ export class HeaderComponent {
     this.boardKeywords = [boardname];
     this.getDevicePortList();
     this.showPortList = true;
+    this.cd.detectChanges();
   }
 
   closePortList() {
