@@ -147,12 +147,12 @@ export class HeaderComponent {
     this.boardKeywords = [boardname];
     this.getDevicePortList();
     this.showPortList = true;
-    this.cd.detectChanges();
+    // this.cd.detectChanges();
   }
 
   closePortList() {
     this.showPortList = false;
-    this.cd.detectChanges();
+    // this.cd.detectChanges();
   }
 
   selectPort(item) {
