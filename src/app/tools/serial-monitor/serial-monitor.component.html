@@ -67,11 +67,10 @@
       }
       <div class="monitor">
         <div class="r-box">
-          <div class="sscroll data-list" #scrollContainer>
-            @for (item of dataList; track $index) {
-            <app-data-item [data]="item" [searchKeyword]="searchKeyword"></app-data-item>
-            }
-            <div style="height: 10px;"></div>
+          <div class="sscroll data-list" #scrollContainer #logBox>
+            <div *uiScroll="let item of datasource;">
+              <app-data-item [data]="item" [searchKeyword]="searchKeyword"></app-data-item>
+            </div>
           </div>
           <div class="btns">
             <div class="btn ccenter hex" nz-tooltip nzTooltipTitle="HEX显示" (click)="changeViewMode('showHex')"

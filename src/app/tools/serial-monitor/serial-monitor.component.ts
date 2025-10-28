@@ -16,6 +16,8 @@ import { PortItem, SerialService } from '../../services/serial.service';
 import { ProjectService } from '../../services/project.service';
 import { MenuComponent } from '../../components/menu/menu.component';
 import { SerialMonitorService } from './serial-monitor.service';
+import { Datasource, SizeStrategy, UiScrollModule } from 'ngx-ui-scroll';
+import { dataItem } from './serial-monitor.service';
 import { HistoryMessageListComponent } from './components/history-message-list/history-message-list.component';
 import { QuickSendListComponent } from './components/quick-send-list/quick-send-list.component';
 import { CompactType, GridsterComponent, GridsterItemComponent, GridType } from 'angular-gridster2';
@@ -46,7 +48,8 @@ import { Buffer } from 'buffer';
     QuickSendListComponent,
     SettingMoreComponent,
     QuickSendEditorComponent,
-    SearchBoxComponent
+    SearchBoxComponent,
+    UiScrollModule
   ],
   templateUrl: './serial-monitor.component.html',
   styleUrl: './serial-monitor.component.scss',
@@ -54,6 +57,9 @@ import { Buffer } from 'buffer';
 export class SerialMonitorComponent {
 
   @ViewChild('scrollContainer') scrollContainer: ElementRef;
+
+  // 虚拟滚动数据源
+  datasource;
 
   get viewMode() {
     return this.serialMonitorService.viewMode;
@@ -169,26 +175,46 @@ export class SerialMonitorComponent {
       // this.windowInfo = this.serialService.currentPort;
       this.currentPort = this.serialService.currentPort;
     }
+
+    // 初始化虚拟滚动数据源
+    let startIndex = 0;
+    if (this.dataList.length > 0) {
+      startIndex = this.dataList.length - 1;
+    }
+
+    this.datasource = new Datasource<dataItem>({
+      get: (index: number, count: number) => {
+        const data: dataItem[] = [];
+        const startIdx = Math.max(0, index);
+        const endIdx = Math.min(this.dataList.length, startIdx + count);
+
+        for (let i = startIdx; i < endIdx; i++) {
+          if (this.dataList[i]) {
+            this.dataList[i]['id'] = i;
+            data.push(this.dataList[i]);
+          }
+        }
+        return Promise.resolve(data);
+      },
+
+      settings: {
+        minIndex: 0,
+        startIndex,
+        bufferSize: 30,
+        padding: 0.5,
+        sizeStrategy: SizeStrategy.Average,
+        infinite: false
+      }
+    });
   }
 
   ngAfterViewInit() {
     this.serialMonitorService.dataUpdated.subscribe(() => {
-      setTimeout(() => {
-        this.cd.detectChanges();
-        if (this.autoScroll) {
-          if (this.scrollContainer && this.scrollContainer.nativeElement) {
-            this.scrollContainer.nativeElement.scrollTop = this.scrollContainer.nativeElement.scrollHeight;
-          }
-        }
-      }, 10);
+      this.handleDataUpdate();
     });
 
-    // 添加滚动事件监听
-    setTimeout(() => {
-      if (this.scrollContainer && this.scrollContainer.nativeElement) {
-        this.scrollContainer.nativeElement.addEventListener('scroll', this.handleScroll.bind(this));
-      }
-    }, 100);
+    // 检查并设置默认串口
+    this.checkAndSetDefaultPort();
 
     // 上传过程中断开串口连接
     this.uiService.stateSubject.subscribe((state) => {
@@ -198,8 +224,51 @@ export class SerialMonitorComponent {
       }
     });
 
-    // 检查并设置默认串口
-    this.checkAndSetDefaultPort();
+    if (this.dataList.length > 0) {
+      this.scrollToBottom();
+    }
+  }
+
+  // 处理数据更新
+  private handleDataUpdate() {
+    setTimeout(() => {
+      this.cd.detectChanges();
+      
+      const currentDataCount = this.dataList.length;
+
+      // 如果数据被清空
+      if (currentDataCount === 0) {
+        if (this.datasource.adapter) {
+          this.datasource.adapter.reload(0);
+        }
+        return;
+      }
+
+      // 重新加载并滚动到底部
+      const startIndex = currentDataCount - 1;
+      if (this.datasource.adapter) {
+        this.datasource.adapter.reload(startIndex).then(() => {
+          if (this.autoScroll) {
+            this.scrollToBottom();
+          }
+        });
+      }
+    }, 10);
+  }
+
+  @ViewChild('logBox', { static: false }) logBoxRef!: ElementRef<HTMLDivElement>;
+  scrollToBottom() {
+    setTimeout(() => {
+      requestAnimationFrame(() => {
+        if (this.logBoxRef) {
+          const element = this.logBoxRef.nativeElement;
+          element.scrollTop = element.scrollHeight;
+        } else if (this.scrollContainer) {
+          const element = this.scrollContainer.nativeElement;
+          element.scrollTop = element.scrollHeight;
+        }
+      });
+    }, 100);
   }
 
 
@@ -355,6 +424,9 @@ export class SerialMonitorComponent {
 
   clearView() {
     this.serialMonitorService.dataList = [];
+    if (this.datasource.adapter) {
+      this.datasource.adapter.reload(0);
+    }
     this.serialMonitorService.dataUpdated.next();
   }
 
@@ -497,20 +569,17 @@ export class SerialMonitorComponent {
     this.currentSearchIndex = index;
     const dataIndex = this.searchResults[index];
 
-    // 滚动到匹配项
-    setTimeout(() => {
-      const elements = document.querySelectorAll('.item');
-      if (elements && elements[dataIndex]) {
-        // 高亮当前匹配项
-        elements[dataIndex].scrollIntoView({ behavior: 'smooth', block: 'center' });
+    // 更新高亮状态
+    this.serialMonitorService.dataList.forEach((item, idx) => {
+      item['searchHighlight'] = idx === dataIndex;
+    });
 
-        // 通知数据项更新高亮状态
-        this.serialMonitorService.dataList.forEach((item, idx) => {
-          item['searchHighlight'] = idx === dataIndex;
-        });
-        this.serialMonitorService.dataUpdated.next();
-      }
-    }, 10);
+    // 使用虚拟滚动的adapter滚动到指定位置
+    if (this.datasource && this.datasource.adapter) {
+      this.datasource.adapter.relax(() => {
+        this.datasource.adapter.reload(dataIndex);
+      });
+    }
   }
 
   navigatePrev() {
