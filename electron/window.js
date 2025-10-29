@@ -8,7 +8,10 @@ function registerWindowHandlers(mainWindow) {
 
     mainWindow.on('focus', () => {
         try {
-            mainWindow.webContents.send('window-focus');
+            if (mainWindow && mainWindow.webContents) {
+                mainWindow.webContents.send('window-focus');
+            }
+
         } catch (error) {
             console.error('Error sending window-focus:', error.message);
         }
@@ -17,7 +20,10 @@ function registerWindowHandlers(mainWindow) {
     mainWindow.on('blur', () => {
         // 检查窗口是否已销毁以及 webContents 是否有效
         try {
-            mainWindow.webContents.send('window-blur');
+            if (mainWindow && mainWindow.webContents) {
+                mainWindow.webContents.send('window-blur');
+            }
+
         } catch (error) {
             console.error('Error sending window-blur:', error.message);
         }

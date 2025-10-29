@@ -163,6 +163,18 @@
       overflow-y: auto;
     }
 
+    // CDK 虚拟滚动容器样式
+    cdk-virtual-scroll-viewport {
+      flex: 1;
+      height: 100%;
+      min-height: 0;
+      max-height: calc(100% - 28px);
+    }
+
+    cdk-virtual-scroll-viewport ::ng-deep .cdk-virtual-scroll-content-wrapper {
+      width: 100%;
+    }
+
   }
 
 }
