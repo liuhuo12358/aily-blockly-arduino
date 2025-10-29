@@ -195,11 +195,8 @@ export class SerialMonitorComponent {
     // 关键：创建新数组引用，触发 Angular 变更检测和 CDK 虚拟滚动更新
     this.dataList = [...this.serialMonitorService.dataList];
     
-    const currentDataCount = this.dataList.length;
-    console.log('数据更新:', currentDataCount, '本地列表长度:', this.dataList.length, '自动滚动:', this.autoScroll);
-
     // 如果数据被清空
-    if (currentDataCount === 0) {
+    if ( this.dataList.length === 0) {
       this.cd.detectChanges();
       return;
     }
@@ -221,28 +218,21 @@ export class SerialMonitorComponent {
       // 延迟滚动,确保 DOM 更新完成
       setTimeout(() => {
         this.scrollToBottom();
-      }, 0);
+      }, 20);
       
       // 重置滚动标记
-      setTimeout(() => {
-        this.isProgrammaticScroll = false;
-      }, 300);
+      // setTimeout(() => {
+      //   this.isProgrammaticScroll = false;
+      // }, 300);
     }
   }
 
   scrollToBottom() {
-    if (!this.viewport || this.dataList.length === 0) {
-      return;
-    }
-
     try {
-      // 使用 scrollTo 滚动到底部，这比 scrollToIndex 更可靠
-      const scrollHeight = this.viewport.measureScrollOffset('bottom');
       this.viewport.scrollTo({
         bottom: 0,
         behavior: 'smooth'
       });
-      console.log('滚动到底部，数据量:', this.dataList.length);
     } catch (error) {
       console.error('滚动失败:', error);
     }
