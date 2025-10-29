@@ -106,7 +106,7 @@ export class ProjectService {
         }
       });
 
-      this.projectRootPath = (await window['env'].get("AILY_PROJECT_PATH")).replace('%HOMEPATH%\\Documents', window['path'].getUserDocuments());
+      this.projectRootPath = (await window['env'].get("AILY_PROJECT_PATH")).replace('%HOMEPATH%\\Documents\\', window['path'].getUserDocuments() + this.platformService.getPlatformSeparator());
       // if (!this.currentProjectPath) {
       //   this.currentProjectPath = this.projectRootPath;
       // }

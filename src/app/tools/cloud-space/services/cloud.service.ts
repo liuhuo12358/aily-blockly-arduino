@@ -5,6 +5,7 @@ import { Observable, throwError, from } from 'rxjs';
 import { catchError, switchMap } from 'rxjs/operators';
 import { API } from '../../../configs/api.config';
 import { CmdService } from '../../../services/cmd.service';
+import { PlatformService } from "../../../services/platform.service";
 
 declare global {
   interface Window {
@@ -24,7 +25,11 @@ export class CloudService {
   private apiUrl = API.cloudSync;
   private cloudProjectsUrl = API.cloudProjects;
 
-  constructor(private http: HttpClient, private cmdService: CmdService) { }
+  constructor(
+      private http: HttpClient,
+      private cmdService: CmdService,
+      private platformService: PlatformService
+  ) { }
 
   /** 
    * 获取公开列表
@@ -255,7 +260,8 @@ export class CloudService {
       window['fs'].mkdirSync(extractPath);
       
       // 使用7za.exe解压文件（明确指定7z格式）
-      const extractCmd = `7za.exe x "${archivePath}" -o"${extractPath}" -t7z -y`;
+      const zz = this.platformService.isWindows() ? '7za.exe' : '7zz';
+      const extractCmd = `${zz} x "${archivePath}" -o"${extractPath}" -t7z -y`;
       
       console.log('执行解压命令:', extractCmd);
       const result = await this.cmdService.runAsync(extractCmd);
