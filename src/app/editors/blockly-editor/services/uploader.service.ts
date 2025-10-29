@@ -322,9 +322,6 @@ export class _UploaderService {
           return;
         }
 
-        // 辨识上传中
-        this._builderService.isUploading = true;
-
         const buildPath = this._builderService.buildPath;
         const sdkPath = this._builderService.sdkPath;
         const toolsPath = this._builderService.toolsPath;
@@ -334,6 +331,9 @@ export class _UploaderService {
           // 编译
           await this._builderService.build();
         }
+
+        // 辨识上传中
+        this._builderService.isUploading = true;
 
         const boardJson = this._builderService.boardJson;
 

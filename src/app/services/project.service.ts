@@ -332,6 +332,20 @@ export class ProjectService {
     return JSON.parse(this.electronService.readFile(boardJsonPath));
   }
 
+  // 获取开发板根目录路下得特殊配置文件，如 ESP32 需要的 partitions.csv
+  async getBoardFile(fileName: string) {
+    const boardModule = await this.getBoardModule();
+    if (!boardModule) {
+      throw new Error('未找到开发板模块');
+    }
+    const filePath = `${this.currentProjectPath}/node_modules/${boardModule}/${fileName}`;
+    if (!window['fs'].existsSync(filePath)) {
+      return null;
+    }
+    return filePath;
+  }
+
+
   // 获取开发板特殊配置文件，如 STM32 需要的特殊配置
   async getJsonConfig(fileName: string) {
     const boardModule = await this.getBoardModule();
