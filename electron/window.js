@@ -1,5 +1,5 @@
 // 窗口控制
-const { ipcMain, BrowserWindow } = require("electron");
+const { ipcMain, BrowserWindow, app } = require("electron");
 const path = require('path');
 
 function registerWindowHandlers(mainWindow) {
