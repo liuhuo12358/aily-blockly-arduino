@@ -192,9 +192,12 @@ export class _UploaderService {
       command = await findFile(toolsPath, paramList[0] + (window['platform'].isWindows ? '.exe' : ''), toolVersion || '');
     }
     console.log("Found command: ", command);
+    
     // 替换命令为完整路径命令
     if (command) {
       paramList[0] = command;
+    } else {
+      throw new Error(`无法找到可执行文件: ${paramList[0]}`);
     }
 
     this.commandName = window['path'].basename(paramList[0])
@@ -202,6 +205,8 @@ export class _UploaderService {
     // 第三步：处理 ${'filename'} 格式的文件路径参数
     for (let i = 0; i < paramList.length; i++) {
       const param = paramList[i];
+      
+      // 处理包含文件路径变量的参数，例如 -C${'avrdude.conf'}
       const match = param.match(/\$\{\'(.+?)\'\}/);
       if (match) {
         const fileName = match[1];
@@ -222,7 +227,12 @@ export class _UploaderService {
           findRes = await findFile(buildPath, fileName, '');
         }
 
-        paramList[i] = param.replace(`\$\{\'${fileName}\'\}`, findRes);
+        // 确保找到了文件路径
+        if (findRes) {
+          paramList[i] = param.replace(`\$\{\'${fileName}\'\}`, findRes);
+        } else {
+          console.warn(`无法找到文件: ${fileName}`);
+        }
       }
     }
 
