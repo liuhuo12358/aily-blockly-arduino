@@ -581,7 +581,7 @@ export class SerialMonitorComponent {
   }
 
   // trackBy 函数优化虚拟滚动性能
-  trackByIndex(index: number, item: any): number {
-    return index;
+  trackByIndex(index: number, item: dataItem): string {
+    return item.time;
   }
 }
