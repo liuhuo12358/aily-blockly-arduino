@@ -196,15 +196,16 @@ export class SerialMonitorComponent {
     this.dataList = [...this.serialMonitorService.dataList];
     
     const currentDataCount = this.dataList.length;
-    console.log('数据更新:', currentDataCount, '本地列表长度:', this.dataList.length);
-
-    // 强制触发变更检测
-    this.cd.detectChanges();
+    console.log('数据更新:', currentDataCount, '本地列表长度:', this.dataList.length, '自动滚动:', this.autoScroll);
 
     // 如果数据被清空
     if (currentDataCount === 0) {
+      this.cd.detectChanges();
       return;
     }
+
+    // 强制触发变更检测
+    this.cd.detectChanges();
 
     // 如果viewport还未初始化,直接返回
     if (!this.viewport) {
@@ -212,30 +213,38 @@ export class SerialMonitorComponent {
       return;
     }
 
-    // 强制 viewport 检查大小变化
-    this.viewport.checkViewportSize();
-
     // 如果自动滚动开启,滚动到底部
     if (this.autoScroll) {
       // 在整个更新过程中标记为程序触发的滚动
       this.isProgrammaticScroll = true;
 
-      // 延迟滚动,确保数据已加载
+      // 延迟滚动,确保 DOM 更新完成
       setTimeout(() => {
         this.scrollToBottom();
-        // 更长的延迟以确保所有滚动事件都已触发
-        setTimeout(() => {
-          this.isProgrammaticScroll = false;
-        }, 200);
-      }, 50);
+      }, 0);
+      
+      // 重置滚动标记
+      setTimeout(() => {
+        this.isProgrammaticScroll = false;
+      }, 300);
     }
   }
 
   scrollToBottom() {
-    if (this.viewport && this.dataList.length > 0) {
-      setTimeout(() => {
-        this.viewport.scrollToIndex(this.dataList.length - 1, 'smooth');
-      }, 0);
+    if (!this.viewport || this.dataList.length === 0) {
+      return;
+    }
+
+    try {
+      // 使用 scrollTo 滚动到底部，这比 scrollToIndex 更可靠
+      const scrollHeight = this.viewport.measureScrollOffset('bottom');
+      this.viewport.scrollTo({
+        bottom: 0,
+        behavior: 'smooth'
+      });
+      console.log('滚动到底部，数据量:', this.dataList.length);
+    } catch (error) {
+      console.error('滚动失败:', error);
     }
   }
 
@@ -396,10 +405,10 @@ export class SerialMonitorComponent {
       this.isProgrammaticScroll = true;
       setTimeout(() => {
         this.scrollToBottom();
-        setTimeout(() => {
-          this.isProgrammaticScroll = false;
-        }, 200);
-      }, 50);
+      }, 0);
+      setTimeout(() => {
+        this.isProgrammaticScroll = false;
+      }, 300);
     }
   }
 
@@ -555,7 +564,11 @@ export class SerialMonitorComponent {
 
     // 使用虚拟滚动的viewport滚动到指定位置
     if (this.viewport) {
+      this.isProgrammaticScroll = true;
       this.viewport.scrollToIndex(dataIndex, 'smooth');
+      setTimeout(() => {
+        this.isProgrammaticScroll = false;
+      }, 300);
     }
   }
 
