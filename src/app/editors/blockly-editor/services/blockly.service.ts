@@ -125,6 +125,7 @@ export class BlocklyService {
         }
       }
     } catch (error) {
+      console.error('加载库失败:', libPackageName);
       console.error(error);
       // this.noticeService.update({
       //   title: '加载库失败',
@@ -250,7 +251,7 @@ export class BlocklyService {
   // 从toolbox中移除项
   removeLibToolbox(toolboxItem) {
     // 通过比较找到要移除的toolbox项
-    console.log(`即将移除`, toolboxItem);
+    console.log(`即将移除：`, toolboxItem);
 
 
     const index = this.findToolboxItemIndex(toolboxItem);
