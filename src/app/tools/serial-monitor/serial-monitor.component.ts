@@ -362,7 +362,7 @@ export class SerialMonitorComponent {
       this.boardKeywords = [boardname];
     }
     this.getDevicePortList();
-    this.showPortList = !this.showPortList;
+    this.showPortList = true;
   }
 
   async getDevicePortList() {
@@ -380,7 +380,6 @@ export class SerialMonitorComponent {
         }
       ]
     }
-    this.cd.detectChanges();
   }
 
   closePortList() {
