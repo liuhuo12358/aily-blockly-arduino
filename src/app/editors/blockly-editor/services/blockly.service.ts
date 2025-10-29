@@ -117,7 +117,10 @@ export class BlocklyService {
         const toolboxFileIsExist = this.electronService.exists(libPackagePath + '/toolbox.json');
         if (toolboxFileIsExist) {
           let toolbox = JSON.parse(this.electronService.readFile(libPackagePath + '/toolbox.json'));
-          if (i18nData) toolbox.name = i18nData.toolbox_name;
+          if (i18nData) {
+            // console.log(toolbox.name + ' >>> ' + i18nData.toolbox_name);
+            toolbox.name = i18nData.toolbox_name;
+          }
           this.loadLibToolbox(toolbox);
         }
       }
