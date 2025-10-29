@@ -20,7 +20,6 @@ import { Datasource, SizeStrategy, UiScrollModule } from 'ngx-ui-scroll';
 import { dataItem } from './serial-monitor.service';
 import { HistoryMessageListComponent } from './components/history-message-list/history-message-list.component';
 import { QuickSendListComponent } from './components/quick-send-list/quick-send-list.component';
-import { CompactType, GridsterComponent, GridsterItemComponent, GridType } from 'angular-gridster2';
 import { BAUDRATE_LIST } from './config';
 import { SettingMoreComponent } from './components/setting-more/setting-more.component';
 import { QuickSendEditorComponent } from './components/quick-send-editor/quick-send-editor.component';
@@ -70,29 +69,6 @@ export class SerialMonitorComponent {
   get viewMode() {
     return this.serialMonitorService.viewMode;
   }
-
-  gridOptions = {
-    margin: 10,
-    outerMargin: false,
-    minCols: 8,
-    maxCols: 8,
-    minRows: 4,
-    maxRows: 16,
-    gridType: GridType.Fit,
-    compactType: CompactType.None,
-    pushItems: true,
-    draggable: {
-      enabled: true
-    },
-    resizable: {
-      enabled: true
-    }
-  };
-
-  gridDashboard = [
-    { cols: 2, rows: 1, y: 0, x: 0 },
-    { cols: 2, rows: 2, y: 0, x: 2 }
-  ];
 
   switchValue = false;
 
