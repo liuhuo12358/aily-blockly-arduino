@@ -98,6 +98,7 @@ import { FloatingTodoComponent } from './components/floating-todo/floating-todo.
 import { TodoUpdateService } from './services/todoUpdate.service';
 import { ArduinoLintService } from './services/arduino-lint.service';
 import { BlocklyService } from '../../editors/blockly-editor/services/blockly.service';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 // import { reloadAbiJsonTool, reloadAbiJsonToolSimple } from './tools';
 
 @Component({
@@ -113,7 +114,8 @@ import { BlocklyService } from '../../editors/blockly-editor/services/blockly.se
     NzResizableModule,
     NzToolTipModule,
     MenuComponent,
-    FloatingTodoComponent
+    FloatingTodoComponent,
+    TranslateModule
   ],
   templateUrl: './aily-chat.component.html',
   styleUrl: './aily-chat.component.scss',
@@ -142,10 +144,7 @@ export class AilyChatComponent implements OnDestroy {
   inputValue = '';
   prjRootPath = '';
   prjPath = '';
-
-  currentUserGroup = [];
-
-  windowInfo = 'AI助手';
+  currentUserGroup: string[] = [];
 
   isCompleted = false;
   private isSessionStarting = false; // 防止重复启动会话的标志位
@@ -689,7 +688,8 @@ export class AilyChatComponent implements OnDestroy {
     private modal: NzModalService,
     private configService: ConfigService,
     private todoUpdateService: TodoUpdateService,
-    private arduinoLintService: ArduinoLintService
+    private arduinoLintService: ArduinoLintService,
+    private translate: TranslateService
   ) { }
 
   ngOnInit() {
@@ -2359,20 +2359,22 @@ Your role is ASK (Advisory & Quick Support) - you provide analysis, recommendati
   ]
 
   // AI模式列表
-  ModeList: IMenuItem[] = [
-    {
-      name: '代理模式',
-      action: 'agent-mode',
-      icon: 'fa-light fa-user-astronaut',
-      data: { mode: 'agent' }
-    },
-    {
-      name: '问答模式',
-      action: 'qa-mode',
-      icon: 'fa-light fa-comment-smile',
-      data: { mode: 'qa' }
-    }
-  ]
+  get ModeList(): IMenuItem[] {
+    return [
+      {
+        name: this.translate.instant('AILY_CHAT.MODE_AGENT_FULL'),
+        action: 'agent-mode',
+        icon: 'fa-light fa-user-astronaut',
+        data: { mode: 'agent' }
+      },
+      {
+        name: this.translate.instant('AILY_CHAT.MODE_QA_FULL'),
+        action: 'qa-mode',
+        icon: 'fa-light fa-comment-smile',
+        data: { mode: 'qa' }
+      }
+    ];
+  }
 
   // 当前AI模式
   // currentMode = 'agent'; // 默认为代理模式

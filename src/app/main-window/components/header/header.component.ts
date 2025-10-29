@@ -145,13 +145,14 @@ export class HeaderComponent {
     this.calculatePortListPosition(event)
     let boardname = this.currentBoard.replace(' 2560', ' ').replace(' R3', '');
     this.boardKeywords = [boardname];
-    this.showPortList = !this.showPortList;
     this.getDevicePortList();
+    this.showPortList = true;
+    // this.cd.detectChanges();
   }
 
   closePortList() {
     this.showPortList = false;
-    this.cd.detectChanges();
+    // this.cd.detectChanges();
   }
 
   selectPort(item) {

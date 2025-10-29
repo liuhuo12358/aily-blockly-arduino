@@ -44,6 +44,7 @@ export class SerialMonitorService {
   // 串口相关属性
   private serialPort: any = null;
   private lastDataTime = 0;
+  private firstDataTime = 0; // 当前记录首次接收数据的时间
   private isConnected = false;
 
   // 状态观察对象
@@ -161,7 +162,8 @@ export class SerialMonitorService {
    * 处理接收到的数据
    * 根据时间间隔规则存储数据：
    * 1. 如果距离上次数据超过1秒，创建新记录
-   * 2. 如果不到1秒，追加到当前记录
+   * 2. 如果距离首次接收数据超过10秒，创建新记录
+   * 3. 其他情况追加到当前记录
    */
   private processReceivedData(data) {
     const currentTime = Date.now();
@@ -170,6 +172,7 @@ export class SerialMonitorService {
     // 检查是否需要创建新的数据项
     if (this.dataList.length === 0 ||
       currentTime - this.lastDataTime > 1000 ||
+      currentTime - this.firstDataTime > 10000 ||
       this.dataList[this.dataList.length - 1].dir !== 'RX') {
       // 创建新的数据项
       this.dataList.push({
@@ -177,6 +180,8 @@ export class SerialMonitorService {
         data: data,
         dir: 'RX'
       });
+      // 记录这是新记录的首次接收时间
+      this.firstDataTime = currentTime;
     } else {
       // 将数据添加到最后一个项目
       const lastItem = this.dataList[this.dataList.length - 1];

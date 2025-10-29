@@ -16,6 +16,8 @@ import { PortItem, SerialService } from '../../services/serial.service';
 import { ProjectService } from '../../services/project.service';
 import { MenuComponent } from '../../components/menu/menu.component';
 import { SerialMonitorService } from './serial-monitor.service';
+import { Datasource, SizeStrategy, UiScrollModule } from 'ngx-ui-scroll';
+import { dataItem } from './serial-monitor.service';
 import { HistoryMessageListComponent } from './components/history-message-list/history-message-list.component';
 import { QuickSendListComponent } from './components/quick-send-list/quick-send-list.component';
 import { CompactType, GridsterComponent, GridsterItemComponent, GridType } from 'angular-gridster2';
@@ -46,7 +48,8 @@ import { Buffer } from 'buffer';
     QuickSendListComponent,
     SettingMoreComponent,
     QuickSendEditorComponent,
-    SearchBoxComponent
+    SearchBoxComponent,
+    UiScrollModule
   ],
   templateUrl: './serial-monitor.component.html',
   styleUrl: './serial-monitor.component.scss',
@@ -54,6 +57,15 @@ import { Buffer } from 'buffer';
 export class SerialMonitorComponent {
 
   @ViewChild('scrollContainer') scrollContainer: ElementRef;
+
+  // 虚拟滚动数据源
+  datasource;
+
+  // 保存滚动处理函数的引用，用于正确移除监听器
+  private boundHandleScroll = this.handleScroll.bind(this);
+
+  // 标记是否为程序触发的滚动，避免自动滚动被误关闭
+  private isProgrammaticScroll = false;
 
   get viewMode() {
     return this.serialMonitorService.viewMode;
@@ -169,26 +181,53 @@ export class SerialMonitorComponent {
       // this.windowInfo = this.serialService.currentPort;
       this.currentPort = this.serialService.currentPort;
     }
+
+    // 初始化虚拟滚动数据源
+    let startIndex = 0;
+    if (this.dataList.length > 0) {
+      startIndex = this.dataList.length - 1;
+    }
+
+    this.datasource = new Datasource<dataItem>({
+      get: (index: number, count: number) => {
+        const data: dataItem[] = [];
+        const startIdx = Math.max(0, index);
+        const endIdx = Math.min(this.dataList.length, startIdx + count);
+
+        for (let i = startIdx; i < endIdx; i++) {
+          if (this.dataList[i]) {
+            this.dataList[i]['id'] = i;
+            data.push(this.dataList[i]);
+          }
+        }
+        return Promise.resolve(data);
+      },
+
+      settings: {
+        minIndex: 0,
+        startIndex,
+        bufferSize: 30,
+        padding: 0.5,
+        sizeStrategy: SizeStrategy.Average,
+        infinite: false
+      }
+    });
   }
 
   ngAfterViewInit() {
     this.serialMonitorService.dataUpdated.subscribe(() => {
-      setTimeout(() => {
-        this.cd.detectChanges();
-        if (this.autoScroll) {
-          if (this.scrollContainer && this.scrollContainer.nativeElement) {
-            this.scrollContainer.nativeElement.scrollTop = this.scrollContainer.nativeElement.scrollHeight;
-          }
-        }
-      }, 10);
+      this.handleDataUpdate();
     });
 
-    // 添加滚动事件监听
+    // 添加滚动事件监听，用于检测用户手动滚动
     setTimeout(() => {
       if (this.scrollContainer && this.scrollContainer.nativeElement) {
-        this.scrollContainer.nativeElement.addEventListener('scroll', this.handleScroll.bind(this));
+        this.scrollContainer.nativeElement.addEventListener('scroll', this.boundHandleScroll);
       }
     }, 100);
+
+    // 检查并设置默认串口
+    this.checkAndSetDefaultPort();
 
     // 上传过程中断开串口连接
     this.uiService.stateSubject.subscribe((state) => {
@@ -198,8 +237,57 @@ export class SerialMonitorComponent {
       }
     });
 
-    // 检查并设置默认串口
-    this.checkAndSetDefaultPort();
+    if (this.dataList.length > 0) {
+      this.scrollToBottom();
+    }
+  }
+
+  // 处理数据更新
+  private handleDataUpdate() {
+    const currentDataCount = this.dataList.length;
+
+    // 如果数据被清空
+    if (currentDataCount === 0) {
+      if (this.datasource && this.datasource.adapter) {
+        this.datasource.adapter.reload(0);
+      }
+      return;
+    }
+
+    // 如果adapter还未初始化，直接返回
+    if (!this.datasource || !this.datasource.adapter) {
+      return;
+    }
+
+    // 如果自动滚动开启，重新加载到最后一条并滚动到底部
+    if (this.autoScroll) {
+      // 在整个更新过程中标记为程序触发的滚动
+      this.isProgrammaticScroll = true;
+
+      const startIndex = currentDataCount - 1;
+      // 使用 relax 方法避免频繁重绘
+      this.datasource.adapter.relax(() => {
+        this.datasource.adapter.reload(startIndex);
+      });
+      // 延迟滚动，确保数据已加载
+      setTimeout(() => {
+        this.scrollToBottom();
+        // 更长的延迟以确保所有滚动事件都已触发
+        setTimeout(() => {
+          this.isProgrammaticScroll = false;
+        }, 200);
+      }, 50);
+    }
+    // 如果不自动滚动，不做任何操作，虚拟滚动会在用户滚动时自动加载新数据
+  }
+
+  scrollToBottom() {
+    if (this.scrollContainer && this.scrollContainer.nativeElement) {
+      setTimeout(() => {
+        const element = this.scrollContainer.nativeElement;
+        element.scrollTop = element.scrollHeight;
+      }, 100);
+    }
   }
 
 
@@ -219,6 +307,11 @@ export class SerialMonitorComponent {
 
   // 处理滚动事件
   handleScroll(event) {
+    // 如果是程序触发的滚动，忽略此事件
+    if (this.isProgrammaticScroll) {
+      return;
+    }
+
     const scrollElement = event.target;
     const scrollTop = scrollElement.scrollTop;
     const maxScrollTop = scrollElement.scrollHeight - scrollElement.clientHeight;
@@ -234,6 +327,10 @@ export class SerialMonitorComponent {
   }
 
   ngOnDestroy() {
+    // 移除滚动事件监听
+    if (this.scrollContainer && this.scrollContainer.nativeElement) {
+      this.scrollContainer.nativeElement.removeEventListener('scroll', this.boundHandleScroll);
+    }
     this.serialMonitorService.disconnect();
   }
 
@@ -351,10 +448,24 @@ export class SerialMonitorComponent {
 
   changeViewMode(name) {
     this.serialMonitorService.viewMode[name] = !this.serialMonitorService.viewMode[name];
+
+    // 如果用户重新开启自动滚动，立即滚动到底部
+    if (name === 'autoScroll' && this.serialMonitorService.viewMode[name]) {
+      this.isProgrammaticScroll = true;
+      setTimeout(() => {
+        this.scrollToBottom();
+        setTimeout(() => {
+          this.isProgrammaticScroll = false;
+        }, 200);
+      }, 50);
+    }
   }
 
   clearView() {
     this.serialMonitorService.dataList = [];
+    if (this.datasource.adapter) {
+      this.datasource.adapter.reload(0);
+    }
     this.serialMonitorService.dataUpdated.next();
   }
 
@@ -497,20 +608,17 @@ export class SerialMonitorComponent {
     this.currentSearchIndex = index;
     const dataIndex = this.searchResults[index];
 
-    // 滚动到匹配项
-    setTimeout(() => {
-      const elements = document.querySelectorAll('.item');
-      if (elements && elements[dataIndex]) {
-        // 高亮当前匹配项
-        elements[dataIndex].scrollIntoView({ behavior: 'smooth', block: 'center' });
+    // 更新高亮状态
+    this.serialMonitorService.dataList.forEach((item, idx) => {
+      item['searchHighlight'] = idx === dataIndex;
+    });
 
-        // 通知数据项更新高亮状态
-        this.serialMonitorService.dataList.forEach((item, idx) => {
-          item['searchHighlight'] = idx === dataIndex;
-        });
-        this.serialMonitorService.dataUpdated.next();
-      }
-    }, 10);
+    // 使用虚拟滚动的adapter滚动到指定位置
+    if (this.datasource && this.datasource.adapter) {
+      this.datasource.adapter.relax(() => {
+        this.datasource.adapter.reload(dataIndex);
+      });
+    }
   }
 
   navigatePrev() {
