@@ -86,7 +86,7 @@ export class LogComponent {
       settings: {
         minIndex: 0,
         startIndex,
-        bufferSize: 30, // 减少缓冲区大小，降低内存使用
+        bufferSize: 30, // 增加缓冲区大小,提升滚动流畅度
         padding: 0.5, // 适中的 padding 值
         itemSize: 24,
         sizeStrategy: SizeStrategy.Average
@@ -111,7 +111,11 @@ export class LogComponent {
       requestAnimationFrame(() => {
         if (this.logBoxRef) {
           const element = this.logBoxRef.nativeElement;
-          element.scrollTop = element.scrollHeight;
+          // 使用 scrollTo 方法实现平滑滚动
+          element.scrollTo({
+            top: element.scrollHeight,
+            behavior: 'auto'
+          });
         }
       });
     }, 100);
