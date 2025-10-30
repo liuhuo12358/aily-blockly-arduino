@@ -88,8 +88,8 @@ export class LogComponent {
         startIndex,
         bufferSize: 30, // 减少缓冲区大小，降低内存使用
         padding: 0.5, // 适中的 padding 值
-        sizeStrategy: SizeStrategy.Average,
-        infinite: false
+        itemSize: 24,
+        sizeStrategy: SizeStrategy.Average
       }
     });
   }
@@ -235,5 +235,8 @@ export class LogComponent {
     this.message.success('日志数据已成功导出到' + folderPath);
   }
 
+  trackById(index: number, item: any): any {
+    return index;
+  }
 
 }

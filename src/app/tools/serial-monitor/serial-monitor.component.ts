@@ -17,7 +17,7 @@ import { PortItem, SerialService } from '../../services/serial.service';
 import { ProjectService } from '../../services/project.service';
 import { MenuComponent } from '../../components/menu/menu.component';
 import { SerialMonitorService } from './serial-monitor.service';
-import { UiScrollModule, Datasource } from 'ngx-ui-scroll';
+import { UiScrollModule, Datasource, SizeStrategy } from 'ngx-ui-scroll';
 import { dataItem } from './serial-monitor.service';
 import { HistoryMessageListComponent } from './components/history-message-list/history-message-list.component';
 import { QuickSendListComponent } from './components/quick-send-list/quick-send-list.component';
@@ -61,6 +61,12 @@ export class SerialMonitorComponent {
 
   // ngx-ui-scroll 数据源
   datasource;
+
+  // 记录上次的数据长度，用于优化更新
+  private lastDataLength = 0;
+
+  // 更新防抖定时器
+  private updateTimer: any = null;
 
   get dataList() {
     return this.serialMonitorService.dataList;
@@ -167,6 +173,8 @@ export class SerialMonitorComponent {
 
         for (let i = startIdx; i < endIdx; i++) {
           if (data[i]) {
+            // 确保每个数据项都有唯一的 ID
+            data[i]['id'] = i;
             items.push(data[i]);
           }
         }
@@ -176,9 +184,10 @@ export class SerialMonitorComponent {
       settings: {
         minIndex: 0,
         startIndex,
-        bufferSize: 30,
-        padding: 0.5,
-        infinite: false
+        sizeStrategy: SizeStrategy.Average, // 动态学习平均高度
+        itemSize: 26, // 设置一个合理的初始预估值
+        bufferSize: 30, // 适中缓冲区
+        padding: 0.5
       }
     });
   }
@@ -206,10 +215,10 @@ export class SerialMonitorComponent {
   }
 
   @ViewChild('dataListBox', { static: false }) dataListBoxRef!: ElementRef<HTMLDivElement>;
-  
+
   private scrollToBottom() {
     if (!this.autoScroll) return;
-    
+
     setTimeout(() => {
       requestAnimationFrame(() => {
         if (this.dataListBoxRef) {
@@ -226,19 +235,34 @@ export class SerialMonitorComponent {
 
     // 如果数据被清空
     if (currentDataCount === 0) {
+      this.lastDataLength = 0;
       if (this.datasource && this.datasource.adapter) {
         this.datasource.adapter.reload(0);
       }
       return;
     }
 
-    // 重新加载到最新数据位置
-    if (this.datasource && this.datasource.adapter) {
-      const startIndex = currentDataCount - 1;
-      this.datasource.adapter.reload(startIndex).then(() => {
-        this.scrollToBottom();
-      });
+    // 只有在数据长度变化时才更新
+    if (currentDataCount === this.lastDataLength) {
+      return;
     }
+
+    this.lastDataLength = currentDataCount;
+
+    // 使用防抖避免频繁更新
+    if (this.updateTimer) {
+      clearTimeout(this.updateTimer);
+    }
+
+    this.updateTimer = setTimeout(() => {
+      if (this.datasource && this.datasource.adapter && this.autoScroll) {
+        const startIndex = Math.max(0, currentDataCount - 30);
+        this.datasource.adapter.reload(startIndex).then(() => {
+          this.scrollToBottom();
+        });
+      }
+      this.updateTimer = null;
+    }, 50); // 50ms 防抖延迟
   }
 
 
@@ -266,6 +290,9 @@ export class SerialMonitorComponent {
   }
 
   ngOnDestroy() {
+    if (this.updateTimer) {
+      clearTimeout(this.updateTimer);
+    }
     this.serialMonitorService.disconnect();
   }
 
@@ -397,6 +424,7 @@ export class SerialMonitorComponent {
 
   clearView() {
     this.serialMonitorService.dataList = [];
+    this.lastDataLength = 0;
     if (this.datasource && this.datasource.adapter) {
       this.datasource.adapter.reload(0);
     }
@@ -556,6 +584,11 @@ export class SerialMonitorComponent {
 
   navigateNext() {
     this.navigateToResult(this.currentSearchIndex + 1);
+  }
+
+  // trackBy 函数用于优化 ngx-ui-scroll 性能
+  trackById(index: number, item: dataItem): any {
+    return item['id'] !== undefined ? item['id'] : index;
   }
 
   onDataItemClick(item: dataItem) {

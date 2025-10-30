@@ -70,7 +70,7 @@
 
           <!-- 数据显示 -->
           <div class="data-list sscroll" #dataListBox>
-            <div *uiScroll="let item of datasource">
+            <div *uiScroll="let item of datasource; trackBy: trackById">
               <app-data-item [data]="item" [searchKeyword]="searchKeyword"
                 (click)="onDataItemClick(item)"></app-data-item>
             </div>
