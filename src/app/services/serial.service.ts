@@ -18,6 +18,8 @@ export class SerialService {
     if (this.electronService.isElectron) {
       const currentSerialPortList = await window['SerialPort'].list();
 
+      // console.log("Detected serial ports: ", currentSerialPortList);
+
       let serialList: PortItem[] = [];
 
       if (window['platform'].isWindows) {
@@ -35,11 +37,14 @@ export class SerialService {
       } else if (window['platform'].isMacOS) {
         // 只返回usb串口设备
         serialList = currentSerialPortList.map((item) => {
-          let friendlyName: string = item.manufacturer? item.manufacturer : item.path.replace('/dev/tty.usbserial-', '').replace('/dev/cu.usbserial-', '');
+          // 将 tty 路径转换为 cu 路径
+          let devicePath = item.path.replace('/dev/tty.', '/dev/cu.');
+          
+          let friendlyName: string = item.manufacturer? item.manufacturer : devicePath.replace('/dev/cu.usbserial-', '').replace('/dev/cu.', '');
           let keywords = ["usb", "serial", "uart", "ftdi", "ch340", "cp210x"];
-          let icon: string = keywords.some(keyword => item.path.toLowerCase().includes(keyword.toLowerCase())) ? "fa-light fa-usb-drive" : 'fa-light fa-computer';
+          let icon: string = keywords.some(keyword => devicePath.toLowerCase().includes(keyword.toLowerCase())) ? "fa-light fa-usb-drive" : 'fa-light fa-computer';
           return {
-            name: item.path,
+            name: devicePath, // 使用转换后的 cu 路径
             text: friendlyName,
             type: 'serial',
             icon: icon,

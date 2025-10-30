@@ -613,7 +613,7 @@ export class HeaderComponent {
   isLoaded() {
     for (const router of ['/main/blockly-editor', '/main/code-editor']) {
       if (this.router.url.indexOf(router) > -1) {
-        this.checkAndSetDefaultPort();
+        // this.checkAndSetDefaultPort();
         return true;
       }
     }
