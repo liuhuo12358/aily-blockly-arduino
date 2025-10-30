@@ -484,7 +484,8 @@ export class _UploaderService {
         // uploadCmd = uploadCmd.replace('${serial}', this.serialService.currentPort || '');
 
         // 在 macOS 下，如果当前端口是 /dev/tty 开头，则替换为 /dev/cu
-        if (window['platform'].isMacOS && this.serialService.currentPort && this.serialService.currentPort.startsWith('/dev/cu.')) {
+        if (window['platform'].isMacOS && this.serialService.currentPort && 
+          this.serialService.currentPort.startsWith('/dev/cu.') && uploadCmd.includes('bossac')) {
           let cuPort = this.serialService.currentPort;
           cuPort = cuPort.replace('/dev/cu.', 'cu.');
           console.log(`Converting port from ${this.serialService.currentPort} to ${cuPort}`);
