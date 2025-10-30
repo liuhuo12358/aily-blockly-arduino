@@ -2755,7 +2755,7 @@ Your role is ASK (Advisory & Quick Support) - you provide analysis, recommendati
 
     // 暂禁止切换为agent模式
     if (mode === 'agent') {
-      if (!(this.currentUserGroup.includes('pro') || this.currentUserGroup.includes('admin'))) {
+      if (!(this.currentUserGroup.includes('pro') || this.currentUserGroup.includes('admin') || this.currentUserGroup.includes('edu'))) {
         this.message.warning('当前账号暂时无法使用该模式！');
         return;
       }
