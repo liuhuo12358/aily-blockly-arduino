@@ -407,8 +407,9 @@ export class _UploaderService {
         if (use_1200bps_touch) {
           console.log("1200bps touch triggered, current port:", this.serialService.currentPort);
           await this.serialMonitorService.connect({ path: this.serialService.currentPort || '', baudRate: 1200 });
-          // await new Promise(resolve => setTimeout(resolve, 250));
+          await new Promise(resolve => setTimeout(resolve, 250));
           this.serialMonitorService.disconnect();
+          await new Promise(resolve => setTimeout(resolve, 250));
         }
 
         console.log("Wait for upload:", wait_for_upload);
