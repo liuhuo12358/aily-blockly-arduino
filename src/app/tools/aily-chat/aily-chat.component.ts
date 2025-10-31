@@ -158,6 +158,10 @@ export class AilyChatComponent implements OnDestroy {
     return this.chatService.currentSessionId;
   }
 
+  get sessionTitle() {
+    return this.chatService.currentSessionTitle;
+  }
+
   get currentMode() {
     return this.chatService.currentMode;
   }
@@ -676,9 +680,8 @@ export class AilyChatComponent implements OnDestroy {
 
   // generate title
   generateTitle(content: string) {
-    this.chatService.generateTitle(content).subscribe((res) => {
-      console.log('生成标题结果:', res);
-    });
+    if (this.sessionTitle) return;
+    this.chatService.generateTitle(this.sessionId, content);
   }
 
   constructor(
@@ -1007,7 +1010,10 @@ ${JSON.stringify(errData)}
       this.chatService.startSession(this.currentMode, tools).subscribe({
         next: (res: any) => {
           if (res.status === 'success') {
-            this.chatService.currentSessionId = res.data;
+            if (res.data != this.sessionId) {
+              this.chatService.currentSessionId = res.data;
+              this.chatService.currentSessionTitle = "";
+            }
             console.log('会话启动成功, sessionId:', res.data);
             this.streamConnect();
             this.isSessionStarting = false;
@@ -1095,6 +1101,8 @@ ${JSON.stringify(errData)}
       if (resourcesText) {
         text = resourcesText + '\n\n' + text;
       }
+
+      this.generateTitle(text);
 
       this.appendMessage('user', text);
       this.appendMessage('aily', '[thinking...]');
@@ -2191,7 +2199,7 @@ Your role is ASK (Advisory & Quick Support) - you provide analysis, recommendati
       },
       complete: () => {
         console.log('streamConnect complete: ', this.list[this.list.length - 1]);
-        // 设置最后一条消息状态为done（输出完成）
+        // 设置最后一条消息状态为done(输出完成)
         if (this.list.length > 0 && this.list[this.list.length - 1].role === 'aily') {
           this.list[this.list.length - 1].state = 'done';
         }
@@ -2202,9 +2210,22 @@ Your role is ASK (Advisory & Quick Support) - you provide analysis, recommendati
         try {
           let historyData = this.chatService.historyList.find(h => h.sessionId === this.sessionId);
           if (!historyData) {
-            this.chatService.historyList.push({ sessionId: this.sessionId, name: "q" + Date.now() });
+            // 如果已经有标题,直接使用
+            if (this.sessionTitle && this.sessionTitle.trim() !== '') {
+              console.log('使用现有会话标题:', this.sessionTitle);
+              this.chatService.historyList.push({ sessionId: this.sessionId, name: this.sessionTitle });
+              this.chatService.saveHistoryFile(this.projectService.currentProjectPath || this.projectService.projectRootPath);
+            } else {
+              // 没有标题则等待3秒后检查
+              console.log('等待标题生成...');
+              setTimeout(() => {
+                // 3秒后再次检查标题,如果还是没有则使用默认标题
+                const title = this.sessionTitle || 'q' + Date.now();
+                this.chatService.historyList.push({ sessionId: this.sessionId, name: title });
+                this.chatService.saveHistoryFile(this.projectService.currentProjectPath || this.projectService.projectRootPath);
+              }, 3000);
+            }
           }
-          this.chatService.saveHistoryFile(this.projectService.currentProjectPath || this.projectService.projectRootPath);
         } catch (error) {
           console.warn("Error getting history data:", error);
         }
@@ -2480,6 +2501,7 @@ Your role is ASK (Advisory & Quick Support) - you provide analysis, recommendati
 
       // 确保会话完全关闭后再清空ID
       this.chatService.currentSessionId = '';
+      this.chatService.currentSessionTitle = '';
 
       // 重置会话启动标志和初始化标志
       this.isSessionStarting = false;

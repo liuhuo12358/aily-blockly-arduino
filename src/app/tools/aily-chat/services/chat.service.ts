@@ -26,6 +26,9 @@ export class ChatService {
   historyList = [];
 
   currentSessionId = this.historyList.length > 0 ? this.historyList[0].sessionId : '';
+  currentSessionTitle = this.historyList.length > 0 ? this.historyList[0].name : '';
+
+  titleIsGenerating = false;
 
   private textSubject = new Subject<ChatTextMessage>();
   private static instance: ChatService;
@@ -181,7 +184,30 @@ export class ChatService {
     return this.http.post(`${API.cancelTask}/${sessionId}`,{});
   }
 
-  generateTitle(content: string) {
-    return this.http.post(`${API.generateTitle}`, { content });
+  generateTitle(sessionId: string, content: string) {
+    if (this.titleIsGenerating) {
+      console.warn('标题生成中，忽略重复请求');
+      return;
+    }
+    this.titleIsGenerating = true;
+    this.http.post(`${API.generateTitle}`, { content }).subscribe(
+      (res) => {
+        if ((res as any).status === 'success' && sessionId === this.currentSessionId) {
+          try {
+            this.currentSessionTitle = JSON.parse((res as any).data).title;
+          } catch (error) {
+            this.currentSessionTitle = (res as any).data;
+          }
+
+          console.log("currentSessionTitle:", this.currentSessionTitle);
+        }
+
+        this.titleIsGenerating = false;
+      },
+      (error) => {
+        console.error('生成标题失败:', error);
+        this.titleIsGenerating = false;
+      }
+    );
   }
 }
