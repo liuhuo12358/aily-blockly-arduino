@@ -243,7 +243,7 @@ export class SerialMonitorComponent {
 
     // 计算新增的数据条数
     const newItemsCount = currentDataCount - this.lastDataLength;
-    
+
     if (newItemsCount > 0 && this.datasource && this.datasource.adapter) {
       // 使用 append 方法增量添加新数据,避免闪烁
       const newItems = [];
@@ -252,19 +252,18 @@ export class SerialMonitorComponent {
         item['id'] = i;
         newItems.push(item);
       }
-      
+
       // 追加新数据到末尾
       this.datasource.adapter.append({
         items: newItems,
         eof: false // 表示还可能有更多数据
       });
-      
+
       // 更新最后的数据长度
       this.lastDataLength = currentDataCount;
-      
-      // 如果开启自动滚动,滚动到底部
-      this.scrollToBottom();
     }
+    // 如果开启自动滚动,滚动到底部
+    this.scrollToBottom();
   }
 
 
