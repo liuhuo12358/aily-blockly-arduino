@@ -239,8 +239,4 @@ export class LogComponent {
     this.message.success('日志数据已成功导出到' + folderPath);
   }
 
-  trackById(index: number, item: any): any {
-    return index;
-  }
-
 }

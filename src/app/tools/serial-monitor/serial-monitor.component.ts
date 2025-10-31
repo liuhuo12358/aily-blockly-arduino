@@ -55,10 +55,6 @@ import { Buffer } from 'buffer';
   styleUrl: './serial-monitor.component.scss',
 })
 export class SerialMonitorComponent {
-
-  // 标记是否为程序触发的滚动,避免自动滚动被误关闭
-  private isProgrammaticScroll = false;
-
   // ngx-ui-scroll 数据源
   datasource;
 
@@ -220,6 +216,8 @@ export class SerialMonitorComponent {
     if (!this.autoScroll) return;
 
     setTimeout(() => {
+      console.log('scroll To Bottom');
+
       requestAnimationFrame(() => {
         if (this.dataListBoxRef) {
           const element = this.dataListBoxRef.nativeElement;
@@ -234,7 +232,7 @@ export class SerialMonitorComponent {
     const currentDataCount = this.dataList.length;
 
     // 如果数据被清空
-    if (currentDataCount === 0) {
+    if (this.dataList.length === 0) {
       this.lastDataLength = 0;
       if (this.datasource && this.datasource.adapter) {
         this.datasource.adapter.reload(0);
@@ -242,27 +240,11 @@ export class SerialMonitorComponent {
       return;
     }
 
-    // 只有在数据长度变化时才更新
-    if (currentDataCount === this.lastDataLength) {
-      return;
-    }
+    const startIndex = currentDataCount - 1;
+    this.datasource.adapter.reload(startIndex).then(() => {
+      this.scrollToBottom();
+    });
 
-    this.lastDataLength = currentDataCount;
-
-    // 使用防抖避免频繁更新
-    if (this.updateTimer) {
-      clearTimeout(this.updateTimer);
-    }
-
-    this.updateTimer = setTimeout(() => {
-      if (this.datasource && this.datasource.adapter && this.autoScroll) {
-        const startIndex = Math.max(0, currentDataCount - 30);
-        this.datasource.adapter.reload(startIndex).then(() => {
-          this.scrollToBottom();
-        });
-      }
-      this.updateTimer = null;
-    }, 50); // 50ms 防抖延迟
   }
 
 
@@ -278,15 +260,6 @@ export class SerialMonitorComponent {
     } catch (error) {
       console.warn('获取串口列表失败:', error);
     }
-  }
-
-  // 处理滚动事件
-  handleScroll() {
-    // 如果是程序触发的滚动,忽略此事件
-    if (this.isProgrammaticScroll) {
-      return;
-    }
-    // ngx-ui-scroll 的滚动处理已内置
   }
 
   ngOnDestroy() {
@@ -409,17 +382,6 @@ export class SerialMonitorComponent {
 
   changeViewMode(name) {
     this.serialMonitorService.viewMode[name] = !this.serialMonitorService.viewMode[name];
-
-    // 如果用户重新开启自动滚动，立即滚动到底部
-    if (name === 'autoScroll' && this.serialMonitorService.viewMode[name]) {
-      this.isProgrammaticScroll = true;
-      // setTimeout(() => {
-      //   this.scrollToBottom();
-      // }, 0);
-      setTimeout(() => {
-        this.isProgrammaticScroll = false;
-      }, 300);
-    }
   }
 
   clearView() {
