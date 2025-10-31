@@ -173,17 +173,6 @@ export class BlocklyComponent {
           };
 
           this.bitmapUploadService.sendUploadResponse(response);
-        } else {
-          // 用户取消或出错
-          // const response: BitmapUploadResponse = {
-          //   fieldId: request.fieldId,  // 添加字段ID
-          //   data: request.currentBitmap, // 返回原始数据
-          //   success: false,
-          //   // message: '图片处理已取消',
-          //   // timestamp: Date.now()
-          // };
-
-          // this.bitmapUploadService.sendUploadResponse(response);
         }
       });
     });

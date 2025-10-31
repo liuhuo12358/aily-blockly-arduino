@@ -67,11 +67,15 @@
       }
       <div class="monitor">
         <div class="r-box">
-          <div class="sscroll data-list" #scrollContainer>
-            <div *uiScroll="let item of datasource;">
-              <app-data-item [data]="item" [searchKeyword]="searchKeyword"></app-data-item>
+
+          <!-- 数据显示 -->
+          <div class="data-list sscroll" #dataListBox>
+            <div *uiScroll="let item of datasource">
+              <app-data-item [data]="item" [searchKeyword]="searchKeyword"
+                (click)="onDataItemClick(item)"></app-data-item>
             </div>
           </div>
+
           <div class="btns">
             <div class="btn ccenter hex" nz-tooltip nzTooltipTitle="HEX显示" (click)="changeViewMode('showHex')"
               [ngClass]="{'actived':showHex}">

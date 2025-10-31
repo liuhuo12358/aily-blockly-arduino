@@ -113,6 +113,7 @@ export class HeaderComponent {
     this.authService.showUser.subscribe(state => {
       this.showUser = state;
     })
+    this.checkAndSetDefaultPort();
   }
 
   // 检查串口列表并设置默认串口
@@ -604,7 +605,6 @@ export class HeaderComponent {
   isLoaded() {
     for (const router of ['/main/blockly-editor', '/main/code-editor']) {
       if (this.router.url.indexOf(router) > -1) {
-        this.checkAndSetDefaultPort();
         return true;
       }
     }

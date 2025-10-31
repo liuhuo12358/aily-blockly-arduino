@@ -15,7 +15,6 @@ import { ActionService } from "../../../services/action.service";
 import { arduinoGenerator } from "../components/blockly/generators/arduino/arduino";
 import { BlocklyService } from "./blockly.service";
 import { findFile } from '../../../utils/builder.utils';
-import { error } from "console";
 
 @Injectable()
 export class _UploaderService {
@@ -41,7 +40,7 @@ export class _UploaderService {
   private isErrored = false;
   cancelled = false;
   private commandName: string | null = null;
-  
+
   private initialized = false; // 防止重复初始化
 
   // 定义正则表达式，匹配常见的进度格式
@@ -75,7 +74,7 @@ export class _UploaderService {
       console.warn('_UploaderService 已经初始化过了，跳过重复初始化');
       return;
     }
-    
+
     this.initialized = true;
     this.actionService.listen('upload-begin', async (action) => {
       try {
@@ -110,8 +109,8 @@ export class _UploaderService {
       wait_for_upload: false
     };
 
-    // 第一步：分割参数并处理基本变量替换和标志提取
-    // 使用正则先提取出以[]包裹的标志参数，并从原来的字符串中移除
+    // 第一步:分割参数并处理基本变量替换和标志提取
+    // 使用正则先提取出以[]包裹的标志参数,并从原来的字符串中移除
     const flagParams: string[] = uploadParam.match(/\[([^\]]+)\]/g) || [];
 
     flagParams.forEach((flag: string) => {
@@ -143,7 +142,7 @@ export class _UploaderService {
       }
       return param;
     });
-    
+
     let paramList = (await Promise.all(paramPromises)).filter(param => param !== ""); // 过滤掉空字符串（标志参数）
 
     console.log("Processed upload params: ", paramList, flags);
@@ -205,7 +204,7 @@ export class _UploaderService {
       const match = param.match(/\$\{\'(.+?)\'\}/);
       if (match) {
         const fileName = match[1];
-        
+
         // 获取fileName后缀
         const fileNameParts = fileName.split('.');
         const fileExtension = fileNameParts.length > 1 ? fileNameParts.pop() : '';
@@ -366,7 +365,7 @@ export class _UploaderService {
         let processedParams: string[];
         let flags: { use_1200bps_touch: boolean; wait_for_upload: boolean };
         let command: string;
-        
+
         try {
           const result = await this.processUploadParams(uploadParam, buildPath, toolsPath, sdkPath, baudRate);
           processedParams = result.processedParams;
@@ -446,7 +445,7 @@ export class _UploaderService {
         //     });
 
         //     buildProperties = buildPropertyParams.join(' ');
-            
+
         //     if (buildProperties) {
         //       buildProperties = ' ' + buildProperties; // 在前面添加空格
         //     }
@@ -497,7 +496,7 @@ export class _UploaderService {
                       trimmedLine.toLowerCase().includes('failed') ||
                       trimmedLine.toLowerCase().includes('a fatal error occurred') ||
                       trimmedLine.toLowerCase().includes("can't open device")) {
-                      
+
                       this.handleUploadError(trimmedLine);
                       // return;
                     }
