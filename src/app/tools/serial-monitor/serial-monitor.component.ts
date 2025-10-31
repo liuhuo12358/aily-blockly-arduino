@@ -204,8 +204,9 @@ export class SerialMonitorComponent {
       }
     });
 
-    // 如果已有数据，滚动到底部
+    // 如果已有数据,滚动到底部
     if (this.dataList.length > 0) {
+      this.lastDataLength = this.dataList.length; // 初始化时记录数据长度
       this.scrollToBottom();
     }
   }
@@ -240,11 +241,30 @@ export class SerialMonitorComponent {
       return;
     }
 
-    const startIndex = currentDataCount - 1;
-    this.datasource.adapter.reload(startIndex).then(() => {
+    // 计算新增的数据条数
+    const newItemsCount = currentDataCount - this.lastDataLength;
+    
+    if (newItemsCount > 0 && this.datasource && this.datasource.adapter) {
+      // 使用 append 方法增量添加新数据,避免闪烁
+      const newItems = [];
+      for (let i = this.lastDataLength; i < currentDataCount; i++) {
+        const item = this.dataList[i];
+        item['id'] = i;
+        newItems.push(item);
+      }
+      
+      // 追加新数据到末尾
+      this.datasource.adapter.append({
+        items: newItems,
+        eof: false // 表示还可能有更多数据
+      });
+      
+      // 更新最后的数据长度
+      this.lastDataLength = currentDataCount;
+      
+      // 如果开启自动滚动,滚动到底部
       this.scrollToBottom();
-    });
-
+    }
   }
 
 
@@ -388,6 +408,7 @@ export class SerialMonitorComponent {
     this.serialMonitorService.dataList = [];
     this.lastDataLength = 0;
     if (this.datasource && this.datasource.adapter) {
+      // 清空时使用 reload 是合理的,因为需要完全重置
       this.datasource.adapter.reload(0);
     }
   }
