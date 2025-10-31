@@ -117,6 +117,7 @@ export class _UploaderService {
     flagParams.forEach((flag: string) => {
       if (flag.includes('--use_1200bps_touch')) {
         flags.use_1200bps_touch = true;
+        console.log("Detected use_1200bps_touch flag");
       }
       if (flag.includes('--wait_for_upload')) {
         flags.wait_for_upload = true;
@@ -404,9 +405,11 @@ export class _UploaderService {
 
         // 上传预处理
         if (use_1200bps_touch) {
+          console.log("1200bps touch triggered, current port:", this.serialService.currentPort);
           await this.serialMonitorService.connect({ path: this.serialService.currentPort || '', baudRate: 1200 });
-          // await new Promise(resolve => setTimeout(resolve, 250));
+          await new Promise(resolve => setTimeout(resolve, 250));
           this.serialMonitorService.disconnect();
+          await new Promise(resolve => setTimeout(resolve, 250));
         }
 
         console.log("Wait for upload:", wait_for_upload);
@@ -478,7 +481,18 @@ export class _UploaderService {
         let uploadCmd = `${command} ${uploadParamList.slice(1).join(' ')}${buildProperties}`;
         console.log("Upload cmd: ", uploadCmd);
 
-        uploadCmd = uploadCmd.replace('${serial}', this.serialService.currentPort || '');
+        // uploadCmd = uploadCmd.replace('${serial}', this.serialService.currentPort || '');
+
+        // 在 macOS 下，如果当前端口是 /dev/tty 开头，则替换为 /dev/cu
+        if (window['platform'].isMacOS && this.serialService.currentPort && 
+          this.serialService.currentPort.startsWith('/dev/cu.') && uploadCmd.includes('bossac')) {
+          let cuPort = this.serialService.currentPort;
+          cuPort = cuPort.replace('/dev/cu.', 'cu.');
+          console.log(`Converting port from ${this.serialService.currentPort} to ${cuPort}`);
+          uploadCmd = uploadCmd.replace('${serial}', cuPort);
+        } else {
+          uploadCmd = uploadCmd.replace('${serial}', this.serialService.currentPort || '');
+        }
 
         console.log("Final upload cmd: ", uploadCmd);
 
