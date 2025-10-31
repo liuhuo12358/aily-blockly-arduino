@@ -105,7 +105,7 @@ export class SerialMonitorService {
           this.isConnected = true;
           this.connectionStatus.next(true);
           this.setupDataListeners();
-          
+          console.log('串口已打开');
           // 记录连接信息到数据列表
           this.dataList.push({
             time: new Date().toLocaleTimeString(),
