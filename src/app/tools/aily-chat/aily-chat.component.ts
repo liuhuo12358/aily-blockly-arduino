@@ -725,10 +725,13 @@ export class AilyChatComponent implements OnDestroy {
 
     this.authService.initializeAuth().then((res) => {
       // 初始化完成后的处理
-    });
+      console.log("认证初始化完成");
 
-    this.authService.userInfo$.subscribe(userInfo => {
-      this.currentUserGroup = userInfo?.groups || [];
+      // 初始化后立即订阅
+      this.authService.userInfo$.subscribe(userInfo => {
+        console.log('userInfo$ 更新:', userInfo);
+        this.currentUserGroup = userInfo?.groups || [];
+      });
     });
 
     // 订阅登录状态变化
@@ -756,7 +759,7 @@ export class AilyChatComponent implements OnDestroy {
         }
 
         if (isLoggedIn) {
-          //
+          console.log('用户已登录，准备初始化AI助手会话');
         } else {
           // 用户登出时的处理
           console.log('用户已登出，清理会话和状态');
@@ -1002,13 +1005,19 @@ ${JSON.stringify(errData)}
             this.isSessionStarting = false;
             resolve();
           } else {
-            let errData = {"message": res.message || '启动会话失败，请稍后重试。'}
-            this.appendMessage('error', `
+            if (res?.data === 401) {
+              this.message.error(res.message);
+            } else {
+              let errData = { "message": res.message || '启动会话失败，请稍后重试。' }
+              this.appendMessage('error', `
 \`\`\`aily-error
 ${JSON.stringify(errData)}
 \`\`\`\n\n`)
+            }
+
             this.isSessionStarting = false;
-            reject(new Error(res.message || '启动会话失败'));
+            reject(res.message || '启动会话失败');
+            
           }
         },
         error: (err) => {
@@ -2753,17 +2762,14 @@ Your role is ASK (Advisory & Quick Support) - you provide analysis, recommendati
       return;
     }
 
-    // 暂禁止切换为agent模式
-    if (mode === 'agent') {
-      if (!(this.currentUserGroup.includes('pro') || this.currentUserGroup.includes('admin') || this.currentUserGroup.includes('edu'))) {
-        this.message.warning('当前账号暂时无法使用该模式！');
-        return;
-      }
-    }
     this.chatService.currentMode = mode;
     console.log('切换AI模式为:', this.currentMode);
     await this.stopAndCloseSession();
-    await this.startSession();
+    this.startSession().then((res) => {
+      console.log('新会话已启动，当前模式:', this.currentMode);
+    }).catch((err) => {
+      this.switchToMode('chat');
+    });
   }
 
   /**
