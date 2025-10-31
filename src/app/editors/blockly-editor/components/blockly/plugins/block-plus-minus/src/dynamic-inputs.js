@@ -264,10 +264,27 @@ const dynamicInputsHelper = function () {
     this.minInputs = 1;
   }
   
-  // Find the first input to add the plus button
-  if (this.inputList.length > 0) {
-    const firstInput = this.inputList[0];
-    firstInput.insertFieldAt(0, createPlusField(), 'PLUS');
+  // Find the first input that starts with "INPUT" to add the plus button
+  let targetInput = null;
+  for (let i = 0; i < this.inputList.length; i++) {
+    const input = this.inputList[i];
+    if (input.name && input.name.startsWith('INPUT')) {
+      targetInput = input;
+      break;
+    }
+  }
+  
+  // If we found an INPUT* input, add the plus button to it
+  if (targetInput) {
+    targetInput.insertFieldAt(0, createPlusField(), 'PLUS');
+    console.log(`Added plus button to input: ${targetInput.name}`);
+  } else {
+    // Fallback: if no INPUT* inputs found, use the first input
+    if (this.inputList.length > 0) {
+      const firstInput = this.inputList[0];
+      firstInput.insertFieldAt(0, createPlusField(), 'PLUS');
+      console.log(`No INPUT* inputs found, added plus button to first input: ${firstInput.name}`);
+    }
   }
   
   console.log(`Initialized dynamic inputs mutator with minInputs: ${this.minInputs}`);
