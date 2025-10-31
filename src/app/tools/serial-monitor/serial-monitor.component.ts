@@ -55,10 +55,6 @@ import { Buffer } from 'buffer';
   styleUrl: './serial-monitor.component.scss',
 })
 export class SerialMonitorComponent {
-
-  // 标记是否为程序触发的滚动,避免自动滚动被误关闭
-  private isProgrammaticScroll = false;
-
   // ngx-ui-scroll 数据源
   datasource;
 
@@ -169,16 +165,7 @@ export class SerialMonitorComponent {
         const data = this.dataList;
         const startIdx = Math.max(0, index);
         const endIdx = Math.min(data.length, startIdx + count);
-        const items = [];
-
-        for (let i = startIdx; i < endIdx; i++) {
-          if (data[i]) {
-            // 确保每个数据项都有唯一的 ID
-            data[i]['id'] = i;
-            items.push(data[i]);
-          }
-        }
-
+        const items = data.slice(startIdx, endIdx);
         return Promise.resolve(items);
       },
       settings: {
@@ -208,33 +195,44 @@ export class SerialMonitorComponent {
       }
     });
 
-    // 如果已有数据，滚动到底部
+    // 如果已有数据,滚动到底部
     if (this.dataList.length > 0) {
+      this.lastDataLength = this.dataList.length; // 初始化时记录数据长度
       this.scrollToBottom();
     }
   }
 
   @ViewChild('dataListBox', { static: false }) dataListBoxRef!: ElementRef<HTMLDivElement>;
 
-  private scrollToBottom() {
+  private scrollToBottom(fast = false) {
     if (!this.autoScroll) return;
-
     setTimeout(() => {
+      // console.log('scroll To Bottom');
       requestAnimationFrame(() => {
         if (this.dataListBoxRef) {
           const element = this.dataListBoxRef.nativeElement;
-          element.scrollTop = element.scrollHeight;
+          if (fast) {
+            element.scrollTop = element.scrollHeight;
+          } else {
+            // 使用 scrollTo 实现平滑滚动
+            element.scrollTo({
+              top: element.scrollHeight,
+              behavior: 'smooth'
+            });
+          }
         }
       });
-    }, 100);
+    }, fast ? 50 : 100);
   }
 
   // 处理数据更新
-  private handleDataUpdate(data?) {
-    const currentDataCount = this.dataList.length;
-
+  private handleDataUpdate(data: dataItem | void) {
+    if (!data) {
+      this.scrollToBottom();
+      return;
+    }
     // 如果数据被清空
-    if (currentDataCount === 0) {
+    if (this.dataList.length === 0) {
       this.lastDataLength = 0;
       if (this.datasource && this.datasource.adapter) {
         this.datasource.adapter.reload(0);
@@ -242,27 +240,34 @@ export class SerialMonitorComponent {
       return;
     }
 
-    // 只有在数据长度变化时才更新
-    if (currentDataCount === this.lastDataLength) {
-      return;
-    }
+    // this.datasource.adapter.append({
+    //   items: [data],
+    // });
 
-    this.lastDataLength = currentDataCount;
+    // this.cd.detectChanges();
+    let currentDataCount = this.dataList.length;
+    // 计算新增的数据条数
+    const newItemsCount = currentDataCount - this.lastDataLength;
 
-    // 使用防抖避免频繁更新
-    if (this.updateTimer) {
-      clearTimeout(this.updateTimer);
-    }
-
-    this.updateTimer = setTimeout(() => {
-      if (this.datasource && this.datasource.adapter && this.autoScroll) {
-        const startIndex = Math.max(0, currentDataCount - 30);
-        this.datasource.adapter.reload(startIndex).then(() => {
-          this.scrollToBottom();
-        });
+    if (newItemsCount > 0 && this.datasource && this.datasource.adapter) {
+      // 使用 append 方法增量添加新数据,避免闪烁
+      const newItems = [];
+      for (let i = this.lastDataLength; i < currentDataCount; i++) {
+        const item = this.dataList[i];
+        item['id'] = i;
+        newItems.push(item);
       }
-      this.updateTimer = null;
-    }, 50); // 50ms 防抖延迟
+
+      // 追加新数据到末尾
+      this.datasource.adapter.append({
+        items: newItems
+      });
+
+      // 更新最后的数据长度
+      this.lastDataLength = currentDataCount;
+    }
+    // 如果开启自动滚动,滚动到底部
+    this.scrollToBottom(true);
   }
 
 
@@ -278,15 +283,6 @@ export class SerialMonitorComponent {
     } catch (error) {
       console.warn('获取串口列表失败:', error);
     }
-  }
-
-  // 处理滚动事件
-  handleScroll() {
-    // 如果是程序触发的滚动,忽略此事件
-    if (this.isProgrammaticScroll) {
-      return;
-    }
-    // ngx-ui-scroll 的滚动处理已内置
   }
 
   ngOnDestroy() {
@@ -409,23 +405,13 @@ export class SerialMonitorComponent {
 
   changeViewMode(name) {
     this.serialMonitorService.viewMode[name] = !this.serialMonitorService.viewMode[name];
-
-    // 如果用户重新开启自动滚动，立即滚动到底部
-    if (name === 'autoScroll' && this.serialMonitorService.viewMode[name]) {
-      this.isProgrammaticScroll = true;
-      // setTimeout(() => {
-      //   this.scrollToBottom();
-      // }, 0);
-      setTimeout(() => {
-        this.isProgrammaticScroll = false;
-      }, 300);
-    }
   }
 
   clearView() {
     this.serialMonitorService.dataList = [];
     this.lastDataLength = 0;
     if (this.datasource && this.datasource.adapter) {
+      // 清空时使用 reload 是合理的,因为需要完全重置
       this.datasource.adapter.reload(0);
     }
   }
