@@ -39,7 +39,7 @@ export class SerialMonitorService {
 
   dataList: dataItem[] = [];
 
-  dataUpdated = new Subject<void>();
+  dataUpdated = new Subject<void | dataItem>();
 
   // 串口相关属性
   private serialPort: any = null;
@@ -99,7 +99,7 @@ export class SerialMonitorService {
       };
 
       this.serialPort = window.electronAPI.SerialPort.create(serialOptions);
-      
+
       return new Promise((resolve, reject) => {
         this.serialPort.on('open', () => {
           this.isConnected = true;
@@ -113,7 +113,7 @@ export class SerialMonitorService {
             dir: 'SYS'
           });
           this.dataUpdated.next();
-          
+
           resolve(true);
         });
 
@@ -175,11 +175,13 @@ export class SerialMonitorService {
       currentTime - this.firstDataTime > 10000 ||
       this.dataList[this.dataList.length - 1].dir !== 'RX') {
       // 创建新的数据项
-      this.dataList.push({
+      let item: dataItem = {
         time: timeString,
         data: data,
         dir: 'RX'
-      });
+      }
+      this.dataList.push(item);
+      this.dataUpdated.next(item);
       // 记录这是新记录的首次接收时间
       this.firstDataTime = currentTime;
     } else {
@@ -394,7 +396,7 @@ export class SerialMonitorService {
       this.message.warning('串口未连接，请先打开串口');
       return Promise.resolve(false);
     }
-    
+
     return new Promise((resolve) => {
       try {
         const methodName = signalType.toLowerCase();

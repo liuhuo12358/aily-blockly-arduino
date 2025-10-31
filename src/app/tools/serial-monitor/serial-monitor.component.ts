@@ -165,16 +165,7 @@ export class SerialMonitorComponent {
         const data = this.dataList;
         const startIdx = Math.max(0, index);
         const endIdx = Math.min(data.length, startIdx + count);
-        const items = [];
-
-        for (let i = startIdx; i < endIdx; i++) {
-          if (data[i]) {
-            // 确保每个数据项都有唯一的 ID
-            data[i]['id'] = i;
-            items.push(data[i]);
-          }
-        }
-
+        const items = data.slice(startIdx, endIdx);
         return Promise.resolve(items);
       },
       settings: {
@@ -213,25 +204,33 @@ export class SerialMonitorComponent {
 
   @ViewChild('dataListBox', { static: false }) dataListBoxRef!: ElementRef<HTMLDivElement>;
 
-  private scrollToBottom() {
+  private scrollToBottom(fast = false) {
     if (!this.autoScroll) return;
-
     setTimeout(() => {
-      console.log('scroll To Bottom');
-
+      // console.log('scroll To Bottom');
       requestAnimationFrame(() => {
         if (this.dataListBoxRef) {
           const element = this.dataListBoxRef.nativeElement;
-          element.scrollTop = element.scrollHeight;
+          if (fast) {
+            element.scrollTop = element.scrollHeight;
+          } else {
+            // 使用 scrollTo 实现平滑滚动
+            element.scrollTo({
+              top: element.scrollHeight,
+              behavior: 'smooth'
+            });
+          }
         }
       });
-    }, 100);
+    }, fast ? 50 : 100);
   }
 
   // 处理数据更新
-  private handleDataUpdate(data?) {
-    const currentDataCount = this.dataList.length;
-
+  private handleDataUpdate(data: dataItem | void) {
+    if (!data) {
+      this.scrollToBottom();
+      return;
+    }
     // 如果数据被清空
     if (this.dataList.length === 0) {
       this.lastDataLength = 0;
@@ -241,6 +240,12 @@ export class SerialMonitorComponent {
       return;
     }
 
+    // this.datasource.adapter.append({
+    //   items: [data],
+    // });
+
+    // this.cd.detectChanges();
+    let currentDataCount = this.dataList.length;
     // 计算新增的数据条数
     const newItemsCount = currentDataCount - this.lastDataLength;
 
@@ -255,15 +260,14 @@ export class SerialMonitorComponent {
 
       // 追加新数据到末尾
       this.datasource.adapter.append({
-        items: newItems,
-        eof: false // 表示还可能有更多数据
+        items: newItems
       });
 
       // 更新最后的数据长度
       this.lastDataLength = currentDataCount;
     }
     // 如果开启自动滚动,滚动到底部
-    this.scrollToBottom();
+    this.scrollToBottom(true);
   }
 
 
