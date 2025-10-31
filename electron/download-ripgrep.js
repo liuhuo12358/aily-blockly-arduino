@@ -11,6 +11,7 @@ const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
 const os = require('os');
+const { URL } = require('url');
 
 // ripgrep 版本
 const RIPGREP_VERSION = '14.1.0';
@@ -144,20 +145,36 @@ function extractArchive(archivePath, extractPath, targetDir) {
     try {
         if (archivePath.endsWith('.zip')) {
             // Windows: 使用 PowerShell 解压
-            const cmd = `powershell -Command "Expand-Archive -Path '${archivePath}' -DestinationPath '${tempDir}' -Force"`;
-            execSync(cmd, { stdio: 'ignore' });
-        } else if (archivePath.endsWith('.tar.gz')) {
+            if (process.platform === 'win32') {
+                const cmd = `powershell -Command "Expand-Archive -Path '${archivePath}' -DestinationPath '${tempDir}' -Force"`;
+                execSync(cmd, { stdio: 'ignore' });
+            } else {
+                // 在非 Windows 系统上尝试使用 unzip
+                execSync(`unzip -q "${archivePath}" -d "${tempDir}"`, { stdio: 'ignore' });
+            }
+        } else if (archivePath.endsWith('.tar.gz') || archivePath.endsWith('.tgz')) {
             // macOS/Linux: 使用 tar
-            execSync(`tar -xzf "${archivePath}" -C "${tempDir}"`, { stdio: 'ignore' });
+            console.log(`  执行: tar -xzf "${archivePath}" -C "${tempDir}"`);
+            execSync(`tar -xzf "${archivePath}" -C "${tempDir}"`, { stdio: 'pipe' });
         } else {
-            throw new Error('不支持的压缩格式');
+            throw new Error(`不支持的压缩格式: ${path.extname(archivePath)}`);
         }
         
         // 复制二进制文件到目标位置
         const sourcePath = path.join(tempDir, extractPath);
         const destPath = path.join(VENDOR_DIR, targetDir, path.basename(extractPath));
         
+        console.log(`  查找源文件: ${sourcePath}`);
+        
         if (!fs.existsSync(sourcePath)) {
+            // 如果找不到文件，列出临时目录的内容进行调试
+            console.log(`  ✗ 未找到源文件，临时目录内容:`);
+            try {
+                const files = fs.readdirSync(tempDir, { recursive: true });
+                files.forEach(file => console.log(`    - ${file}`));
+            } catch (e) {
+                console.log(`    无法列出目录内容: ${e.message}`);
+            }
             throw new Error(`未找到文件: ${sourcePath}`);
         }
         
@@ -177,9 +194,13 @@ function extractArchive(archivePath, extractPath, targetDir) {
         
         return destPath;
     } catch (error) {
+        console.error(`  解压失败: ${error.message}`);
         // 清理
         if (fs.existsSync(tempDir)) {
             fs.rmSync(tempDir, { recursive: true, force: true });
+        }
+        if (fs.existsSync(archivePath)) {
+            fs.unlinkSync(archivePath);
         }
         throw error;
     }
@@ -200,7 +221,9 @@ async function downloadAndInstallRipgrep(platformConfig) {
     }
     
     // 下载
-    const tempFile = path.join(os.tmpdir(), `ripgrep-${platformConfig.arch}-${platformConfig.platform}${path.extname(platformConfig.url)}`);
+    const tempFile = path.join(os.tmpdir(), `ripgrep-${platformConfig.arch}-${platformConfig.platform}.tar.gz`);
+    
+    console.log(`  临时文件: ${tempFile}`);
     
     try {
         await downloadFile(platformConfig.url, tempFile);

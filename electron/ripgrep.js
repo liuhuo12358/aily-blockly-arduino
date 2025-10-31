@@ -74,15 +74,57 @@ function getBundledRipgrepPath() {
  */
 async function isRipgrepAvailable() {
     return new Promise((resolve) => {
+        const rgPath = findRipgrepPath();
+        console.log(`检查 ripgrep 可用性: ${rgPath}`);
+        
+        // 首先检查文件是否存在
+        if (!fs.existsSync(rgPath)) {
+            console.warn(`Ripgrep 文件不存在: ${rgPath}`);
+            resolve(false);
+            return;
+        }
+        
+        // 检查文件权限（Unix 系统）
+        if (process.platform !== 'win32') {
+            try {
+                const stats = fs.statSync(rgPath);
+                if (!(stats.mode & parseInt('111', 8))) {
+                    console.warn(`Ripgrep 文件无执行权限: ${rgPath}`);
+                    // 尝试添加执行权限
+                    try {
+                        fs.chmodSync(rgPath, stats.mode | parseInt('755', 8));
+                        console.log(`已添加执行权限: ${rgPath}`);
+                    } catch (chmodError) {
+                        console.error(`无法添加执行权限: ${chmodError.message}`);
+                        resolve(false);
+                        return;
+                    }
+                }
+            } catch (statError) {
+                console.warn(`无法检查文件权限: ${statError.message}`);
+            }
+        }
+        
         execFile(
-            findRipgrepPath(),
+            rgPath,
             ['--version'],
             { timeout: 2000 },
-            (error) => {
+            (error, stdout, stderr) => {
                 if (error) {
-                    console.warn('Ripgrep 不可用:', error.message);
+                    console.warn('Ripgrep 执行失败:', error.message);
+                    console.warn('错误详情:', stderr);
+                    
+                    // 在 macOS 上提供安装建议
+                    if (process.platform === 'darwin') {
+                        console.log('💡 在 macOS 上安装 ripgrep 的方法:');
+                        console.log('   方法1: brew install ripgrep');
+                        console.log('   方法2: 从 https://github.com/BurntSushi/ripgrep/releases 下载');
+                        console.log('   方法3: 运行 node electron/download-ripgrep.js 下载内置版本');
+                    }
+                    
                     resolve(false);
                 } else {
+                    console.log('Ripgrep 可用:', stdout.trim());
                     resolve(true);
                 }
             }
@@ -344,13 +386,41 @@ async function searchContent(params) {
     for (const line of result.results) {
         if (!line) continue;
         
-        // ripgrep 输出格式: filepath:linenum:content
-        // Windows下可能是 C:\path\file:123:content 或 .\file:123:content
-        // 使用更灵活的正则: 匹配到第一个 :数字: 模式
-        const match = line.match(/^(.+?):(\d+):(.*)$/);
-        if (match) {
-            let [, file, lineNum, content] = match;
-            
+        // ripgrep 输出格式有两种:
+        // 1. 多文件搜索: filepath:linenum:content  
+        // 2. 单文件搜索: linenum:content
+        let file, lineNum, content;
+        
+        // 先尝试匹配包含文件路径的格式
+        const fullMatch = line.match(/^(.+?):(\d+):(.*)$/);
+        if (fullMatch) {
+            const [, pathPart, linePart, contentPart] = fullMatch;
+            // 检查第一部分是否包含路径分隔符，如果有则认为是文件路径
+            if (pathPart.includes('/') || pathPart.includes('\\') || pathPart.includes('.')) {
+                file = pathPart;
+                lineNum = linePart;
+                content = contentPart;
+            } else {
+                // 第一部分不像文件路径，可能是行号:内容格式
+                file = searchPath; // 使用搜索路径作为文件名
+                lineNum = pathPart;
+                content = linePart + ':' + contentPart; // 重新组合内容
+            }
+        } else {
+            // 尝试简单的行号:内容格式
+            const simpleMatch = line.match(/^(\d+):(.*)$/);
+            if (simpleMatch) {
+                const [, linePart, contentPart] = simpleMatch;
+                file = searchPath; // 使用搜索路径作为文件名
+                lineNum = linePart;
+                content = contentPart;
+            } else {
+                console.warn(`[searchContent] 无法解析行: ${line.substring(0, 100)}`);
+                continue;
+            }
+        }
+        
+        if (file && lineNum && content !== undefined) {
             console.log(`[searchContent] 原始内容长度: ${content.length} 字符 (行${lineNum})`);
             
             // 🆕 新策略: 在 JavaScript 层手动查找所有匹配,生成多个记录
@@ -370,7 +440,7 @@ async function searchContent(params) {
                 break;
             }
         } else {
-            console.warn(`[searchContent] 无法解析行: ${line.substring(0, 100)}`);
+            console.warn(`[searchContent] 跳过无效解析: ${line.substring(0, 100)}`);
         }
     }
     
@@ -438,20 +508,9 @@ function expandMatches(content, pattern, file, lineNum, maxLineLength, isRegex) 
             content: truncatedContent
         });
     } else {
-        // 为每个匹配位置生成独立记录
-        for (let i = 0; i < matchPositions.length; i++) {
-            const position = matchPositions[i];
-            const truncatedContent = extractAroundPosition(processedContent, position, maxLineLength);
-            
-            matches.push({
-                file: file,
-                line: lineNum,
-                column: isFormatted ? mapFormattedPosition(content, processedContent, position) : position + 1, // 列号从1开始
-                content: truncatedContent
-            });
-            
-            console.log(`[expandMatches] 匹配 #${i + 1}: 位置=${position}, 截取长度=${truncatedContent.length}`);
-        }
+        // 🆕 智能上下文合并：为相近的匹配位置合并上下文
+        const mergedMatches = mergeOverlappingContexts(matchPositions, processedContent, maxLineLength, file, lineNum, isFormatted, content);
+        matches.push(...mergedMatches);
     }
     
     console.log(`[expandMatches] 生成 ${matches.length} 个匹配记录`);
@@ -684,6 +743,121 @@ function extractAroundPosition(content, position, maxLength) {
     }
     
     return result;
+}
+
+/**
+ * 智能合并重叠的上下文区域
+ * @param {Array<number>} matchPositions - 匹配位置数组
+ * @param {string} content - 内容
+ * @param {number} maxLength - 最大长度
+ * @param {string} file - 文件路径
+ * @param {number} lineNum - 行号
+ * @param {boolean} isFormatted - 内容是否已格式化
+ * @param {string} originalContent - 原始内容
+ * @returns {Array} 合并后的匹配记录数组
+ */
+function mergeOverlappingContexts(matchPositions, content, maxLength, file, lineNum, isFormatted, originalContent) {
+    console.log(`[mergeOverlappingContexts] 开始合并 ${matchPositions.length} 个匹配位置`);
+    
+    if (matchPositions.length === 0) return [];
+    if (matchPositions.length === 1) {
+        // 只有一个匹配，直接处理
+        const position = matchPositions[0];
+        const truncatedContent = extractAroundPosition(content, position, maxLength);
+        return [{
+            file: file,
+            line: lineNum,
+            column: isFormatted ? mapFormattedPosition(originalContent, content, position) : position + 1,
+            content: truncatedContent
+        }];
+    }
+    
+    // 排序匹配位置
+    const sortedPositions = [...matchPositions].sort((a, b) => a - b);
+    const mergedRanges = [];
+    const contextRadius = Math.floor(maxLength / 2);
+    
+    console.log(`[mergeOverlappingContexts] 上下文半径: ${contextRadius}`);
+    
+    // 第一步：计算每个匹配的上下文范围
+    const ranges = sortedPositions.map(pos => ({
+        matchPos: pos,
+        start: Math.max(0, pos - contextRadius),
+        end: Math.min(content.length, pos + contextRadius)
+    }));
+    
+    // 第二步：合并重叠的范围
+    let currentRange = ranges[0];
+    
+    for (let i = 1; i < ranges.length; i++) {
+        const nextRange = ranges[i];
+        
+        // 检查是否重叠或相邻（留一些缓冲空间）
+        if (nextRange.start <= currentRange.end + 50) { // 50字符缓冲
+            // 合并范围
+            currentRange.end = Math.max(currentRange.end, nextRange.end);
+            currentRange.matchPositions = currentRange.matchPositions || [currentRange.matchPos];
+            currentRange.matchPositions.push(nextRange.matchPos);
+            console.log(`[mergeOverlappingContexts] 合并范围: ${currentRange.start}-${currentRange.end}, 匹配位置: [${currentRange.matchPositions.join(', ')}]`);
+        } else {
+            // 不重叠，保存当前范围并开始新范围
+            mergedRanges.push(currentRange);
+            currentRange = nextRange;
+        }
+    }
+    
+    // 添加最后一个范围
+    mergedRanges.push(currentRange);
+    
+    console.log(`[mergeOverlappingContexts] 合并后范围数: ${mergedRanges.length}`);
+    
+    // 第三步：为每个合并范围生成结果
+    const results = [];
+    
+    for (let i = 0; i < mergedRanges.length; i++) {
+        const range = mergedRanges[i];
+        const matchPositions = range.matchPositions || [range.matchPos];
+        
+        // 确保范围不超过最大长度
+        let start = range.start;
+        let end = range.end;
+        
+        if (end - start > maxLength) {
+            // 如果范围太大，以第一个匹配位置为中心重新计算
+            const centerPos = matchPositions[0];
+            start = Math.max(0, centerPos - Math.floor(maxLength / 2));
+            end = Math.min(content.length, start + maxLength);
+        }
+        
+        let extractedContent = content.substring(start, end);
+        
+        // 添加省略标记
+        if (start > 0) {
+            extractedContent = '... ' + extractedContent;
+        }
+        if (end < content.length) {
+            extractedContent = extractedContent + ' ...';
+        }
+        
+        // 添加匹配位置高亮信息
+        const matchInfo = matchPositions.length > 1 
+            ? `[${matchPositions.length} 个匹配]` 
+            : '';
+        
+        results.push({
+            file: file,
+            line: lineNum,
+            column: isFormatted ? mapFormattedPosition(originalContent, content, matchPositions[0]) : matchPositions[0] + 1,
+            content: extractedContent,
+            matchCount: matchPositions.length,
+            matchPositions: matchPositions,
+            contextRange: { start, end }
+        });
+        
+        console.log(`[mergeOverlappingContexts] 范围 #${i + 1}: ${start}-${end}, ${matchPositions.length} 个匹配, 内容长度: ${extractedContent.length}`);
+    }
+    
+    return results;
 }
 
 module.exports = {
