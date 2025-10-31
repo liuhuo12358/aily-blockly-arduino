@@ -25,6 +25,7 @@ export const API = {
   getHistory: `${CHAT_SERVER_URL}/api/v1/conversation_history`,
   stopSession: `${CHAT_SERVER_URL}/api/v1/stop_session`,
   cancelTask: `${CHAT_SERVER_URL}/api/v1/cancel_task`,
+  generateTitle: `${CHAT_SERVER_URL}/api/v1/generate_title`,
   // cloud
   cloudBase: `${WORKSPACE_SERVER_URL}/api/v1/cloud`,
   cloudSync: `${WORKSPACE_SERVER_URL}/api/v1/cloud/sync`,

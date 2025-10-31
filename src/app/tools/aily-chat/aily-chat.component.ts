@@ -674,6 +674,13 @@ export class AilyChatComponent implements OnDestroy {
     `
   }
 
+  // generate title
+  generateTitle(content: string) {
+    this.chatService.generateTitle(content).subscribe((res) => {
+      console.log('生成标题结果:', res);
+    });
+  }
+
   constructor(
     private uiService: UiService,
     private chatService: ChatService,
@@ -889,6 +896,7 @@ ${JSON.stringify(errData)}
     this.chatService.openHistoryFile(this.projectService.currentProjectPath || this.projectService.projectRootPath);
     this.HistoryList = this.chatService.historyList;
     this.scrollToBottom();
+
     // this.mcpService.init().then(() => {
     //   this.startSession();
     // })

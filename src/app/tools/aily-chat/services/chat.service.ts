@@ -180,4 +180,8 @@ export class ChatService {
   cancelTask(sessionId: string) {
     return this.http.post(`${API.cancelTask}/${sessionId}`,{});
   }
+
+  generateTitle(content: string) {
+    return this.http.post(`${API.generateTitle}`, { content });
+  }
 }
