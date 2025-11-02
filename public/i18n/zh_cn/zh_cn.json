@@ -302,5 +302,13 @@
         "SUCCESS_SAVE": "保存成功！",
         "ERROR_SAVE_FAILED": "保存失败，请稍后重试",
         "ERROR_LOAD_FAILED": "加载项目设置失败"
+    },
+    "FLOAT_SIDER": {
+        "PROJECT_SETTINGS": "项目设置",
+        "PINMAP": "引脚图",
+        "DOCUMENTATION": "文档",
+        "FEEDBACK": "反馈",
+        "NO_PINMAP": "该开发板没有提供引脚图",
+        "NO_DOCUMENTATION": "该开发板没有提供文档链接"
     }
 }

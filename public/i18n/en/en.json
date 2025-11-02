@@ -303,5 +303,13 @@
         "SUCCESS_SAVE": "Saved successfully!",
         "ERROR_SAVE_FAILED": "Save failed, please try again later",
         "ERROR_LOAD_FAILED": "Failed to load project settings"
+    },
+    "FLOAT_SIDER": {
+        "PROJECT_SETTINGS": "Project Settings",
+        "PINMAP": "Pin Map",
+        "DOCUMENTATION": "Documentation",
+        "FEEDBACK": "Feedback",
+        "NO_PINMAP": "Pin map not available for this board",
+        "NO_DOCUMENTATION": "Documentation not available for this board"
     }
 }

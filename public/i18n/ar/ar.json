@@ -218,5 +218,13 @@
         "STOP": "إيقاف",
         "MODE_AGENT_FULL": "وضع الوكيل",
         "MODE_QA_FULL": "وضع سؤال وجواب"
+    },
+    "FLOAT_SIDER": {
+        "PROJECT_SETTINGS": "إعدادات المشروع",
+        "PINMAP": "خريطة الدبابيس",
+        "DOCUMENTATION": "التوثيق",
+        "FEEDBACK": "ملاحظات",
+        "NO_PINMAP": "خريطة الدبابيس غير متوفرة لهذه اللوحة",
+        "NO_DOCUMENTATION": "التوثيق غير متوفر لهذه اللوحة"
     }
 }

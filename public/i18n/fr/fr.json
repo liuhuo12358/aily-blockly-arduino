@@ -221,5 +221,13 @@
         "STOP": "Arrêter",
         "MODE_AGENT_FULL": "Mode Agent",
         "MODE_QA_FULL": "Mode Q&R"
+    },
+    "FLOAT_SIDER": {
+        "PROJECT_SETTINGS": "Paramètres du Projet",
+        "PINMAP": "Schéma des Broches",
+        "DOCUMENTATION": "Documentation",
+        "FEEDBACK": "Retour d'information",
+        "NO_PINMAP": "Schéma des broches non disponible pour cette carte",
+        "NO_DOCUMENTATION": "Documentation non disponible pour cette carte"
     }
 }

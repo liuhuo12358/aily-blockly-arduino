@@ -225,5 +225,13 @@
         "STOP": "停止",
         "MODE_AGENT_FULL": "エージェントモード",
         "MODE_QA_FULL": "Q&Aモード"
+    },
+    "FLOAT_SIDER": {
+        "PROJECT_SETTINGS": "プロジェクト設定",
+        "PINMAP": "ピン配置図",
+        "DOCUMENTATION": "ドキュメント",
+        "FEEDBACK": "フィードバック",
+        "NO_PINMAP": "このボードのピン配置図は利用できません",
+        "NO_DOCUMENTATION": "このボードのドキュメントは利用できません"
     }
 }
