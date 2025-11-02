@@ -100,7 +100,7 @@ export class FloatSiderComponent implements OnInit, OnDestroy {
   }
 
   openSettings() {
-
+    this.uiService.openProjectSettings();
   }
 
   openFeedback() {
