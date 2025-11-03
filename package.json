@@ -44,7 +44,8 @@
         "to": "app/child",
         "filter": [
           "**/*",
-          "!node/**"
+          "!node/**",
+          "!aily-builder/**"
         ]
       }
     ],
