@@ -15,8 +15,8 @@ interface ProjectSettings {
   description: string;
   nickname: string;
   doc_url: string;
-  dependencies: Record<string, string>;
-  projectConfig: Record<string, string>;
+  dependencies?: Record<string, string>;
+  projectConfig?: Record<string, string>;
   [key: string]: any; // 允许其他任意属性
 }
 
@@ -42,9 +42,7 @@ export class ProjectSettingDialogComponent {
     version: '',
     description: '',
     nickname: '',
-    doc_url: '',
-    dependencies: {},
-    projectConfig: {}
+    doc_url: ''
   };
 
   // 提交状态
@@ -84,14 +82,11 @@ export class ProjectSettingDialogComponent {
       if (packageJson) {
         // 保留所有原始属性,只更新我们需要编辑的字段
         this.projectSettings = {
-          ...packageJson, // 保留所有原始属性
           name: packageJson.name || '',
           version: packageJson.version || '',
           description: packageJson.description || '',
           nickname: packageJson.nickname || '',
           doc_url: packageJson.doc_url || '',
-          dependencies: packageJson.dependencies || {},
-          projectConfig: packageJson.projectConfig || {}
         };
       }
     } catch (error) {
@@ -120,19 +115,52 @@ export class ProjectSettingDialogComponent {
       return;
     }
 
+    // 验证 name 格式:只能包含小写字母、数字、连字符和下划线
+    const namePattern = /^[a-z0-9_-]+$/;
+    if (!namePattern.test(this.projectSettings.name.trim())) {
+      this.message.warning(this.translate.instant('PROJECT_SETTING_DIALOG.WARNING_NAME_INVALID_FORMAT'));
+      return;
+    }
+
     if (!this.projectSettings.version || this.projectSettings.version.trim() === '') {
       this.message.warning(this.translate.instant('PROJECT_SETTING_DIALOG.WARNING_VERSION_EMPTY'));
       return;
     }
 
-    // 将数组转换回对象
-    this.syncArrayToObject();
+    // 验证 version 格式:必须符合语义化版本规范 (x.y.z)
+    const versionPattern = /^\d+\.\d+\.\d+$/;
+    if (!versionPattern.test(this.projectSettings.version.trim())) {
+      this.message.warning(this.translate.instant('PROJECT_SETTING_DIALOG.WARNING_VERSION_INVALID_FORMAT'));
+      return;
+    }
+
+    // 验证 doc_url 格式:如果不为空则必须是有效的 URL
+    if (this.projectSettings.doc_url && this.projectSettings.doc_url.trim() !== '') {
+      try {
+        new URL(this.projectSettings.doc_url.trim());
+      } catch {
+        this.message.warning(this.translate.instant('PROJECT_SETTING_DIALOG.WARNING_DOC_URL_INVALID_FORMAT'));
+        return;
+      }
+    }
+
+    console.log(this.projectSettings);
+    
 
     this.isSubmitting = true;
 
     try {
-      // 保存项目配置,保留所有原始字段
-      await this.projectService.setPackageJson(this.projectSettings);
+      // 先读取完整的 package.json
+      const packageJson = await this.projectService.getPackageJson();
+      
+      // 用 projectSettings 中的值覆盖相同的字段
+      const updatedPackageJson = {
+        ...packageJson,
+        ...this.projectSettings
+      };
+      
+      // 保存更新后的完整配置
+      await this.projectService.setPackageJson(updatedPackageJson);
       
       this.message.success(this.translate.instant('PROJECT_SETTING_DIALOG.SUCCESS_SAVE'));
       this.modal.close({ result: 'success', data: this.projectSettings });
