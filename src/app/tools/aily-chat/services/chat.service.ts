@@ -22,8 +22,10 @@ export interface ChatTextMessage {
 })
 export class ChatService {
 
-  currentSessionId = '';
   currentMode = 'ask'; // 默认为代理模式
+  historyList = [];
+
+  currentSessionId = this.historyList.length > 0 ? this.historyList[0].sessionId : '';
 
   private textSubject = new Subject<ChatTextMessage>();
   private static instance: ChatService;
@@ -32,6 +34,22 @@ export class ChatService {
     private http: HttpClient
   ) {
     ChatService.instance = this;
+  }
+
+  // 打开.history
+  openHistoryFile(prjPath: string) {
+    // 打开项目下的.history文件
+    const historyPath = prjPath + '/.history';
+    if (window['fs'].existsSync(historyPath)) {
+      this.historyList = JSON.parse(window['fs'].readFileSync(historyPath, 'utf-8'));
+    }
+  }
+
+  // 保存.history
+  saveHistoryFile(prjPath: string) {
+    // 保存项目下的.history文件
+    const historyPath = prjPath + '/.history';
+    window['fs'].writeFileSync(historyPath, JSON.stringify(this.historyList, null, 2), 'utf-8');
   }
 
 
@@ -55,7 +73,6 @@ export class ChatService {
     this.textSubject.next(message);
 
     // 发送后滚动到页面底部
-
   }
 
   /**
@@ -121,7 +138,7 @@ export class ChatService {
                   return;
                 }
               } catch (error) {
-                console.error('解析JSON失败:', error, line);
+                console.warn('解析JSON失败:', error, line);
               }
             }
           }
@@ -132,7 +149,7 @@ export class ChatService {
               const msg = JSON.parse(buffer);
               messageSubject.next(msg);
             } catch (error) {
-              console.error('解析最后的JSON失败:', error, buffer);
+              console.warn('解析最后的JSON失败:', error, buffer);
             }
           }
 
@@ -162,5 +179,9 @@ export class ChatService {
 
   cancelTask(sessionId: string) {
     return this.http.post(`${API.cancelTask}/${sessionId}`,{});
+  }
+
+  generateTitle(content: string) {
+    return this.http.post(`${API.generateTitle}`, { content });
   }
 }

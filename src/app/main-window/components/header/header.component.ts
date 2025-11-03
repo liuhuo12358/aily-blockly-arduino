@@ -123,6 +123,7 @@ export class HeaderComponent {
     this.authService.showUser.subscribe(state => {
       this.showUser = state;
     })
+    this.checkAndSetDefaultPort();
   }
 
   // 检查串口列表并设置默认串口
@@ -155,13 +156,14 @@ export class HeaderComponent {
     this.calculatePortListPosition(event)
     let boardname = this.currentBoard.replace(' 2560', ' ').replace(' R3', '');
     this.boardKeywords = [boardname];
-    this.showPortList = !this.showPortList;
     this.getDevicePortList();
+    this.showPortList = true;
+    // this.cd.detectChanges();
   }
 
   closePortList() {
     this.showPortList = false;
-    this.cd.detectChanges();
+    // this.cd.detectChanges();
   }
 
   selectPort(item) {
@@ -613,7 +615,6 @@ export class HeaderComponent {
   isLoaded() {
     for (const router of ['/main/blockly-editor', '/main/code-editor']) {
       if (this.router.url.indexOf(router) > -1) {
-        // this.checkAndSetDefaultPort();
         return true;
       }
     }
