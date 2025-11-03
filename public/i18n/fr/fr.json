@@ -15,6 +15,7 @@
         "DEBUG": "Déboguer",
         "TERMINAL": "Terminal",
         "TOOL_SERIAL": "Outil Série",
+        "SIMULATOR": "Simulateur",
         "AI": "IA",
         "APP_STORE": "Magasin d'Applications",
         "SETTINGS": "Paramètres",
@@ -68,7 +69,9 @@
             "THEME": "Paramètres de Thème",
             "COMPILATION": "Paramètres de Compilation",
             "REPOSITORY": "Paramètres de Dépôt",
-            "DEPENDENCIES": "Dépendances Globales"
+            "DEPENDENCIES": "Dépendances Globales",
+            "MCP": "MCP",
+            "DEVMODE": "Mode Développeur"
         },
         "FIELDS": {
             "PROJECT_FOLDER": "Dossier du Projet",
@@ -122,9 +125,11 @@
         "TITLE": "Gestionnaire de Bibliothèques",
         "BACK": "Retour",
         "SEARCH_LIBRARY": "Rechercher une bibliothèque",
+        "ALL": "Toutes les bibliothèques",
         "INSTALLED": "Installé",
         "CORE_LIBRARY": "Bibliothèque centrale",
         "IMPORT_LIBRARY": "Importer une bibliothèque locale",
+        "HELP": "Comment développer une bibliothèque",
         "DEV_HELP": "Aide développement",
         "REPORT_ISSUE": "Signaler problème",
         "INSTALL": "Installer",
@@ -146,8 +151,15 @@
         "AI": "IA",
         "IOT": "IoT",
         "OTHERS": "Autres",
-        "ALL": "Toutes les bibliothèques",
         "LIB_IN_USE": "Cette bibliothèque est actuellement utilisée. Veuillez supprimer les blocs associés de l'espace de travail avant de supprimer cette bibliothèque"
+    },
+    "COMPATIBILITY_DIALOG": {
+        "TITLE": "Avis de Compatibilité de Bibliothèque",
+        "WARNING_MESSAGE": "Cette bibliothèque peut ne pas fonctionner sur la carte actuelle. Voulez-vous continuer l'installation?",
+        "SUPPORTED_CORES": "Cœurs supportés par la bibliothèque:",
+        "CURRENT_BOARD_CORE": "Cœur de la carte actuelle:",
+        "CANCEL": "Annuler",
+        "CONTINUE_INSTALL": "Continuer l'installation"
     },
     "BOARD_SELECTOR": {
         "TITLE": "Changer de carte",
@@ -173,6 +185,10 @@
     "UNSAVE_DIALOG": {
         "TITLE": "Modifications non enregistrées",
         "MESSAGE": "Vous avez des modifications non enregistrées. Voulez-vous les enregistrer ?",
+        "MESSAGE_OPEN": "Voulez-vous enregistrer les modifications du projet actuel avant d'en ouvrir un nouveau ?",
+        "MESSAGE_NEW": "Voulez-vous enregistrer les modifications du projet actuel avant d'en créer un nouveau ?",
+        "MESSAGE_CLOSE": "Voulez-vous enregistrer les modifications avant de fermer ?",
+        "MESSAGE_DEFAULT": "Voulez-vous enregistrer le projet actuel ?",
         "CANCEL": "Annuler",
         "SKIP_SAVE": "Ignorer l'enregistrement",
         "SAVE_AND_CONTINUE": "Enregistrer et continuer"
@@ -262,5 +278,8 @@
         "FEEDBACK": "Retour d'information",
         "NO_PINMAP": "Schéma des broches non disponible pour cette carte",
         "NO_DOCUMENTATION": "Documentation non disponible pour cette carte"
+    },
+    "SERIAL": {
+        "SELECT_PORT_FIRST": "Veuillez d'abord sélectionner un port série"
     }
 }
