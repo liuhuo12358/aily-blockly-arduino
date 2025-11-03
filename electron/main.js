@@ -385,9 +385,9 @@ function checkNodePath(childPath) {
   childPath = escapePath(childPath);
   const nodePath = path.join(childPath, "node");
   if (!fs.existsSync(nodePath)) {
-    const nodeZipPath = path.join(childPath, "node-v22.19.0-darwin-arm64.tar.xz");
+    const nodeZipPath = path.join(childPath, "node-v22.21.0-darwin-arm64.7z");
     try {
-      child_process.execSync(`tar -xzf ${nodeZipPath} -C ${childPath} && mv ${nodeZipPath.replace('.tar.xz', '')} ${nodePath}`, {stdio: 'inherit'});
+      child_process.execSync(`mkdir -p ${nodePath} && tar -xzf ${nodeZipPath} -C ${nodePath}`, {stdio: 'inherit'});
       console.log('安装解压node成功！');
     } catch (error) {
       console.error("安装解压node失败，错误码:", error);
@@ -510,7 +510,7 @@ function loadEnv() {
   // npm registry
   process.env.AILY_NPM_REGISTRY = conf["npm_registry"][0];
   // 7za path
-  process.env.AILY_7ZA_PATH = path.join(childPath, isWin32 ? "7za.exe" : "7za");
+  process.env.AILY_7ZA_PATH = path.join(childPath, isWin32 ? "7za.exe" : "7zz");
   // aily builder path
   process.env.AILY_BUILDER_PATH = path.join(childPath, "aily-builder");
   // 全局npm包路径
