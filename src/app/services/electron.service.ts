@@ -138,7 +138,7 @@ export class ElectronService {
       const result = await window['notification'].show(notificationOptions);
       return result;
     } catch (error) {
-      console.error('Show notification error:', error);
+      console.warn('Show notification error:', error);
       return { success: false, error: error.message };
     }
   }

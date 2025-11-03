@@ -324,7 +324,7 @@ export class HeaderComponent {
       case 'upload':
         // 确认是否选择串口
         if (!this.serialService.currentPort) {
-          this.message.warning('请先选择串口');
+          this.message.warning(this.translate.instant('SERIAL.SELECT_PORT_FIRST'));
           this.openPortList(event);
           return;
         }
@@ -659,8 +659,11 @@ export class HeaderComponent {
     // 判断是否是STM32，是则更新项目配置
     if (this.projectService.currentBoardConfig['core'].indexOf('stm32') > -1 &&
       this.projectService.currentBoardConfig['description'].indexOf('Series') > -1) {
-      let newPinConfig = subItem;
-      this.projectService.compareStm32PinConfig(newPinConfig)
+      // 如果subItem包含board variant字段，则调用比较函数
+      if (subItem.key === 'board' && subItem.data.variant) {
+        let newPinConfig = subItem;
+        this.projectService.compareStm32PinConfig(newPinConfig)
+      }
     }
   }
 

@@ -313,5 +313,8 @@
         "FEEDBACK": "反馈",
         "NO_PINMAP": "该开发板没有提供引脚图",
         "NO_DOCUMENTATION": "该开发板没有提供文档链接"
+    },
+    "SERIAL": {
+        "SELECT_PORT_FIRST": "请先选择串口"
     }
 }

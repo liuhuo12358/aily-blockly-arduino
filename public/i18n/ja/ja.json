@@ -15,6 +15,7 @@
         "DEBUG": "デバッグ",
         "TERMINAL": "ターミナル",
         "TOOL_SERIAL": "シリアルツール",
+        "SIMULATOR": "シミュレータ",
         "AI": "AI",
         "APP_STORE": "アプリストア",
         "SETTINGS": "設定",
@@ -68,7 +69,9 @@
             "THEME": "テーマ設定",
             "COMPILATION": "コンパイル設定",
             "REPOSITORY": "リポジトリ設定",
-            "DEPENDENCIES": "グローバル依存関係"
+            "DEPENDENCIES": "グローバル依存関係",
+            "MCP": "MCP",
+            "DEVMODE": "開発者モード"
         },
         "FIELDS": {
             "PROJECT_FOLDER": "プロジェクトフォルダ",
@@ -87,13 +90,16 @@
             "APPLY": "適用"
         }
     },
-    "LIB_MANAGER": {
+    "PROJECT_NEW": {
+        "TITLE": "新規プロジェクト",
         "TITLE": "ライブラリマネージャー",
         "BACK": "戻る",
         "SEARCH_LIBRARY": "ライブラリを検索",
+        "ALL": "すべてのライブラリ",
         "INSTALLED": "インストール済み",
         "CORE_LIBRARY": "コアライブラリ",
         "IMPORT_LIBRARY": "ローカルライブラリをインポート",
+        "HELP": "ライブラリの開発方法",
         "DEV_HELP": "開発ヘルプ",
         "REPORT_ISSUE": "問題報告",
         "INSTALL": "インストール",
@@ -118,7 +124,15 @@
         "ALL": "すべてのライブラリ",
         "LIB_IN_USE": "このライブラリは現在使用中です。このライブラリを削除する前に、ワークスペースから関連するブロックを削除してください"
     },
-    "PROJECT_NEW": {
+    "COMPATIBILITY_DIALOG": {
+        "TITLE": "ライブラリ互換性通知",
+        "WARNING_MESSAGE": "このライブラリは現在のボードで動作しない可能性があります。インストールを続けますか？",
+        "SUPPORTED_CORES": "ライブラリがサポートするコア：",
+        "CURRENT_BOARD_CORE": "現在のボードのコア：",
+        "CANCEL": "キャンセル",
+        "CONTINUE_INSTALL": "インストールを続ける"
+    },
+    "BOARD_SELECTOR": {
         "TITLE": "新規プロジェクト",
         "STEPS": {
             "SELECT_BOARD": "ボードを選択",
@@ -266,5 +280,8 @@
         "FEEDBACK": "フィードバック",
         "NO_PINMAP": "このボードのピン配置図は利用できません",
         "NO_DOCUMENTATION": "このボードのドキュメントは利用できません"
+    },
+    "SERIAL": {
+        "SELECT_PORT_FIRST": "先にシリアルポートを選択してください"
     }
 }

@@ -259,5 +259,8 @@
         "FEEDBACK": "피드백",
         "NO_PINMAP": "이 보드에 대한 핀 맵을 사용할 수 없습니다",
         "NO_DOCUMENTATION": "이 보드에 대한 문서를 사용할 수 없습니다"
+    },
+    "SERIAL": {
+        "SELECT_PORT_FIRST": "먼저 시리얼 포트를 선택하세요"
     }
 }
