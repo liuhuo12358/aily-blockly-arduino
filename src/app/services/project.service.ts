@@ -1206,6 +1206,41 @@ export class ProjectService {
       this.uiService.updateFooterState({ state: 'doing', text: '正在安装新开发板...' });
       await this.cmdService.runAsync(`npm install ${newBoardPackage}`, this.currentProjectPath);
 
+      // 2.5. 获取新开发板的模板并更新package.json
+      console.log('更新项目配置文件...');
+      this.uiService.updateFooterState({ state: 'doing', text: '正在更新项目配置...' });
+      
+      // 读取当前package.json保留项目基本信息
+      const currentPackageJson = await this.getPackageJson();
+      
+      // 获取新开发板的模板package.json
+      const appDataPath = window['path'].getAppDataPath();
+      const templatePath = `${appDataPath}${pt}node_modules${pt}${boardInfo.name}${pt}template`;
+      const templatePackageJsonPath = `${templatePath}${pt}package.json`;
+      
+      if (window['fs'].existsSync(templatePackageJsonPath)) {
+        // 读取模板package.json
+        const templatePackageJson = JSON.parse(window['fs'].readFileSync(templatePackageJsonPath, 'utf8'));
+        
+        // 合并配置：保留当前项目的基本信息，使用新开发板的依赖和配置
+        const newPackageJson = {
+          ...templatePackageJson,
+          name: currentPackageJson.name, // 保留项目名称
+          nickname: currentPackageJson.nickname, // 保留昵称
+          author: currentPackageJson.author, // 保留作者
+          description: currentPackageJson.description, // 保留描述
+          // 不保留其他自定义配置
+          // ...(currentPackageJson.projectConfig && { projectConfig: currentPackageJson.projectConfig }),
+          // ...(currentPackageJson.cloudId && { cloudId: currentPackageJson.cloudId }),
+        };
+        
+        // 写入新的package.json
+        window['fs'].writeFileSync(`${this.currentProjectPath}/package.json`, JSON.stringify(newPackageJson, null, 2));
+        console.log('package.json 更新完成');
+      } else {
+        console.warn('未找到新开发板的模板package.json，跳过配置更新');
+      }
+
       // 3. 重新加载项目
       console.log('重新加载项目...');
       await this.projectOpen(this.currentProjectPath);
