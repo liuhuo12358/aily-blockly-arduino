@@ -223,5 +223,13 @@
         "STOP": "Stoppen",
         "MODE_AGENT_FULL": "Agent-Modus",
         "MODE_QA_FULL": "F&A-Modus"
+    },
+    "FLOAT_SIDER": {
+        "PROJECT_SETTINGS": "Projekteinstellungen",
+        "PINMAP": "Pin-Belegung",
+        "DOCUMENTATION": "Dokumentation",
+        "FEEDBACK": "Feedback",
+        "NO_PINMAP": "Pin-Belegung für dieses Board nicht verfügbar",
+        "NO_DOCUMENTATION": "Dokumentation für dieses Board nicht verfügbar"
     }
 }

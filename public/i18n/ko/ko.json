@@ -218,5 +218,13 @@
         "STOP": "중지",
         "MODE_AGENT_FULL": "에이전트 모드",
         "MODE_QA_FULL": "Q&A 모드"
+    },
+    "FLOAT_SIDER": {
+        "PROJECT_SETTINGS": "프로젝트 설정",
+        "PINMAP": "핀 맵",
+        "DOCUMENTATION": "문서",
+        "FEEDBACK": "피드백",
+        "NO_PINMAP": "이 보드에 대한 핀 맵을 사용할 수 없습니다",
+        "NO_DOCUMENTATION": "이 보드에 대한 문서를 사용할 수 없습니다"
     }
 }
