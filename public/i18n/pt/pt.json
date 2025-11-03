@@ -218,6 +218,14 @@
         "STOP": "Parar",
         "MODE_AGENT_FULL": "Modo Agente",
         "MODE_QA_FULL": "Modo P&R"
+    },
+    "FLOAT_SIDER": {
+        "PROJECT_SETTINGS": "Configurações do Projeto",
+        "PINMAP": "Mapa de Pinos",
+        "DOCUMENTATION": "Documentação",
+        "FEEDBACK": "Feedback",
+        "NO_PINMAP": "Mapa de pinos não disponível para esta placa",
+        "NO_DOCUMENTATION": "Documentação não disponível para esta placa"
     }
 }
 
