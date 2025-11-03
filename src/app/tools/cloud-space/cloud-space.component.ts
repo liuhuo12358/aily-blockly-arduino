@@ -220,8 +220,7 @@ export class CloudSpaceComponent {
     
     // 构建更安全的打包命令
     // 使用绝对路径避免路径问题，并明确指定文件
-    const zz = this.platformService.isWindows() ? '7za.exe' : '7zz';
-    let packCommand = `${zz} a -t7z -mx=9 "${archivePath}" package.json`;
+    let packCommand = `${this.platformService.za7} a -t7z -mx=9 "${archivePath}" package.json`;
     
     // 检查是否有.abi文件
     const files = window['fs'].readDirSync(prjPath, { withFileTypes: true });

@@ -260,8 +260,7 @@ export class CloudService {
       window['fs'].mkdirSync(extractPath);
       
       // 使用7za.exe解压文件（明确指定7z格式）
-      const zz = this.platformService.isWindows() ? '7za.exe' : '7zz';
-      const extractCmd = `${zz} x "${archivePath}" -o"${extractPath}" -t7z -y`;
+      const extractCmd = `${this.platformService.za7} x "${archivePath}" -o"${extractPath}" -t7z -y`;
       
       console.log('执行解压命令:', extractCmd);
       const result = await this.cmdService.runAsync(extractCmd);
