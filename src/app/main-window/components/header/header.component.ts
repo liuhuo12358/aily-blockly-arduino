@@ -23,6 +23,7 @@ import { ConfigService } from '../../../services/config.service';
 import { AuthService } from '../../../services/auth.service';
 import { BoardSelectorDialogComponent } from '../board-selector-dialog/board-selector-dialog.component';
 import { LoginDialogComponent } from '../login-dialog/login-dialog.component';
+import { PlatformService } from '../../../services/platform.service';
 
 @Component({
   selector: 'app-header',
@@ -40,6 +41,14 @@ import { LoginDialogComponent } from '../login-dialog/login-dialog.component';
 export class HeaderComponent {
   headerBtns = HEADER_BTNS;
   headerMenu = HEADER_MENU;
+
+  get isMac() {
+    return this.platformService.isMac();
+  }
+
+  get isWindowFullScreen() {
+    return this.electronService.isWindowFullScreen();
+  }
 
   get projectData() {
     return this.projectService.currentPackageData;
@@ -85,7 +94,8 @@ export class HeaderComponent {
     private electronService: ElectronService,
     private configService: ConfigService,
     private authService: AuthService,
-    private translate: TranslateService
+    private translate: TranslateService,
+    private platformService: PlatformService
   ) { }
 
   async ngAfterViewInit() {
@@ -649,8 +659,11 @@ export class HeaderComponent {
     // 判断是否是STM32，是则更新项目配置
     if (this.projectService.currentBoardConfig['core'].indexOf('stm32') > -1 &&
       this.projectService.currentBoardConfig['description'].indexOf('Series') > -1) {
-      let newPinConfig = subItem;
-      this.projectService.compareStm32PinConfig(newPinConfig)
+      // 如果subItem包含board variant字段，则调用比较函数
+      if (subItem.key === 'board' && subItem.data.variant) {
+        let newPinConfig = subItem;
+        this.projectService.compareStm32PinConfig(newPinConfig)
+      }
     }
   }
 
