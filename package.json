@@ -66,7 +66,7 @@
       ]
     },
     "mac": {
-      "icon": "public/icon.ico",
+      "icon": "public/icon-512.ico",
       "fileAssociations": [
         {
           "ext": "abi",
