@@ -230,6 +230,7 @@ export class SerialMonitorComponent {
   // 处理数据更新
   private handleDataUpdate(data: dataItem | void) {
     if (!data) {
+      this.cd.detectChanges();
       this.scrollToBottom();
       return;
     }
@@ -238,6 +239,7 @@ export class SerialMonitorComponent {
       this.lastDataLength = 0;
       if (this.datasource && this.datasource.adapter) {
         this.datasource.adapter.reload(0);
+        this.cd.detectChanges();
       }
       return;
     }
@@ -268,6 +270,7 @@ export class SerialMonitorComponent {
       // 更新最后的数据长度
       this.lastDataLength = currentDataCount;
     }
+    this.cd.detectChanges();
     // 如果开启自动滚动,滚动到底部
     this.scrollToBottom(true);
   }
