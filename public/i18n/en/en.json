@@ -314,5 +314,8 @@
         "FEEDBACK": "Feedback",
         "NO_PINMAP": "Pin map not available for this board",
         "NO_DOCUMENTATION": "Documentation not available for this board"
+    },
+    "SERIAL": {
+        "SELECT_PORT_FIRST": "Please select a serial port first"
     }
 }

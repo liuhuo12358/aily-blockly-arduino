@@ -266,5 +266,8 @@
         "FEEDBACK": "フィードバック",
         "NO_PINMAP": "このボードのピン配置図は利用できません",
         "NO_DOCUMENTATION": "このボードのドキュメントは利用できません"
+    },
+    "SERIAL": {
+        "SELECT_PORT_FIRST": "先にシリアルポートを選択してください"
     }
 }

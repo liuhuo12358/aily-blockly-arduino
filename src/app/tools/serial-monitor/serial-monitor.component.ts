@@ -27,6 +27,7 @@ import { QuickSendEditorComponent } from './components/quick-send-editor/quick-s
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { SearchBoxComponent } from './components/search-box/search-box.component';
 import { Buffer } from 'buffer';
+import { TranslateService } from '@ngx-translate/core';
 
 @Component({
   selector: 'app-serial-monitor',
@@ -146,6 +147,7 @@ export class SerialMonitorComponent {
     private router: Router,
     private cd: ChangeDetectorRef,
     private message: NzMessageService,
+    private translate: TranslateService,
   ) { }
 
   async ngOnInit() {
@@ -380,7 +382,7 @@ export class SerialMonitorComponent {
     }
 
     if (!this.currentPort) {
-      this.message.warning('请先选择串口');
+      this.message.warning(this.translate.instant('SERIAL.SELECT_PORT_FIRST'));
       setTimeout(() => {
         this.switchValue = false;
       }, 300);
