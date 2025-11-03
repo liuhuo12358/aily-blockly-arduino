@@ -299,7 +299,10 @@
         "CLOSE": "Close",
         "SAVE": "Save",
         "WARNING_NAME_EMPTY": "Please enter project name",
+        "WARNING_NAME_INVALID_FORMAT": "Invalid project name format. Only lowercase letters, numbers, hyphens and underscores are allowed",
         "WARNING_VERSION_EMPTY": "Please enter version",
+        "WARNING_VERSION_INVALID_FORMAT": "Invalid version format. Must follow x.y.z format (e.g., 1.0.0)",
+        "WARNING_DOC_URL_INVALID_FORMAT": "Invalid documentation URL format. Please enter a valid URL",
         "SUCCESS_SAVE": "Saved successfully!",
         "ERROR_SAVE_FAILED": "Save failed, please try again later",
         "ERROR_LOAD_FAILED": "Failed to load project settings"
@@ -311,5 +314,8 @@
         "FEEDBACK": "Feedback",
         "NO_PINMAP": "Pin map not available for this board",
         "NO_DOCUMENTATION": "Documentation not available for this board"
+    },
+    "SERIAL": {
+        "SELECT_PORT_FIRST": "Please select a serial port first"
     }
 }

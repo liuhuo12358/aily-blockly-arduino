@@ -314,7 +314,7 @@ export class HeaderComponent {
       case 'upload':
         // 确认是否选择串口
         if (!this.serialService.currentPort) {
-          this.message.warning('请先选择串口');
+          this.message.warning(this.translate.instant('SERIAL.SELECT_PORT_FIRST'));
           this.openPortList(event);
           return;
         }
