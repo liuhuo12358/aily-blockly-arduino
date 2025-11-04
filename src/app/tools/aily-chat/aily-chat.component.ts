@@ -663,15 +663,15 @@ export class AilyChatComponent implements OnDestroy {
   // 关键信息获取
   getKeyInfo = () => {
     return `
-    <keyinfo>
-    项目存放根路径(**rootFolder**): ${this.projectService.projectRootPath || '无'}
-    当前项目路径(**path**): ${this.getCurrentProjectPath() || '无'}
-    appDataPath(**appDataPath**): ${window['path'].getAppDataPath() || '无'}
-    转换后的blockly库存放路径(**blocklylibrariesPath**): ${ window['path'].join(window['path'].getAppDataPath(), 'libraries') || '无'}
-    当前使用的语言(**lang**)： ${this.configService.data.lang || 'zh-cn'}
-    操作系统(**os**): ${window['platform'].type || 'unknown'}
-    </keyinfo>
-    `
+<keyinfo>
+项目存放根路径(**rootFolder**): ${this.projectService.projectRootPath || '无'}
+当前项目路径(**path**): ${this.getCurrentProjectPath() || '无'}
+appDataPath(**appDataPath**): ${window['path'].getAppDataPath() || '无'}
+转换后的blockly库存放路径(**blocklylibrariesPath**): ${ window['path'].join(window['path'].getAppDataPath(), 'libraries') || '无'}
+当前使用的语言(**lang**)： ${this.configService.data.lang || 'zh-cn'}
+操作系统(**os**): ${window['platform'].type || 'unknown'}
+</keyinfo>
+`
   }
 
   // generate title
@@ -2115,6 +2115,8 @@ ${JSON.stringify(errData)}
 1. 先列出计划使用的所有库(不可跳过以\`lib-core\`开始的库，特别是lib-core-logic lib-core-variables lib-core-time等基础库)
 2. 逐一读取每个库的README确定块存在
 3. 使用smart_block_tool和create_code_structure_tool创建对应代码块
+- 不要一次性生成大量块，分步创建，每次创建后检查结果
+- 全局变量 setup loop 回调函数 独立结构分开创建
 4. 检查工具反馈结果
 5. 修复结构或逻辑问题(多次修复仍然有误时，分析是否遗漏了相关库readme的阅读)
 - 如果发现问题，请及时修复，不要继续往下走
@@ -2153,7 +2155,7 @@ Your role is ASK (Advisory & Quick Support) - you provide analysis, recommendati
 
             // 拼接到工具结果中返回
             if (toolResult?.content) {
-               toolContent = `\n${keyInfo}\n\n<toolResult>${toolResult.content}</toolResult>`;
+               toolContent += `\n${keyInfo}\n\n<toolResult>${toolResult.content}</toolResult>`;
             }
 
             console.log(`工具调用结果: `, toolResult, resultText);
