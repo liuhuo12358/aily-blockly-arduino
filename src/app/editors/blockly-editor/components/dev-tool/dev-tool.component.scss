@@ -1,7 +1,7 @@
 .devtool-box {
     position: absolute;
-    bottom: 16px;
-    left: 196px;
+    bottom: 1px;
+    left: 185px;
     display: flex;
     gap: 5px;
     align-items: center;
@@ -12,7 +12,7 @@
     height: 40px;
     transition: all 0.3s ease;
     overflow: hidden;
-    z-index: 9;
+    z-index: 999;
 
 
     .btn {
