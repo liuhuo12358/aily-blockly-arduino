@@ -103,9 +103,9 @@
         "SECTIONS": {
             "BASIC": "Basic Settings",
             "THEME": "Theme Settings",
-            "COMPILATION": "Compilation Settings",
-            "REPOSITORY": "Repository Settings",
-            "DEPENDENCIES": "Global Dependencies",
+            "COMPILATION": "Compilation",
+            "REPOSITORY": "Repository",
+            "DEPENDENCIES": "Dependencies",
             "MCP": "MCP",
             "DEVMODE": "Developer Mode"
         },
