@@ -2794,10 +2794,9 @@ function getHighestInputNumber(inputNames: string[]): number {
 /**
  * 配置块的输入
  */
-async function configureBlockInputs(workspace: any, block: any, inputs: InputConfig, blockMap?: Map<string, any>): Promise<{ updatedInputs: string[], extractedNext?: any, errorInputs: string[] }> {
+async function configureBlockInputs(workspace: any, block: any, inputs: InputConfig, blockMap?: Map<string, any>): Promise<{ updatedInputs: string[], extractedNext?: any }> {
   const updatedInputs: string[] = [];
   let extractedNext: any = undefined;
-  const errorInputs: string[] = [];
 
   console.log('🔌 configureBlockInputs 开始执行');
   console.log('📦 输入配置数据:', JSON.stringify(inputs, null, 2));
@@ -2843,7 +2842,6 @@ async function configureBlockInputs(workspace: any, block: any, inputs: InputCon
             }
           } else {
             console.warn(`❌ 子块创建失败或输入没有连接点`);
-            errorInputs.push(`子块创建失败或输入没有连接点`);
           }
         } else if (inputConfig.shadow) {
           console.log('👤 创建影子块...');
@@ -2867,14 +2865,12 @@ async function configureBlockInputs(workspace: any, block: any, inputs: InputCon
             }
           } else {
             console.warn(`❌ 影子块创建失败或输入没有连接点`);
-            errorInputs.push(`影子块创建失败或输入没有连接点`);
           }
         } else {
           console.log(`ℹ️ 输入 "${inputName}" 没有块或影子配置`);
         }
       } else {
         console.warn(`❌ 输入 "${inputName}" 在块 ${block.type} 中不存在`);
-        errorInputs.push(`输入 "${inputName}" 在块 ${block.type} 中不存在`);
         // 列出可用的输入
         const availableInputs = [];
         if (block.inputList) {
@@ -2894,7 +2890,7 @@ async function configureBlockInputs(workspace: any, block: any, inputs: InputCon
     console.warn('❌ 配置块输入时出错:', error);
   }
 
-  return { updatedInputs, extractedNext, errorInputs };
+  return { updatedInputs, extractedNext };
 }
 
 /**
@@ -2952,11 +2948,6 @@ async function createBlockFromConfig(workspace: any, config: BlockConfig | strin
       console.log('🔌 配置块输入...');
       const inputResult = await configureBlockInputs(workspace, block, config.inputs, blockMap);
       console.log('✅ 块输入配置完成');
-
-      if (inputResult.errorInputs.length > 0) {
-        console.warn(`⚠️ 配置以下输入时出现问题: ${inputResult.errorInputs.join(', ')}`);
-        return { block: null, totalBlocks: 0 };
-      }
       
       // 如果从inputs中提取了错误嵌套的next配置，将其添加到config中
       if (inputResult.extractedNext) {

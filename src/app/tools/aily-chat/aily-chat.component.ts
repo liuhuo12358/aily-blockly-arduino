@@ -2108,10 +2108,14 @@ ${JSON.stringify(errData)}
               };
             }
 
+            // 获取keyinfo
+            const keyInfo = this.getKeyInfo();
+
             let toolContent = '';
+
             // 拼接到工具结果中返回
             if (toolResult?.content && this.chatService.currentMode === 'agent') {
-                toolContent = `\n请不要经验主义或者过于自信，Blockly块创建必须遵循以下流程：
+                toolContent += `\n${keyInfo}\n请不要经验主义或者过于自信，Blockly块创建必须遵循以下流程：
 1. 先列出计划使用的所有库(不可跳过以\`lib-core\`开始的库，特别是lib-core-logic lib-core-variables lib-core-time等基础库)
 2. 逐一读取每个库的README确定块存在
 3. 使用smart_block_tool和create_code_structure_tool创建对应代码块
@@ -2123,6 +2127,7 @@ ${JSON.stringify(errData)}
 - 推荐优先使用connect_blocks_tool修改连接关系
 - 全局变量请作为独立块创建
 - 避免批量删除块
+- 独立且无用的块请删除
 6. 重复直至完成
 JSON务必保留必要的换行和缩进格式，否则可能导致解析失败。
 <toolResult>${toolResult.content}</toolResult>`;
@@ -2148,14 +2153,6 @@ Your role is ASK (Advisory & Quick Support) - you provide analysis, recommendati
               }
               
               this.completeToolCall(data.tool_id, data.tool_name, finalState, resultText);
-            }
-
-            // 获取keyinfo
-            const keyInfo = this.getKeyInfo();
-
-            // 拼接到工具结果中返回
-            if (toolResult?.content) {
-               toolContent += `\n${keyInfo}\n\n<toolResult>${toolResult.content}</toolResult>`;
             }
 
             console.log(`工具调用结果: `, toolResult, resultText);
