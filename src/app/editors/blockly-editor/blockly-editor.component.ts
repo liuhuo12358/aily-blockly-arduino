@@ -16,6 +16,7 @@ import { _UploaderService } from './services/uploader.service';
 import { _BuilderService } from './services/builder.service';
 import { BitmapUploadService } from './services/bitmap-upload.service';
 import { ProjectService } from '../../services/project.service';
+import { DevToolComponent } from './components/dev-tool/dev-tool.component';
 
 @Component({
   selector: 'app-blockly-editor',
@@ -23,7 +24,8 @@ import { ProjectService } from '../../services/project.service';
     BlocklyComponent,
     LibManagerComponent,
     NotificationComponent,
-    TranslateModule
+    TranslateModule,
+    DevToolComponent
   ],
   providers: [
     _ProjectService,
