@@ -25,7 +25,14 @@ export class DevToolComponent {
 
   async clear() {
     try {
-      const sketchPath = this.projectService.currentProjectPath+'\\.temp\\sketch\\sketch.ino';
+      const pt = window['platform'].pt;
+      // const sketchPath = this.projectService.currentProjectPath + pt + '.temp' + pt + 'sketch' + pt + 'sketch.ino';
+      const sketchPath = window['path'].join(
+        this.projectService.currentProjectPath,
+        '.temp',
+        'sketch',
+        'sketch.ino'
+      );
       const sketchName = window['path'].basename(sketchPath, '.ino');
       
       // 为了避免不同项目的同名sketch冲突,使用项目路径的MD5哈希值
