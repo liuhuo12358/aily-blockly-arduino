@@ -3311,7 +3311,7 @@ export async function createCodeStructureTool(
       
       if (insertPosition !== 'workspace' && targetBlock) {
         console.log(`🎯 执行块插入: ${insertPosition} 到 ${targetBlock}`);
-        await handleBlockInsertion(workspace, rootBlock, insertPosition, targetBlock, targetInput);
+        await handleBlockInsertion(workspace, rootBlock.block, insertPosition, targetBlock, targetInput);
         console.log(`✅ 块插入完成`);
       } else {
         console.log(`⚠️ 跳过块插入 - 条件不满足`);
@@ -3325,7 +3325,7 @@ export async function createCodeStructureTool(
       metadata = {
         structureType: structure,
         createdBlocks,
-        rootBlockId: rootBlock.id,
+        rootBlockId: rootBlock.block?.id || 'unknown',
         connections,
         workspaceOverview: isError ? null : workspaceOverview
       };
@@ -3342,7 +3342,7 @@ export async function createCodeStructureTool(
 📊 创建结果概览:
 - 结构名称: ${structure}
 - 创建块数: ${createdBlocks.length} 个
-- 根块ID: ${rootBlock.id}
+- 根块ID: ${rootBlock.block?.id || 'unknown'}
 - 连接数: ${connections.length} 个
 
 ${workspaceOverview}`;
