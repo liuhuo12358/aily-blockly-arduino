@@ -104,8 +104,13 @@ export class DevToolComponent {
       this.electronService.deleteDir(defaultBuildPath);
       this.messageService.success('Clear build folder success');
     } catch (error) {
-      console.error('Clear build folder error:', error);
-      this.messageService.error('Clear build folder failed: ' + error.message);
+      if (error.message && error.message.includes('EBUSY')) {
+        console.warn('Clear build folder failed: Folder is busy');
+        this.messageService.warning('Clear build folder failed: Folder is busy, wait a moment and try again.');
+      } else {
+        console.error('Clear build folder error:', error);
+        this.messageService.error('Clear build folder failed: ' + error.message);
+      }
     }
   }
 
