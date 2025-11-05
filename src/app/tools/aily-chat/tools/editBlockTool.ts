@@ -1891,8 +1891,7 @@ export async function smartBlockTool(args: SmartBlockArgs): Promise<SmartBlockRe
         position: parsedPosition,
         totalBlocks: result.totalBlocks || 1,
         parentConnected: !!parsedParentConnection,
-        workspaceOverview: isError ? null : workspaceOverview,
-        cppCode: cppCode || null
+        workspaceOverview: isError ? null : workspaceOverview
       }
     };
 
@@ -3733,8 +3732,7 @@ ${workspaceOverview}`;
         inputName: optimizedInputName,
         parameterCorrected: validation.correctionMade,
         correctionReason: validation.correctionReason,
-        workspaceOverview: isError ? null : workspaceOverview,
-        cppCode: cppCode || null
+        workspaceOverview: isError ? null : workspaceOverview
       }
     };
 
@@ -4312,35 +4310,35 @@ export async function deleteBlockTool(args: {
       const resultMessage = `成功级联删除块 "${deletedBlockType}" 及其 ${deletedIds.length - 1} 个连接块（共删除 ${deletedIds.length} 个块）`;
       console.log(`✅ ${resultMessage}`);
       
-      // 获取删除后的工作区概览
-      console.log('📊 获取删除后的工作区概览...');
-      const overviewResult = await getWorkspaceOverviewTool({
-        includeCode: true,
-        includeTree: true,
-        format: 'text',
-        groupBy: 'structure'
-      });
+      // // 获取删除后的工作区概览
+      // console.log('📊 获取删除后的工作区概览...');
+      // const overviewResult = await getWorkspaceOverviewTool({
+      //   includeCode: true,
+      //   includeTree: true,
+      //   format: 'text',
+      //   groupBy: 'structure'
+      // });
       
-      let workspaceOverview = '';
-      let cppCode = '';
+      // let workspaceOverview = '';
+      // let cppCode = '';
       
-      if (!overviewResult.is_error) {
-        workspaceOverview = overviewResult.content;
-        // 尝试提取C++代码部分
-        const codeMatch = workspaceOverview.match(/```cpp([\s\S]*?)```/);
-        if (codeMatch) {
-          cppCode = codeMatch[1].trim();
-        }
-      } else {
-        console.warn('⚠️ 获取工作区概览失败:', overviewResult.content);
-        workspaceOverview = '⚠️ 工作区概览获取失败，但删除操作成功';
-      }
+      // if (!overviewResult.is_error) {
+      //   workspaceOverview = overviewResult.content;
+      //   // 尝试提取C++代码部分
+      //   const codeMatch = workspaceOverview.match(/```cpp([\s\S]*?)```/);
+      //   if (codeMatch) {
+      //     cppCode = codeMatch[1].trim();
+      //   }
+      // } else {
+      //   console.warn('⚠️ 获取工作区概览失败:', overviewResult.content);
+      //   workspaceOverview = '⚠️ 工作区概览获取失败，但删除操作成功';
+      // }
 
       // 生成增强的结果消息
-      const enhancedMessage = `${resultMessage}
+      const enhancedMessage = `${resultMessage}`;
 
-📊 删除操作完成后的工作区状态:
-${workspaceOverview}`;
+// 📊 删除操作完成后的工作区状态:
+// ${workspaceOverview}`;
       
       return {
         is_error: false,
@@ -4355,9 +4353,7 @@ ${workspaceOverview}`;
           deletedBlockId: blockId,
           deletedBlockType: deletedBlockType,
           totalDeleted: deletedIds.length,
-          cascadeDeleted: cascadeDeleted,
-          workspaceOverview: overviewResult.is_error ? null : overviewResult.content,
-          cppCode: cppCode || null
+          cascadeDeleted: cascadeDeleted
         }
       };
       
@@ -4445,35 +4441,35 @@ ${workspaceOverview}`;
       
       console.log(`✅ ${resultMessage}`);
       
-      // 获取删除后的工作区概览
-      console.log('📊 获取删除后的工作区概览...');
-      const overviewResult = await getWorkspaceOverviewTool({
-        includeCode: true,
-        includeTree: true,
-        format: 'text',
-        groupBy: 'structure'
-      });
+      // // 获取删除后的工作区概览
+      // console.log('📊 获取删除后的工作区概览...');
+      // const overviewResult = await getWorkspaceOverviewTool({
+      //   includeCode: true,
+      //   includeTree: true,
+      //   format: 'text',
+      //   groupBy: 'structure'
+      // });
       
-      let workspaceOverview = '';
-      let cppCode = '';
+      // let workspaceOverview = '';
+      // let cppCode = '';
       
-      if (!overviewResult.is_error) {
-        workspaceOverview = overviewResult.content;
-        // 尝试提取C++代码部分
-        const codeMatch = workspaceOverview.match(/```cpp([\s\S]*?)```/);
-        if (codeMatch) {
-          cppCode = codeMatch[1].trim();
-        }
-      } else {
-        console.warn('⚠️ 获取工作区概览失败:', overviewResult.content);
-        workspaceOverview = '⚠️ 工作区概览获取失败，但删除操作成功';
-      }
+      // if (!overviewResult.is_error) {
+      //   workspaceOverview = overviewResult.content;
+      //   // 尝试提取C++代码部分
+      //   const codeMatch = workspaceOverview.match(/```cpp([\s\S]*?)```/);
+      //   if (codeMatch) {
+      //     cppCode = codeMatch[1].trim();
+      //   }
+      // } else {
+      //   console.warn('⚠️ 获取工作区概览失败:', overviewResult.content);
+      //   workspaceOverview = '⚠️ 工作区概览获取失败，但删除操作成功';
+      // }
 
       // 生成增强的结果消息
-      const enhancedMessage = `${resultMessage}
+      const enhancedMessage = `${resultMessage}`;
 
-📊 删除操作完成后的工作区状态:
-${workspaceOverview}`;
+// 📊 删除操作完成后的工作区状态:
+// ${workspaceOverview}`;
       
       return {
         is_error: false,
@@ -4488,9 +4484,7 @@ ${workspaceOverview}`;
         metadata: {
           deletedBlockId: blockId,
           deletedBlockType: deletedBlockType,
-          reconnectedBlocks: reconnectedBlocks,
-          workspaceOverview: overviewResult.is_error ? null : overviewResult.content,
-          cppCode: cppCode || null
+          reconnectedBlocks: reconnectedBlocks
         }
       };
     }
