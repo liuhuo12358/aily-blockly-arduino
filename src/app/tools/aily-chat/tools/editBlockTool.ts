@@ -1019,6 +1019,136 @@ function configureBlockFields(block: any, fields: FieldConfig): {
 }
 
 /**
+ * 模糊匹配变量 - 支持首尾字符丢失的情况
+ * @param variableMap 变量映射对象
+ * @param searchName 要搜索的变量名
+ * @returns 匹配的变量对象或null
+ */
+function findVariableByFuzzyMatch(variableMap: any, searchName: string): any | null {
+  if (!variableMap || !searchName || searchName.length < 2) {
+    return null;
+  }
+
+  const allVariables = variableMap.getAllVariables();
+  if (!allVariables || allVariables.length === 0) {
+    return null;
+  }
+
+  console.log(`🔍 开始模糊匹配，搜索: "${searchName}"`);
+
+  // 候选匹配结果
+  const candidates: Array<{
+    variable: any;
+    score: number;
+    reason: string;
+  }> = [];
+
+  for (const variable of allVariables) {
+    const varName = variable.name || '';
+    const varId = variable.getId() || '';
+    
+    // 跳过空名称
+    if (!varName && !varId) continue;
+
+    let score = 0;
+    let reason = '';
+
+    // 策略1: 检查搜索名是否是变量名的子串（处理首尾字符丢失）
+    if (varName.includes(searchName)) {
+      score = 90;
+      reason = `变量名包含搜索字符串: "${varName}" 包含 "${searchName}"`;
+    }
+    // 策略2: 检查搜索名是否是变量ID的子串
+    else if (varId.includes(searchName)) {
+      score = 85;
+      reason = `变量ID包含搜索字符串: "${varId}" 包含 "${searchName}"`;
+    }
+    // 策略3: 检查变量名是否是搜索名的子串（处理搜索名过长的情况）
+    else if (searchName.includes(varName) && varName.length >= 3) {
+      score = 80;
+      reason = `搜索字符串包含变量名: "${searchName}" 包含 "${varName}"`;
+    }
+    // 策略4: 检查变量ID是否是搜索名的子串
+    else if (searchName.includes(varId) && varId.length >= 3) {
+      score = 75;
+      reason = `搜索字符串包含变量ID: "${searchName}" 包含 "${varId}"`;
+    }
+    // 策略5: 前缀匹配（处理尾部字符丢失）
+    else if (varName.startsWith(searchName) || searchName.startsWith(varName)) {
+      const minLength = Math.min(varName.length, searchName.length);
+      const maxLength = Math.max(varName.length, searchName.length);
+      score = (minLength / maxLength) * 70;
+      reason = `前缀匹配: "${varName}" 与 "${searchName}"`;
+    }
+    // 策略6: 后缀匹配（处理首部字符丢失）
+    else if (varName.endsWith(searchName) || searchName.endsWith(varName)) {
+      const minLength = Math.min(varName.length, searchName.length);
+      const maxLength = Math.max(varName.length, searchName.length);
+      score = (minLength / maxLength) * 65;
+      reason = `后缀匹配: "${varName}" 与 "${searchName}"`;
+    }
+    // 策略7: 编辑距离匹配（处理中间字符差异）
+    else {
+      const editDistance = calculateEditDistance(varName, searchName);
+      const maxLength = Math.max(varName.length, searchName.length);
+      
+      // 只有当编辑距离较小且字符串足够长时才考虑
+      if (editDistance <= Math.min(3, maxLength * 0.4) && maxLength >= 4) {
+        score = Math.max(0, 60 - (editDistance / maxLength) * 30);
+        reason = `编辑距离匹配: "${varName}" 与 "${searchName}" 距离=${editDistance}`;
+      }
+    }
+
+    // 加分项：长度相似性
+    if (score > 0) {
+      const lengthDiff = Math.abs(varName.length - searchName.length);
+      if (lengthDiff <= 2) {
+        score += 5;
+        reason += ' + 长度相似';
+      }
+    }
+
+    // 记录候选
+    if (score > 0) {
+      candidates.push({ variable, score, reason });
+      console.log(`🎯 候选匹配: ${varName}(${varId}) - 得分: ${score.toFixed(2)} - ${reason}`);
+    }
+  }
+
+  // 如果没有候选，返回null
+  if (candidates.length === 0) {
+    console.log(`❌ 没有找到模糊匹配的变量`);
+    return null;
+  }
+
+  // 按得分排序
+  candidates.sort((a, b) => b.score - a.score);
+  
+  const bestMatch = candidates[0];
+  
+  // 检查最佳匹配得分是否足够高
+  if (bestMatch.score < 50) {
+    console.log(`⚠️ 最佳匹配得分过低 (${bestMatch.score.toFixed(2)}), 拒绝匹配`);
+    return null;
+  }
+
+  console.log(`🏆 最佳模糊匹配: ${bestMatch.variable.name}(${bestMatch.variable.getId()})`);
+  console.log(`📊 匹配得分: ${bestMatch.score.toFixed(2)}`);
+  console.log(`📋 匹配原因: ${bestMatch.reason}`);
+
+  // 如果有多个高分匹配，警告歧义
+  const highScoreMatches = candidates.filter(c => c.score >= bestMatch.score - 10);
+  if (highScoreMatches.length > 1) {
+    console.log(`⚠️ 检测到 ${highScoreMatches.length} 个高分匹配，存在歧义:`);
+    highScoreMatches.slice(0, 3).forEach((match, i) => {
+      console.log(`   ${i + 1}. ${match.variable.name}(${match.variable.getId()}) - 得分: ${match.score.toFixed(2)}`);
+    });
+  }
+
+  return bestMatch.variable;
+}
+
+/**
  * 处理变量字段 - 智能查找或创建变量
  * @param block 块对象
  * @param variableName 变量名
@@ -1104,56 +1234,65 @@ function handleVariableField(block: any, variableName: string, returnId: boolean
         }
       }
     }
+
+    // 方法5: 如果仍未找到，进行模糊匹配（支持首尾字符丢失的情况）
+    if (!variable) {
+      console.log(`🔍 开始模糊匹配变量: "${variableName}"`);
+      variable = findVariableByFuzzyMatch(variableMap, variableName);
+      if (variable) {
+        console.log(`✅ 通过模糊匹配找到变量: "${variable.name}" (ID: ${variable.getId()}) (查找: "${variableName}")`);
+      }
+    }
     
     if (variable) {
       console.log(`✅ 找到现有变量: ${variableName} (ID: ${variable.getId()})`);
       return returnId ? variable.getId() : variableName;
     }
 
-    // 2. 如果变量不存在，创建新变量
-    console.log(`🆕 变量不存在，创建新变量: ${variableName}`);
+    // // 2. 如果变量不存在，创建新变量
+    // console.log(`🆕 变量不存在，创建新变量: ${variableName}`);
     
-    // 根据提供的类型或块类型推断变量类型
-    let finalVariableType = variableType || ''; // 使用提供的类型，如果没有则默认为''
+    // // 根据提供的类型或块类型推断变量类型
+    // let finalVariableType = variableType || ''; // 使用提供的类型，如果没有则默认为''
     
-    if (!variableType && block.type) {
-      // 从块类型推断变量类型
-      if (block.type.includes('number') || block.type.includes('math')) {
-        finalVariableType = 'Number';
-      } else if (block.type.includes('string') || block.type.includes('text')) {
-        finalVariableType = 'String';
-      } else if (block.type.includes('boolean')) {
-        finalVariableType = 'Boolean';
-      } else if (block.type.includes('dht')) {
-        finalVariableType = 'DHT';
-      } else if (block.type.includes('servo')) {
-        finalVariableType = 'Servo';
-      } else if (block.type.includes('lcd')) {
-        finalVariableType = 'LCD';
-      }
-    }
+    // if (!variableType && block.type) {
+    //   // 从块类型推断变量类型
+    //   if (block.type.includes('number') || block.type.includes('math')) {
+    //     finalVariableType = 'Number';
+    //   } else if (block.type.includes('string') || block.type.includes('text')) {
+    //     finalVariableType = 'String';
+    //   } else if (block.type.includes('boolean')) {
+    //     finalVariableType = 'Boolean';
+    //   } else if (block.type.includes('dht')) {
+    //     finalVariableType = 'DHT';
+    //   } else if (block.type.includes('servo')) {
+    //     finalVariableType = 'Servo';
+    //   } else if (block.type.includes('lcd')) {
+    //     finalVariableType = 'LCD';
+    //   }
+    // }
 
-    // 创建变量
-    variable = variableMap.createVariable(variableName, finalVariableType);
+    // // 创建变量
+    // variable = variableMap.createVariable(variableName, finalVariableType);
     
-    if (variable) {
-      console.log(`✅ 变量创建成功: ${variableName} (类型: ${finalVariableType}, ID: ${variable.getId()})`);
+    // if (variable) {
+    //   console.log(`✅ 变量创建成功: ${variableName} (类型: ${finalVariableType}, ID: ${variable.getId()})`);
       
-      // 🔧 如果有全局的变量注册函数（来自generator.js），调用它
-      if (typeof (window as any).registerVariableToBlockly === 'function') {
-        try {
-          (window as any).registerVariableToBlockly(variableName, finalVariableType);
-          console.log(`🔧 变量已注册到工具箱: ${variableName}`);
-        } catch (error) {
-          console.warn('⚠️ 注册变量到工具箱失败:', error);
-        }
-      }
+    //   // 🔧 如果有全局的变量注册函数（来自generator.js），调用它
+    //   if (typeof (window as any).registerVariableToBlockly === 'function') {
+    //     try {
+    //       (window as any).registerVariableToBlockly(variableName, finalVariableType);
+    //       console.log(`🔧 变量已注册到工具箱: ${variableName}`);
+    //     } catch (error) {
+    //       console.warn('⚠️ 注册变量到工具箱失败:', error);
+    //     }
+    //   }
       
-      return returnId ? variable.getId() : variableName;
-    } else {
-      console.warn(`❌ 变量创建失败: ${variableName}`);
-      return null;
-    }
+    //   return returnId ? variable.getId() : variableName;
+    // } else {
+    //   console.warn(`❌ 变量创建失败: ${variableName}`);
+    //   return null;
+    // }
     
   } catch (error) {
     console.warn('❌ 处理变量字段时出错:', error);
@@ -3000,7 +3139,7 @@ export async function createCodeStructureTool(
 
       toolResult = ``;
       if (rootBlock.error) {
-        toolResult += `⚠️ 注意: 在创建过程中遇到一些问题，部分块创建失败或者连接错误！请仔细检查并修复这些问题，务必读取相关库的readme。\n`
+        toolResult += `⚠️ 注意: 在创建过程中遇到一些问题，部分块创建失败或者连接错误！请仔细阅读相关库的readme后再进行调整。\n`
       } else {
         // toolResult += `✅ 成功创建 ${structure} 代码结构`;
         toolResult += `✅ 创建完成代码结构 `;

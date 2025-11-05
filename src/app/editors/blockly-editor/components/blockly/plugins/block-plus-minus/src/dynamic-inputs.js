@@ -273,19 +273,6 @@ const dynamicInputsHelper = function () {
       break;
     }
   }
-  
-  // If we found an INPUT* input, add the plus button to it
-  if (targetInput) {
-    targetInput.insertFieldAt(0, createPlusField(), 'PLUS');
-    console.log(`Added plus button to input: ${targetInput.name}`);
-  } else {
-    // Fallback: if no INPUT* inputs found, use the first input
-    if (this.inputList.length > 0) {
-      const firstInput = this.inputList[0];
-      firstInput.insertFieldAt(0, createPlusField(), 'PLUS');
-      console.log(`No INPUT* inputs found, added plus button to first input: ${firstInput.name}`);
-    }
-  }
 
   // If we found an INPUT* input, add the plus button to it
   if (targetInput) {
