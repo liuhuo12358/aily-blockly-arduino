@@ -98,6 +98,10 @@ Sun Junjie (Community Partner)
 [7z]() This project uses 7z to reduce the size of some packages (such as the huge ESP32 compiler)  
 Other content can be found in [package.json](./package.json)  
 
+## The AI features of this project reference the following projects
+[Kode](https://github.com/shareAI-lab/Kode-cli)  
+[copilot](https://github.com/microsoft/vscode-copilot-chat)  
+
 ## Additional Rights Statement  
 For derivatives or modifications based on this project, without the consent of the project leader (Naihe col), the following activities are prohibited:
 1. Information about relevant rights holders and sponsors of this project must not be removed, and such information must appear on the software startup page.

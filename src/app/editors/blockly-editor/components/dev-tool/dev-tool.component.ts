@@ -48,11 +48,16 @@ export class DevToolComponent {
     this.currentY = window.innerHeight - event.clientY + (this.dragStartY - this.offsetY);
     
     // 限制在可视区域内
-    const maxX = window.innerWidth - 200; // 假设组件宽度约200px
-    const maxY = window.innerHeight - 50; // 假设组件高度约50px
+    const topExclusionZone = 70; // 顶部禁用区域高度
+    const componentHeight = 40; // 假设组件高度约40px
+    const componentWidth = 260; // 假设组件宽度约260px
+
+    const maxX = window.innerWidth - componentWidth;
+    const minY = 1; // 最小bottom值
+    const maxY = window.innerHeight - topExclusionZone - componentHeight; // 不能进入顶部40px区域
     
     this.currentX = Math.max(0, Math.min(this.currentX, maxX));
-    this.currentY = Math.max(1, Math.min(this.currentY, maxY));
+    this.currentY = Math.max(minY, Math.min(this.currentY, maxY));
   }
 
   onDragEnd = () => {
