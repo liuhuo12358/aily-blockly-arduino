@@ -236,7 +236,7 @@ export class ExampleListComponent implements OnInit, AfterViewInit, OnDestroy {
       packageJson.nickname = item.nickname
       packageJson.description = item.description || ''
       packageJson.doc_url = item.doc_url || ''
-      packageJson.keywords = JSON.parse(item.tags) || []
+      packageJson.keywords = item?.tags ? JSON.parse(item.tags) : []
       packageJson.cloudId = item.id;
 
       this.electronService.writeFile(`${targetPath}/package.json`, JSON.stringify(packageJson, null, 2));
