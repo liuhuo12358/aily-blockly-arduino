@@ -657,6 +657,14 @@ export class AilyChatComponent implements OnDestroy {
       : '';
   }
 
+  getCurrentProjectLibrariesPath(): string {
+    if (this.getCurrentProjectPath() != '') {
+      return this.getCurrentProjectPath() + '/node_modules/@aily-project';
+    }
+
+    return '';
+  }
+
   // 内置工具
   tools: Tool[] = TOOLS;
 
@@ -666,6 +674,7 @@ export class AilyChatComponent implements OnDestroy {
 <keyinfo>
 项目存放根路径(**rootFolder**): ${this.projectService.projectRootPath || '无'}
 当前项目路径(**path**): ${this.getCurrentProjectPath() || '无'}
+当前项目库存放路径(**librariesPath**): ${ this.getCurrentProjectLibrariesPath() || '无' }
 appDataPath(**appDataPath**): ${window['path'].getAppDataPath() || '无'}
 转换后的blockly库存放路径(**blocklylibrariesPath**): ${ window['path'].join(window['path'].getAppDataPath(), 'libraries') || '无'}
 当前使用的语言(**lang**)： ${this.configService.data.lang || 'zh-cn'}
@@ -2116,7 +2125,7 @@ ${JSON.stringify(errData)}
             // 拼接到工具结果中返回
             if (toolResult?.content && this.chatService.currentMode === 'agent') {
                 toolContent += `\n${keyInfo}\n请不要经验主义或者过于自信，Blockly块创建必须遵循以下流程：
-1. 先列出计划使用的所有库(不可跳过以\`lib-core\`开始的库，特别是lib-core-logic lib-core-variables lib-core-time等基础库)
+1. 先列出计划使用的所有库(不可跳过以\`lib-core\`开始的库，特别注意lib-core-logic lib-core-variables lib-core-time等基础库)
 2. 逐一读取每个库的README确定块存在
 3. 使用smart_block_tool和create_code_structure_tool创建对应代码块
 - 不要一次性生成大量块，分步创建，每次创建后检查结果
@@ -2124,9 +2133,9 @@ ${JSON.stringify(errData)}
 4. 检查工具反馈结果
 5. 修复结构或逻辑问题(多次修复仍然有误时，分析是否遗漏了相关库readme的阅读)
 - 如果发现问题，请及时修复，不要继续往下走
-- 推荐优先使用connect_blocks_tool修改连接关系
+- 如果部分代码块创建失败，使用第三步的工具继续创建遗漏的块，或者使用connect_blocks_tool修改连接关系
+- 避免直接删除块，优先考虑使用配置工具修改块属性
 - 全局变量请作为独立块创建
-- 避免批量删除块
 - 独立且无用的块请删除
 6. 重复直至完成
 JSON务必保留必要的换行和缩进格式，否则可能导致解析失败。

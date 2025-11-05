@@ -762,36 +762,103 @@ support two modes:
     },
     {
         name: "configure_block_tool",
-        description: `块配置工具。修改现有块的属性，包括字段值、输入连接、样式等。支持批量配置和属性验证。`,
+        description: `块字段配置和结构修改工具。专门用于修改已存在块的字段值（如下拉菜单选项、文本输入、数字值等）和动态结构（如 controls_if 的 else/elseif 分支）。
+
+**使用前提条件：**
+- 目标块必须已经存在于工作区中
+- 必须提供有效的 blockId 或 blockType
+- 字段修改：必须提供要修改的 fields 对象（不能为空）
+- 结构修改：必须提供 extraState 对象来修改动态块结构
+
+**功能范围：**
+1. **字段修改**：修改下拉菜单选择、文本字段值、数字字段值、布尔字段状态
+2. **结构修改**：修改支持动态输入的块结构，如：
+   - controls_if: 增加/减少 else if 分支，添加/移除 else 分支
+   - controls_ifelse: 修改 else if 分支数量
+   - text_join: 修改拼接项数量
+   - lists_create_with: 修改列表项数量
+
+**适用场景：**
+- 修改下拉菜单的选择（如引脚号、波特率、运算符等）
+- 更新文本字段的值
+- 修改数字字段的值
+- 调整布尔字段的状态
+- 为 controls_if 块增加 else 或 else if 分支
+- 修改动态列表或文本拼接块的项目数量
+
+**不适用场景：**
+- 创建新块（请使用 smart_block_tool）
+- 删除块（请使用 delete_block_tool）  
+- 修改块的连接关系（请使用 connect_blocks_tool）
+- 移动块位置（当前不支持）
+
+**extraState 使用示例：**
+为 controls_if 块添加 1 个 else if 和 1 个 else 分支：
+\`\`\`json
+{
+  "blockId": "if_block_id",
+  "extraState": {
+    "elseIfCount": 1,
+    "hasElse": true
+  }
+}
+\`\`\`
+
+**必须提供完整的参数结构，空参数会导致工具执行失败。**`,
         input_schema: {
             type: 'object',
             properties: {
                 blockId: {
                     type: 'string',
-                    description: '要配置的块ID'
+                    description: '要配置的块ID（blockId 和 blockType 至少提供一个）'
+                },
+                blockType: {
+                    type: 'string',
+                    description: '块类型，当未提供 blockId 时使用（会找到第一个匹配类型的块）'
                 },
                 fields: {
                     type: 'object',
-                    description: '要更新的字段值'
+                    description: '要更新的字段值对象。格式：{"字段名": "字段值"}。字段名需要参考对应库的文档。',
+                    additionalProperties: {
+                        oneOf: [
+                            { type: 'string' },
+                            { type: 'number' },
+                            { type: 'boolean' }
+                        ]
+                    }
                 },
-                inputs: {
-                    type: 'object', 
-                    description: '要更新的输入连接'
-                },
-                position: {
+                extraState: {
                     type: 'object',
+                    description: '动态块结构配置对象。用于修改支持动态输入的块结构，如 controls_if 的分支数量。',
                     properties: {
-                        x: { type: 'number', description: 'X坐标' },
-                        y: { type: 'number', description: 'Y坐标' }
+                        elseIfCount: {
+                            type: 'number',
+                            description: 'else if 分支数量（适用于 controls_if, controls_ifelse）',
+                            minimum: 0,
+                            maximum: 20
+                        },
+                        hasElse: {
+                            type: 'boolean',
+                            description: '是否包含 else 分支（适用于 controls_if）'
+                        },
+                        itemCount: {
+                            type: 'number',
+                            description: '项目数量（适用于 text_join, lists_create_with 等）',
+                            minimum: 1,
+                            maximum: 50
+                        }
                     },
-                    description: '新位置'
-                },
-                style: {
-                    type: 'object',
-                    description: '块的样式配置'
+                    additionalProperties: true
                 }
             },
-            required: ['blockId']
+            anyOf: [
+                { 
+                    allOf: [
+                        { anyOf: [{ required: ['blockId'] }, { required: ['blockType'] }] },
+                        { anyOf: [{ required: ['fields'] }, { required: ['extraState'] }] }
+                    ]
+                }
+            ]
         }
     },
     // {
