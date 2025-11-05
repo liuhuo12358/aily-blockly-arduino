@@ -123,8 +123,10 @@ export class CloudSpaceComponent {
       packageJson.nickname = item.nickname
       packageJson.description = item.description || ''
       packageJson.doc_url = item.doc_url || ''
+      packageJson.keywords = JSON.parse(item.tags) || []
+      packageJson.cloudId = item.id;
+      
       this.electronService.writeFile(`${targetPath}/package.json`, JSON.stringify(packageJson, null, 2));
-
       this.projectService.projectOpen(targetPath);
     });
   }

@@ -221,7 +221,6 @@ export class ExampleListComponent implements OnInit, AfterViewInit, OnDestroy {
     this.loadingExampleIndex = index;
 
     const item = this.exampleList[index];
-    console.log('加载示例项目:', item);
     this.cloudService.getProjectArchive(item.archive_url).subscribe(async res => {
       // 直接添加随机数避免重名
       const randomNum = Math.floor(100000 + Math.random() * 900000);
@@ -237,8 +236,10 @@ export class ExampleListComponent implements OnInit, AfterViewInit, OnDestroy {
       packageJson.nickname = item.nickname
       packageJson.description = item.description || ''
       packageJson.doc_url = item.doc_url || ''
-      this.electronService.writeFile(`${targetPath}/package.json`, JSON.stringify(packageJson, null, 2));
+      packageJson.keywords = JSON.parse(item.tags) || []
+      packageJson.cloudId = item.id;
 
+      this.electronService.writeFile(`${targetPath}/package.json`, JSON.stringify(packageJson, null, 2));
       this.projectService.projectOpen(targetPath);
       this.loadingExampleIndex = null;
     });
