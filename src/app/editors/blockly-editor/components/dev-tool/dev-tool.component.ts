@@ -10,6 +10,14 @@ import { NzMessageService } from 'ng-zorro-antd/message';
   styleUrl: './dev-tool.component.scss'
 })
 export class DevToolComponent {
+  // 拖拽相关属性
+  isDragging = false;
+  dragStartX = 0;
+  dragStartY = 0;
+  currentX = 185; // 初始 left 值
+  currentY = 1; // 初始 bottom 值
+  offsetX = 0;
+  offsetY = 0;
 
   constructor(
     private projectService: ProjectService,
@@ -17,6 +25,53 @@ export class DevToolComponent {
     private messageService: NzMessageService
   ) {
 
+  }
+
+  onDragStart(event: MouseEvent) {
+    this.isDragging = true;
+    this.dragStartX = event.clientX - this.currentX;
+    this.dragStartY = event.clientY;
+    this.offsetY = window.innerHeight - this.currentY; // 计算从顶部的偏移
+    
+    // 添加全局事件监听
+    document.addEventListener('mousemove', this.onDrag);
+    document.addEventListener('mouseup', this.onDragEnd);
+    
+    event.preventDefault();
+  }
+
+  onDrag = (event: MouseEvent) => {
+    if (!this.isDragging) return;
+    
+    // 计算新位置
+    this.currentX = event.clientX - this.dragStartX;
+    this.currentY = window.innerHeight - event.clientY + (this.dragStartY - this.offsetY);
+    
+    // 限制在可视区域内
+    const topExclusionZone = 70; // 顶部禁用区域高度
+    const componentHeight = 40; // 假设组件高度约40px
+    const componentWidth = 260; // 假设组件宽度约260px
+
+    const maxX = window.innerWidth - componentWidth;
+    const minY = 1; // 最小bottom值
+    const maxY = window.innerHeight - topExclusionZone - componentHeight; // 不能进入顶部40px区域
+    
+    this.currentX = Math.max(0, Math.min(this.currentX, maxX));
+    this.currentY = Math.max(minY, Math.min(this.currentY, maxY));
+  }
+
+  onDragEnd = () => {
+    this.isDragging = false;
+    
+    // 移除全局事件监听
+    document.removeEventListener('mousemove', this.onDrag);
+    document.removeEventListener('mouseup', this.onDragEnd);
+  }
+
+  ngOnDestroy() {
+    // 清理事件监听器
+    document.removeEventListener('mousemove', this.onDrag);
+    document.removeEventListener('mouseup', this.onDragEnd);
   }
 
   reload() {
@@ -56,8 +111,13 @@ export class DevToolComponent {
       this.electronService.deleteDir(defaultBuildPath);
       this.messageService.success('Clear build folder success');
     } catch (error) {
-      console.error('Clear build folder error:', error);
-      this.messageService.error('Clear build folder failed: ' + error.message);
+      if (error.message && error.message.includes('EBUSY')) {
+        console.warn('Clear build folder failed: Folder is busy');
+        this.messageService.warning('Clear build folder failed: Folder is busy, wait a moment and try again.');
+      } else {
+        console.error('Clear build folder error:', error);
+        this.messageService.error('Clear build folder failed: ' + error.message);
+      }
     }
   }
 
