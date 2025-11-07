@@ -13,6 +13,7 @@ export interface IMenuItem {
   dev?: boolean;
   router?: string[]; // 在指定路由中显示
   children?: IMenuItem[],
+  extra?: any,
   check?: boolean,
   key?: string; // 用于标识编译和上传配置
 }
