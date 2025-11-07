@@ -1229,6 +1229,15 @@ export class ProjectService {
           nickname: currentPackageJson.nickname, // 保留昵称
           author: currentPackageJson.author, // 保留作者
           description: currentPackageJson.description, // 保留描述
+          dependencies: {
+            // 从模板获取新的开发板依赖和基础库
+            ...templatePackageJson.dependencies,
+            // 保留当前项目的非开发板依赖（过滤掉 @aily-project/board-* 包）
+            ...Object.fromEntries(
+              Object.entries(currentPackageJson.dependencies || {})
+                .filter(([key]) => !key.startsWith('@aily-project/board-'))
+            ),
+          },
           // 不保留其他自定义配置
           // ...(currentPackageJson.projectConfig && { projectConfig: currentPackageJson.projectConfig }),
           // ...(currentPackageJson.cloudId && { cloudId: currentPackageJson.cloudId }),
