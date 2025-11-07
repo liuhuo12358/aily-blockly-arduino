@@ -676,7 +676,8 @@ export class AilyChatComponent implements OnDestroy {
 当前项目路径(**path**): ${this.getCurrentProjectPath() || '无'}
 当前项目库存放路径(**librariesPath**): ${ this.getCurrentProjectLibrariesPath() || '无' }
 appDataPath(**appDataPath**): ${window['path'].getAppDataPath() || '无'}
-转换后的blockly库存放路径(**blocklylibrariesPath**): ${ window['path'].join(window['path'].getAppDataPath(), 'libraries') || '无'}
+ - 包含SDK文件、编译器工具等，boards.json-开发板列表 libraries.json-库列表 等缓存到此路径
+转换库存放路径(**libraryConversionPath**): ${ window['path'].join(window['path'].getAppDataPath(), 'libraries') || '无'}
 当前使用的语言(**lang**)： ${this.configService.data.lang || 'zh-cn'}
 操作系统(**os**): ${window['platform'].type || 'unknown'}
 </keyinfo>

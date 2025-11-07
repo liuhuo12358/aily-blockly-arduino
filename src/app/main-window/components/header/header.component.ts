@@ -659,8 +659,8 @@ export class HeaderComponent {
     // 判断是否是STM32，是则更新项目配置
     if (this.projectService.currentBoardConfig['core'].indexOf('stm32') > -1 &&
       this.projectService.currentBoardConfig['description'].indexOf('Series') > -1) {
-      // 如果subItem包含board variant字段，则调用比较函数
-      if (subItem.key === 'board' && subItem.data.variant) {
+      // 如果subItem包含pnum variant字段，则调用比较函数
+      if (subItem.key === 'pnum' && subItem.extra?.build.variant) {
         let newPinConfig = subItem;
         this.projectService.compareStm32PinConfig(newPinConfig)
       }
