@@ -105,8 +105,8 @@ export let HEADER_BTNS: IMenuItem[][] = [
     },
     {
       name: 'MENU.USER_AUTH',
-      action: 'user-auth',
-      data: { type: 'tool', data: "user-auth" },
+      action: 'tool-open',
+      data: { type: 'tool', data: "user-center" },
       icon: 'fa-light fa-user',
     },
   ],

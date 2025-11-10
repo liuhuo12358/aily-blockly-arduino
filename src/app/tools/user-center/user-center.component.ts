@@ -4,12 +4,15 @@ import { SubWindowComponent } from '../../components/sub-window/sub-window.compo
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { AuthService, LoginRequest, RegisterRequest } from '../../services/auth.service';
-import { GitHubLoginDialogComponent } from '../../main-window/components/github-login-dialog/github-login-dialog.component';
 import sha256 from 'crypto-js/sha256';
 import { Subject, takeUntil } from 'rxjs';
 import { ElectronService } from '../../services/electron.service';
 import { NzModalService } from 'ng-zorro-antd/modal';
 import { NzMessageService } from 'ng-zorro-antd/message';
+import { LoginComponent } from '../../components/login/login.component';
+import { NzButtonModule } from 'ng-zorro-antd/button';
+import { NzProgressModule } from 'ng-zorro-antd/progress';
+import { UiService } from '../../services/ui.service';
 
 @Component({
   selector: 'app-user-center',
@@ -17,7 +20,10 @@ import { NzMessageService } from 'ng-zorro-antd/message';
     FormsModule,
     CommonModule,
     ToolContainerComponent,
-    SubWindowComponent
+    SubWindowComponent,
+    LoginComponent,
+    NzButtonModule,
+    NzProgressModule
   ],
   templateUrl: './user-center.component.html',
   styleUrl: './user-center.component.scss'
@@ -27,13 +33,9 @@ export class UserCenterComponent {
   windowInfo = '用户中心';
   @ViewChild('menuBox') menuBox: ElementRef;
 
-  // @Output() closeEvent = new EventEmitter<void>();
-
   private destroy$ = new Subject<void>();
   private message = inject(NzMessageService);
-  private modal = inject(NzModalService);
   private authService = inject(AuthService);
-  private electronService = inject(ElectronService);
 
   userInfo = {
     username: '',
@@ -47,6 +49,12 @@ export class UserCenterComponent {
   currentUser: any = null;
   isGitHubAuthWaiting = false;
 
+  constructor(
+    private uiService: UiService
+  ) {
+
+  }
+
   async ngOnInit() {
     // 首先检查并同步登录状态
     await this.checkAndSyncAuthStatus();
@@ -56,12 +64,6 @@ export class UserCenterComponent {
       .pipe(takeUntil(this.destroy$))
       .subscribe(isLoggedIn => {
         this.isLoggedIn = isLoggedIn;
-
-        // // 如果登录成功且当前在GitHub登录等待状态，关闭弹窗
-        // if (isLoggedIn && this.isGitHubAuthWaiting) {
-        //   this.isGitHubAuthWaiting = false;
-        //   this.closeEvent.emit();
-        // }
       });
 
     // 监听用户信息
@@ -93,43 +95,6 @@ export class UserCenterComponent {
   ngOnDestroy() {
     this.destroy$.next();
     this.destroy$.complete();
-  }
-
-  async onLogin() {
-    if (!this.userInfo.username || !this.userInfo.password) {
-      this.message.warning('请输入用户名和密码');
-      return;
-    }
-
-    this.isWaiting = true;
-
-    try {
-      const loginData: LoginRequest = {
-        username: this.userInfo.username,
-        password: sha256(this.userInfo.password).toString()
-      };
-
-      this.authService.login(loginData).subscribe({
-        next: (response) => {
-          if (response.status === 200 && response.data) {
-            this.message.success('登录成功');
-          } else {
-            this.message.error(response.message || '登录失败');
-          }
-        },
-        error: (error) => {
-          console.error('登录错误:', error);
-          this.message.error('登录失败，请检查网络连接');
-        },
-        complete: () => {
-          this.isWaiting = false;
-        }
-      });
-    } catch (error) {
-      console.error('登录过程中出错:', error);
-      this.message.error('登录失败');
-      this.isWaiting = false;
-    }
   }
 
   async onRegister() {
@@ -197,72 +162,7 @@ export class UserCenterComponent {
     this.message.warning('服务暂不可用');
   }
 
-  /**
-   * 开始 GitHub 浏览器 OAuth 登录
-   */
-  async onGitHubLogin() {
-    if (this.isGitHubAuthWaiting) return;
-
-    // 首先显示确认对话框
-    const modalRef = this.modal.create({
-      nzTitle: null,
-      nzFooter: null,
-      nzClosable: false,
-      nzBodyStyle: {
-        padding: '0',
-      },
-      nzWidth: '380px',
-      nzContent: GitHubLoginDialogComponent,
-      nzData: {
-        title: 'GitHub 登录确认',
-        text: ''
-      }
-    });
-
-    // 等待用户选择
-    modalRef.afterClose.subscribe(async (result: any) => {
-      if (result && result.result === 'agree') {
-        // 用户同意，继续GitHub登录流程
-        await this.proceedWithGitHubLogin();
-      }
-      // 如果用户取消或关闭对话框，则不执行任何操作
-    });
-  }
-
-  /**
-   * 执行实际的GitHub登录流程
-   */
-  private async proceedWithGitHubLogin() {
-    this.isGitHubAuthWaiting = true;
-
-    try {
-      // 直接通过 HTTP 请求启动 GitHub OAuth 流程
-      this.authService.startGitHubOAuth().subscribe({
-        next: (response) => {
-          // 使用 ElectronService 在系统浏览器中打开授权页面
-          if (this.electronService.isElectron) {
-            this.electronService.openUrl(response.authorization_url);
-            this.message.info('正在跳转到 GitHub 授权页面...');
-          } else {
-            // 如果不在 Electron 环境中，使用 window.open 作为降级方案
-            window.open(response.authorization_url, '_blank');
-            this.message.info('正在跳转到 GitHub 授权页面...');
-          }
-        },
-        error: (error) => {
-          console.error('启动 GitHub OAuth 失败:', error);
-          this.message.error('启动 GitHub 登录失败，请检查网络连接');
-          this.isGitHubAuthWaiting = false;
-        }
-      });
-    } catch (error) {
-      console.error('GitHub 登录出错:', error);
-      this.message.error('GitHub 登录失败');
-      this.isGitHubAuthWaiting = false;
-    }
-  }
-
   close() {
-
+    this.uiService.closeTool('user-center');
   }
 }
