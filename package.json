@@ -1,7 +1,7 @@
 {
   "name": "aily-blockly",
   "productName": "aily blockly",
-  "version": "0.8.7",
+  "version": "0.8.8",
   "author": "coloz",
   "description": "aily blockly dev",
   "main": "electron/main.js",
