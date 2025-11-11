@@ -1394,22 +1394,23 @@ ${JSON.stringify(errData)}
                       const command = toolArgs.command;
                       if (command.includes('npm i') || command.includes('npm install')) {
                         console.log('检测到 npm install 命令，尝试加载库');
-                        // Extract the package name for @aily-project/ packages only
-                        const npmRegex = /npm (i|install)\s+(@aily-project\/[a-zA-Z0-9-_]+)/;
-                        const match = command.match(npmRegex);
+                        // Extract all @aily-project/ packages from the command
+                        const npmRegex = /@aily-project\/[a-zA-Z0-9-_]+/g;  // 使用全局匹配
+                        const matches = command.match(npmRegex);
 
-                        console.log('npmRegex match:', match);
+                        console.log('npmRegex matches:', matches);
 
-                        if (match && match[2]) {
-                          const libPackageName = match[2];
-                          console.log('Installing library:', libPackageName);
+                        if (matches && matches.length > 0) {
+                          // 遍历所有匹配到的库包名
+                          for (const libPackageName of matches) {
+                            console.log('Installing library:', libPackageName);
 
-                          // Load the library into blockly
-                          try {
-                            await this.blocklyService.loadLibrary(libPackageName, projectPath);
-                          } catch (e) {
-                            //
-                            console.log("加载库失败:", e);
+                            // Load the library into blockly
+                            try {
+                              await this.blocklyService.loadLibrary(libPackageName, projectPath);
+                            } catch (e) {
+                              console.log("加载库失败:", libPackageName, e);
+                            }
                           }
                         } else {
                           console.log("projectOpen: ", projectPath);
