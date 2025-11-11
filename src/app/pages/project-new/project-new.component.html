@@ -15,11 +15,13 @@
       }
     </ng-template>
     <!-- 查看模式：-->
+    @if(currentStep == 0){
     <div class="tag-list">
       <nz-tag (click)="changeViewMode('brand')" [nzColor]="listMode === 'brand' ? '#108ee9' : null">按品牌</nz-tag>
       <nz-tag (click)="changeViewMode('core')" [nzColor]="listMode === 'core' ? '#108ee9' : null">按核心</nz-tag>
       <!-- <nz-tag (click)="listMode = 'function'">按功能</nz-tag> -->
     </div>
+    }
     <!-- <nz-steps [nzCurrent]="currentStep" nzSize="small">
       <nz-step [nzTitle]="'PROJECT_NEW.STEPS.SELECT_BOARD' | translate"></nz-step>
       <nz-step [nzTitle]="'PROJECT_NEW.STEPS.BASIC_SETTINGS' | translate"></nz-step>
