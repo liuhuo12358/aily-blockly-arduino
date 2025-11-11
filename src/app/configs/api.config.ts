@@ -14,6 +14,7 @@ export const API = {
   verifyToken: `${AUTH_SERVER_URL}/api/v1/auth/verify`,
   refreshToken: `${AUTH_SERVER_URL}/api/v1/auth/refresh`,
   me: `${AUTH_SERVER_URL}/api/v1/auth/me`,
+  changeNickname: `${AUTH_SERVER_URL}/api/v1/auth/me/nickname`,
   // github oauth
   githubBrowserAuthorize: `${AUTH_SERVER_URL}/api/v1/oauth/github/browser-authorize`,
   githubTokenExchange: `${AUTH_SERVER_URL}/api/v1/oauth/github/token-exchange`,

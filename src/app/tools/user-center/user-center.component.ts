@@ -1,6 +1,5 @@
 import { Component, ElementRef, inject, ViewChild } from '@angular/core';
 import { ToolContainerComponent } from '../../components/tool-container/tool-container.component';
-import { SubWindowComponent } from '../../components/sub-window/sub-window.component';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { AuthService, LoginRequest, RegisterRequest } from '../../services/auth.service';
@@ -12,6 +11,7 @@ import { NzMessageService } from 'ng-zorro-antd/message';
 import { LoginComponent } from '../../components/login/login.component';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzProgressModule } from 'ng-zorro-antd/progress';
+import { NzInputModule } from 'ng-zorro-antd/input';
 import { UiService } from '../../services/ui.service';
 
 @Component({
@@ -20,10 +20,10 @@ import { UiService } from '../../services/ui.service';
     FormsModule,
     CommonModule,
     ToolContainerComponent,
-    SubWindowComponent,
     LoginComponent,
     NzButtonModule,
-    NzProgressModule
+    NzProgressModule,
+    NzInputModule
   ],
   templateUrl: './user-center.component.html',
   styleUrl: './user-center.component.scss'
@@ -32,6 +32,7 @@ export class UserCenterComponent {
   currentUrl = '/user-center';
   windowInfo = '用户中心';
   @ViewChild('menuBox') menuBox: ElementRef;
+  @ViewChild('nicknameInput') nicknameInput?: ElementRef<HTMLInputElement>;
 
   private destroy$ = new Subject<void>();
   private message = inject(NzMessageService);
@@ -48,6 +49,10 @@ export class UserCenterComponent {
   isLoggedIn = false;
   currentUser: any = null;
   isGitHubAuthWaiting = false;
+  isEditingNickname = false;
+  editedNickname = '';
+  nicknameSaving = false;
+  nicknameError = '';
 
   constructor(
     private uiService: UiService
@@ -70,6 +75,7 @@ export class UserCenterComponent {
     this.authService.userInfo$
       .pipe(takeUntil(this.destroy$))
       .subscribe(userInfo => {
+        console.log('UserCenterComponent - 接收到用户信息更新: ', userInfo);
         this.currentUser = userInfo;
       });
 
@@ -164,5 +170,109 @@ export class UserCenterComponent {
 
   close() {
     this.uiService.closeTool('user-center');
+  }
+
+  onStartNicknameEdit(event?: Event): void {
+    if (this.nicknameSaving) {
+      return;
+    }
+    event?.preventDefault?.();
+    event?.stopPropagation?.();
+    this.isEditingNickname = true;
+    this.nicknameError = '';
+    this.editedNickname = this.displayNickname;
+    setTimeout(() => {
+      this.nicknameInput?.nativeElement?.focus();
+      this.nicknameInput?.nativeElement?.select();
+    });
+  }
+
+  onCancelNicknameEdit(event?: Event): void {
+    event?.preventDefault?.();
+    event?.stopPropagation?.();
+    this.isEditingNickname = false;
+    this.nicknameSaving = false;
+    this.nicknameError = '';
+    this.editedNickname = '';
+  }
+
+  async onSaveNickname(): Promise<void> {
+    if (!this.isEditingNickname || this.nicknameSaving) {
+      return;
+    }
+
+    const nextNickname = this.editedNickname.trim();
+    if (!nextNickname) {
+      this.nicknameError = '昵称不能为空';
+      this.message.warning('昵称不能为空');
+      setTimeout(() => {
+        this.nicknameInput?.nativeElement?.focus();
+      });
+      return;
+    }
+
+    if (nextNickname === this.displayNickname) {
+      this.isEditingNickname = false;
+      this.editedNickname = '';
+      return;
+    }
+
+    this.nicknameSaving = true;
+    this.nicknameError = '';
+
+    try {
+      await this.submitNicknameChange(nextNickname);
+      this.currentUser = {
+        ...this.currentUser,
+        nickname: nextNickname
+      };
+      this.message.success('昵称修改已保存');
+      this.isEditingNickname = false;
+      this.editedNickname = '';
+    } catch (error) {
+      console.error('昵称更新失败:', error);
+      this.nicknameError = '昵称更新失败，请稍后重试';
+      this.message.error('昵称更新失败，请稍后重试');
+    } finally {
+      this.nicknameSaving = false;
+    }
+  }
+
+  async onNicknameBlur(): Promise<void> {
+    if (this.nicknameSaving) {
+      return;
+    }
+    await this.onSaveNickname();
+  }
+
+  private async submitNicknameChange(nextNickname: string): Promise<void> {
+    (await this.authService.changeNickname(nextNickname)).subscribe({
+      next: async (response) => {
+        if (response.status === 200) {
+          // 昵称修改成功
+          await this.authService.refreshMe();
+        } else {
+          throw new Error('昵称修改失败，服务器返回错误');
+        }
+      },
+      error: (error) => {
+        console.error('昵称修改请求失败:', error);
+        throw error;
+      }
+    });
+  }
+
+  get displayNickname(): string {
+    return (this.currentUser?.nickname || this.currentUser?.login || '').trim();
+  }
+
+  get quotaUsagePercent(): number {
+    const total = this.currentUser?.quota?.total_token ?? 0;
+    const used = this.currentUser?.quota?.used_token ?? 0;
+    if (!total || total <= 0) {
+      return 0;
+    }
+    const percent = (used / total) * 100;
+    return Math.max(0, Math.min(100, Math.round(percent)));
   }
 }
