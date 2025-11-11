@@ -1,0 +1,38 @@
+<app-tool-container [title]="'USER CENTER'" (closeEvent)="close()">
+    <ng-container *ngTemplateOutlet="windowBoxTemplate"></ng-container>
+</app-tool-container>
+<ng-template #windowBoxTemplate>
+    <div class="window-box">
+        <div class="user-info">
+            <div class="avatar ccenter">
+                <i class="fa-thin fa-user"></i>
+            </div>
+            <div class="username">{{ currentUser?.nickname || currentUser?.login || '' }}</div>
+        </div>
+        <!-- <div class="user-data">
+            <div class="item">
+                <div class="ccenter">
+                    <i class="fa-light fa-user-vneck"></i>
+                    Token usage
+                </div>
+                <div class="progress">
+                    <div class="active"></div>
+                </div>
+            </div>
+        </div> -->
+        <div class="actions">
+            <!-- <button nz-button nzType="primary" (click)="onLogout()">
+                修改用户信息
+            </button>
+            <button nz-button nzType="primary" (click)="onLogout()">
+                修改用户信息
+            </button> -->
+            <button nz-button nzType="primary" (click)="onLogout()">
+                登出
+            </button>
+        </div>
+    </div>
+    @if(!isLoggedIn){
+    <app-login></app-login>
+    }
+</ng-template>

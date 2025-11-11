@@ -65,6 +65,3 @@
   (closeEvent)="closePortList()" [keywords]="boardKeywords" (itemClickEvent)="selectPort($event)"
   (subItemClickEvent)="selectSubItem($event)"></app-menu>
 }
-@if(showUser){
-<app-user [position]="userPosition" [width]="260" (closeEvent)="closeUser()"></app-user>
-}

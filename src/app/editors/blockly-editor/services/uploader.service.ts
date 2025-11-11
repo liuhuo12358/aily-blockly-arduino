@@ -629,7 +629,7 @@ export class _UploaderService {
                     }
 
                     // 进度为100%时标记完成
-                    if (lastProgress === 100) {
+                    if (lastProgress >= 100) {
                       this.uploadCompleted = true;
                     }
 

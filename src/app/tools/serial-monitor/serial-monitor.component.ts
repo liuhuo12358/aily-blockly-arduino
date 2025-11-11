@@ -27,6 +27,7 @@ import { QuickSendEditorComponent } from './components/quick-send-editor/quick-s
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { SearchBoxComponent } from './components/search-box/search-box.component';
 import { Buffer } from 'buffer';
+import { TranslateService } from '@ngx-translate/core';
 
 @Component({
   selector: 'app-serial-monitor',
@@ -146,6 +147,7 @@ export class SerialMonitorComponent {
     private router: Router,
     private cd: ChangeDetectorRef,
     private message: NzMessageService,
+    private translate: TranslateService,
   ) { }
 
   async ngOnInit() {
@@ -228,6 +230,7 @@ export class SerialMonitorComponent {
   // 处理数据更新
   private handleDataUpdate(data: dataItem | void) {
     if (!data) {
+      this.cd.detectChanges();
       this.scrollToBottom();
       return;
     }
@@ -236,6 +239,7 @@ export class SerialMonitorComponent {
       this.lastDataLength = 0;
       if (this.datasource && this.datasource.adapter) {
         this.datasource.adapter.reload(0);
+        this.cd.detectChanges();
       }
       return;
     }
@@ -266,6 +270,7 @@ export class SerialMonitorComponent {
       // 更新最后的数据长度
       this.lastDataLength = currentDataCount;
     }
+    this.cd.detectChanges();
     // 如果开启自动滚动,滚动到底部
     this.scrollToBottom(true);
   }
@@ -380,7 +385,7 @@ export class SerialMonitorComponent {
     }
 
     if (!this.currentPort) {
-      this.message.warning('请先选择串口');
+      this.message.warning(this.translate.instant('SERIAL.SELECT_PORT_FIRST'));
       setTimeout(() => {
         this.switchValue = false;
       }, 300);

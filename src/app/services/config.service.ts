@@ -237,7 +237,10 @@ interface AppConfig {
     warnings: string;
   };
 
-  devmode: boolean;
+  devmode: {
+    enabled: boolean;
+    autoSave: boolean;
+  };
 
   blockly: {
     renderer: string; // Blockly渲染器
