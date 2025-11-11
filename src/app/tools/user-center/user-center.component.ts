@@ -53,6 +53,7 @@ export class UserCenterComponent {
   editedNickname = '';
   nicknameSaving = false;
   nicknameError = '';
+  quotaUsagePercent = 0;
 
   constructor(
     private uiService: UiService
@@ -77,6 +78,7 @@ export class UserCenterComponent {
       .subscribe(userInfo => {
         console.log('UserCenterComponent - 接收到用户信息更新: ', userInfo);
         this.currentUser = userInfo;
+        this.calculateQuotaUsagePercent();
       });
 
     // 由于app.component已经设置了全局OAuth监听器，这里不需要再设置
@@ -97,6 +99,8 @@ export class UserCenterComponent {
   ngAfterViewInit(): void {
     this.authService.refreshMe().then(() => {
       console.log('Auth token refreshed after UserCenterComponent view init.');
+      // 刷新后重新计算配额使用百分比
+      this.calculateQuotaUsagePercent();
     });
   }
 
@@ -268,13 +272,30 @@ export class UserCenterComponent {
     return (this.currentUser?.nickname || this.currentUser?.login || '').trim();
   }
 
-  get quotaUsagePercent(): number {
+  get quotaRemainingPercent(): number {
+    return Math.max(0, 100 - this.quotaUsagePercent);
+  }
+
+  private calculateQuotaUsagePercent(): void {
+    console.log('=== 开始计算配额使用百分比 ===');
+    console.log('currentUser 完整对象:', JSON.stringify(this.currentUser, null, 2));
+    console.log('currentUser?.quota:', this.currentUser?.quota);
+    
     const total = this.currentUser?.quota?.total_token ?? 0;
     const used = this.currentUser?.quota?.used_token ?? 0;
+    
+    console.log('提取的值 - total:', total, 'used:', used);
+    console.log('total 类型:', typeof total, 'used 类型:', typeof used);
+    
     if (!total || total <= 0) {
-      return 0;
+      this.quotaUsagePercent = 0;
+      console.log('总配额为0或无效，设置使用百分比为0');
+      return;
     }
     const percent = (used / total) * 100;
-    return Math.max(0, Math.min(100, Math.round(percent)));
+    // 保留2位小数，不四舍五入到整数
+    this.quotaUsagePercent = Math.max(0, Math.min(100, Number(percent.toFixed(2))));
+    console.log('计算得到的使用百分比:', this.quotaUsagePercent, '(used/total*100 =', used, '/', total, '*100)');
+    console.log('=== 计算完成 ===');
   }
 }
