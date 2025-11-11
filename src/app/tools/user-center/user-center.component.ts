@@ -95,7 +95,9 @@ export class UserCenterComponent {
   }
 
   ngAfterViewInit(): void {
-
+    this.authService.refreshMe().then(() => {
+      console.log('Auth token refreshed after UserCenterComponent view init.');
+    });
   }
 
   ngOnDestroy() {
