@@ -14,7 +14,7 @@ interface ProjectInfo {
     rootFolder?: string;
     opened?: boolean;
     appDataPath?: string;
-    blocklylibrariesPath?: string;
+    libraryConversionPath?: string;
 }
 
 interface PlatformInfo {
@@ -91,11 +91,12 @@ export async function getContextTool(prjService: ProjectService, input: GetConte
 ## 上下文信息字段说明
 
 ### project (项目信息)
-- **path**: 当前项目的相对路径（存放当前项目的依赖库，在node_modules目录中，如已安装的board、libraries、用户配置等）
+- **path**: 当前项目的相对路径（path/node_modules/@aily-project目录下存放当前项目的依赖库，如已安装的board、libraries、用户配置等）
 - **name**: 项目名称（从 package.json 读取）
 - **rootFolder**: 项目根文件夹名称
 - **opened**: 是否有项目被打开
-- **appDataPath**: 应用数据存储路径（包含SDK文件、编译器工具等，boards.json libraries.json通常会缓存到此路径）
+- **appDataPath**: 应用数据存储路径（包含SDK文件、编译器工具等，boards.json-开发板列表 libraries.json-库列表 等缓存到此路径）
+- **libraryConversionPath**: 库转换存放路径（用于存放转换后的库文件）
 - **dependencies**: 项目依赖包（从 package.json 读取）
 - **boardDependencies**: 开发板相关依赖（从 package.json 读取）
 
@@ -186,7 +187,7 @@ async function getProjectInfo(projectService): Promise<ProjectInfo> {
             rootFolder: prjRootPath || '',
             opened: !!currentProjectPath,
             appDataPath: appDataPath,
-            blocklylibrariesPath: appDataPath ? window['path'].join(appDataPath, 'libraries') : ''
+            libraryConversionPath: appDataPath ? window['path'].join(appDataPath, 'libraries') : ''
         };
 
         // If current project path is empty, return early

@@ -13,6 +13,7 @@ export interface IMenuItem {
   dev?: boolean;
   router?: string[]; // 在指定路由中显示
   children?: IMenuItem[],
+  extra?: any,
   check?: boolean,
   key?: string; // 用于标识编译和上传配置
 }
@@ -104,8 +105,8 @@ export let HEADER_BTNS: IMenuItem[][] = [
     },
     {
       name: 'MENU.USER_AUTH',
-      action: 'user-auth',
-      data: { type: 'tool', data: "user-auth" },
+      action: 'tool-open',
+      data: { type: 'tool', data: "user-center" },
       icon: 'fa-light fa-user',
     },
   ],

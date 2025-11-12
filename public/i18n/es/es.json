@@ -242,6 +242,7 @@
         "TITLE": "Configuración del Proyecto",
         "BASIC_INFO": "Información Básica",
         "NAME": "Nombre del Proyecto",
+        "NAME_RULE": "Solo se permiten letras minúsculas, números, guiones y guiones bajos",
         "NAME_PLACEHOLDER": "Por favor ingrese el nombre del proyecto",
         "VERSION": "Versión",
         "VERSION_PLACEHOLDER": "Por favor ingrese la versión, ej.: 1.0.0",

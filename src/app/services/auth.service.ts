@@ -117,10 +117,11 @@ export class AuthService {
           // console.log("登录成功，token: ", response.data.access_token);
           // 保存 token 和用户信息
           this.saveToken2(response.data.access_token);
-          if (response.data.user) {
-            this.saveUserInfo(response.data.user);
-            this.userInfoSubject.next(response.data.user);
-          }
+          this.getMe(response.data.access_token);
+          // if (response.data.user) {
+          //   this.saveUserInfo(response.data.user);
+          //   this.userInfoSubject.next(response.data.user);
+          // }
           this.isLoggedInSubject.next(true);
         } else {
           this.isLoggedInSubject.next(false);
@@ -186,6 +187,7 @@ export class AuthService {
       }).subscribe({
         next: (response) => {
           if (response.status === 200 && response.data) {
+            this.userInfoSubject.next(response.data);
             resolve(response.data);
           } else {
             reject(new Error('获取用户信息失败'));
@@ -195,6 +197,23 @@ export class AuthService {
       });
     });
   }
+
+  async refreshMe() {
+    return this.http.get<CommonResponse>(API.me).subscribe( (res) => {
+      if (res.status === 200 && res.data) {
+        this.userInfoSubject.next(res.data);
+      };
+    });
+  }
+
+  /**
+   * 更改用户昵称
+   */
+  async changeNickname(newNickname: string) {
+    return this.http.post<CommonResponse>(API.changeNickname, { nickname: newNickname });
+  }
+
+
 
   /**
    * 检查是否支持安全存储

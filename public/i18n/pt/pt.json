@@ -223,6 +223,7 @@
         "TITLE": "Configurações do Projeto",
         "BASIC_INFO": "Informações Básicas",
         "NAME": "Nome do Projeto",
+        "NAME_RULE": "Apenas letras minúsculas, números, hífens e sublinhados são permitidos",
         "NAME_PLACEHOLDER": "Por favor, insira o nome do projeto",
         "VERSION": "Versão",
         "VERSION_PLACEHOLDER": "Por favor, insira a versão, ex.: 1.0.0",

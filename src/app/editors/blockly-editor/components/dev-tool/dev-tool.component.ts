@@ -1,15 +1,19 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { ProjectService } from '../../../../services/project.service';
 import { ElectronService } from '../../../../services/electron.service';
 import { NzMessageService } from 'ng-zorro-antd/message';
+import { FormsModule } from '@angular/forms';
+import { ConfigService } from '../../../../services/config.service';
 
 @Component({
   selector: 'app-dev-tool',
-  imports: [],
+  imports: [
+    FormsModule
+  ],
   templateUrl: './dev-tool.component.html',
   styleUrl: './dev-tool.component.scss'
 })
-export class DevToolComponent {
+export class DevToolComponent implements OnInit {
   // 拖拽相关属性
   isDragging = false;
   dragStartX = 0;
@@ -19,12 +23,45 @@ export class DevToolComponent {
   offsetX = 0;
   offsetY = 0;
 
+  private _autoSave: boolean = true;
+
+  get autoSave(): boolean {
+    return this._autoSave;
+  }
+
+  set autoSave(value: boolean) {
+    this._autoSave = value;
+    // 保存到配置
+    // 检查 devmode 是否为旧格式的 boolean,如果是则转换为新格式
+    if (typeof this.configService.data.devmode === 'boolean') {
+      const oldValue = this.configService.data.devmode;
+      this.configService.data.devmode = { enabled: oldValue, autoSave: true };
+    } else if (!this.configService.data.devmode) {
+      this.configService.data.devmode = { enabled: false, autoSave: true };
+    }
+    this.configService.data.devmode.autoSave = value;
+    this.configService.save();
+  }
+
   constructor(
     private projectService: ProjectService,
     private electronService: ElectronService,
-    private messageService: NzMessageService
+    private messageService: NzMessageService,
+    private configService: ConfigService
   ) {
 
+  }
+
+  ngOnInit() {
+    // 从配置中读取 autoSave 状态，默认为 true
+    // 检查 devmode 是否为旧格式的 boolean,如果是则转换为新格式
+    if (typeof this.configService.data.devmode === 'boolean') {
+      const oldValue = this.configService.data.devmode;
+      this.configService.data.devmode = { enabled: oldValue, autoSave: true };
+    } else if (!this.configService.data.devmode) {
+      this.configService.data.devmode = { enabled: false, autoSave: true };
+    }
+    this._autoSave = this.configService.data.devmode.autoSave ?? true;
   }
 
   onDragStart(event: MouseEvent) {
@@ -50,7 +87,7 @@ export class DevToolComponent {
     // 限制在可视区域内
     const topExclusionZone = 70; // 顶部禁用区域高度
     const componentHeight = 40; // 假设组件高度约40px
-    const componentWidth = 260; // 假设组件宽度约260px
+    const componentWidth = 345; // 假设组件宽度约345px
 
     const maxX = window.innerWidth - componentWidth;
     const minY = 1; // 最小bottom值
@@ -75,7 +112,16 @@ export class DevToolComponent {
   }
 
   reload() {
-    this.projectService.projectOpen();
+    // 如果开启了自动保存,先保存项目
+    if (this.autoSave) {
+      this.projectService.save();
+      // 给一点时间让保存完成
+      setTimeout(() => {
+        this.projectService.projectOpen();
+      }, 100);
+    } else {
+      this.projectService.projectOpen();
+    }
   }
 
   async clear() {

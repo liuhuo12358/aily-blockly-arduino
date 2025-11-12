@@ -223,6 +223,7 @@
         "TITLE": "프로젝트 설정",
         "BASIC_INFO": "기본 정보",
         "NAME": "프로젝트 이름",
+        "NAME_RULE": "소문자, 숫자, 하이픈, 밑줄만 사용 가능",
         "NAME_PLACEHOLDER": "프로젝트 이름을 입력하세요",
         "VERSION": "버전",
         "VERSION_PLACEHOLDER": "버전을 입력하세요（예: 1.0.0）",

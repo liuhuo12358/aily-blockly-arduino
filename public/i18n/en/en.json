@@ -278,6 +278,7 @@
         "TITLE": "Project Settings",
         "BASIC_INFO": "Basic Information",
         "NAME": "Project Name",
+        "NAME_RULE": "Only lowercase letters, numbers, hyphens and underscores are allowed",
         "NAME_PLACEHOLDER": "Please enter project name",
         "VERSION": "Version",
         "VERSION_PLACEHOLDER": "Please enter version, e.g., 1.0.0",

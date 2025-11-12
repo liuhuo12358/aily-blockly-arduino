@@ -242,6 +242,7 @@
         "TITLE": "項目設置",
         "BASIC_INFO": "基本信息",
         "NAME": "項目名稱",
+        "NAME_RULE": "只能包含小寫字母、數字、連字符和下劃線",
         "NAME_PLACEHOLDER": "請輸入項目名稱",
         "VERSION": "版本號",
         "VERSION_PLACEHOLDER": "請輸入版本號，如：1.0.0",

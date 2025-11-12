@@ -54,12 +54,12 @@ function registerOAuthInstance(state) {
       state: state
     };
 
-    console.log('注册OAuth实例信息:', {
-      state,
-      instanceId: instanceInfo.instanceId,
-      userDataPath: currentUserDataPath,
-      stateFilePath
-    });
+    // console.log('注册OAuth实例信息:', {
+    //   state,
+    //   instanceId: instanceInfo.instanceId,
+    //   userDataPath: currentUserDataPath,
+    //   stateFilePath
+    // });
 
     let oauthStates = {};
     if (fs.existsSync(stateFilePath)) {
@@ -88,8 +88,8 @@ function registerOAuthInstance(state) {
     }
 
     fs.writeFileSync(stateFilePath, JSON.stringify(oauthStates, null, 2));
-    console.log('已注册OAuth状态:', state, '实例ID:', instanceInfo.instanceId);
-    console.log('OAuth状态文件内容:', oauthStates);
+    // console.log('已注册OAuth状态:', state, '实例ID:', instanceInfo.instanceId);
+    // console.log('OAuth状态文件内容:', oauthStates);
 
     return instanceInfo;
   } catch (error) {
@@ -539,7 +539,7 @@ function loadEnv() {
     process.env.PATH = `${process.env.PATH}${path.delimiter}${ninjaPath}`;
   }
 
-  console.log("====process.env:", process.env)
+  // console.log("====process.env:", process.env)
 }
 
 
