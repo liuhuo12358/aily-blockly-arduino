@@ -277,6 +277,7 @@
         "TITLE": "项目设置",
         "BASIC_INFO": "基本信息",
         "NAME": "项目名称",
+        "NAME_RULE": "只能包含小写字母、数字、连字符和下划线",
         "NAME_PLACEHOLDER": "请输入项目名称",
         "VERSION": "版本号",
         "VERSION_PLACEHOLDER": "请输入版本号，如：1.0.0",

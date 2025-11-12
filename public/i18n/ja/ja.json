@@ -244,6 +244,7 @@
         "TITLE": "プロジェクト設定",
         "BASIC_INFO": "基本情報",
         "NAME": "プロジェクト名",
+        "NAME_RULE": "小文字、数字、ハイフン、アンダースコアのみ使用可能",
         "NAME_PLACEHOLDER": "プロジェクト名を入力してください",
         "VERSION": "バージョン",
         "VERSION_PLACEHOLDER": "バージョンを入力してください（例：1.0.0）",

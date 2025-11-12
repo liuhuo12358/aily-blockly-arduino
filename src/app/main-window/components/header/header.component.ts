@@ -18,7 +18,6 @@ import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { UpdateService } from '../../../services/update.service';
 import { Router } from '@angular/router';
 import { ElectronService } from '../../../services/electron.service';
-import { UserComponent } from '../user/user.component';
 import { ConfigService } from '../../../services/config.service';
 import { AuthService } from '../../../services/auth.service';
 import { BoardSelectorDialogComponent } from '../board-selector-dialog/board-selector-dialog.component';
@@ -32,7 +31,6 @@ import { PlatformService } from '../../../services/platform.service';
     NzToolTipModule,
     MenuComponent,
     ActBtnComponent,
-    UserComponent,
     TranslateModule
   ],
   templateUrl: './header.component.html',
@@ -106,6 +104,13 @@ export class HeaderComponent {
           if (menu.disabled) {
             menu.disabled = false;
           }
+        });
+
+        // headerBtns中的按钮都置为默认状态
+        this.headerBtns.forEach((btnGroup) => {
+          btnGroup.forEach((btn) => {
+            btn.state = 'default';
+          });
         });
       } else {
         // 将headerMenu中有disabled的按钮置禁用
@@ -363,18 +368,6 @@ export class HeaderComponent {
           this.electronService.openNewInStance('/main/playground')
         } else {
           this.router.navigate(['/main/playground']);
-        }
-        break;
-      case 'user-auth':
-        // 在显示用户组件前先同步登录状态
-        let isLogin = await this.authService.checkAndSyncAuthStatus();
-        if (isLogin) {
-          if (event) {
-            this.calculateUserPosition(event);
-          }
-          this.showUser = !this.showUser;
-        } else {
-          this.openLoginDialog();
         }
         break;
       case 'board-select':
@@ -659,8 +652,8 @@ export class HeaderComponent {
     // 判断是否是STM32，是则更新项目配置
     if (this.projectService.currentBoardConfig['core'].indexOf('stm32') > -1 &&
       this.projectService.currentBoardConfig['description'].indexOf('Series') > -1) {
-      // 如果subItem包含board variant字段，则调用比较函数
-      if (subItem.key === 'board' && subItem.data.variant) {
+      // 如果subItem包含pnum variant字段，则调用比较函数
+      if (subItem.key === 'pnum' && subItem.extra?.build.variant) {
         let newPinConfig = subItem;
         this.projectService.compareStm32PinConfig(newPinConfig)
       }
@@ -668,31 +661,6 @@ export class HeaderComponent {
   }
 
   showUser = false;
-  userPosition = { x: 0, y: 40 };
-
-  // 计算用户组件的显示位置
-  calculateUserPosition(event: MouseEvent) {
-    const target = event.target as HTMLElement;
-    const rect = target.getBoundingClientRect();
-
-    // 计算用户组件的位置，使其显示在点击元素的下方
-    this.userPosition = {
-      x: rect.left + 10,
-      y: 40
-    };
-
-    // 确保用户组件不会超出窗口边界
-    const windowWidth = window.innerWidth;
-    const userComponentWidth = 260; // 用户组件的宽度
-
-    if (this.userPosition.x + userComponentWidth > windowWidth) {
-      this.userPosition.x = windowWidth - userComponentWidth - 3;
-    }
-
-    if (this.userPosition.x < 0) {
-      this.userPosition.x = 10;
-    }
-  }
 
   closeUser() {
     this.showUser = false;

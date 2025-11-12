@@ -1,4 +1,7 @@
-<div class="devtool-box">
+<div class="devtool-box" [style.left.px]="currentX" [style.bottom.px]="currentY" [class.dragging]="isDragging">
+    <div class="drag-handle" (mousedown)="onDragStart($event)" title="drag to move">
+        <i class="fa-solid fa-grip-dots-vertical"></i>
+    </div>
     <div class="btn ccenter" (click)="reload()">
         <i class="fa-light fa-sync"></i>
         reload project
@@ -6,6 +9,12 @@
     <div class="btn ccenter" (click)="clear()">
         <i class="fa-light fa-broom-wide"></i>
         clear cache
+    </div>
+    <div class="check ccenter">
+        <input type="checkbox" id="autoSave" style="margin-right: 3px;" [(ngModel)]="autoSave"/>
+        <label for="autoSave">
+            auto save
+        </label>
     </div>
     <!-- <div class="btn ccenter" (click)="openWebDevTools()">
         <i class="fa-light fa-gear-code"></i>

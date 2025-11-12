@@ -93,6 +93,10 @@ aily Blockly是aily Project下的blockly IDE，前期面向非专业用户提供
 [7z]()本项目使用7z减小部分包的大小（如巨大的ESP32编译器）  
 其他内容可见[package.json](./package.json)  
 
+## 本项目AI功能参考了以下项目
+[Kode](https://github.com/shareAI-lab/Kode-cli)  
+[copilot](https://github.com/microsoft/vscode-copilot-chat)  
+
 ## 附加权利说明  
 基于本项目产生的衍生品或修改，在未取得本项目负责人（奈何col）的同意下，不得进行以下事项：
 1. 不得移除本项目相关权利人、赞助者信息，且必须保证相关信息出现在软件启动页。

@@ -242,6 +242,7 @@
         "TITLE": "Projekteinstellungen",
         "BASIC_INFO": "Grundlegende Informationen",
         "NAME": "Projektname",
+        "NAME_RULE": "Nur Kleinbuchstaben, Zahlen, Bindestriche und Unterstriche sind erlaubt",
         "NAME_PLACEHOLDER": "Bitte Projektnamen eingeben",
         "VERSION": "Version",
         "VERSION_PLACEHOLDER": "Bitte Version eingeben, z.B.: 1.0.0",

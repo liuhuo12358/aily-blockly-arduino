@@ -16,6 +16,7 @@ import { ElectronService } from '../../services/electron.service';
 import { distinctUntilChanged } from 'rxjs/operators';
 import { PlatformService } from "../../services/platform.service";
 import { CrossPlatformCmdService } from "../../services/cross-platform-cmd.service";
+import { LoginComponent } from '../../components/login/login.component';
 
 @Component({
   selector: 'app-cloud-space',
@@ -24,7 +25,8 @@ import { CrossPlatformCmdService } from "../../services/cross-platform-cmd.servi
     FormsModule,
     CommonModule,
     NzButtonModule,
-    EditorComponent
+    EditorComponent,
+    LoginComponent
   ],
   templateUrl: './cloud-space.component.html',
   styleUrl: './cloud-space.component.scss'
@@ -39,6 +41,8 @@ export class CloudSpaceComponent {
   editorProjectData = null;
   searchKeyword = ''; // 搜索关键词
   isLoginDialogOpen = false; // 标记登录对话框是否已打开
+
+  isLoggedIn = false;
 
   constructor(
     private uiService: UiService,
@@ -64,11 +68,11 @@ export class CloudSpaceComponent {
       this.canSync = !!path;
     });
 
-    this.authService.checkAndSyncAuthStatus().then((res) => {
-      if (!res) {
-        this.openLoginDialog();
-      }
-    });
+    // this.authService.checkAndSyncAuthStatus().then((res) => {
+    //   if (!res) {
+    //     this.openLoginDialog();
+    //   }
+    // });
 
     // 检查用户是否登录
     this.authService.isLoggedIn$
@@ -77,8 +81,10 @@ export class CloudSpaceComponent {
         if (!isLoggedIn) {
           this.itemList = [];
           this.filteredItemList = [];
+          this.isLoggedIn = false;
         } else {
           // 用户已登录时关闭可能存在的登录对话框状态标记
+          this.isLoggedIn = true;
           this.isLoginDialogOpen = false;
           this.getCloudProjects().then(
             () => { console.log('云项目列表获取完成'); }
@@ -89,24 +95,24 @@ export class CloudSpaceComponent {
       });
   }
 
-  openLoginDialog() {
-    this.isLoginDialogOpen = true;
-    const modalRef = this.modal.create({
-      nzTitle: null,
-      nzFooter: null,
-      nzClosable: false,
-      nzBodyStyle: {
-        padding: '0',
-      },
-      nzWidth: '350px',
-      nzContent: LoginDialogComponent
-    });
+  // openLoginDialog() {
+  //   this.isLoginDialogOpen = true;
+  //   const modalRef = this.modal.create({
+  //     nzTitle: null,
+  //     nzFooter: null,
+  //     nzClosable: false,
+  //     nzBodyStyle: {
+  //       padding: '0',
+  //     },
+  //     nzWidth: '350px',
+  //     nzContent: LoginDialogComponent
+  //   });
 
-    // 当对话框关闭时重置状态
-    modalRef.afterClose.subscribe(() => {
-      this.isLoginDialogOpen = false;
-    });
-  }
+  //   // 当对话框关闭时重置状态
+  //   modalRef.afterClose.subscribe(() => {
+  //     this.isLoginDialogOpen = false;
+  //   });
+  // }
 
   // 打开项目
   openInNewTab(item) {
@@ -127,8 +133,10 @@ export class CloudSpaceComponent {
       packageJson.nickname = item.nickname
       packageJson.description = item.description || ''
       packageJson.doc_url = item.doc_url || ''
-      this.electronService.writeFile(`${targetPath}/package.json`, JSON.stringify(packageJson, null, 2));
+      packageJson.keywords = item?.tags ? JSON.parse(item.tags) : []
+      packageJson.cloudId = item.id;
 
+      this.electronService.writeFile(`${targetPath}/package.json`, JSON.stringify(packageJson, null, 2));
       this.projectService.projectOpen(targetPath);
     });
   }
@@ -207,7 +215,7 @@ export class CloudSpaceComponent {
 
     const archivePath = `${prjPath}/project.7z`;
     await this.delete7zFile(archivePath);
-    
+
     // 检查要打包的文件是否存在
     const packageJsonPath = `${prjPath}/package.json`;
     if (!await window['fs'].existsSync(packageJsonPath)) {
@@ -215,17 +223,17 @@ export class CloudSpaceComponent {
       console.warn('package.json 不存在:', packageJsonPath);
       return;
     }
-    
+
     console.log('开始打包项目:', prjPath);
-    
+
     // 构建更安全的打包命令
     // 使用绝对路径避免路径问题，并明确指定文件
     let packCommand = `${this.platformService.za7} a -t7z -mx=9 "${archivePath}" package.json`;
-    
+
     // 检查是否有.abi文件
     const files = window['fs'].readDirSync(prjPath, { withFileTypes: true });
     const abiFiles = files.filter(file => file.name.endsWith('.abi'));
-    
+
     if (abiFiles.length > 0) {
       console.log('找到abi文件:', abiFiles.map(f => f.name));
       // 逐个添加abi文件
@@ -244,35 +252,35 @@ export class CloudSpaceComponent {
     } else {
       console.log('未找到partitions.csv文件');
     }
-    
+
     console.log('执行打包命令:', packCommand);
-    
+
     // 打包文件
     const result = await this.cmdService.runAsync(packCommand, prjPath, false);
-    
+
     console.log('打包命令执行结果:', result);
-    
+
     // 检查打包是否成功
     if (result.type === 'error' || (result.code && result.code !== 0)) {
       this.message.error('项目打包失败: ' + (result.error || result.data));
       console.error('7za打包失败:', result);
       return;
     }
-    
+
     // 等待文件系统完成写入
     await new Promise(resolve => setTimeout(resolve, 500));
-    
+
     // 验证生成的7z文件
     if (!window['fs'].existsSync(archivePath)) {
       this.message.error('7z文件生成失败');
       console.error('7z文件不存在:', archivePath);
       return;
     }
-    
+
     // 检查文件大小（多次检查确保文件完整）
     let fileStats = window['fs'].statSync(archivePath);
     let retryCount = 0;
-    
+
     // 如果文件大小为0，等待一段时间后重试
     while (fileStats.size === 0 && retryCount < 5) {
       console.log(`文件大小为0，等待重试... (${retryCount + 1}/5)`);
@@ -280,16 +288,16 @@ export class CloudSpaceComponent {
       fileStats = window['fs'].statSync(archivePath);
       retryCount++;
     }
-    
+
     if (fileStats.size === 0) {
       this.message.error('生成的7z文件为空，打包过程可能失败');
       console.error('7z文件为空:', archivePath);
-      
+
       // 尝试手动检查打包命令的输出
       console.error('打包命令输出:', result.data);
       return;
     }
-    
+
     console.log('7z文件生成成功:', {
       path: archivePath,
       size: fileStats.size
@@ -324,7 +332,7 @@ export class CloudSpaceComponent {
 
   async syncToCloud() {
     this.isSyncing = true;
-    
+
     // 保存当前项目
     await this.projectService.save(this.projectService.currentProjectPath);
 
@@ -369,7 +377,7 @@ export class CloudSpaceComponent {
       this.message.error('同步失败: ' + err);
       this.delete7zFile(archivePath);
     });
-  }  showEditor = false;
+  } showEditor = false;
 
   openEditor(item) {
     this.showEditor = true;

@@ -242,6 +242,7 @@
         "TITLE": "Paramètres du Projet",
         "BASIC_INFO": "Informations de Base",
         "NAME": "Nom du Projet",
+        "NAME_RULE": "Seules les lettres minuscules, chiffres, traits d'union et traits de soulignement sont autorisés",
         "NAME_PLACEHOLDER": "Veuillez saisir le nom du projet",
         "VERSION": "Version",
         "VERSION_PLACEHOLDER": "Veuillez saisir la version, par ex.: 1.0.0",
