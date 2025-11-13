@@ -855,20 +855,66 @@ function getFieldTypeInfo(block: any, fieldName: string): {
         tempWorkspace.dispose();
         
         if (field) {
-          const fieldType = field.constructor.name || '';
+          // 使用更可靠的字段类型检测方法，避免依赖构造函数名称（在压缩后会变化）
+          let fieldType = 'unknown';
+          let isVariableField = false;
+          let isInputField = false;
+          let isDropdownField = false;
+
+          // 检测字段类型 - 使用 instanceof 和特有属性/方法来判断
+          try {
+            // 检查是否为变量字段
+            if (field.getVariable && typeof field.getVariable === 'function') {
+              fieldType = 'FieldVariable';
+              isVariableField = true;
+            }
+            // 检查是否为文本输入字段
+            else if (field.getEditorText_ && typeof field.getEditorText_ === 'function') {
+              fieldType = 'FieldTextInput';
+              isInputField = true;
+            }
+            // 检查是否为下拉菜单字段
+            else if (field.getOptions && typeof field.getOptions === 'function') {
+              fieldType = 'FieldDropdown';
+              isDropdownField = true;
+            }
+            // 检查是否为数字字段
+            else if (field.getConstraints && typeof field.getConstraints === 'function') {
+              fieldType = 'FieldNumber';
+              isInputField = true;
+            }
+            // 检查是否为颜色字段
+            else if (field.getColour && typeof field.getColour === 'function') {
+              fieldType = 'FieldColour';
+            }
+            // 检查是否为角度字段
+            else if (field.setAngle && typeof field.setAngle === 'function') {
+              fieldType = 'FieldAngle';
+              isInputField = true;
+            }
+            // 默认情况 - 使用方法检测而非构造函数名
+            else {
+              // 用method-based检测替代constructor.name依赖
+              if (field.getVariable && typeof field.getVariable === 'function') {
+                fieldType = 'FieldVariable';
+                isVariableField = true;
+              } else if (field.getEditorText_ && typeof field.getEditorText_ === 'function') {
+                fieldType = 'FieldTextInput';
+                isInputField = true;
+              } else if (field.getOptions && typeof field.getOptions === 'function') {
+                fieldType = 'FieldDropdown';
+                isDropdownField = true;
+              } else {
+                // 最终备用方案
+                fieldType = field.constructor.name || 'unknown';
+              }
+            }
+          } catch (e) {
+            console.warn('字段类型检测出错:', e);
+            fieldType = field.constructor.name || 'unknown';
+          }
+
           console.log(`🔍 从块定义检查字段类型: ${fieldName} -> ${fieldType}`);
-
-          // 精确的字段类型检测 - 优先相信实际类型，而不是字段名
-          const isVariableField = fieldType === 'FieldVariable' || 
-                                 fieldType.includes('Variable');
-
-          const isInputField = fieldType === 'FieldTextInput' || 
-                              fieldType === 'FieldInput' ||
-                              fieldType.includes('Input');
-
-          // 下拉菜单字段检测
-          const isDropdownField = fieldType === 'FieldDropdown' ||
-                                 fieldType.includes('Dropdown');
 
           console.log(`📋 字段分析结果: ${fieldName} - 变量字段: ${isVariableField}, 输入字段: ${isInputField}, 下拉字段: ${isDropdownField}, 类型: ${fieldType}`);
 
@@ -894,21 +940,69 @@ function getFieldTypeInfo(block: any, fieldName: string): {
       return { isVariableField: false, isInputField: false, fieldType: null };
     }
 
-    const fieldType = field.constructor.name || '';
+    // 使用更可靠的字段类型检测方法
+    let fieldType = 'unknown';
+    let isVariableField = false;
+    let isInputField = false;
+    let isDropdownField = false;
+
+    try {
+      // 检查是否为变量字段
+      if (field.getVariable && typeof field.getVariable === 'function') {
+        fieldType = 'FieldVariable';
+        isVariableField = true;
+      }
+      // 检查是否为文本输入字段
+      else if (field.getEditorText_ && typeof field.getEditorText_ === 'function') {
+        fieldType = 'FieldTextInput';
+        isInputField = true;
+      }
+      // 检查是否为下拉菜单字段
+      else if (field.getOptions && typeof field.getOptions === 'function') {
+        fieldType = 'FieldDropdown';
+        isDropdownField = true;
+      }
+      // 检查是否为数字字段
+      else if (field.getConstraints && typeof field.getConstraints === 'function') {
+        fieldType = 'FieldNumber';
+        isInputField = true;
+      }
+      // 检查是否为颜色字段
+      else if (field.getColour && typeof field.getColour === 'function') {
+        fieldType = 'FieldColour';
+      }
+      // 检查是否为角度字段
+      else if (field.setAngle && typeof field.setAngle === 'function') {
+        fieldType = 'FieldAngle';
+        isInputField = true;
+      }
+      // 默认情况 - 基于功能检测而非构造函数名
+      else {
+        // 最终回退：使用基于特性的检测
+        if (isLikelyVariableField || (field.getText && field.setText && field.getVariable)) {
+          fieldType = 'FieldVariable';
+          isVariableField = true;
+        } else if (!isLikelyVariableField && (field.getText && field.setText && !field.getVariable)) {
+          fieldType = 'FieldTextInput';
+          isInputField = true;
+        } else {
+          fieldType = field.constructor.name || 'unknown';
+          // 只保留必要的布尔值设置，避免依赖构造函数名
+          isVariableField = isLikelyVariableField;
+          isInputField = !isLikelyVariableField && (field.getText && field.setText);
+        }
+      }
+    } catch (e) {
+      console.warn('字段类型检测出错:', e);
+      // 最安全的回退方案：只依赖字段名推断和基本特性
+      fieldType = field.constructor.name || 'unknown';
+      isVariableField = isLikelyVariableField;
+      isInputField = !isLikelyVariableField;
+      isDropdownField = false;
+    }
+    
     console.log(`🔍 回退检查字段类型: ${fieldName} -> ${fieldType}`);
-
-    // 判断是否为变量字段 - 结合类型和字段名
-    const isVariableField = fieldType === 'FieldVariable' || 
-                           fieldType.includes('Variable') ||
-                           isLikelyVariableField;
-
-    // 判断是否为输入字段 - 但排除变量字段
-    const isInputField = (fieldType === 'FieldTextInput' || 
-                        fieldType === 'FieldInput' ||
-                        fieldType.includes('Input')) &&
-                        !isLikelyVariableField;
-
-    console.log(`📋 字段分析结果: ${fieldName} - 变量字段: ${isVariableField}, 输入字段: ${isInputField}`);
+    console.log(`📋 字段分析结果: ${fieldName} - 变量字段: ${isVariableField}, 输入字段: ${isInputField}, 下拉字段: ${isDropdownField}`);
 
     return {
       isVariableField,
