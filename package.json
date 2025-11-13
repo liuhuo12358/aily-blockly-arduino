@@ -40,13 +40,8 @@
         "to": "app/electron"
       },
       {
-        "from": "child",
-        "to": "app/child",
-        "filter": [
-          "**/*",
-          "!node/**",
-          "!aily-builder/**"
-        ]
+        "from": "child/common",
+        "to": "app/child"
       }
     ],
     "win": {
@@ -63,6 +58,12 @@
           "icon": "public/icon.ico",
           "role": "Editor"
         }
+      ],
+      "extraResources": [
+        {
+          "from": "child/windows",
+          "to": "app/child"
+        }
       ]
     },
     "mac": {
@@ -73,6 +74,12 @@
           "name": "Aily Blockly Project",
           "description": "Aily Blockly Project File",
           "role": "Editor"
+        }
+      ],
+      "extraResources": [
+        {
+          "from": "child/macos",
+          "to": "app/child"
         }
       ]
     },
