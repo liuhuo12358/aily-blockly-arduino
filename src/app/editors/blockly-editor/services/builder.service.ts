@@ -15,6 +15,7 @@ import { BlocklyService as BlocklyService } from './blockly.service';
 import { _ProjectService } from './project.service';
 
 import { getDefaultBuildPath } from '../../../utils/builder.utils';
+import { PlatformService } from "../../../services/platform.service";
 
 // 库缓存信息接口
 interface LibraryCacheInfo {
@@ -53,6 +54,7 @@ export class _BuilderService {
     private projectService: ProjectService,
     private _projectService: _ProjectService,
     private blocklyService: BlocklyService,
+    private platformService: PlatformService,
   ) { }
 
   buildInProgress = false;
@@ -781,7 +783,7 @@ export class _BuilderService {
       }
       
       try {
-        await this.cmdService.runAsync(`7za x "${sourceZipPath}" -o"${sourcePath}" -y`);
+        await this.cmdService.runAsync(`${this.platformService.za7} x "${sourceZipPath}" -o"${sourcePath}" -y`);
       } catch (error) {
         console.error(`解压库 ${lib} 失败:`, error);
         return null;

@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { CmdService } from '../../../services/cmd.service';
 import { ProjectService } from '../../../services/project.service';
 import { BlocklyService } from '../../../editors/blockly-editor/services/blockly.service';
+import { PlatformService } from "../../../services/platform.service";
 
 // Arduino 代码检查器
 declare const arduinoGenerator: any;
@@ -63,8 +64,9 @@ export class ArduinoLintService {
   constructor(
     private cmdService: CmdService,
     private projectService: ProjectService,
-    private blocklyService: BlocklyService
-  ) { 
+    private blocklyService: BlocklyService,
+    private platformService: PlatformService,
+  ) {
     // 将服务实例注册到全局对象，以便 ArduinoSyntaxTool 可以访问
     (window as any)['arduinoLintService'] = this;
     console.log('🔧 ArduinoLintService 已注册到全局对象');
@@ -797,7 +799,7 @@ export class ArduinoLintService {
         
         try {
           console.log(`📦 解压库 ${lib}...`);
-          await this.cmdService.runAsync(`7za x "${sourceZipPath}" -o"${sourcePath}" -y`);
+          await this.cmdService.runAsync(`${this.platformService.za7} x "${sourceZipPath}" -o"${sourcePath}" -y`);
         } catch (error) {
           console.warn(`解压库 ${lib} 失败:`, error);
           return { success: false, error: `解压失败: ${error.message}` };

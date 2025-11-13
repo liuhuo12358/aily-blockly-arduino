@@ -14,6 +14,8 @@ import { LoginDialogComponent } from '../../main-window/components/login-dialog/
 import { NzModalService } from 'ng-zorro-antd/modal';
 import { ElectronService } from '../../services/electron.service';
 import { distinctUntilChanged } from 'rxjs/operators';
+import { PlatformService } from "../../services/platform.service";
+import { CrossPlatformCmdService } from "../../services/cross-platform-cmd.service";
 import { LoginComponent } from '../../components/login/login.component';
 
 @Component({
@@ -50,7 +52,9 @@ export class CloudSpaceComponent {
     private message: NzMessageService,
     private authService: AuthService,
     private modal: NzModalService,
-    private electronService: ElectronService
+    private electronService: ElectronService,
+    private platformService: PlatformService,
+    private crossPlatformCmdService: CrossPlatformCmdService
   ) { }
 
   // 分页参数
@@ -118,11 +122,11 @@ export class CloudSpaceComponent {
       // 直接添加随机数避免重名
       const randomNum = Math.floor(100000 + Math.random() * 900000);
       const uniqueName = `${item.name || 'cloud_project'}_${randomNum}`;
-      const targetPath = this.projectService.projectRootPath + '\\' + uniqueName;
+      const targetPath = this.projectService.projectRootPath + this.platformService.getPlatformSeparator() + uniqueName;
 
       // 使用 Move-Item 将下载/临时文件移动到目标项目目录
       // -Force 用于覆盖同名目标（如果存在）
-      await this.cmdService.runAsync(`Move-Item -Path "${res}" -Destination "${targetPath}" -Force`);
+      await this.crossPlatformCmdService.copyItem(res, targetPath, true, true);
 
       // 更新 package.json 中的项目信息
       const packageJson = JSON.parse(this.electronService.readFile(`${targetPath}/package.json`));
@@ -224,7 +228,7 @@ export class CloudSpaceComponent {
 
     // 构建更安全的打包命令
     // 使用绝对路径避免路径问题，并明确指定文件
-    let packCommand = `7za.exe a -t7z -mx=9 "${archivePath}" package.json`;
+    let packCommand = `${this.platformService.za7} a -t7z -mx=9 "${archivePath}" package.json`;
 
     // 检查是否有.abi文件
     const files = window['fs'].readDirSync(prjPath, { withFileTypes: true });

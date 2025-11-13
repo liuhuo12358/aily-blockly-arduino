@@ -1,7 +1,7 @@
 {
   "name": "aily-blockly",
   "productName": "aily blockly",
-  "version": "0.8.8",
+  "version": "0.8.9",
   "author": "coloz",
   "description": "aily blockly dev",
   "main": "electron/main.js",
@@ -44,7 +44,8 @@
         "to": "app/child",
         "filter": [
           "**/*",
-          "!node/**"
+          "!node/**",
+          "!aily-builder/**"
         ]
       }
     ],
@@ -65,7 +66,7 @@
       ]
     },
     "mac": {
-      "icon": "public/icon.ico",
+      "icon": "public/icon-512.ico",
       "fileAssociations": [
         {
           "ext": "abi",

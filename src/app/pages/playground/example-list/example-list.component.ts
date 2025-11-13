@@ -16,6 +16,8 @@ import { CloudService } from '../../../tools/cloud-space/services/cloud.service'
 import { ProjectService } from '../../../services/project.service';
 import { CmdService } from '../../../services/cmd.service';
 import { ElectronService } from '../../../services/electron.service';
+import { PlatformService } from "../../../services/platform.service";
+import { CrossPlatformCmdService } from "../../../services/cross-platform-cmd.service";
 
 @Component({
   selector: 'app-example-list',
@@ -55,7 +57,9 @@ export class ExampleListComponent implements OnInit, AfterViewInit, OnDestroy {
     private cloudService: CloudService,
     private projectService: ProjectService,
     private cmdService: CmdService,
-    private electronService: ElectronService
+    private electronService: ElectronService,
+    private platformService: PlatformService,
+    private crossPlatformCmdService: CrossPlatformCmdService
   ) {
   }
 
@@ -225,11 +229,11 @@ export class ExampleListComponent implements OnInit, AfterViewInit, OnDestroy {
       // 直接添加随机数避免重名
       const randomNum = Math.floor(100000 + Math.random() * 900000);
       const uniqueName = `${item.name || 'cloud_project'}_${randomNum}`;
-      const targetPath = this.projectService.projectRootPath + '\\' + uniqueName;
+      const targetPath = this.projectService.projectRootPath + this.platformService.getPlatformSeparator() + uniqueName;
 
       // 使用 Move-Item 将下载/临时文件移动到目标项目目录
       // -Force 用于覆盖同名目标（如果存在）
-      await this.cmdService.runAsync(`Move-Item -Path "${res}" -Destination "${targetPath}" -Force`);
+      await this.crossPlatformCmdService.copyItem(res, targetPath, true, true);
 
       // 更新 package.json 中的项目信息
       const packageJson = JSON.parse(this.electronService.readFile(`${targetPath}/package.json`));

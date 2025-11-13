@@ -12,6 +12,10 @@ export class PlatformService {
     this.parser = new UAParser();
   }
 
+  get za7() {
+    return this.isWindows() ? '7za.exe' : '7zz';
+  }
+
   /**
    * 获取平台路径分隔符
    * @returns Windows 返回 '\\'，其他平台返回 '/'

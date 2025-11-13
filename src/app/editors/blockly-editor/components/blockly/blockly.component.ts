@@ -13,6 +13,8 @@ import { micropythonGenerator } from './generators/micropython/micropython';
 import { BlocklyService } from '../../services/blockly.service';
 import { BitmapUploadResponse, GlobalServiceManager } from '../../services/bitmap-upload.service';
 
+import './renderer/aily-thrasos/thrasos';
+import './renderer/aily-zelos/zelos';
 import './custom-category';
 import './custom-field/field-bitmap';
 import './custom-field/field-bitmap-u8g2';
@@ -131,6 +133,7 @@ export class BlocklyComponent {
   get configData() {
     return this.configService.data;
   }
+
   constructor(
     private blocklyService: BlocklyService,
     private modal: NzModalService,
@@ -244,7 +247,7 @@ export class BlocklyComponent {
       // 在工作区创建前设置 block registry 拦截
       this.setupBlockRegistryInterception();
       // 获取当前blockly渲染器
-      this.options.renderer = this.configData.blockly.renderer || 'thrasos';
+      this.options.renderer = this.configData.blockly.renderer ? ('aily-' + this.configData.blockly.renderer) : 'thrasos';
 
       this.workspace = Blockly.inject('blocklyDiv', this.options);
 
@@ -343,6 +346,7 @@ export class BlocklyComponent {
   }
 
   private codeGenerationTimer: any = null;
+
   codeGeneration(): void {
     // 清除之前的定时器
     if (this.codeGenerationTimer) {

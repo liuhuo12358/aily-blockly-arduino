@@ -6,7 +6,7 @@
 Aily Project is a hardware development integrated environment that plans to integrate numerous AI capabilities to help hardware developers develop more smoothly.  
 Aily Blockly is a blockly IDE under the aily Project. In the early stage, it provides AI-assisted programming capabilities for non-professional users. The long-term goal is to break the boundary between professional development and non-professional development, and ultimately achieve natural language programming.  
 
-<img src="./img/sf.webp" width=1000 />
+<img src="./img/home.webp" />
 
 > We aim to design and develop this project as industrial-grade software, but the project is currently in the alpha stage and is not recommended for mass production device firmware development. However, the current version is perfectly suitable for prototype verification and educational teaching.  
 
