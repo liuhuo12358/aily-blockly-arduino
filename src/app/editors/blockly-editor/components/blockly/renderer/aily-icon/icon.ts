@@ -1,8 +1,19 @@
 import * as Blockly from "blockly";
 import { ISerializable } from 'blockly';
 
+interface AilyIcon {
+  type: 'image' | 'i' | 'svg';
+  width: number; // 宽度
+  height: number; // 高度
+  alt?: string; // 图片alt，仅image类型有效
+  src: string; // 图片类型为src，svg类型为path，i类型为icon class
+  class?: string; // 扩展类名
+  fontSize?: string; // 仅 i类型有效
+  color?: string; // 颜色，仅svg、i类型有效
+}
+
 export class Icon extends Blockly.icons.Icon implements ISerializable {
-  _defaultState = {
+  _state: AilyIcon = {
     type: 'i',
     width: 40,
     height: 30,
@@ -13,16 +24,7 @@ export class Icon extends Blockly.icons.Icon implements ISerializable {
     color: 'white',
   }
 
-  state: {
-    type: 'image' | 'i' | 'svg';
-    width: number;
-    height: number;
-    alt?: string;
-    src: string;
-    class?: string;
-    fontSize?: string;
-    color?: string;
-  };
+  state: AilyIcon | string;
 
   constructor(sourceBlock) {
     super(sourceBlock);
@@ -33,7 +35,7 @@ export class Icon extends Blockly.icons.Icon implements ISerializable {
   }
 
   override getSize() {
-    return new Blockly.utils.Size(this.state.width, this.state.height);
+    return new Blockly.utils.Size(this._state.width, this._state.height);
   }
 
   override isShownWhenCollapsed() {
@@ -66,41 +68,41 @@ export class Icon extends Blockly.icons.Icon implements ISerializable {
     //   this.svgRoot
     // );
 
-    switch (this.state.type) {
+    switch (this._state.type) {
       case "image":
         Blockly.utils.dom.createSvgElement(
           Blockly.utils.Svg.IMAGE,
           {
-            'class': this.state.class,
-            'width': this.state.width + 'px',
-            'height': this.state.height + 'px',
+            'class': this._state.class,
+            'width': this._state.width + 'px',
+            'height': this._state.height + 'px',
             'alt': '*',
           },
           this.svgRoot,
         ).setAttributeNS(
           Blockly.utils.dom.XLINK_NS,
           'xlink:href',
-          this.state.src,
+          this._state.src,
         );
         break;
       case "svg":
         Blockly.utils.dom.createSvgElement(
           Blockly.utils.Svg.SVG,
           {
-            'class': this.state.class,
-            'width': this.state.width,
-            'height': this.state.height,
+            'class': this._state.class,
+            'width': this._state.width,
+            'height': this._state.height,
             'xmlns': 'http://www.w3.org/2000/svg',
             'viewBox': '0 0 512 512',
-            'fill': this.state.color || this._defaultState.color,
+            'fill': this._state.color,
           },
           this.svgRoot,
-        ).innerHTML = this.state.src;
+        ).innerHTML = this._state.src;
         break;
       case "i":
-        this.svgRoot.innerHTML = `<foreignObject class="${this.state.class}" width="${this.state.width}" height="${this.state.height}" font-size="${this.state.fontSize}" color="${this.state.color}" style="line-height: 1;">
+        this.svgRoot.innerHTML = `<foreignObject class="${this._state.class}" width="${this._state.width}" height="${this._state.height}" font-size="${this._state.fontSize}" color="${this._state.color}" style="line-height: 1;">
                                     <body xmlns="http://www.w3.org/1999/xhtml">
-                                      <i class="${this.state.src}"></i>
+                                      <i class="${this._state.src}"></i>
                                     </body>
                                   </foreignObject>`;
         break;
@@ -112,7 +114,15 @@ export class Icon extends Blockly.icons.Icon implements ISerializable {
     super.dispose();
   }
 
-  loadState(state: any): void {
+  loadState(state: AilyIcon | string): void {
+    if (typeof state === 'string') {
+      this._state = { ...this._state, src: state };
+    } else {
+      this._state = { ...this._state, ...state };
+    }
+    if (!this._state.color) {
+      this._state.color = 'white';
+    }
     this.state = state;
   }
 
