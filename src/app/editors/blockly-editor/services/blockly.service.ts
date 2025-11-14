@@ -33,7 +33,8 @@ export class BlocklyService {
   constructor(
     private translateService: TranslateService,
     private electronService: ElectronService
-  ) { }
+  ) {
+  }
 
   // 加载blockly的json数据
   loadAbiJson(jsonData) {
@@ -171,6 +172,9 @@ export class BlocklyService {
   // }
 
   loadLibToolbox(toolboxItem) {
+    toolboxItem.contents.forEach(item => {
+      item.icons = {...item.icons, ...item.ailyIcons};
+    });
     this.toolbox.contents.push(toolboxItem);
     this.workspace.updateToolbox(this.toolbox);
     this.workspace.render();

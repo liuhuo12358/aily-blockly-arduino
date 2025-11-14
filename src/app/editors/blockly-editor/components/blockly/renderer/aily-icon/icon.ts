@@ -31,7 +31,7 @@ export class Icon extends Blockly.icons.Icon implements ISerializable {
   }
 
   override getType() {
-    return new Blockly.icons.IconType('AilyIcon');
+    return new Blockly.icons.IconType('ailyIcon');
   }
 
   override getSize() {
