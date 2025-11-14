@@ -1,6 +1,41 @@
 // 窗口控制
 const { ipcMain, BrowserWindow, app } = require("electron");
+const { exec } = require('child_process');
 const path = require('path');
+
+function terminateAilyProcess() {
+    const platform = process.platform;
+    let command;
+
+    if (platform === 'win32') {
+        command = 'taskkill /F /IM "aily blockly.exe"';
+    } else if (platform === 'darwin') {
+        command = "pkill -f 'aily blockly'";
+    } else {
+        command = "pkill -f 'aily blockly'";
+    }
+
+    try {
+        exec(command, (error, stdout, stderr) => {
+            if (error) {
+                const notFound =
+                    (platform === 'win32' && stderr && stderr.includes('not found')) ||
+                    (platform !== 'win32' && error.code === 1);
+                if (notFound) {
+                    console.log('No aily-blockly process found to terminate.');
+                    return;
+                }
+                console.error(`Error killing aily-blockly process: ${error.message}`);
+                return;
+            }
+            if (stdout) {
+                console.log(`aily-blockly process terminated: ${stdout}`);
+            }
+        });
+    } catch (commandError) {
+        console.warn('Error attempting to kill aily-blockly process:', commandError.message);
+    }
+}
 
 function registerWindowHandlers(mainWindow) {
     // 添加一个映射来存储已打开的窗口
@@ -97,6 +132,8 @@ function registerWindowHandlers(mainWindow) {
         // 检查是否是主窗口，如果是主窗口，关闭整个应用程序
         if (senderWindow === mainWindow) {
             app.quit();
+            // Attempt to terminate any residual helper processes on exit.
+            terminateAilyProcess();
         } else {
             senderWindow.close();
         }

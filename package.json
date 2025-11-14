@@ -1,7 +1,7 @@
 {
   "name": "aily-blockly",
   "productName": "aily blockly",
-  "version": "0.8.8",
+  "version": "0.9.0",
   "author": "coloz",
   "description": "aily blockly dev",
   "main": "electron/main.js",
@@ -40,13 +40,8 @@
         "to": "app/electron"
       },
       {
-        "from": "child",
-        "to": "app/child",
-        "filter": [
-          "**/*",
-          "!node/**",
-          "!aily-builder/**"
-        ]
+        "from": "child/common",
+        "to": "app/child"
       }
     ],
     "win": {
@@ -63,6 +58,12 @@
           "icon": "public/icon.ico",
           "role": "Editor"
         }
+      ],
+      "extraResources": [
+        {
+          "from": "child/windows",
+          "to": "app/child"
+        }
       ]
     },
     "mac": {
@@ -74,6 +75,12 @@
           "name": "Aily Blockly Project",
           "description": "Aily Blockly Project File",
           "role": "Editor"
+        }
+      ],
+      "extraResources": [
+        {
+          "from": "child/macos",
+          "to": "app/child"
         }
       ]
     },
