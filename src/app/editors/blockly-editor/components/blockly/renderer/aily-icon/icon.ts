@@ -2,22 +2,26 @@ import * as Blockly from "blockly";
 import { ISerializable } from 'blockly';
 
 export class Icon extends Blockly.icons.Icon implements ISerializable {
-  configImageElement;
+  _defaultState = {
+    type: 'i',
+    width: 40,
+    height: 30,
+    src: 'fa-solid fa-bed-pulse',
+    alt: '*',
+    class: '',
+    fontSize: '30px',
+    color: 'white',
+  }
 
   state: {
-    type: 'images' | 'i';
+    type: 'image' | 'i' | 'svg';
     width: number;
     height: number;
     alt?: string;
     src: string;
     class?: string;
-  } = {
-    type: 'images',
-    width: 40,
-    height: 30,
-    src: 'https://picsum.photos/40/30?r=1',
-    alt: '*',
-    class: '',
+    fontSize?: string;
+    color?: string;
   };
 
   constructor(sourceBlock) {
@@ -62,20 +66,46 @@ export class Icon extends Blockly.icons.Icon implements ISerializable {
     //   this.svgRoot
     // );
 
-    this.configImageElement = Blockly.utils.dom.createSvgElement(
-      Blockly.utils.Svg.IMAGE,
-      {
-        'width': this.state.width + 'px',
-        'height': this.state.height + 'px',
-        'alt': '*',
-      },
-      this.svgRoot,
-    );
-    this.configImageElement.setAttributeNS(
-      Blockly.utils.dom.XLINK_NS,
-      'xlink:href',
-      this.state.src,
-    );
+    switch (this.state.type) {
+      case "image":
+        Blockly.utils.dom.createSvgElement(
+          Blockly.utils.Svg.IMAGE,
+          {
+            'class': this.state.class,
+            'width': this.state.width + 'px',
+            'height': this.state.height + 'px',
+            'alt': '*',
+          },
+          this.svgRoot,
+        ).setAttributeNS(
+          Blockly.utils.dom.XLINK_NS,
+          'xlink:href',
+          this.state.src,
+        );
+        break;
+      case "svg":
+        Blockly.utils.dom.createSvgElement(
+          Blockly.utils.Svg.SVG,
+          {
+            'class': this.state.class,
+            'width': this.state.width,
+            'height': this.state.height,
+            'xmlns': 'http://www.w3.org/2000/svg',
+            'viewBox': '0 0 512 512',
+            'fill': this.state.color || this._defaultState.color,
+          },
+          this.svgRoot,
+        ).innerHTML = this.state.src;
+        break;
+      case "i":
+        this.svgRoot.innerHTML = `<foreignObject class="${this.state.class}" width="${this.state.width}" height="${this.state.height}" font-size="${this.state.fontSize}" color="${this.state.color}" style="line-height: 1;">
+                                    <body xmlns="http://www.w3.org/1999/xhtml">
+                                      <i class="${this.state.src}"></i>
+                                    </body>
+                                  </foreignObject>`;
+        break;
+    }
+
   }
 
   override dispose() {
