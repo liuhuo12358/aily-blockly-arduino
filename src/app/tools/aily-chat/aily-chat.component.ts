@@ -1228,7 +1228,7 @@ ${JSON.stringify(errData)}
           return; // 如果不在等待状态，直接返回
         }
 
-        console.log("Recv: ", data);
+        // console.log("Recv: ", data);
 
         try {
           if (data.type === 'ModelClientStreamingChunkEvent') {
