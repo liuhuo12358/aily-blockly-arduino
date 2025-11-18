@@ -1,0 +1,13 @@
+@if (currentUrl == "/model-store") {
+<app-sub-window [title]="'MODEL STORE'" [winBtns]="['go-main', 'minimize', 'maximize', 'close']">
+    <ng-container *ngTemplateOutlet="windowBoxTemplate"></ng-container>
+</app-sub-window>
+} @else {
+<app-tool-container [title]="'MODEL STORE'" [path]="'/model-store'" (closeEvent)="close()">
+    <ng-container *ngTemplateOutlet="windowBoxTemplate"></ng-container>
+</app-tool-container>
+}
+<ng-template #windowBoxTemplate>
+    <div class="window-box">
+    </div>
+</ng-template>
