@@ -69,7 +69,7 @@ export class ArduinoLintService {
   ) {
     // 将服务实例注册到全局对象，以便 ArduinoSyntaxTool 可以访问
     (window as any)['arduinoLintService'] = this;
-    console.log('🔧 ArduinoLintService 已注册到全局对象');
+    // console.log('🔧 ArduinoLintService 已注册到全局对象');
   }
 
   /**
@@ -90,7 +90,7 @@ export class ArduinoLintService {
 
     try {
       if (this.lintInProgress) {
-        console.warn('⚠️ 检测到并发 lint 请求，重置状态后继续');
+        // console.warn('⚠️ 检测到并发 lint 请求，重置状态后继续');
         this.lintInProgress = false; // 强制重置状态
         // 等待一小段时间确保之前的操作完成
         await new Promise(resolve => setTimeout(resolve, 100));
@@ -98,7 +98,7 @@ export class ArduinoLintService {
 
       this.lintInProgress = true;
 
-      console.log(`🔍 开始 Arduino 语法检查 (模式: ${mode}, 格式: ${format})...`);
+      // console.log(`🔍 开始 Arduino 语法检查 (模式: ${mode}, 格式: ${format})...`);
 
       // 验证输入
       if (!code || code.trim().length === 0) {
@@ -115,7 +115,7 @@ export class ArduinoLintService {
         // 解析结果
         const parsedResult = this.parseResult(result, startTime, mode, format);
         
-        console.log(`✅ Lint 检查完成: ${parsedResult.success ? '通过' : '失败'} (${parsedResult.executionTime}ms)`);
+        // console.log(`✅ Lint 检查完成: ${parsedResult.success ? '通过' : '失败'} (${parsedResult.executionTime}ms)`);
         
         return parsedResult;
         
@@ -125,7 +125,7 @@ export class ArduinoLintService {
       }
 
     } catch (error: any) {
-      console.warn('❌ Arduino 语法检查失败:', error);
+      // console.warn('❌ Arduino 语法检查失败:', error);
       
       return {
         success: false,
@@ -149,7 +149,7 @@ export class ArduinoLintService {
    * 重置 lint 状态 (用于调试和错误恢复)
    */
   resetLintState(): void {
-    console.log('🔄 重置 Arduino lint 状态');
+    // console.log('🔄 重置 Arduino lint 状态');
     this.lintInProgress = false;
   }
 
@@ -207,19 +207,19 @@ export class ArduinoLintService {
       // 创建必要的目录结构（如果不存在）
       if (!window['path'].isExists(tempPath)) {
         await this.cmdService.runAsync(`New-Item -Path "${tempPath}" -ItemType Directory -Force`);
-        console.log(`✅ 创建临时目录: ${tempPath}`);
+        // console.log(`✅ 创建临时目录: ${tempPath}`);
       } else {
-        console.log(`♻️ 复用现有临时目录: ${tempPath}`);
+        // console.log(`♻️ 复用现有临时目录: ${tempPath}`);
       }
       
       if (!window['path'].isExists(sketchPath)) {
         await this.cmdService.runAsync(`New-Item -Path "${sketchPath}" -ItemType Directory -Force`);
-        console.log(`✅ 创建 sketch 目录: ${sketchPath}`);
+        // console.log(`✅ 创建 sketch 目录: ${sketchPath}`);
       }
       
       if (!window['path'].isExists(librariesPath)) {
         await this.cmdService.runAsync(`New-Item -Path "${librariesPath}" -ItemType Directory -Force`);
-        console.log(`✅ 创建 libraries 目录: ${librariesPath}`);
+        // console.log(`✅ 创建 libraries 目录: ${librariesPath}`);
       }
 
       // 准备项目库文件（新增：关键的库准备步骤）
@@ -227,9 +227,9 @@ export class ArduinoLintService {
 
       // 高效写入代码到 sketch.ino 文件（覆盖模式，无需预先删除）
       await window['fs'].writeFileSync(sketchFilePath, code);
-      console.log(`✅ 写入代码到: ${sketchFilePath} (${code.length} 字符)`);
+      // console.log(`✅ 写入代码到: ${sketchFilePath} (${code.length} 字符)`);
 
-      console.log(`✅ 临时环境准备完成，复用项目 .temp 目录: ${tempPath}`);
+      // console.log(`✅ 临时环境准备完成，复用项目 .temp 目录: ${tempPath}`);
 
       return {
         tempPath,
@@ -256,7 +256,7 @@ export class ArduinoLintService {
       // 构建 lint 命令
       const lintCommand = await this.buildLintCommand(env, mode, format);
 
-      console.log(`🚀 执行 lint 命令: ${lintCommand}`);
+      // console.log(`🚀 执行 lint 命令: ${lintCommand}`);
 
       // 收集所有输出
       let allOutput = '';
@@ -266,8 +266,8 @@ export class ArduinoLintService {
       return new Promise((resolve, reject) => {
         this.cmdService.run(lintCommand).subscribe({
           next: (output) => {
-            console.log('📋 cmdService 输出类型:', output.type);
-            console.log('📋 cmdService 输出数据:', output.data);
+            // console.log('📋 cmdService 输出类型:', output.type);
+            // console.log('📋 cmdService 输出数据:', output.data);
             
             if (output.type === 'stdout' && output.data) {
               allOutput += output.data;
@@ -284,7 +284,7 @@ export class ArduinoLintService {
             reject(new Error(`命令执行失败: ${error.message || error}`));
           },
           complete: () => {
-            console.log('📋 cmdService 执行完成，总输出:', allOutput);
+            // console.log('📋 cmdService 执行完成，总输出:', allOutput);
             if (hasError && !allOutput.trim()) {
               reject(new Error(errorMessage));
             } else {
@@ -404,13 +404,13 @@ export class ArduinoLintService {
     try {
       if (format === 'json') {
         // 提取 JSON 部分 - aily-builder 输出可能包含日志信息
-        console.log('🔍 原始输出:', output);
+        // console.log('🔍 原始输出:', output);
         
         let jsonText = output;
         
         // 查找 JSON 对象的开始位置
         const jsonStart = output.indexOf('{');
-        console.log('📍 JSON 开始位置:', jsonStart);
+        // console.log('📍 JSON 开始位置:', jsonStart);
         
         if (jsonStart !== -1) {
           // 从第一个 { 开始提取
@@ -434,11 +434,11 @@ export class ArduinoLintService {
             jsonText = jsonText.substring(0, jsonEnd);
           }
         } else {
-          console.warn('⚠️ 未找到 JSON 开始标记，尝试直接解析整个输出');
+          // console.warn('⚠️ 未找到 JSON 开始标记，尝试直接解析整个输出');
         }
         
-        console.log('🔍 提取的 JSON 文本:', jsonText);
-        console.log('📏 JSON 文本长度:', jsonText.length);
+        // console.log('🔍 提取的 JSON 文本:', jsonText);
+        // console.log('📏 JSON 文本长度:', jsonText.length);
         
         if (!jsonText.trim()) {
           throw new Error('提取的 JSON 文本为空');
@@ -612,13 +612,13 @@ export class ArduinoLintService {
         
         if (window['path'].isExists(sketchFilePath)) {
           await window['fs'].unlinkSync(sketchFilePath);
-          console.log(`🧹 定期清理临时文件: sketch.ino (第${this.lintSessionCount}次lint)`);
+          // console.log(`🧹 定期清理临时文件: sketch.ino (第${this.lintSessionCount}次lint)`);
         }
       } else {
-        console.log(`✅ lint会话 #${this.lintSessionCount} 完成（跳过清理以提升性能）`);
+        // console.log(`✅ lint会话 #${this.lintSessionCount} 完成（跳过清理以提升性能）`);
       }
       
-      console.log('📝 临时文件保留策略: 减少IO开销，下次覆盖写入');
+      // console.log('📝 临时文件保留策略: 减少IO开销，下次覆盖写入');
     } catch (error) {
       console.warn('清理检查失败:', error);
       // 不抛出错误，避免影响主要功能
@@ -636,7 +636,7 @@ export class ArduinoLintService {
       
       if (window['path'].isExists(sketchFilePath)) {
         await window['fs'].unlinkSync(sketchFilePath);
-        console.log('🧹 手动清理 lint 临时文件完成');
+        // console.log('🧹 手动清理 lint 临时文件完成');
       }
       
       // 重置计数器
@@ -652,36 +652,36 @@ export class ArduinoLintService {
    */
   isAvailable(): boolean {
     try {
-      console.log('🔍 检查 aily-builder 可用性...');
+      // console.log('🔍 检查 aily-builder 可用性...');
       
       // 检查 window['path'] 是否存在
       if (!window['path']) {
-        console.warn('❌ window.path 不存在');
+        // console.warn('❌ window.path 不存在');
         return false;
       }
       
       // 检查 getAilyBuilderPath 方法
       if (typeof window['path'].getAilyBuilderPath !== 'function') {
-        console.warn('❌ window.path.getAilyBuilderPath 方法不存在');
+        // console.warn('❌ window.path.getAilyBuilderPath 方法不存在');
         return false;
       }
       
       const ailyBuilderPath = window['path'].getAilyBuilderPath();
-      console.log('- aily-builder 路径:', ailyBuilderPath);
+      // console.log('- aily-builder 路径:', ailyBuilderPath);
       
       if (!ailyBuilderPath) {
-        console.warn('❌ aily-builder 路径为空');
+        // console.warn('❌ aily-builder 路径为空');
         return false;
       }
       
       // 检查 isExists 方法
       if (typeof window['path'].isExists !== 'function') {
-        console.warn('❌ window.path.isExists 方法不存在');
+        // console.warn('❌ window.path.isExists 方法不存在');
         return false;
       }
       
       const indexJsExists = window['path'].isExists(ailyBuilderPath + '/index.js');
-      console.log('- index.js 存在:', indexJsExists);
+      // console.log('- index.js 存在:', indexJsExists);
       
       return indexJsExists;
     } catch (error) {
@@ -715,7 +715,7 @@ export class ArduinoLintService {
    */
   private async prepareProjectLibraries(librariesPath: string): Promise<void> {
     try {
-      console.log('🔧 开始准备项目库文件...');
+      // console.log('🔧 开始准备项目库文件...');
 
       // 获取项目依赖
       const packageJson = await this.projectService.getPackageJson();
@@ -730,11 +730,11 @@ export class ArduinoLintService {
       });
 
       if (libsList.length === 0) {
-        console.log('📦 项目无需要处理的库文件');
+        // console.log('📦 项目无需要处理的库文件');
         return;
       }
 
-      console.log(`📦 检测到 ${libsList.length} 个项目库: ${libsList.join(', ')}`);
+      // console.log(`📦 检测到 ${libsList.length} 个项目库: ${libsList.join(', ')}`);
 
       // 处理每个库
       const processResults: Array<{lib: string, success: boolean, error?: string}> = [];
@@ -744,11 +744,11 @@ export class ArduinoLintService {
           const result = await this.processLibraryForLint(lib, librariesPath);
           processResults.push({ lib, success: result.success, error: result.error });
           
-          if (result.success) {
-            console.log(`✅ 库 ${lib} 处理成功`);
-          } else {
-            console.warn(`⚠️ 库 ${lib} 处理失败: ${result.error}`);
-          }
+          // if (result.success) {
+          //   console.log(`✅ 库 ${lib} 处理成功`);
+          // } else {
+          //   console.warn(`⚠️ 库 ${lib} 处理失败: ${result.error}`);
+          // }
         } catch (error: any) {
           console.warn(`⚠️ 库 ${lib} 处理异常: ${error.message}`);
           processResults.push({ lib, success: false, error: error.message });
@@ -759,11 +759,11 @@ export class ArduinoLintService {
       const successCount = processResults.filter(r => r.success).length;
       const failureCount = processResults.length - successCount;
       
-      console.log(`📊 库处理完成: 成功 ${successCount}/${processResults.length}，失败 ${failureCount}`);
+      // console.log(`📊 库处理完成: 成功 ${successCount}/${processResults.length}，失败 ${failureCount}`);
       
       if (failureCount > 0) {
         const failedLibs = processResults.filter(r => !r.success).map(r => r.lib);
-        console.warn(`❌ 处理失败的库: ${failedLibs.join(', ')}`);
+        // console.warn(`❌ 处理失败的库: ${failedLibs.join(', ')}`);
       }
 
     } catch (error: any) {
@@ -793,12 +793,12 @@ export class ArduinoLintService {
       if (!window['path'].isExists(sourcePath)) {
         const sourceZipPath = `${currentProjectPath}/node_modules/${lib}/src.7z`;
         if (!window['path'].isExists(sourceZipPath)) {
-          console.warn(`库 ${lib} 没有src目录或src.7z文件`);
+          // console.warn(`库 ${lib} 没有src目录或src.7z文件`);
           return { success: true }; // 不是错误，只是这个库可能不需要源码
         }
         
         try {
-          console.log(`📦 解压库 ${lib}...`);
+          // console.log(`📦 解压库 ${lib}...`);
           await this.cmdService.runAsync(`${this.platformService.za7} x "${sourceZipPath}" -o"${sourcePath}" -y`);
         } catch (error) {
           console.warn(`解压库 ${lib} 失败:`, error);
@@ -810,7 +810,7 @@ export class ArduinoLintService {
       sourcePath = this.resolveNestedSrcPath(sourcePath);
 
       if (!window['fs'].existsSync(sourcePath)) {
-        console.warn(`库 ${lib} 源码路径不存在: ${sourcePath}`);
+        // console.warn(`库 ${lib} 源码路径不存在: ${sourcePath}`);
         return { success: true }; // 不是错误
       }
 
@@ -846,7 +846,7 @@ export class ArduinoLintService {
         const itemName = typeof firstItem === 'object' && firstItem !== null ? firstItem.name : firstItem;
 
         if (itemName === 'src' && window['fs'].isDirectory(`${sourcePath}/${itemName}`)) {
-          console.log(`检测到嵌套src目录，使用 ${sourcePath}/src 作为源路径`);
+          // console.log(`检测到嵌套src目录，使用 ${sourcePath}/src 作为源路径`);
           return `${sourcePath}/src`;
         }
       }
@@ -892,23 +892,23 @@ export class ArduinoLintService {
     targetNames?: string[];
   }> {
     try {
-      console.log(`库 ${lib} 包含头文件，整体复制`);
+      // console.log(`库 ${lib} 包含头文件，整体复制`);
       const targetName = lib.split('@aily-project/')[1];
       const targetPath = `${librariesPath}/${targetName}`;
 
       // 性能优化：如果目标路径已存在，跳过复制
       let shouldCopy = true;
       if (window['path'].isExists(targetPath)) {
-        console.log(`♻️ 库 ${lib} 目标路径已存在，跳过复制以节省时间: ${targetPath}`);
+        // console.log(`♻️ 库 ${lib} 目标路径已存在，跳过复制以节省时间: ${targetPath}`);
         shouldCopy = false;
       }
 
       // 仅在需要时执行复制操作
       if (shouldCopy) {
         await this.cmdService.runAsync(`Copy-Item -Path "${sourcePath}" -Destination "${targetPath}" -Recurse -Force`);
-        console.log(`✅ 库 ${lib} 复制完成: ${targetPath}`);
+        // console.log(`✅ 库 ${lib} 复制完成: ${targetPath}`);
       } else {
-        console.log(`✅ 库 ${lib} 复用已存在文件，节省IO时间`);
+        // console.log(`✅ 库 ${lib} 复用已存在文件，节省IO时间`);
       }
 
       return {
@@ -930,7 +930,7 @@ export class ArduinoLintService {
     targetNames?: string[];
   }> {
     try {
-      console.log(`库 ${lib} 不包含头文件，逐个复制目录`);
+      // console.log(`库 ${lib} 不包含头文件，逐个复制目录`);
       const targetNames: string[] = [];
       const copyOperations: Array<{source: string, target: string, itemName: string}> = [];
 
@@ -950,7 +950,7 @@ export class ArduinoLintService {
           // 性能优化：检查目标路径是否已存在
           let shouldCopy = true;
           if (window['path'].isExists(targetPath)) {
-            console.log(`♻️ 目录 ${itemName} 已存在，跳过复制以节省时间`);
+            // console.log(`♻️ 目录 ${itemName} 已存在，跳过复制以节省时间`);
             shouldCopy = false;
           }
 
@@ -968,14 +968,14 @@ export class ArduinoLintService {
 
       // 批量执行需要的复制操作
       if (copyOperations.length > 0) {
-        console.log(`📦 需要复制 ${copyOperations.length}/${targetNames.length} 个目录`);
+        // console.log(`📦 需要复制 ${copyOperations.length}/${targetNames.length} 个目录`);
         
         for (const op of copyOperations) {
           await this.cmdService.runAsync(`Copy-Item -Path "${op.source}" -Destination "${op.target}" -Recurse -Force`);
-          console.log(`✅ 复制目录: ${op.itemName}`);
+          // console.log(`✅ 复制目录: ${op.itemName}`);
         }
       } else {
-        console.log(`✅ 所有目录已存在，无需复制，节省了大量IO时间`);
+        // console.log(`✅ 所有目录已存在，无需复制，节省了大量IO时间`);
       }
 
       return {
