@@ -269,4 +269,8 @@ export class ElectronService {
     return false;
   }
 
+
+  openByExplorer(path){
+    window['other'].openByExplorer(path);
+  }
 }

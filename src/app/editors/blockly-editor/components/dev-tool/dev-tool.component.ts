@@ -87,7 +87,7 @@ export class DevToolComponent implements OnInit {
     // 限制在可视区域内
     const topExclusionZone = 70; // 顶部禁用区域高度
     const componentHeight = 40; // 假设组件高度约40px
-    const componentWidth = 345; // 假设组件宽度约345px
+    const componentWidth = 435; // 假设组件宽度约345px
 
     const maxX = window.innerWidth - componentWidth;
     const minY = 1; // 最小bottom值
@@ -181,6 +181,6 @@ export class DevToolComponent implements OnInit {
   }
 
   openResources() {
-
+    this.electronService.openByExplorer(window['path'].getAppDataPath());
   }
 }
