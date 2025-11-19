@@ -221,18 +221,18 @@ export function fixJsonString(
   const changes: string[] = [];
   let fixedJson = jsonString.trim();
 
-  if (logProcess) {
-    console.log(`🔧 开始修复 JSON: ${jsonString}`);
-  }
+  // if (logProcess) {
+  //   console.log(`🔧 开始修复 JSON: ${jsonString}`);
+  // }
 
   // 首先尝试直接解析
   try {
     JSON.parse(fixedJson);
     return { fixed: fixedJson, success: true, changes };
   } catch (error) {
-    if (logProcess) {
-      console.log(`⚠️ 需要修复 JSON: ${(error as Error).message}`);
-    }
+    // if (logProcess) {
+    //   console.log(`⚠️ 需要修复 JSON: ${(error as Error).message}`);
+    // }
   }
 
   // 使用 jsonrepair 库修复
@@ -241,14 +241,14 @@ export function fixJsonString(
       const repaired = jsonrepair(fixedJson);
       JSON.parse(repaired); // 验证修复结果
       changes.push('jsonrepair库自动修复');
-      if (logProcess) {
-        console.log(`✅ jsonrepair 修复成功: ${repaired}`);
-      }
+      // if (logProcess) {
+      //   console.log(`✅ jsonrepair 修复成功: ${repaired}`);
+      // }
       return { fixed: repaired, success: true, changes };
     } catch (repairError) {
-      if (logProcess) {
-        console.log(`❌ jsonrepair 修复失败: ${(repairError as Error).message}`);
-      }
+      // if (logProcess) {
+      //   console.log(`❌ jsonrepair 修复失败: ${(repairError as Error).message}`);
+      // }
     }
   }
 
@@ -335,29 +335,29 @@ function calculateEditDistance(str1: string, str2: string): number {
  */
 function findBlockByFuzzyId(providedId: string, workspace: any): any | null {
   if (!providedId || !workspace) {
-    console.log('⚠️ findBlockByFuzzyId: 参数无效');
+    // console.log('⚠️ findBlockByFuzzyId: 参数无效');
     return null;
   }
 
-  console.log(`🔍 开始模糊匹配块ID: "${providedId}"`);
+  // console.log(`🔍 开始模糊匹配块ID: "${providedId}"`);
   
   // 获取工作区中的所有块
   const allBlocks = workspace.getAllBlocks();
   if (!allBlocks || allBlocks.length === 0) {
-    console.log('⚠️ 工作区中没有找到任何块');
+    // console.log('⚠️ 工作区中没有找到任何块');
     return null;
   }
 
-  console.log(`📊 工作区中共有 ${allBlocks.length} 个块`);
+  // console.log(`📊 工作区中共有 ${allBlocks.length} 个块`);
   
   // 1. 首先尝试精确匹配
   for (const block of allBlocks) {
     if (block.id === providedId) {
-      console.log(`✅ 精确匹配成功: ${block.type}(${block.id})`);
+      // console.log(`✅ 精确匹配成功: ${block.type}(${block.id})`);
       return block;
     }
   }
-  console.log('⚠️ 精确匹配失败，尝试模糊匹配...');
+  // console.log('⚠️ 精确匹配失败，尝试模糊匹配...');
 
   // 2. 模糊匹配策略
   const matches: Array<{block: any, score: number, reason: string}> = [];
@@ -404,12 +404,12 @@ function findBlockByFuzzyId(providedId: string, workspace: any): any | null {
     
     if (score > 0) {
       matches.push({block, score, reason});
-      console.log(`🎯 候选匹配: ${block.type}(${blockId}) - 得分: ${score.toFixed(2)} - ${reason}`);
+      // console.log(`🎯 候选匹配: ${block.type}(${blockId}) - 得分: ${score.toFixed(2)} - ${reason}`);
     }
   }
   
   if (matches.length === 0) {
-    console.log('❌ 未找到任何匹配的块');
+    // console.log('❌ 未找到任何匹配的块');
     return null;
   }
   
@@ -417,23 +417,23 @@ function findBlockByFuzzyId(providedId: string, workspace: any): any | null {
   matches.sort((a, b) => b.score - a.score);
   const bestMatch = matches[0];
   
-  console.log(`🏆 最佳匹配: ${bestMatch.block.type}(${bestMatch.block.id})`);
-  console.log(`📊 匹配得分: ${bestMatch.score.toFixed(2)}`);
-  console.log(`📋 匹配原因: ${bestMatch.reason}`);
+  // console.log(`🏆 最佳匹配: ${bestMatch.block.type}(${bestMatch.block.id})`);
+  // console.log(`📊 匹配得分: ${bestMatch.score.toFixed(2)}`);
+  // console.log(`📋 匹配原因: ${bestMatch.reason}`);
   
   // 如果最佳匹配得分太低，拒绝匹配
   if (bestMatch.score < 60) {
-    console.log('⚠️ 最佳匹配得分过低，拒绝匹配');
+    // console.log('⚠️ 最佳匹配得分过低，拒绝匹配');
     return null;
   }
   
   // 如果有多个高分匹配，提醒可能存在歧义
   const highScoreMatches = matches.filter(m => m.score >= bestMatch.score - 10);
   if (highScoreMatches.length > 1) {
-    console.log(`⚠️ 检测到 ${highScoreMatches.length} 个高分匹配，可能存在歧义:`);
-    highScoreMatches.forEach(m => {
-      console.log(`   - ${m.block.type}(${m.block.id}) - 得分: ${m.score.toFixed(2)}`);
-    });
+    // console.log(`⚠️ 检测到 ${highScoreMatches.length} 个高分匹配，可能存在歧义:`);
+    // highScoreMatches.forEach(m => {
+    //   console.log(`   - ${m.block.type}(${m.block.id}) - 得分: ${m.score.toFixed(2)}`);
+    // });
   }
   
   return bestMatch.block;
@@ -464,31 +464,31 @@ export function getBlockByIdSmart(
   } = options;
 
   if (!workspace || !blockId) {
-    if (logDetails) console.log('⚠️ getBlockByIdSmart: 参数无效');
+    // if (logDetails) console.log('⚠️ getBlockByIdSmart: 参数无效');
     return null;
   }
 
-  if (logDetails) console.log(`🎯 智能查找块: "${blockId}"`);
+  // if (logDetails) console.log(`🎯 智能查找块: "${blockId}"`);
   
   // 1. 🎯 精确匹配
-  if (logDetails) console.log('📍 尝试精确匹配...');
+  // if (logDetails) console.log('📍 尝试精确匹配...');
   let block = workspace.getBlockById(blockId);
   if (block) {
-    if (logDetails) console.log(`✅ 精确匹配成功: ${block.type}(${block.id})`);
+    // if (logDetails) console.log(`✅ 精确匹配成功: ${block.type}(${block.id})`);
     return block;
   }
 
   // 2. 🔍 模糊匹配（如果启用）
   if (!enableFuzzyMatch) {
-    if (logDetails) console.log('❌ 精确匹配失败，模糊匹配已禁用');
+    // if (logDetails) console.log('❌ 精确匹配失败，模糊匹配已禁用');
     return null;
   }
 
-  if (logDetails) console.log('🔍 开始智能模糊匹配...');
+  // if (logDetails) console.log('🔍 开始智能模糊匹配...');
   
   const allBlocks = workspace.getAllBlocks();
   if (!allBlocks || allBlocks.length === 0) {
-    if (logDetails) console.log('⚠️ 工作区中没有任何块');
+    // if (logDetails) console.log('⚠️ 工作区中没有任何块');
     return null;
   }
 
@@ -552,7 +552,7 @@ export function getBlockByIdSmart(
   }
 
   if (matches.length === 0) {
-    if (logDetails) console.log('❌ 未找到任何匹配的块');
+    // if (logDetails) console.log('❌ 未找到任何匹配的块');
     return null;
   }
 
@@ -563,28 +563,28 @@ export function getBlockByIdSmart(
   
   // 检查最佳匹配得分
   if (bestMatch.score < minScore) {
-    if (logDetails) {
-      console.log(`⚠️ 最佳匹配得分过低 (${bestMatch.score.toFixed(2)} < ${minScore})`);
-      console.log(`   候选块: ${bestMatch.block.type}(${bestMatch.block.id})`);
-    }
+    // if (logDetails) {
+    //   console.log(`⚠️ 最佳匹配得分过低 (${bestMatch.score.toFixed(2)} < ${minScore})`);
+    //   console.log(`   候选块: ${bestMatch.block.type}(${bestMatch.block.id})`);
+    // }
     return null;
   }
 
   // 记录匹配结果
-  if (logDetails) {
-    console.log(`🏆 最佳匹配: ${bestMatch.block.type}(${bestMatch.block.id})`);
-    console.log(`📊 匹配得分: ${bestMatch.score.toFixed(2)}`);
-    console.log(`📋 匹配原因: ${bestMatch.reason}`);
+  // if (logDetails) {
+  //   console.log(`🏆 最佳匹配: ${bestMatch.block.type}(${bestMatch.block.id})`);
+  //   console.log(`📊 匹配得分: ${bestMatch.score.toFixed(2)}`);
+  //   console.log(`📋 匹配原因: ${bestMatch.reason}`);
 
-    // 如果有多个高分匹配，提醒歧义
-    const highScoreMatches = matches.filter(m => m.score >= bestMatch.score - 5);
-    if (highScoreMatches.length > 1) {
-      console.log(`⚠️ 检测到 ${highScoreMatches.length} 个高分匹配:`);
-      highScoreMatches.slice(0, 3).forEach((m, i) => {
-        console.log(`   ${i + 1}. ${m.block.type}(${m.block.id}) - 得分: ${m.score.toFixed(2)} - ${m.reason}`);
-      });
-    }
-  }
+  //   // 如果有多个高分匹配，提醒歧义
+  //   const highScoreMatches = matches.filter(m => m.score >= bestMatch.score - 5);
+  //   if (highScoreMatches.length > 1) {
+  //     console.log(`⚠️ 检测到 ${highScoreMatches.length} 个高分匹配:`);
+  //     highScoreMatches.slice(0, 3).forEach((m, i) => {
+  //       console.log(`   ${i + 1}. ${m.block.type}(${m.block.id}) - 得分: ${m.score.toFixed(2)} - ${m.reason}`);
+  //     });
+  //   }
+  // }
 
   return bestMatch.block;
 }

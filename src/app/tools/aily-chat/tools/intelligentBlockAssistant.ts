@@ -556,7 +556,7 @@ export class IntelligentBlockAssistant {
     const bestPattern = patterns[0];
     const sequence: BlockSequenceStep[] = [];
     
-    console.log(`🎯 使用最佳模式: ${bestPattern.pattern.name} (得分: ${bestPattern.score.toFixed(2)})`);
+    // console.log(`🎯 使用最佳模式: ${bestPattern.pattern.name} (得分: ${bestPattern.score.toFixed(2)})`);
     
     for (let i = 0; i < bestPattern.pattern.sequence.length; i++) {
       const step = bestPattern.pattern.sequence[i];
