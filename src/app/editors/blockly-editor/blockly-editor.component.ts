@@ -17,6 +17,7 @@ import { _BuilderService } from './services/builder.service';
 import { BitmapUploadService } from './services/bitmap-upload.service';
 import { ProjectService } from '../../services/project.service';
 import { DevToolComponent } from './components/dev-tool/dev-tool.component';
+import { HistoryService } from './services/history.service';
 
 @Component({
   selector: 'app-blockly-editor',
@@ -28,7 +29,6 @@ import { DevToolComponent } from './components/dev-tool/dev-tool.component';
     DevToolComponent
   ],
   providers: [
-    _ProjectService,
     _BuilderService,
     _UploaderService,
     BitmapUploadService
@@ -68,6 +68,7 @@ export class BlocklyEditorComponent {
         try {
           this._projectService.currentProjectPath = params['path']
           this.projectService.currentProjectPath = params['path'];
+          this._projectService.initHistory(); // 初始化历史服务
           this.loadProject(params['path']);
         } catch (error) {
           console.error('加载项目失败', error);
