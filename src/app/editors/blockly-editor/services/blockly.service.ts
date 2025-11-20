@@ -22,6 +22,8 @@ export class BlocklyService {
     ],
   };
 
+  iconsMap =  new Map();
+
   codeSubject = new BehaviorSubject<string>('');
 
   boardConfig;
@@ -33,10 +35,15 @@ export class BlocklyService {
   constructor(
     private translateService: TranslateService,
     private electronService: ElectronService
-  ) { }
+  ) {
+  }
 
   // 加载blockly的json数据
   loadAbiJson(jsonData) {
+    jsonData.blocks.blocks.forEach(block => {
+      const ailyIcons = this.iconsMap.get(block.type);
+      if(ailyIcons) block.icons = ailyIcons;
+    });
     Blockly.serialization.workspaces.load(jsonData, this.workspace);
   }
 
@@ -139,6 +146,10 @@ export class BlocklyService {
   loadLibBlocks(blocks, libStaticPath) {
     for (let index = 0; index < blocks.length; index++) {
       let block = blocks[index];
+      if (block.ailyIcons) this.iconsMap.set(block.type, block.ailyIcons);
+      if (block.icon) this.iconsMap.set(block.type, {
+        ailyIcon: block.icon
+      });
       block = processJsonVar(block, this.boardConfig); // 替换开发板相关变量
       if (libStaticPath) {
         block = processStaticFilePath(block, libStaticPath);
@@ -171,6 +182,9 @@ export class BlocklyService {
   // }
 
   loadLibToolbox(toolboxItem) {
+    toolboxItem.contents.forEach(item => {
+      item.icons = {...item.icons, ...item.ailyIcons, ...this.iconsMap.get(item.type), ...this.iconsMap.get(item.type)};
+    });
     this.toolbox.contents.push(toolboxItem);
     this.workspace.updateToolbox(this.toolbox);
     this.workspace.render();
@@ -287,6 +301,7 @@ export class BlocklyService {
   }
 
   reset() {
+    this.iconsMap.clear();
     // 移除所有加载的脚本标签（block.js 和 generator.js）
     const scripts = document.getElementsByTagName('script');
     const scriptSrcsToRemove = [];
