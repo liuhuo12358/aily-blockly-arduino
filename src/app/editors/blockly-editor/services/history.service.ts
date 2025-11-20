@@ -65,7 +65,7 @@ export class HistoryService {
     if (!window['fs'].existsSync(this.historyPath)) {
       window['fs'].mkdirSync(this.historyPath);
       // Optional: Hide directory on Windows
-      if (window['process'].platform === 'win32') {
+      if (window['platform'].type === 'win32') {
         try {
            // Using child_process to hide folder is a bit heavy, maybe skip for now
         } catch (e) {}
