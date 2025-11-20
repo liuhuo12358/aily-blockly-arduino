@@ -359,6 +359,17 @@ contextBridge.exposeInMainWorld("electronAPI", {
       });
     }
   },
+  // 示例列表协议 API
+  exampleList: {
+    onOpen: (callback) => {
+      const listener = (event, data) => callback(data);
+      ipcRenderer.on('open-example-list', listener);
+      // 返回解除监听函数
+      return () => {
+        ipcRenderer.removeListener('open-example-list', listener);
+      };
+    }
+  },
   tools: {
     findFileByName: (searchPath, fileName) => {
       return new Promise((resolve, reject) => {
