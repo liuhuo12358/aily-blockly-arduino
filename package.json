@@ -38,10 +38,6 @@
       {
         "from": "electron",
         "to": "app/electron"
-      },
-      {
-        "from": "child/common",
-        "to": "app/child"
       }
     ],
     "win": {
