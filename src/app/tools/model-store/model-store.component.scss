@@ -3,6 +3,22 @@
     position: relative;
 }
 
+.breadcrumb {
+    padding: 5px 0 5px 10px;
+
+    .home{
+        cursor: pointer;
+        &:hover{
+            color: #ffffff;
+        }
+    }
+}
+
+.content {
+    position: relative;
+    height: calc(100% - 85px);
+}
+
 .section-title {
     // margin: 15px 10px 0 10px;
     padding: 10px;
@@ -10,10 +26,6 @@
     color: #fff;
     border-bottom: 1px solid #444;
     position: relative;
-
-    .title {
-        height: 30px;
-    }
 
     .search-btn {
         width: 30px;
@@ -29,11 +41,6 @@
     }
 
     .search-bar {
-        // position: absolute;
-        // top: 10px;
-        // left: 10px;
-        // width: calc(100% - 20px);
-        // height: 32px;
         display: flex;
         align-items: center;
 
@@ -79,15 +86,15 @@
 
 
 .item-list {
-    padding: 10px;
-    height: calc(100% - 95px);
+    padding: 10px 2px 10px 10px;
+    height: 100%;
     overflow-y: auto;
 }
 
 .item {
     display: flex;
     padding: 5px;
-    background: #444;
+    background: #3e3e3e;
     border-radius: 5px;
     overflow: hidden;
     margin-bottom: 10px;
@@ -95,20 +102,19 @@
     cursor: pointer;
 
     &:hover {
-        .content {
-            filter: blur(3px);
-        }
+        // .content {
+        //     filter: blur(1px);
+        // }
 
         .btns {
             display: flex;
         }
     }
 
-    .content {
+    .item-content {
         display: flex;
+        width: 100%;
         padding: 5px;
-        background: #444;
-        filter: blur(0);
         transition: all 0.3s;
 
         .left {
@@ -120,12 +126,13 @@
             flex-shrink: 0;
 
             img {
-                width: 170px;
-                height: 85px;
+                width: 172px;
+                height: 129px;
             }
 
             .title {
                 font-size: 14px;
+                font-weight: bold;
                 color: #fff;
                 position: absolute;
                 left: 0;
@@ -139,6 +146,9 @@
         .right {
             display: flex;
             flex-direction: column;
+            position: relative;
+            flex-grow: 1;
+            font-size: 12px;
 
             .text {
                 font-size: 12px;
@@ -149,6 +159,12 @@
                 -webkit-box-orient: vertical;
                 overflow: hidden;
                 text-overflow: ellipsis;
+            }
+
+            .author {
+                position: absolute;
+                bottom: 0;
+                right: 0;
             }
         }
     }

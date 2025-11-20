@@ -30,20 +30,29 @@
             </div>
             <!-- } -->
         </div>
-
-        <div class="item-list sscroll">
-            @for (item of filteredItemList; track $index) {
-            <div class="item">
-                <div class="content">
-                    <div class="left">
-                        <img src={{item?.pic_url}} alt="">
-                        <div class="title">{{item?.name}}</div>
+        <div class="breadcrumb">
+            <nz-breadcrumb nzSeparator=">">
+                <nz-breadcrumb-item class="home" (click)="closeModelDetail()">模型列表</nz-breadcrumb-item>
+                @if(showDetail){
+                <nz-breadcrumb-item>{{currentModelName}}</nz-breadcrumb-item>
+                }
+            </nz-breadcrumb>
+        </div>
+        <div class="content">
+            <div class="item-list sscroll">
+                @for (item of filteredItemList; track item.id) {
+                <div class="item" (click)="loadModelDetail(item)">
+                    <div class="item-content">
+                        <div class="left">
+                            <img src={{item?.pic_url}} alt="">
+                            <div class="title">{{item?.name}}</div>
+                        </div>
+                        <div class="right">
+                            <div class="text">{{item?.description || '-'}}</div>
+                            <div class="author">{{item?.author_name || 'unknown'}}</div>
+                        </div>
                     </div>
-                    <div class="right">
-                        <div class="text">{{item?.description || '无描述'}}</div>
-                    </div>
-                </div>
-                <!-- <div class="btns ccenter">
+                    <!-- <div class="btns ccenter">
                     <button (click)="openInNewTab(item)">
                         <i class="fa-light fa-folder-open"></i>
                         打开
@@ -66,13 +75,13 @@
                         删除
                     </button>
                 </div> -->
+                </div>
+                }
             </div>
+            @if(showDetail) {
+            <app-model-detail [id]="modelID" (close)="showDetail = false"></app-model-detail>
             }
         </div>
-        <!-- @if(showEditor) {
-        <app-cloud-project-editor (close)="showEditor = false" (saved)="onProjectSaved()"
-            [projectData]="editorProjectData"></app-cloud-project-editor>
-        } -->
     </div>
     <!-- @if(!isLoggedIn){
     <app-login></app-login>

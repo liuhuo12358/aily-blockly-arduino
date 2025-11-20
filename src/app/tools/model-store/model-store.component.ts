@@ -7,6 +7,8 @@ import { UiService } from '../../services/ui.service';
 import { Router } from '@angular/router';
 import { NzTagModule } from 'ng-zorro-antd/tag';
 import { ModelStoreService, ModelItem } from './model-store.service';
+import { NzBreadCrumbModule } from 'ng-zorro-antd/breadcrumb';
+import { ModelDetailComponent } from './model-detail/model-detail.component';
 
 @Component({
   selector: 'app-model-store',
@@ -15,7 +17,9 @@ import { ModelStoreService, ModelItem } from './model-store.service';
     ToolContainerComponent,
     FormsModule,
     CommonModule,
-    NzTagModule
+    NzTagModule,
+    NzBreadCrumbModule,
+    ModelDetailComponent
   ],
   templateUrl: './model-store.component.html',
   styleUrl: './model-store.component.scss'
@@ -49,6 +53,21 @@ export class ModelStoreComponent implements OnInit {
         console.error('加载模型列表失败:', error);
       }
     });
+  }
+
+  showDetail;
+  modelID: string = '';
+  currentModelName;
+  loadModelDetail(item: ModelItem) {
+    this.modelID = item.id;
+    this.currentModelName = item.name;
+    this.showDetail = true;
+  }
+
+  closeModelDetail() {
+    this.showDetail = false;
+    this.modelID = null;
+    this.currentModelName = null;
   }
 
   openSearch() {
