@@ -39,6 +39,7 @@ export class ModelStoreComponent implements OnInit {
   searchKeyword = ''; // 搜索关键词
 
   ngOnInit() {
+    this.currentUrl = this.router.url;
     this.loadModelList();
   }
 
