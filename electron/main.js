@@ -364,18 +364,25 @@ function handleProtocol(url) {
     // 检查是否是打开示例列表
     // 移除末尾斜杠以兼容不同情况
     const normalizedPath = fullPath.replace(/\/$/, '');
-    if (normalizedPath === '/examples' || normalizedPath === '/open-examples') {
+    if (normalizedPath === '/examples' || normalizedPath === '/open-examples' || normalizedPath === '/open-template') {
       const searchParams = urlObj.searchParams;
       const keyword = searchParams.get('keyword');
-      const id = searchParams.get('id');
+      const id = searchParams.get('templateId') || searchParams.get('id');
+      const sessionId = searchParams.get('sessionId');
+      const params = searchParams.get('params');
+      const version = searchParams.get('version');
       
       // 优先使用 keyword，如果有 id 则作为 keyword
       const searchKeyword = keyword || id || '';
       
-      console.log('打开示例列表:', { keyword, id, searchKeyword });
+      console.log('打开示例列表:', { keyword, id, params, version, searchKeyword });
       
       const data = {
-        keyword: searchKeyword
+        keyword: searchKeyword,
+        id: id || '',
+        sessionId: sessionId || '',
+        params: params || '',
+        version: version || ''
       };
 
       if (mainWindow && mainWindow.webContents && isRendererReady) {

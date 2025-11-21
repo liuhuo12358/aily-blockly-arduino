@@ -111,11 +111,16 @@ export class AppComponent implements OnInit, OnDestroy {
     if (window['exampleList'] && window['exampleList'].onOpen) {
       this.exampleListListener = window['exampleList'].onOpen((data: any) => {
         console.log('收到打开示例列表请求:', data);
-        const keyword = data.keyword || '';
         
         // 导航到示例列表页面
         this.router.navigate(['/main/playground'], {
-          queryParams: { keyword: keyword }
+          queryParams: { 
+            keyword: data.keyword || '',
+            id: data.id || '',
+            sessionId: data.sessionId || '',
+            params: data.params || '',
+            version: data.version || ''
+          }
         });
       });
     }
