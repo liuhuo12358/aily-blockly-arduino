@@ -39,7 +39,7 @@ import {
   connectBlocksTool,
   createCodeStructureTool,
   configureBlockTool,
-  // variableManagerTool, 
+  // variableManagerTool,
   // findBlockTool,
   deleteBlockTool,
   getWorkspaceOverviewTool,  // 新增工具导入
@@ -1264,8 +1264,8 @@ ${JSON.stringify(errData)}
             if (data.type.startsWith('context_compression_start')) {
               this.appendMessage('aily', `\n\n
 \`\`\`aily-state
-{ 
-  "state": "doing", 
+{
+  "state": "doing",
   "text": "${data.content}",
   "id": "${data.id}"
 }
@@ -1274,7 +1274,7 @@ ${JSON.stringify(errData)}
             } else {
               this.appendMessage('aily', `\n\n
 \`\`\`aily-state
-{ 
+{
   "state": "done",
   "text": "${data.content}",
   "id": "${data.id}"
@@ -1888,7 +1888,7 @@ ${JSON.stringify(errData)}
 
                     // \`\`\`aily-state
                     // {
-                    //   "state": "doing", 
+                    //   "state": "doing",
                     //   "text": "管理TODO项目...",
                     //   "id": "${toolCallId}"
                     // }
@@ -1942,9 +1942,9 @@ ${JSON.stringify(errData)}
                       // // 如果有todos数据，添加任务列表显示
                       // if (toolResult.todos && Array.isArray(toolResult.todos) && toolResult.todos.length > 0) {
                       //   const todoList = toolResult.todos.map(todo => {
-                      //     const statusIcon = todo.status === 'completed' ? '✅' : 
+                      //     const statusIcon = todo.status === 'completed' ? '✅' :
                       //                       todo.status === 'in_progress' ? '🔄' : '⏸️';
-                      //     const priorityIcon = todo.priority === 'high' ? '🔴' : 
+                      //     const priorityIcon = todo.priority === 'high' ? '🔴' :
                       //                         todo.priority === 'medium' ? '🟡' : '🟢';
                       //     return `${priorityIcon} ${todo.content} ${statusIcon}`;
                       //   }).join('\n');
@@ -2213,7 +2213,7 @@ Your role is ASK (Advisory & Quick Support) - you provide analysis, recommendati
 \`\`\`\n\n
 
           `);
-          // 调用取消函数 
+          // 调用取消函数
           this.stop();
         }
       },
@@ -2285,7 +2285,7 @@ Your role is ASK (Advisory & Quick Support) - you provide analysis, recommendati
       if (res.status === 'success') {
         // 先解析工具调用状态信息
         this.parseHistory(res.data);
-        this.scrollToBottom();
+        this.scrollToBottom('auto');
       } else {
         this.appendMessage('error', res.message);
       }
@@ -2357,7 +2357,7 @@ Your role is ASK (Advisory & Quick Support) - you provide analysis, recommendati
     return segments;
   }
 
-  scrollToBottom() {
+  scrollToBottom(behavior: string = 'smooth') {
     // 只在自动滚动启用时才滚动到底部
     if (!this.autoScrollEnabled) {
       return;
@@ -2375,7 +2375,7 @@ Your role is ASK (Advisory & Quick Support) - you provide analysis, recommendati
             // 使用 scrollTo 方法实现平滑滚动
             element.scrollTo({
               top: element.scrollHeight,
-              behavior: 'smooth'
+              behavior,
             });
           }
         }
