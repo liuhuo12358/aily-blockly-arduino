@@ -24,6 +24,7 @@ export class ChatService {
 
   currentMode = 'ask'; // 默认为代理模式
   historyList = [];
+  historyChatMap = new Map<string, any>();
 
   currentSessionId = this.historyList.length > 0 ? this.historyList[0].sessionId : '';
   currentSessionTitle = this.historyList.length > 0 ? this.historyList[0].name : '';
