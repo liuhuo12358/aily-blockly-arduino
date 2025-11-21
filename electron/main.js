@@ -454,7 +454,7 @@ function checkNodePath(childPath) {
   }
   const ailyBuilderPath = path.join(childPath, "aily-builder");
   if (!fs.existsSync(ailyBuilderPath)) {
-    const ailyBuilderZipPath = path.join(childPath, serve ? "common" : "", "aily-builder-1.0.6.7z");
+    const ailyBuilderZipPath = path.join(childPath, serve ? "macos" : "", "aily-builder-1.0.6.7z");
     try {
       child_process.execSync(`mkdir -p ${ailyBuilderPath} && tar -xzf ${ailyBuilderZipPath} -C ${ailyBuilderPath}`, {stdio: 'inherit'});
       console.log('安装解压aily-builder成功！');
