@@ -444,7 +444,7 @@ function checkNodePath(childPath) {
   childPath = escapePath(childPath);
   const nodePath = path.join(childPath, "node");
   if (!fs.existsSync(nodePath)) {
-    const nodeZipPath = path.join(childPath, "node-v22.21.0-darwin-arm64.7z");
+    const nodeZipPath = path.join(childPath, serve ? "macos" : "", "node-v22.21.0-darwin-arm64.7z");
     try {
       child_process.execSync(`mkdir -p ${nodePath} && tar -xzf ${nodeZipPath} -C ${nodePath}`, {stdio: 'inherit'});
       console.log('安装解压node成功！');
@@ -454,7 +454,7 @@ function checkNodePath(childPath) {
   }
   const ailyBuilderPath = path.join(childPath, "aily-builder");
   if (!fs.existsSync(ailyBuilderPath)) {
-    const ailyBuilderZipPath = path.join(childPath, "aily-builder-1.0.6.7z");
+    const ailyBuilderZipPath = path.join(childPath, serve ? "common" : "", "aily-builder-1.0.6.7z");
     try {
       child_process.execSync(`mkdir -p ${ailyBuilderPath} && tar -xzf ${ailyBuilderZipPath} -C ${ailyBuilderPath}`, {stdio: 'inherit'});
       console.log('安装解压aily-builder成功！');
@@ -823,7 +823,7 @@ function createWindow() {
                 console.log('检测到OAuth回调文件变化，发送回调数据');
                 if (mainWindow && mainWindow.webContents) {
                   mainWindow.webContents.send('oauth-callback', callbackData);
-                  
+
                   // 将窗口置前显示
                   if (mainWindow.isMinimized()) {
                     mainWindow.restore();
