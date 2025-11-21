@@ -39,7 +39,7 @@ import {
   connectBlocksTool,
   createCodeStructureTool,
   configureBlockTool,
-  // variableManagerTool, 
+  // variableManagerTool,
   // findBlockTool,
   deleteBlockTool,
   getWorkspaceOverviewTool,  // 新增工具导入
@@ -100,6 +100,7 @@ import { ArduinoLintService } from './services/arduino-lint.service';
 import { BlocklyService } from '../../editors/blockly-editor/services/blockly.service';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { LoginComponent } from '../../components/login/login.component';
+
 // import { reloadAbiJsonTool, reloadAbiJsonToolSimple } from './tools';
 
 @Component({
@@ -589,10 +590,10 @@ export class AilyChatComponent implements OnDestroy {
   }
 
   /**
- * 获取URL中的文件名或有意义的部分
- * @param url 完整的URL地址
- * @returns 简化的URL名称，如果无法解析则返回原URL
- */
+   * 获取URL中的文件名或有意义的部分
+   * @param url 完整的URL地址
+   * @returns 简化的URL名称，如果无法解析则返回原URL
+   */
   getUrlDisplayName(url: string): string {
     if (!url) return '';
 
@@ -714,7 +715,8 @@ appDataPath(**appDataPath**): ${window['path'].getAppDataPath() || '无'}
     private todoUpdateService: TodoUpdateService,
     private arduinoLintService: ArduinoLintService,
     private translate: TranslateService
-  ) { }
+  ) {
+  }
 
   ngOnInit() {
     // if (this.electronService.isElectron) {
@@ -992,6 +994,7 @@ appDataPath(**appDataPath**): ${window['path'].getAppDataPath() || '无'}
         "state": state
       });
     }
+    this.chatService.historyChatMap.set(this.sessionId, this.list);
   }
 
   async startSession(): Promise<void> {
@@ -1264,8 +1267,8 @@ ${JSON.stringify(errData)}
             if (data.type.startsWith('context_compression_start')) {
               this.appendMessage('aily', `\n\n
 \`\`\`aily-state
-{ 
-  "state": "doing", 
+{
+  "state": "doing",
   "text": "${data.content}",
   "id": "${data.id}"
 }
@@ -1274,7 +1277,7 @@ ${JSON.stringify(errData)}
             } else {
               this.appendMessage('aily', `\n\n
 \`\`\`aily-state
-{ 
+{
   "state": "done",
   "text": "${data.content}",
   "id": "${data.id}"
@@ -1888,7 +1891,7 @@ ${JSON.stringify(errData)}
 
                     // \`\`\`aily-state
                     // {
-                    //   "state": "doing", 
+                    //   "state": "doing",
                     //   "text": "管理TODO项目...",
                     //   "id": "${toolCallId}"
                     // }
@@ -1942,9 +1945,9 @@ ${JSON.stringify(errData)}
                       // // 如果有todos数据，添加任务列表显示
                       // if (toolResult.todos && Array.isArray(toolResult.todos) && toolResult.todos.length > 0) {
                       //   const todoList = toolResult.todos.map(todo => {
-                      //     const statusIcon = todo.status === 'completed' ? '✅' : 
+                      //     const statusIcon = todo.status === 'completed' ? '✅' :
                       //                       todo.status === 'in_progress' ? '🔄' : '⏸️';
-                      //     const priorityIcon = todo.priority === 'high' ? '🔴' : 
+                      //     const priorityIcon = todo.priority === 'high' ? '🔴' :
                       //                         todo.priority === 'medium' ? '🟡' : '🟢';
                       //     return `${priorityIcon} ${todo.content} ${statusIcon}`;
                       //   }).join('\n');
@@ -1955,18 +1958,17 @@ ${JSON.stringify(errData)}
                       // }
                     }
                     break;
-                  case 'queryBlockDefinitionTool':
-                    {
-                      // console.log('[块定义查询工具被调用]', toolArgs);
-                      this.startToolCall(toolCallId, data.tool_name, "查询块定义信息...", toolArgs);
-                      toolResult = await queryBlockDefinitionTool(this.projectService, toolArgs);
-                      if (toolResult.is_error) {
-                        resultState = "error";
-                        resultText = '块定义查询失败: ' + (toolResult.content || '未知错误');
-                      } else {
-                        resultText = `块定义查询完成: ${toolResult.content}`;
-                      }
+                  case 'queryBlockDefinitionTool': {
+                    // console.log('[块定义查询工具被调用]', toolArgs);
+                    this.startToolCall(toolCallId, data.tool_name, "查询块定义信息...", toolArgs);
+                    toolResult = await queryBlockDefinitionTool(this.projectService, toolArgs);
+                    if (toolResult.is_error) {
+                      resultState = "error";
+                      resultText = '块定义查询失败: ' + (toolResult.content || '未知错误');
+                    } else {
+                      resultText = `块定义查询完成: ${toolResult.content}`;
                     }
+                  }
                     break;
                   //                   case 'getBlockConnectionCompatibilityTool':
                   //                     {
@@ -2213,7 +2215,7 @@ Your role is ASK (Advisory & Quick Support) - you provide analysis, recommendati
 \`\`\`\n\n
 
           `);
-          // 调用取消函数 
+          // 调用取消函数
           this.stop();
         }
       },
@@ -2280,12 +2282,22 @@ Your role is ASK (Advisory & Quick Support) - you provide analysis, recommendati
 
     this.list = [...this.defaultList.map(item => ({ ...item }))];
     // console.log('获取历史消息，sessionId:', this.sessionId);
+    // this.chatService.getHistory(this.sessionId).subscribe((res: any) => {
+    //   // console.log('get history', res);
+    //
+    // });
+    if (this.chatService.historyChatMap.get(this.sessionId)) {
+      this.list = [...this.chatService.historyChatMap.get(this.sessionId)];
+      this.scrollToBottom('auto');
+      return;
+    }
+
     this.chatService.getHistory(this.sessionId).subscribe((res: any) => {
       // console.log('get history', res);
       if (res.status === 'success') {
         // 先解析工具调用状态信息
         this.parseHistory(res.data);
-        this.scrollToBottom();
+        this.scrollToBottom('auto');
       } else {
         this.appendMessage('error', res.message);
       }
@@ -2293,6 +2305,7 @@ Your role is ASK (Advisory & Quick Support) - you provide analysis, recommendati
   }
 
   bottomHeight = 180;
+
   onContentResize({ height }: NzResizeEvent): void {
     this.bottomHeight = height!;
   }
@@ -2357,7 +2370,7 @@ Your role is ASK (Advisory & Quick Support) - you provide analysis, recommendati
     return segments;
   }
 
-  scrollToBottom() {
+  scrollToBottom(behavior: string = 'smooth') {
     // 只在自动滚动启用时才滚动到底部
     if (!this.autoScrollEnabled) {
       return;
@@ -2375,7 +2388,7 @@ Your role is ASK (Advisory & Quick Support) - you provide analysis, recommendati
             // 使用 scrollTo 方法实现平滑滚动
             element.scrollTo({
               top: element.scrollHeight,
-              behavior: 'smooth'
+              behavior,
             });
           }
         }
@@ -2548,6 +2561,7 @@ Your role is ASK (Advisory & Quick Support) - you provide analysis, recommendati
 
   selectContent: ResourceItem[] = []
   showAddList = false;
+
   openAddList() {
     this.showAddList = !this.showAddList;
   }
