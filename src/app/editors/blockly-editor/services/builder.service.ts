@@ -243,7 +243,7 @@ export class _BuilderService {
           this.checkIfCancelled();
           // 检查和清理libraries文件夹
           // 输出已复制的库文件夹名称
-          console.log(`已复制的库文件夹: ${copiedLibraries.join(', ')}`);
+          // console.log(`已复制的库文件夹: ${copiedLibraries.join(', ')}`);
 
           // 获取libraries文件夹中的所有文件夹
           let existingFolders: string[] = [];
@@ -254,7 +254,7 @@ export class _BuilderService {
               .filter(item => window['fs'].isDirectory(`${librariesPath}/${item.name || item}`))
               .map(item => item.name || item);
 
-            console.log(`libraries文件夹中现有文件夹: ${existingFolders.join(', ')}`);
+            // console.log(`libraries文件夹中现有文件夹: ${existingFolders.join(', ')}`);
 
             // 直接清理不在copiedLibraries列表中的文件夹
             if (existingFolders.length > 0) {
@@ -270,7 +270,7 @@ export class _BuilderService {
                   const folderToDelete = `${librariesPath}/${folder}`;
                   console.log(`删除未使用的库文件夹: ${folder}`);
                   try {
-                    await this.crossPlatformCmdService.removeItem(folderToDelete, true, true);
+                    await this.crossPlatformCmdService.deleteItem(folderToDelete);
                   } catch (error) {
                     console.warn(`删除文件夹 ${folder} 失败:`, error);
                   }
@@ -364,7 +364,7 @@ export class _BuilderService {
             }
           }
 
-          console.log("boardType: ", this.boardType);
+          // console.log("boardType: ", this.boardType);
 
           compilerParam = compilerParamList.join(' ');
 
@@ -381,7 +381,7 @@ export class _BuilderService {
                 if (value !== null && value !== undefined && value !== '') {
                   // if (/upload/i.test(key)) return; // 跳过包含 upload 的配置项
                   buildPropertyParams.push(`--board-options ${key}=${value}`);
-                  console.log(`解析配置: --board-options ${key}=${value}`);
+                  // console.log(`解析配置: --board-options ${key}=${value}`);
                 }
 
                 if (key === 'PartitionScheme' && value === 'custom') {
@@ -466,7 +466,7 @@ export class _BuilderService {
 
           this.cmdService.run(compileCommand, null, false).subscribe({
             next: (output: CmdOutput) => {
-              console.log('编译命令输出:', output);
+              // console.log('编译命令输出:', output);
               if (output.type === 'close' && output.code !== 0) {
                 this.isErrored = true;
                 return;
@@ -812,7 +812,7 @@ export class _BuilderService {
         const itemName = typeof firstItem === 'object' && firstItem !== null ? firstItem.name : firstItem;
 
         if (itemName === 'src' && window['fs'].isDirectory(`${sourcePath}/${itemName}`)) {
-          console.log(`检测到嵌套src目录，使用 ${sourcePath}/src 作为源路径`);
+          // console.log(`检测到嵌套src目录，使用 ${sourcePath}/src 作为源路径`);
           return `${sourcePath}/src`;
         }
       }
@@ -863,10 +863,11 @@ export class _BuilderService {
       // 如果目标已存在且是开发模式，添加删除命令
       if (window['path'].isExists(op.target) && (this.configService.data.devmode || false)) {
         // 使用跨平台命令删除
-        await this.crossPlatformCmdService.removeItem(op.target, true, true);
+        await this.crossPlatformCmdService.deleteItem(op.target);
       }
       // 使用跨平台命令复制
-      await this.crossPlatformCmdService.copyItem(op.source, op.target, true, true);
+      // await this.crossPlatformCmdService.copyItem(op.source, op.target, true, true);
+      await this.crossPlatformCmdService.linkItem(op.source, op.target);
     }
     
     try {
@@ -903,7 +904,7 @@ export class _BuilderService {
       let shouldCopy = true;
       if (window['path'].isExists(targetPath)) {
         if (this.configService.data.devmode || false) {
-          await this.crossPlatformCmdService.removeItem(targetPath, true, true);
+          await this.crossPlatformCmdService.deleteItem(targetPath);
         } else {
           console.log(`库 ${lib} 目标路径已存在，跳过复制但保留记录`);
           shouldCopy = false;
@@ -911,7 +912,7 @@ export class _BuilderService {
       }
 
       if (shouldCopy) {
-        await this.crossPlatformCmdService.copyItem(sourcePath, targetPath, true, true);
+        await this.crossPlatformCmdService.linkItem(sourcePath, targetPath);
       }
 
       // 更新缓存
@@ -945,7 +946,7 @@ export class _BuilderService {
    */
   private async processLibraryDirectories(lib: string, sourcePath: string, librariesPath: string): Promise<LibraryProcessResult> {
     try {
-      console.log(`库 ${lib} 不包含头文件，逐个复制目录`);
+      // console.log(`库 ${lib} 不包含头文件，逐个复制目录`);
       const targetNames: string[] = [];
       const copyOperations: CopyOperation[] = [];
 
@@ -1058,7 +1059,7 @@ export class _BuilderService {
    * @returns 已复制的库名称列表
    */
   private async processLibrariesParallel(libsPath: string[], librariesPath: string): Promise<string[]> {
-    console.log(`开始并行处理 ${libsPath.length} 个库`);
+    // console.log(`开始并行处理 ${libsPath.length} 个库`);
     
     try {
       // 并行处理所有库
@@ -1081,7 +1082,7 @@ export class _BuilderService {
         console.warn('以下库处理失败:', errors);
       }
 
-      console.log(`并行处理完成，成功处理 ${copiedLibraries.length} 个库目录`);
+      // console.log(`并行处理完成，成功处理 ${copiedLibraries.length} 个库目录`);
       return copiedLibraries;
     } catch (error) {
       console.error('并行处理库失败:', error);
@@ -1097,13 +1098,13 @@ export class _BuilderService {
     try {
       // 检查compilerPath是否存在
       if (!window['path'].isExists(this.compilerPath)) {
-        console.warn(`编译器路径不存在: ${this.compilerPath}`);
+        // console.warn(`编译器路径不存在: ${this.compilerPath}`);
         return;
       }
 
       // 检查toolsPath是否存在，如果不存在则创建
       if (!window['path'].isExists(this.toolsPath)) {
-        console.log(`创建工具路径: ${this.toolsPath}`);
+        // console.log(`创建工具路径: ${this.toolsPath}`);
         await this.crossPlatformCmdService.createDirectory(this.toolsPath, true);
       }
 
@@ -1116,26 +1117,26 @@ export class _BuilderService {
 
       const targetCompilerPath = `${this.toolsPath}/${compilerDirName}`;
 
-      console.log(`检查编译器目录是否存在: ${targetCompilerPath}`);
+      // console.log(`检查编译器目录是否存在: ${targetCompilerPath}`);
 
       // 检查目标路径是否已存在编译器目录
       if (window['path'].isExists(targetCompilerPath)) {
-        console.log(`编译器目录已存在于工具路径中: ${compilerDirName}`);
+        // console.log(`编译器目录已存在于工具路径中: ${compilerDirName}`);
         return;
       }
 
-      console.log(`开始复制编译器目录: ${this.compilerPath} -> ${targetCompilerPath}`);
-
+      // console.log(`开始复制编译器目录: ${this.compilerPath} -> ${targetCompilerPath}`);
       // 复制整个编译器目录到工具路径
       try {
-        await this.crossPlatformCmdService.copyItem(this.compilerPath, this.toolsPath, true, true);
-        console.log(`成功复制编译器目录: ${compilerDirName}`);
+        // await this.crossPlatformCmdService.copyItem(this.compilerPath, this.toolsPath, true, true);
+        await this.crossPlatformCmdService.linkItem(this.compilerPath, this.toolsPath);
+        // console.log(`成功复制编译器目录: ${compilerDirName}`);
       } catch (error) {
         console.error(`复制编译器目录失败:`, error);
         throw error;
       }
 
-      console.log('编译器目录同步完成');
+      // console.log('编译器目录同步完成');
     } catch (error) {
       console.error('同步编译器目录失败:', error);
       throw error;

@@ -195,8 +195,9 @@ export class ProjectService {
 
   // 保存项目
   save(path = this.currentProjectPath) {
-    this.actionService.dispatch('project-save', { path }, result => {
+    this.actionService.dispatch('project-save', { path }, async result => {
       if (result.success) {
+        this.currentPackageData = await this.getPackageJson();
         this.stateSubject.next('saved');
       } else {
         console.warn('项目保存失败:', result.error);
@@ -300,6 +301,13 @@ export class ProjectService {
     if (!this.currentProjectPath) {
       throw new Error('当前项目路径未设置');
     }
+
+    // set之前重新获取最新的package.json内容，然后进行合并
+    const currentPackageJson = await this.getPackageJson();
+    if (currentPackageJson) {
+      data = { ...currentPackageJson, ...data };
+    }
+
     const packageJsonPath = `${this.currentProjectPath}/package.json`;
     // 写入新的package.json
     window['fs'].writeFileSync(packageJsonPath, JSON.stringify(data, null, 2));

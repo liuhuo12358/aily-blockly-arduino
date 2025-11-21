@@ -40,6 +40,9 @@ export class ExampleListComponent implements OnInit, AfterViewInit, OnDestroy {
   exampleList: any[] = [];
   resourceUrl: string = '';
   keyword: string = '';
+  params: string = '';
+  version: string = '';
+  sessionId: string = '';
 
   pageIndex: number = 1; // 当前页码
   pageSize: number = 10; // 每页显示数量，默认值
@@ -71,12 +74,17 @@ export class ExampleListComponent implements OnInit, AfterViewInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe(params => {
         console.log('URL参数:', params);
+        const id = params['id'] || '';
+        this.sessionId = params['sessionId'] || '';
+
         this.keyword = params['keyword'] || '';
+        this.params = params['params'] || '';
+        this.version = params['version'] || '';
         // 当通过 URL 搜索时，重置回第一页
         this.pageIndex = 1;
         // 只有在 pageSize 已计算后才获取数据
         if (this.pageSizeCalculated) {
-          this.getExamples();
+          this.getExamples(id);
         }
       });
     // this.resourceUrl = this.configService.data.resource[0] + "/imgs/examples/";
@@ -104,7 +112,7 @@ export class ExampleListComponent implements OnInit, AfterViewInit, OnDestroy {
     // }
   }
 
-  getExamples() {
+  getExamples(id: string = '') {
     this.cloudService.getPublicProjects(this.pageIndex, this.pageSize, this.keyword).subscribe(res => {
       if (res && res.status === 200) {
         this.exampleList = []

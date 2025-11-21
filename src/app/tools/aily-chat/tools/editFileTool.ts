@@ -112,7 +112,7 @@ export async function editFileTool(
         // 路径规范化
         const normalizedFilePath = normalizePath(filePath);
         
-        console.log("编辑文件: ", normalizedFilePath);
+        // console.log("编辑文件: ", normalizedFilePath);
 
         // 验证路径是否有效
         if (!normalizedFilePath || normalizedFilePath.trim() === '') {

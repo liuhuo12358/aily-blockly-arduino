@@ -73,17 +73,17 @@ export async function getContextTool(prjService: ProjectService, input: GetConte
             
             if (editingMode.mode === 'blockly' || editingMode.mode === 'unknown') {
                 try {
-                    console.log('📊 项目已打开且处于Blockly模式，获取工作区概览...');
+                    // console.log('📊 项目已打开且处于Blockly模式，获取工作区概览...');
                     const workspaceInfo = await getWorkspaceOverviewInfo();
                     result.workspaceOverview = workspaceInfo.overview;
                     result.cppCode = workspaceInfo.cppCode;
-                    console.log('✅ 工作区概览获取成功');
+                    // console.log('✅ 工作区概览获取成功');
                 } catch (error) {
-                    console.warn('⚠️ 获取工作区概览失败:', error);
+                    // console.warn('⚠️ 获取工作区概览失败:', error);
                     result.workspaceOverview = '⚠️ 工作区概览获取失败';
                 }
             } else {
-                console.log(`ℹ️ 当前编辑模式为 ${editingMode.mode}，跳过工作区概览获取`);
+                // console.log(`ℹ️ 当前编辑模式为 ${editingMode.mode}，跳过工作区概览获取`);
             }
         }
 
@@ -133,7 +133,7 @@ async function getWorkspaceOverviewInfo(includeCode = true, includeTree = true):
     isError: boolean;
 }> {
     try {
-        console.log('📊 获取工作区概览...');
+        // console.log('📊 获取工作区概览...');
         const overviewResult = await getWorkspaceOverviewTool({
             includeCode,
             includeTree,
@@ -153,11 +153,11 @@ async function getWorkspaceOverviewInfo(includeCode = true, includeTree = true):
             }
             
             // 🔧 如果概览中包含变量信息，添加到开头
-            if (overview.includes('📝 变量列表:')) {
-                console.log('✅ 工作区概览包含变量信息');
-            } else {
-                console.log('ℹ️ 工作区概览中无变量信息');
-            }
+            // if (overview.includes('📝 变量列表:')) {
+            //     console.log('✅ 工作区概览包含变量信息');
+            // } else {
+            //     console.log('ℹ️ 工作区概览中无变量信息');
+            // }
             
             return { overview, cppCode, isError: false };
         } else {

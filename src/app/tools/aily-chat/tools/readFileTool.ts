@@ -46,7 +46,7 @@ export async function readFileTool(
         // 路径规范化
         filePath = normalizePath(filePath);
         
-        console.log("读取文件: ", filePath);
+        // console.log("读取文件: ", filePath);
 
         // 验证路径是否有效
         if (!filePath || filePath.trim() === '') {

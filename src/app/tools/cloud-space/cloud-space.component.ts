@@ -43,6 +43,7 @@ export class CloudSpaceComponent {
   isLoginDialogOpen = false; // 标记登录对话框是否已打开
 
   isLoggedIn = false;
+  openingProjectIds = new Set<string>();
 
   constructor(
     private uiService: UiService,
@@ -117,27 +118,44 @@ export class CloudSpaceComponent {
   // 打开项目
   openInNewTab(item) {
     if (!item || !item.id) return;
+    if (this.openingProjectIds.has(item.id)) return;
+
+    this.openingProjectIds.add(item.id);
     console.log('打开云上项目:', item);
-    this.cloudService.getProjectArchive(item.archive_url).subscribe(async res => {
-      // 直接添加随机数避免重名
-      const randomNum = Math.floor(100000 + Math.random() * 900000);
-      const uniqueName = `${item.name || 'cloud_project'}_${randomNum}`;
-      const targetPath = this.projectService.projectRootPath + this.platformService.getPlatformSeparator() + uniqueName;
+    this.cloudService.getProjectArchive(item.archive_url).subscribe({
+      next: async res => {
+        try {
+          // 直接添加随机数避免重名
+          const randomNum = Math.floor(100000 + Math.random() * 900000);
+          const uniqueName = `${item.name || 'cloud_project'}_${randomNum}`;
+          const targetPath = this.projectService.projectRootPath + this.platformService.getPlatformSeparator() + uniqueName;
 
-      // 使用 Move-Item 将下载/临时文件移动到目标项目目录
-      // -Force 用于覆盖同名目标（如果存在）
-      await this.crossPlatformCmdService.copyItem(res, targetPath, true, true);
+          // 使用 Move-Item 将下载/临时文件移动到目标项目目录
+          // -Force 用于覆盖同名目标（如果存在）
+          await this.crossPlatformCmdService.copyItem(res, targetPath, true, true);
 
-      // 更新 package.json 中的项目信息
-      const packageJson = JSON.parse(this.electronService.readFile(`${targetPath}/package.json`));
-      packageJson.nickname = item.nickname
-      packageJson.description = item.description || ''
-      packageJson.doc_url = item.doc_url || ''
-      packageJson.keywords = item?.tags ? JSON.parse(item.tags) : []
-      packageJson.cloudId = item.id;
+          // 更新 package.json 中的项目信息
+          const packageJson = JSON.parse(this.electronService.readFile(`${targetPath}/package.json`));
+          packageJson.nickname = item.nickname
+          packageJson.description = item.description || ''
+          packageJson.doc_url = item.doc_url || ''
+          packageJson.keywords = item?.tags ? JSON.parse(item.tags) : []
+          packageJson.cloudId = item.id;
 
-      this.electronService.writeFile(`${targetPath}/package.json`, JSON.stringify(packageJson, null, 2));
-      this.projectService.projectOpen(targetPath);
+          this.electronService.writeFile(`${targetPath}/package.json`, JSON.stringify(packageJson, null, 2));
+          this.projectService.projectOpen(targetPath);
+        } catch (e) {
+          console.error('打开项目失败', e);
+          this.message.error('打开项目失败');
+        } finally {
+          this.openingProjectIds.delete(item.id);
+        }
+      },
+      error: err => {
+        console.error('下载项目失败', err);
+        this.message.error('下载项目失败');
+        this.openingProjectIds.delete(item.id);
+      }
     });
   }
 
@@ -376,7 +394,9 @@ export class CloudSpaceComponent {
       this.message.error('同步失败: ' + err);
       this.delete7zFile(archivePath);
     });
-  } showEditor = false;
+  } 
+  
+  showEditor = false;
 
   openEditor(item) {
     this.showEditor = true;

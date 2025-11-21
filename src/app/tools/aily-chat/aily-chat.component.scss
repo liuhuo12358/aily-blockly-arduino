@@ -29,7 +29,7 @@
   padding-left: 10px;
   flex: 1; /* 使用flex:1让对话区域占用剩余空间 */
   overflow-y: auto;
-  scroll-behavior: smooth;
+  //scroll-behavior: smooth;
   min-height: 0; /* 确保flex子项可以收缩 */
 
   .dialogs {

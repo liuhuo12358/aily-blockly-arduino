@@ -15,7 +15,7 @@ async function checkRipgrepAvailable(): Promise<boolean> {
         const electronAPI = (window as any).electronAPI;
         if (electronAPI?.ripgrep && typeof electronAPI.ripgrep.isRipgrepAvailable === 'function') {
             ripgrepAvailable = await electronAPI.ripgrep.isRipgrepAvailable();
-            console.log('Ripgrep 可用性检测:', ripgrepAvailable);
+            // console.log('Ripgrep 可用性检测:', ripgrepAvailable);
             return ripgrepAvailable;
         }
     } catch (error) {
@@ -301,7 +301,7 @@ export async function grepTool(
         // 路径规范化
         searchPath = normalizePath(searchPath);
         
-        console.log(`搜索文件内容: pattern="${pattern}", path="${searchPath}", include="${include || 'all'}"`);
+        // console.log(`搜索文件内容: pattern="${pattern}", path="${searchPath}", include="${include || 'all'}"`);
         
         // 验证路径是否存在
         if (!window['fs'].existsSync(searchPath)) {
@@ -327,7 +327,7 @@ export async function grepTool(
         
         // 如果需要返回内容，使用 searchContent
         if (returnContent && ripgrepReady) {
-            console.log('使用 ripgrep searchContent 返回匹配内容');
+            // console.log('使用 ripgrep searchContent 返回匹配内容');
             
             try {
                 const electronAPI = (window as any).electronAPI;
@@ -392,8 +392,8 @@ export async function grepTool(
                     resultContent += `\n⚠️ 结果已截断，仅显示前 ${maxResults} 个匹配。请使用更具体的搜索模式或文件过滤。`;
                 }
 
-                console.log('searchContent 完成:', result.numMatches, '个匹配, 耗时', result.durationMs, 'ms');
-                console.log('匹配内容:', result.matches);
+                // console.log('searchContent 完成:', result.numMatches, '个匹配, 耗时', result.durationMs, 'ms');
+                // console.log('匹配内容:', result.matches);
 
                 const toolResult = {
                     is_error: false,
@@ -412,7 +412,7 @@ export async function grepTool(
             } catch (error: any) {
                 console.warn('searchContent 失败:', error);
                 // 降级到文件名模式
-                console.log('降级到文件名搜索模式');
+                // console.log('降级到文件名搜索模式');
             }
         }
         
@@ -422,21 +422,21 @@ export async function grepTool(
         let usingRipgrep = false;
         
         if (ripgrepReady) {
-            console.log('使用 ripgrep 进行文件名搜索');
+            // console.log('使用 ripgrep 进行文件名搜索');
             searchResult = await searchWithRipgrep(pattern, searchPath, include, isRegex);
             if (searchResult) {
                 usingRipgrep = true;
-                console.log(`Ripgrep 搜索完成: 找到 ${searchResult.numFiles} 个文件, 耗时 ${searchResult.durationMs}ms`);
+                // console.log(`Ripgrep 搜索完成: 找到 ${searchResult.numFiles} 个文件, 耗时 ${searchResult.durationMs}ms`);
             }
         }
         
         // 如果 ripgrep 不可用或失败，使用纯 TypeScript 实现作为后备
         if (!searchResult) {
-            if (ripgrepReady) {
-                console.log('Ripgrep 搜索失败，回退到纯 TypeScript 实现');
-            } else {
-                console.log('Ripgrep 不可用，使用纯 TypeScript 实现');
-            }
+            // if (ripgrepReady) {
+            //     console.log('Ripgrep 搜索失败，回退到纯 TypeScript 实现');
+            // } else {
+            //     console.log('Ripgrep 不可用，使用纯 TypeScript 实现');
+            // }
             
             const jsResult = searchFilesRecursive(
                 searchPath,

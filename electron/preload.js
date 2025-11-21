@@ -175,6 +175,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
     unlinkSync: (path, cb) => require("fs").unlinkSync(path, cb),
     rmdirSync: (path) => require("fs").rmdirSync(path, { recursive: true, force: true }),
     renameSync: (oldPath, newPath) => require("fs").renameSync(oldPath, newPath),
+    linkSync: (existingPath, newPath) => require("fs").linkSync(existingPath, newPath),
   },
   glob: {
     // 使用glob模式查找文件
@@ -357,6 +358,17 @@ contextBridge.exposeInMainWorld("electronAPI", {
           .then((result) => resolve(result))
           .catch((error) => reject(error));
       });
+    }
+  },
+  // 示例列表协议 API
+  exampleList: {
+    onOpen: (callback) => {
+      const listener = (event, data) => callback(data);
+      ipcRenderer.on('open-example-list', listener);
+      // 返回解除监听函数
+      return () => {
+        ipcRenderer.removeListener('open-example-list', listener);
+      };
     }
   },
   tools: {

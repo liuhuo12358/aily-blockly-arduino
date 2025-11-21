@@ -4,11 +4,13 @@ import { ElectronService } from '../../../../services/electron.service';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { FormsModule } from '@angular/forms';
 import { ConfigService } from '../../../../services/config.service';
+import { NzToolTipModule } from 'ng-zorro-antd/tooltip';
 
 @Component({
   selector: 'app-dev-tool',
   imports: [
-    FormsModule
+    FormsModule,
+    NzToolTipModule
   ],
   templateUrl: './dev-tool.component.html',
   styleUrl: './dev-tool.component.scss'
@@ -69,37 +71,37 @@ export class DevToolComponent implements OnInit {
     this.dragStartX = event.clientX - this.currentX;
     this.dragStartY = event.clientY;
     this.offsetY = window.innerHeight - this.currentY; // 计算从顶部的偏移
-    
+
     // 添加全局事件监听
     document.addEventListener('mousemove', this.onDrag);
     document.addEventListener('mouseup', this.onDragEnd);
-    
+
     event.preventDefault();
   }
 
   onDrag = (event: MouseEvent) => {
     if (!this.isDragging) return;
-    
+
     // 计算新位置
     this.currentX = event.clientX - this.dragStartX;
     this.currentY = window.innerHeight - event.clientY + (this.dragStartY - this.offsetY);
-    
+
     // 限制在可视区域内
     const topExclusionZone = 70; // 顶部禁用区域高度
     const componentHeight = 40; // 假设组件高度约40px
-    const componentWidth = 345; // 假设组件宽度约345px
+    const componentWidth = 282; // 假设组件宽度约270px
 
     const maxX = window.innerWidth - componentWidth;
     const minY = 1; // 最小bottom值
     const maxY = window.innerHeight - topExclusionZone - componentHeight; // 不能进入顶部40px区域
-    
+
     this.currentX = Math.max(0, Math.min(this.currentX, maxX));
     this.currentY = Math.max(minY, Math.min(this.currentY, maxY));
   }
 
   onDragEnd = () => {
     this.isDragging = false;
-    
+
     // 移除全局事件监听
     document.removeEventListener('mousemove', this.onDrag);
     document.removeEventListener('mouseup', this.onDragEnd);
@@ -109,6 +111,30 @@ export class DevToolComponent implements OnInit {
     // 清理事件监听器
     document.removeEventListener('mousemove', this.onDrag);
     document.removeEventListener('mouseup', this.onDragEnd);
+  }
+
+  /**
+   * 获取当前项目的构建路径
+   * @returns 返回构建路径
+   */
+  private async getBuildPath(): Promise<string> {
+    const sketchPath = window['path'].join(
+      this.projectService.currentProjectPath,
+      '.temp',
+      'sketch',
+      'sketch.ino'
+    );
+    const sketchName = window['path'].basename(sketchPath, '.ino');
+
+    // 为了避免不同项目的同名sketch冲突,使用项目路径的MD5哈希值
+    const projectPathMD5 = (await window['tools'].calculateMD5(sketchPath)).substring(0, 8); // 只取前8位MD5值
+    const uniqueSketchName = `${sketchName}_${projectPathMD5}`;
+
+    // 使用统一的构建路径获取方法
+    return window['path'].join(
+      window['path'].getAilyBuilderBuildPath(),
+      uniqueSketchName
+    );
   }
 
   reload() {
@@ -126,25 +152,7 @@ export class DevToolComponent implements OnInit {
 
   async clear() {
     try {
-      const pt = window['platform'].pt;
-      // const sketchPath = this.projectService.currentProjectPath + pt + '.temp' + pt + 'sketch' + pt + 'sketch.ino';
-      const sketchPath = window['path'].join(
-        this.projectService.currentProjectPath,
-        '.temp',
-        'sketch',
-        'sketch.ino'
-      );
-      const sketchName = window['path'].basename(sketchPath, '.ino');
-      
-      // 为了避免不同项目的同名sketch冲突,使用项目路径的MD5哈希值
-      const projectPathMD5 = (await window['tools'].calculateMD5(sketchPath)).substring(0, 8); // 只取前8位MD5值
-      const uniqueSketchName = `${sketchName}_${projectPathMD5}`;
-      
-      // 使用统一的构建路径获取方法
-      const defaultBuildPath = window['path'].join(
-        window['path'].getAilyBuilderBuildPath(),
-        uniqueSketchName
-      );
+      const defaultBuildPath = await this.getBuildPath();
 
       // console.log(defaultBuildPath);
       // 检查目录是否存在
@@ -178,5 +186,18 @@ export class DevToolComponent implements OnInit {
 
   close() {
 
+  }
+
+  openResources() {
+    this.electronService.openByExplorer(window['path'].getAppDataPath());
+  }
+
+  async openCompileFolder() {
+    const buildPath = await this.getBuildPath();
+    if (!this.electronService.exists(buildPath)) {
+      this.messageService.warning('Compile folder does not exist');
+      return;
+    }
+    this.electronService.openByExplorer(buildPath);
   }
 }
