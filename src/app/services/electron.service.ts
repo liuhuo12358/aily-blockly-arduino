@@ -273,4 +273,13 @@ export class ElectronService {
   openByExplorer(path){
     window['other'].openByExplorer(path);
   }
+
+  /**
+   * 发送渲染进程就绪信号
+   */
+  sendRendererReady() {
+    if (this.isElectron) {
+      window['ipcRenderer'].send('renderer-ready');
+    }
+  }
 }

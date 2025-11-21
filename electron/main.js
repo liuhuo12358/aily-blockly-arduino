@@ -206,7 +206,13 @@ const serve = args.some((val) => val === "--serve");
 process.env.DEV = serve;
 
 // 注册协议处理
-app.setAsDefaultProtocolClient(PROTOCOL);
+if (process.defaultApp) {
+  if (process.argv.length >= 2) {
+    app.setAsDefaultProtocolClient(PROTOCOL, process.execPath, [path.resolve(process.argv[1])]);
+  }
+} else {
+  app.setAsDefaultProtocolClient(PROTOCOL);
+}
 
 // 文件关联处理
 let pendingFileToOpen = null;
@@ -355,6 +361,38 @@ function handleProtocol(url) {
       return;
     }
 
+    // 检查是否是打开示例列表
+    // 移除末尾斜杠以兼容不同情况
+    const normalizedPath = fullPath.replace(/\/$/, '');
+    if (normalizedPath === '/examples' || normalizedPath === '/open-examples') {
+      const searchParams = urlObj.searchParams;
+      const keyword = searchParams.get('keyword');
+      const id = searchParams.get('id');
+      
+      // 优先使用 keyword，如果有 id 则作为 keyword
+      const searchKeyword = keyword || id || '';
+      
+      console.log('打开示例列表:', { keyword, id, searchKeyword });
+      
+      const data = {
+        keyword: searchKeyword
+      };
+
+      if (mainWindow && mainWindow.webContents && isRendererReady) {
+        mainWindow.webContents.send('open-example-list', data);
+        if (mainWindow.isMinimized()) {
+          mainWindow.restore();
+        }
+        mainWindow.focus();
+        mainWindow.show();
+      } else {
+        // 如果窗口不存在或未就绪，存储数据以便稍后处理
+        console.log('窗口未就绪，缓存示例列表请求');
+        global.pendingExampleListOpen = data;
+      }
+      return;
+    }
+
     // 处理其他协议链接
     // dialog.showMessageBox({ message: `收到协议：${url}` });
   } catch (error) {
@@ -378,6 +416,27 @@ const { registerNotificationHandlers } = require("./notification");
 
 let mainWindow;
 let userConf;
+let isRendererReady = false;
+
+// 监听渲染进程就绪事件
+ipcMain.on('renderer-ready', () => {
+  console.log('渲染进程已就绪');
+  isRendererReady = true;
+
+  // 检查是否有待处理的OAuth回调
+  if (global.pendingOAuthCallback) {
+    console.log('发送待处理的OAuth回调');
+    mainWindow.webContents.send('oauth-callback', global.pendingOAuthCallback);
+    global.pendingOAuthCallback = null;
+  }
+
+  // 检查是否有待处理的示例列表打开请求
+  if (global.pendingExampleListOpen) {
+    console.log('发送待处理的示例列表请求');
+    mainWindow.webContents.send('open-example-list', global.pendingExampleListOpen);
+    global.pendingExampleListOpen = null;
+  }
+});
 
 // 检查Node
 function checkNodePath(childPath) {
@@ -683,6 +742,7 @@ function createWindow() {
   // 当主窗口被关闭时，进行相应的处理
   mainWindow.on("closed", () => {
     mainWindow = null;
+    isRendererReady = false;
     app.quit();
   });
 
@@ -703,14 +763,27 @@ function createWindow() {
   registerNotificationHandlers(mainWindow);
 
   // 检查是否有待处理的OAuth回调
+  // 注意：这里不再使用 setTimeout 自动发送，而是等待 renderer-ready 事件
+  // 但为了兼容性（如果 renderer-ready 没触发），保留一个较长时间的超时检查
   if (global.pendingOAuthCallback) {
-    // 延迟发送以确保渲染进程已准备好
     setTimeout(() => {
-      if (mainWindow && mainWindow.webContents) {
+      if (global.pendingOAuthCallback && mainWindow && mainWindow.webContents) {
+        console.log('超时检查：发送待处理的OAuth回调');
         mainWindow.webContents.send('oauth-callback', global.pendingOAuthCallback);
         global.pendingOAuthCallback = null;
       }
-    }, 2000);
+    }, 5000);
+  }
+
+  // 检查是否有待处理的示例列表打开请求
+  if (global.pendingExampleListOpen) {
+    setTimeout(() => {
+      if (global.pendingExampleListOpen && mainWindow && mainWindow.webContents) {
+        console.log('超时检查：发送待处理的示例列表请求');
+        mainWindow.webContents.send('open-example-list', global.pendingExampleListOpen);
+        global.pendingExampleListOpen = null;
+      }
+    }, 5000);
   }
 
   // 在多实例模式下，监听OAuth回调文件的变化

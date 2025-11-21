@@ -17,6 +17,7 @@
         "TOOL_SERIAL": "Serial Tool",
         "SIMULATOR": "Simulator",
         "AI": "AI",
+        "MODEL_STORE": "Model Store",
         "APP_STORE": "App Store",
         "SETTINGS": "Settings",
         "ABOUT": "About",
