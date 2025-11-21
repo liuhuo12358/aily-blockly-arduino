@@ -64,6 +64,10 @@ nz-modal-container {
   z-index: 10000 !important;
 }
 
+.cdk-global-scrollblock{
+  overflow-y: hidden;
+}
+
 .btn {
   cursor: pointer;
 
