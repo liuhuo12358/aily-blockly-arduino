@@ -4,11 +4,13 @@ import { ElectronService } from '../../../../services/electron.service';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { FormsModule } from '@angular/forms';
 import { ConfigService } from '../../../../services/config.service';
+import { NzToolTipModule } from 'ng-zorro-antd/tooltip';
 
 @Component({
   selector: 'app-dev-tool',
   imports: [
-    FormsModule
+    FormsModule,
+    NzToolTipModule
   ],
   templateUrl: './dev-tool.component.html',
   styleUrl: './dev-tool.component.scss'
@@ -87,7 +89,7 @@ export class DevToolComponent implements OnInit {
     // 限制在可视区域内
     const topExclusionZone = 70; // 顶部禁用区域高度
     const componentHeight = 40; // 假设组件高度约40px
-    const componentWidth = 435; // 假设组件宽度约345px
+    const componentWidth = 282; // 假设组件宽度约270px
 
     const maxX = window.innerWidth - componentWidth;
     const minY = 1; // 最小bottom值
@@ -111,6 +113,30 @@ export class DevToolComponent implements OnInit {
     document.removeEventListener('mouseup', this.onDragEnd);
   }
 
+  /**
+   * 获取当前项目的构建路径
+   * @returns 返回构建路径
+   */
+  private async getBuildPath(): Promise<string> {
+    const sketchPath = window['path'].join(
+      this.projectService.currentProjectPath,
+      '.temp',
+      'sketch',
+      'sketch.ino'
+    );
+    const sketchName = window['path'].basename(sketchPath, '.ino');
+
+    // 为了避免不同项目的同名sketch冲突,使用项目路径的MD5哈希值
+    const projectPathMD5 = (await window['tools'].calculateMD5(sketchPath)).substring(0, 8); // 只取前8位MD5值
+    const uniqueSketchName = `${sketchName}_${projectPathMD5}`;
+
+    // 使用统一的构建路径获取方法
+    return window['path'].join(
+      window['path'].getAilyBuilderBuildPath(),
+      uniqueSketchName
+    );
+  }
+
   reload() {
     // 如果开启了自动保存,先保存项目
     if (this.autoSave) {
@@ -126,25 +152,7 @@ export class DevToolComponent implements OnInit {
 
   async clear() {
     try {
-      const pt = window['platform'].pt;
-      // const sketchPath = this.projectService.currentProjectPath + pt + '.temp' + pt + 'sketch' + pt + 'sketch.ino';
-      const sketchPath = window['path'].join(
-        this.projectService.currentProjectPath,
-        '.temp',
-        'sketch',
-        'sketch.ino'
-      );
-      const sketchName = window['path'].basename(sketchPath, '.ino');
-
-      // 为了避免不同项目的同名sketch冲突,使用项目路径的MD5哈希值
-      const projectPathMD5 = (await window['tools'].calculateMD5(sketchPath)).substring(0, 8); // 只取前8位MD5值
-      const uniqueSketchName = `${sketchName}_${projectPathMD5}`;
-
-      // 使用统一的构建路径获取方法
-      const defaultBuildPath = window['path'].join(
-        window['path'].getAilyBuilderBuildPath(),
-        uniqueSketchName
-      );
+      const defaultBuildPath = await this.getBuildPath();
 
       // console.log(defaultBuildPath);
       // 检查目录是否存在
@@ -182,5 +190,14 @@ export class DevToolComponent implements OnInit {
 
   openResources() {
     this.electronService.openByExplorer(window['path'].getAppDataPath());
+  }
+
+  async openCompileFolder() {
+    const buildPath = await this.getBuildPath();
+    if (!this.electronService.exists(buildPath)) {
+      this.messageService.warning('Compile folder does not exist');
+      return;
+    }
+    this.electronService.openByExplorer(buildPath);
   }
 }
