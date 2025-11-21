@@ -60,6 +60,77 @@ export class CrossPlatformCmdService {
   }
 
   /**
+   * 复制目录（以硬链接的方式，直接调用node的api）
+   */
+  async linkItem(source: string, destination: string): Promise<any> {
+    try {
+      if (!window['fs'].existsSync(source)) {
+        throw new Error(`Source directory does not exist: ${source}`);
+      }
+
+      // 处理源是文件的情况
+      if (!window['fs'].isDirectory(source)) {
+        let destPath = destination;
+        // 如果目标存在且是目录，则将文件链接到该目录下
+        if (window['fs'].existsSync(destination) && window['fs'].statSync(destination).isDirectory()) {
+          destPath = window['path'].join(destination, window['path'].basename(source));
+        }
+
+        if (window['fs'].existsSync(destPath)) {
+          window['fs'].unlinkSync(destPath, null);
+        }
+        window['fs'].linkSync(source, destPath);
+        return true;
+      }
+
+      if (!window['fs'].existsSync(destination)) {
+        window['fs'].mkdirSync(destination);
+      }
+
+      const items = window['fs'].readDirSync(source, { withFileTypes: true });
+      // console.log('linkDirectory items:', items);
+
+      for (const item of items) {
+        const srcPath = window['path'].join(source, item.name);
+        const destPath = window['path'].join(destination, item.name);
+
+        if (window['fs'].isDirectory(srcPath)) {
+          await this.linkItem(srcPath, destPath);
+        } else {
+          if (window['fs'].existsSync(destPath)) {
+            window['fs'].unlinkSync(destPath, null);
+          }
+          window['fs'].linkSync(srcPath, destPath);
+        }
+      }
+      return true;
+    } catch (error) {
+      console.error('linkDirectory error:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * 删除文件或目录（直接调用node的api)
+   */
+  async deleteItem(path: string): Promise<any> {
+    try {
+      if (window['fs'].existsSync(path)) {
+        if (window['fs'].isDirectory(path)) {
+          window['fs'].rmdirSync(path, { recursive: true, force: true });
+        } else {
+          window['fs'].unlinkSync(path);
+        }
+      }
+      return true;
+    } catch (error) {
+      console.error('unlinkDirectory error:', error);
+      throw error;
+    }
+  }
+
+
+  /**
    * 删除文件或目录（跨平台）
    * @param path 路径
    * @param recursive 是否递归删除
