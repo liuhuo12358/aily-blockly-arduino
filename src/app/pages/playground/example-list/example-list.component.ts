@@ -10,6 +10,7 @@ import { ActivatedRoute } from '@angular/router';
 import { PlaygroundService } from '../playground.service';
 import { NzPaginationModule } from 'ng-zorro-antd/pagination';
 import { NzToolTipModule } from 'ng-zorro-antd/tooltip';
+import { NzMessageService } from 'ng-zorro-antd/message';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { CloudService } from '../../../tools/cloud-space/services/cloud.service';
@@ -64,7 +65,8 @@ export class ExampleListComponent implements OnInit, AfterViewInit, OnDestroy {
     private cmdService: CmdService,
     private electronService: ElectronService,
     private platformService: PlatformService,
-    private crossPlatformCmdService: CrossPlatformCmdService
+    private crossPlatformCmdService: CrossPlatformCmdService,
+    private messageService: NzMessageService
   ) {
   }
 
@@ -103,6 +105,7 @@ export class ExampleListComponent implements OnInit, AfterViewInit, OnDestroy {
         // 当通过 URL 搜索时，重置回第一页
         this.pageIndex = 1;
         // 只有在 pageSize 已计算后才获取数据
+
         if (this.pageSizeCalculated) {
           this.getExamples();
         }
@@ -159,6 +162,14 @@ export class ExampleListComponent implements OnInit, AfterViewInit, OnDestroy {
         });
 
         console.log('获取公开项目列表:', this.exampleList);
+        if (this.exampleList.length === 0 && this.pageIndex === 1) {
+          this.messageService.warning("No examples found.");
+          return;
+        }
+
+        if (this.id) {
+          this.loadExample(0);
+        }
       }
     });
   }
@@ -268,7 +279,7 @@ export class ExampleListComponent implements OnInit, AfterViewInit, OnDestroy {
       packageJson.nickname = item.nickname
       packageJson.description = item.description || ''
       packageJson.doc_url = item.doc_url || ''
-      packageJson.keywords = item?.tags ? JSON.parse(item.tags) : []
+      packageJson.keywords = item?.tags ? JSON.parse(item.tags) : ""
       packageJson.cloudId = item.id;
 
       this.electronService.writeFile(`${targetPath}/package.json`, JSON.stringify(packageJson, null, 2));

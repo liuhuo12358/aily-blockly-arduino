@@ -2245,12 +2245,17 @@ Your role is ASK (Advisory & Quick Support) - you provide analysis, recommendati
             } else {
               // 没有标题则等待3秒后检查
               // console.log('等待标题生成...');
-              setTimeout(() => {
-                // 3秒后再次检查标题,如果还是没有则使用默认标题
+              const checkAndSave = () => {
+                // 如果正在生成标题，则继续等待
+                if (this.chatService.titleIsGenerating) {
+                  setTimeout(checkAndSave, 1000);
+                  return;
+                }
                 const title = this.sessionTitle || 'q' + Date.now();
                 this.chatService.historyList.push({ sessionId: this.sessionId, name: title });
                 this.chatService.saveHistoryFile(this.projectService.currentProjectPath || this.projectService.projectRootPath);
-              }, 3000);
+              };
+              setTimeout(checkAndSave, 10000);
             }
           }
         } catch (error) {
