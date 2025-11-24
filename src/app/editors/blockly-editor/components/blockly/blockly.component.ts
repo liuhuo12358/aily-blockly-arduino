@@ -267,13 +267,13 @@ export class BlocklyComponent {
       // 设置全局工作区引用，供 editBlockTool 使用
       (window as any)['blocklyWorkspace'] = this.workspace;
       this.workspace.addChangeListener((event:any) => {
-        if (event.type == Blockly.Events.SELECTED) {
-          console.log('积木选择事件：', event);
-          // const code = Blockly;
-          // console.log('代码生成结果：', code);
-         const block = this.workspace.getBlockById(event.newElementId);
-         console.log('选中的积木：', block);
-        }
+        // if (event.type == Blockly.Events.SELECTED) {
+        //   console.log('积木选择事件：', event);
+        //   // const code = Blockly;
+        //   // console.log('代码生成结果：', code);
+        //  const block = this.workspace.getBlockById(event.newElementId);
+        //  console.log('选中的积木：', block);
+        // }
         try {
           this.codeGeneration();
         } catch (error) {
