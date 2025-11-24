@@ -18,6 +18,7 @@ import { CmdService } from '../../../services/cmd.service';
 import { ElectronService } from '../../../services/electron.service';
 import { PlatformService } from "../../../services/platform.service";
 import { CrossPlatformCmdService } from "../../../services/cross-platform-cmd.service";
+import { updateBlocksInFile } from '../../../utils/blockly_updater';
 
 @Component({
   selector: 'app-example-list',
@@ -40,7 +41,8 @@ export class ExampleListComponent implements OnInit, AfterViewInit, OnDestroy {
   exampleList: any[] = [];
   resourceUrl: string = '';
   keyword: string = '';
-  params: string = '';
+  id: string = '';
+  params: any = {};
   version: string = '';
   sessionId: string = '';
 
@@ -66,6 +68,23 @@ export class ExampleListComponent implements OnInit, AfterViewInit, OnDestroy {
   ) {
   }
 
+  parseParams(paramsStr: string): any {
+    try {
+      if (!paramsStr || paramsStr.trim() === '') {
+        return {};
+      }
+      let jsonStr = decodeURIComponent(escape(window['base64'].atob(paramsStr)));
+      if (jsonStr.startsWith("'") && jsonStr.endsWith("'")) {
+        jsonStr = jsonStr.substring(1, jsonStr.length - 1);
+      }
+      const paramsObj = JSON.parse(jsonStr);
+      return paramsObj;
+    } catch (e) {
+      console.error('解析params失败:', e);
+      return {};
+    }
+  }
+
   ngOnInit() {
     // 订阅 URL 参数变化并在每次变化时获取示例列表。
     // queryParams 会立即发出当前值，因此不需要额外的初始 getExamples() 调用，
@@ -73,18 +92,19 @@ export class ExampleListComponent implements OnInit, AfterViewInit, OnDestroy {
     this.route.queryParams
       .pipe(takeUntil(this.destroy$))
       .subscribe(params => {
-        console.log('URL参数:', params);
-        const id = params['id'] || '';
+        // console.log('URL参数:', params);
+        this.id = params['id'] || '';
         this.sessionId = params['sessionId'] || '';
 
         this.keyword = params['keyword'] || '';
-        this.params = params['params'] || '';
+        this.params = this.parseParams(params['params'] || '');
+
         this.version = params['version'] || '';
         // 当通过 URL 搜索时，重置回第一页
         this.pageIndex = 1;
         // 只有在 pageSize 已计算后才获取数据
         if (this.pageSizeCalculated) {
-          this.getExamples(id);
+          this.getExamples();
         }
       });
     // this.resourceUrl = this.configService.data.resource[0] + "/imgs/examples/";
@@ -112,8 +132,8 @@ export class ExampleListComponent implements OnInit, AfterViewInit, OnDestroy {
     // }
   }
 
-  getExamples(id: string = '') {
-    this.cloudService.getPublicProjects(this.pageIndex, this.pageSize, this.keyword).subscribe(res => {
+  getExamples() {
+    this.cloudService.getPublicProjects(this.pageIndex, this.pageSize, this.keyword, this.id).subscribe(res => {
       if (res && res.status === 200) {
         this.exampleList = []
         this.total = res.data.total;
@@ -193,14 +213,14 @@ export class ExampleListComponent implements OnInit, AfterViewInit, OnDestroy {
     // 总共可以显示的数量
     const calculatedPageSize = Math.max(1, itemsPerRow * rows);
     
-    console.log('Container size:', containerWidth, 'x', containerHeight);
-    console.log('Items per row:', itemsPerRow, 'Rows:', rows, 'Calculated page size:', calculatedPageSize);
+    // console.log('Container size:', containerWidth, 'x', containerHeight);
+    // console.log('Items per row:', itemsPerRow, 'Rows:', rows, 'Calculated page size:', calculatedPageSize);
     
     // 如果计算出的 pageSize 与当前值不同,更新并重新获取数据
     if (this.pageSize !== calculatedPageSize) {
       const oldPageSize = this.pageSize;
       this.pageSize = calculatedPageSize;
-      console.log(`Page size changed from ${oldPageSize} to ${this.pageSize}, refreshing data...`);
+      // console.log(`Page size changed from ${oldPageSize} to ${this.pageSize}, refreshing data...`);
       
       // 重置到第一页并重新获取数据
       this.pageIndex = 1;
@@ -252,6 +272,12 @@ export class ExampleListComponent implements OnInit, AfterViewInit, OnDestroy {
       packageJson.cloudId = item.id;
 
       this.electronService.writeFile(`${targetPath}/package.json`, JSON.stringify(packageJson, null, 2));
+
+      if (this.params && Object.keys(this.params).length > 0) {
+        const abiFilePath = `${targetPath}/project.abi`;
+        updateBlocksInFile(abiFilePath, this.params);
+      }
+
       this.projectService.projectOpen(targetPath);
       this.loadingExampleIndex = null;
     });

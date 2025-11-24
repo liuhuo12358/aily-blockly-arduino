@@ -524,5 +524,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
           .catch((error) => reject(error));
       });
     }
+  },
+  base64: {
+    atob: (b64String) => Buffer.from(b64String, 'base64').toString('binary'),
   }
 });
