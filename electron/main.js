@@ -14,7 +14,7 @@ if (isWin32) {
   app.setAppUserModelId("pro.aily.blockly");
 }
 
-PROTOCOL = "ailyblockly";
+PROTOCOL = "abis";
 
 // OAuth实例管理
 const OAUTH_STATE_FILE = 'oauth-instances.json';
@@ -180,7 +180,7 @@ function setupUniqueUserDataPath() {
 // 检查是否需要多实例模式
 function shouldUseMultiInstance() {
   // 启用多实例模式，允许同时运行多个实例
-  return true;
+  return false;
 }
 
 // 只有在需要多实例时才设置独立的用户数据目录

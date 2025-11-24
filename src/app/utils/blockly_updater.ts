@@ -153,7 +153,7 @@ export function updateBlocksInFile(
                 const updated = updateBlockInObject(projectData, blockId, newValue, fieldName);
                 if (updated) {
                     hasChanges = true;
-                    console.log(`Successfully updated block ${blockId}`);
+                    // console.log(`Successfully updated block ${blockId}`);
                 } else {
                     console.warn(`Block ${blockId} not found in ${filePath}`);
                 }
@@ -163,7 +163,7 @@ export function updateBlocksInFile(
         // 3. Write File (only if updated)
         if (hasChanges) {
             window['fs'].writeFileSync(filePath, JSON.stringify(projectData, null, 2), 'utf8');
-            console.log(`Successfully updated blocks in ${filePath}`);
+            // console.log(`Successfully updated blocks in ${filePath}`);
         }
     } catch (error) {
         console.error(`Failed to update file ${filePath}:`, error);
