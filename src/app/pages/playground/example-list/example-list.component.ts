@@ -11,7 +11,7 @@ import { PlaygroundService } from '../playground.service';
 import { NzPaginationModule } from 'ng-zorro-antd/pagination';
 import { NzToolTipModule } from 'ng-zorro-antd/tooltip';
 import { NzMessageService } from 'ng-zorro-antd/message';
-import { Subject } from 'rxjs';
+import { Subject, Subscription } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { CloudService } from '../../../tools/cloud-space/services/cloud.service';
 import { ProjectService } from '../../../services/project.service';
@@ -46,6 +46,7 @@ export class ExampleListComponent implements OnInit, AfterViewInit, OnDestroy {
   params: any = {};
   version: string = '';
   sessionId: string = '';
+  isOpened: boolean = false;
 
   pageIndex: number = 1; // 当前页码
   pageSize: number = 10; // 每页显示数量，默认值
@@ -54,6 +55,7 @@ export class ExampleListComponent implements OnInit, AfterViewInit, OnDestroy {
   private pageSizeCalculated: boolean = false; // 标记 pageSize 是否已计算
   
   private destroy$ = new Subject<void>();
+  private examplesSub: Subscription | null = null;
 
   constructor(
     private configService: ConfigService,
@@ -136,7 +138,12 @@ export class ExampleListComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   getExamples() {
-    this.cloudService.getPublicProjects(this.pageIndex, this.pageSize, this.keyword, this.id).subscribe(res => {
+    if (this.examplesSub) {
+      this.examplesSub.unsubscribe();
+    }
+    this.examplesSub = this.cloudService.getPublicProjects(this.pageIndex, this.pageSize, this.keyword, this.id)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(res => {
       if (res && res.status === 200) {
         this.exampleList = []
         this.total = res.data.total;
@@ -167,7 +174,8 @@ export class ExampleListComponent implements OnInit, AfterViewInit, OnDestroy {
           return;
         }
 
-        if (this.id) {
+        if (this.id && !this.isOpened) {
+          this.isOpened = true;
           this.loadExample(0);
         }
       }
@@ -264,7 +272,9 @@ export class ExampleListComponent implements OnInit, AfterViewInit, OnDestroy {
     this.loadingExampleIndex = index;
 
     const item = this.exampleList[index];
-    this.cloudService.getProjectArchive(item.archive_url).subscribe(async res => {
+    this.cloudService.getProjectArchive(item.archive_url)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(async res => {
       // 直接添加随机数避免重名
       const randomNum = Math.floor(100000 + Math.random() * 900000);
       const uniqueName = `${item.name || 'cloud_project'}_${randomNum}`;

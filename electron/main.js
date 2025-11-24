@@ -180,7 +180,7 @@ function setupUniqueUserDataPath() {
 // 检查是否需要多实例模式
 function shouldUseMultiInstance() {
   // 启用多实例模式，允许同时运行多个实例
-  return false;
+  return true;
 }
 
 // 只有在需要多实例时才设置独立的用户数据目录
@@ -883,6 +883,24 @@ if (shouldUseMultiInstance()) {
     const protocolUrl = commandLine.find(arg => arg.startsWith(`${PROTOCOL}://`));
     if (protocolUrl) {
       console.log('在second-instance中处理协议链接:', protocolUrl);
+
+      // 检查是否是示例相关的URL，如果是则忽略（由新实例处理）
+      try {
+        const urlObj = new URL(protocolUrl);
+        let fullPath = urlObj.pathname;
+        if (urlObj.hostname && urlObj.hostname !== '') {
+          fullPath = '/' + urlObj.hostname + urlObj.pathname;
+        }
+        const normalizedPath = fullPath.replace(/\/$/, '');
+        
+        if (normalizedPath === '/examples' || normalizedPath === '/open-examples' || normalizedPath === '/open-template') {
+          console.log('检测到示例相关URL，忽略second-instance处理，将由新实例处理');
+          return;
+        }
+      } catch (e) {
+        console.error('解析协议URL失败:', e);
+      }
+
       handleProtocol(protocolUrl);
 
       // 处理协议后不要置前窗口，让具体的处理逻辑决定
