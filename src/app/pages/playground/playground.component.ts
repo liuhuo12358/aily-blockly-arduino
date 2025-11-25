@@ -27,7 +27,7 @@ import { ElectronService } from '../../services/electron.service';
 export class PlaygroundComponent {
   @Output() close = new EventEmitter();
 
-  tagList: string[] = [];
+  tagList: any[] = [];
   // exampleList = []
 
   constructor(
@@ -50,7 +50,22 @@ export class PlaygroundComponent {
 
     // 使用翻译初始化标签列表
     this.tagList = [
-      'SenseCraft AI', 'AI-VOX', 'UNO R4', 'ESP32S3', '程序设计基础'
+      {
+        text: 'SenseCraft AI',
+        color: '#8fc31f'
+      },
+      {
+        text: 'AI-VOX',
+      },
+      {
+        text: 'UNO R4',
+      },
+      {
+        text: 'ESP32S3',
+      },
+      {
+        text: '程序设计基础',
+      }
       // this.translate.instant('显示全部'),
       // this.translate.instant('入门课程'),
       // this.translate.instant('库示例'),
