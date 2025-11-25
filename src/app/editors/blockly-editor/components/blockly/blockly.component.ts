@@ -13,7 +13,6 @@ import { micropythonGenerator } from './generators/micropython/micropython';
 import { BlocklyService } from '../../services/blockly.service';
 import { BitmapUploadResponse, GlobalServiceManager } from '../../services/bitmap-upload.service';
 
-import './renderer/aily-icon';
 import './renderer/aily-thrasos/thrasos';
 import './renderer/aily-zelos/zelos';
 import './custom-category';
@@ -273,7 +272,14 @@ export class BlocklyComponent {
       (window as any)['Blockly'] = Blockly;
       // 设置全局工作区引用，供 editBlockTool 使用
       (window as any)['blocklyWorkspace'] = this.workspace;
-      this.workspace.addChangeListener((event) => {
+      this.workspace.addChangeListener((event:any) => {
+        // if (event.type == Blockly.Events.SELECTED) {
+        //   console.log('积木选择事件：', event);
+        //   // const code = Blockly;
+        //   // console.log('代码生成结果：', code);
+        //  const block = this.workspace.getBlockById(event.newElementId);
+        //  console.log('选中的积木：', block);
+        // }
         try {
           this.codeGeneration();
         } catch (error) {
