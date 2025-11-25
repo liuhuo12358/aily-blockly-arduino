@@ -20,6 +20,8 @@ import { ElectronService } from '../../../services/electron.service';
 import { PlatformService } from "../../../services/platform.service";
 import { CrossPlatformCmdService } from "../../../services/cross-platform-cmd.service";
 import { updateBlocksInFile } from '../../../utils/blockly_updater';
+import { Buffer } from 'buffer';
+import { jsonrepair } from 'jsonrepair';
 
 @Component({
   selector: 'app-example-list',
@@ -77,7 +79,19 @@ export class ExampleListComponent implements OnInit, AfterViewInit, OnDestroy {
       if (!paramsStr || paramsStr.trim() === '') {
         return {};
       }
-      let jsonStr = decodeURIComponent(escape(window['base64'].atob(paramsStr)));
+      // 兼容处理：将 URL 中的空格替换回 + (防止被错误解码)
+      const base64Str = paramsStr.replace(/ /g, '+');
+      let jsonStr = Buffer.from(base64Str, 'base64').toString('utf8');
+      
+      // 尝试修复 JSON 字符串中的控制字符和格式问题
+      try {
+        jsonStr = jsonrepair(jsonStr);
+      } catch (err) {
+        console.warn('jsonrepair failed, trying raw parse', err);
+        // 兜底：移除可能导致解析错误的不可见控制字符
+        jsonStr = jsonStr.replace(/[\x00-\x1F]+/g, "");
+      }
+
       if (jsonStr.startsWith("'") && jsonStr.endsWith("'")) {
         jsonStr = jsonStr.substring(1, jsonStr.length - 1);
       }
