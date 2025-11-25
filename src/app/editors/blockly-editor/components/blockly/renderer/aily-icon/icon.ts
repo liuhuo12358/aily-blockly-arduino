@@ -15,8 +15,8 @@ interface AilyIcon {
 export class Icon extends Blockly.icons.Icon implements ISerializable {
   _state: AilyIcon = {
     type: 'i',
-    width: 20,
-    height: 20,
+    width: 0,
+    height: 0,
     src: 'fa-solid fa-bed-pulse',
     alt: '*',
     class: 'inner-icon',
@@ -51,9 +51,9 @@ export class Icon extends Blockly.icons.Icon implements ISerializable {
 
     super.initView(pointerdownListener);
 
-    setTimeout(() => {
-      this.updateView();
-    }, 0);
+    // setTimeout(() => {
+    //   this.updateView();
+    // }, 0);
   }
 
   updateView() {
@@ -115,18 +115,18 @@ export class Icon extends Blockly.icons.Icon implements ISerializable {
   }
 
   loadState(state: AilyIcon | string): void {
-    if (typeof state === 'string') {
-      this._state = { ...this._state, src: state };
-    } else {
-      this._state = { ...this._state, ...state };
-    }
-    if (!this._state.color) {
-      this._state.color = 'white';
-    }
-    this.state = state;
+    // if (typeof state === 'string') {
+    //   this._state = { ...this._state, src: state };
+    // } else {
+    //   this._state = { ...this._state, ...state };
+    // }
+    // if (!this._state.color) {
+    //   this._state.color = 'white';
+    // }
+    // this.state = state;
   }
 
   saveState(doFullSerialization: boolean): any {
-    return this.state;
+    // return this.state;
   }
 }

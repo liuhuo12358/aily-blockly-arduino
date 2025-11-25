@@ -154,10 +154,6 @@ export class BlocklyService {
           JSON.parse(JSON.stringify(block.icon))
         );
       }
-      if (block.ailyIcons) this.iconsMap.set(block.type, block.ailyIcons);
-      if (block.icon) this.iconsMap.set(block.type, {
-        ailyIcon: block.icon
-      });
       block = processJsonVar(block, this.boardConfig); // 替换开发板相关变量
       if (libStaticPath) {
         block = processStaticFilePath(block, libStaticPath);
@@ -190,9 +186,6 @@ export class BlocklyService {
   // }
 
   loadLibToolbox(toolboxItem) {
-    toolboxItem.contents?.forEach(item => {
-      item.icons = {...item.icons, ...item.ailyIcons, ...this.iconsMap.get(item.type), ...this.iconsMap.get(item.type)};
-    });
     this.toolbox.contents.push(toolboxItem);
     this.workspace.updateToolbox(this.toolbox);
     this.workspace.render();
