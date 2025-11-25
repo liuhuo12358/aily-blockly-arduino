@@ -4,21 +4,10 @@ import { PathObject } from "./path_object";
 import { Drawer } from "./drawer";
 import { RenderInfo } from "./info";
 import { ISerializable } from "blockly";
-import { addAilyIconToBlock } from "../aily-icon/acon";
+import { addAilyIconToBlock, getBlockDefinition } from "../aily-icon/acon";
 
 type BlockSvg = Blockly.BlockSvg;
 type BlockStyle = Blockly.Theme.BlockStyle;
-
-function getBlockDefinition(blockType: string): any {
-  const blockDefinitionsMap = (window as any).__ailyBlockDefinitionsMap as Map<
-    string,
-    any
-  >;
-  if (blockDefinitionsMap) {
-    return blockDefinitionsMap.get(blockType);
-  }
-  return null;
-}
 
 export class Renderer extends Blockly.thrasos.Renderer {
   constructor(name: string) {

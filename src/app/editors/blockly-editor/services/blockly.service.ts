@@ -143,10 +143,10 @@ export class BlocklyService {
   loadLibBlocks(blocks, libStaticPath) {
     for (let index = 0; index < blocks.length; index++) {
       let block = blocks[index];
-      if (block.type && block.acon) {
+      if (block?.type && block?.icon) {
         this.blockDefinitionsMap.set(
           block.type,
-          JSON.parse(JSON.stringify(block.acon))
+          JSON.parse(JSON.stringify(block.icon))
         );
       }
       block = processJsonVar(block, this.boardConfig); // 替换开发板相关变量

@@ -233,3 +233,18 @@ export function addAilyIconToBlock(
   const icon = new AilyIcon(block, state);
   return block.addIcon(icon);
 }
+
+/**
+ * 获取指定块类型的 BlockDefinition
+ * @param blockType
+ */
+export function getBlockDefinition(blockType: string): any {
+  const blockDefinitionsMap = (window as any).__ailyBlockDefinitionsMap as Map<
+    string,
+    any
+  >;
+  if (blockDefinitionsMap) {
+    return blockDefinitionsMap.get(blockType);
+  }
+  return null;
+}
