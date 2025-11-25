@@ -70,6 +70,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
     isWindows: process.platform === "win32",
     isMacOS: process.platform === "darwin",
     isLinux: process.platform === "linux",
+    lang: process.env.AILY_SYSTEM_LANG || 'zh-CN'
   },
   terminal: {
     init: (data) => ipcRenderer.invoke("terminal-create", data),

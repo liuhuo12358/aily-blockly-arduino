@@ -605,6 +605,9 @@ function loadEnv() {
     process.env.PATH = `${process.env.PATH}${path.delimiter}${ninjaPath}`;
   }
 
+  // 当前系统语言
+  process.env.AILY_SYSTEM_LANG = app.getLocale();
+
   // console.log("====process.env:", process.env)
 }
 
