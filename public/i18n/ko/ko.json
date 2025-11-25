@@ -76,6 +76,7 @@
             "LANGUAGE": "언어",
             "UI_THEME": "인터페이스 테마",
             "BLOCKLY_THEME": "Blockly 테마",
+            "BLOCKLY_MINIMAP": "Blockly 미니맵",
             "COMPILATION_OPTIONS": "컴파일 옵션",
             "REPOSITORY_URLS": "저장소 주소",
             "BOARD_LIST": "개발 보드 목록",
