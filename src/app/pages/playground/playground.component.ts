@@ -52,7 +52,7 @@ export class PlaygroundComponent {
     this.tagList = [
       {
         text: 'SenseCraft AI',
-        color: '#8fc31f'
+        color: '#739c19ff'
       },
       {
         text: 'AI-VOX',
@@ -66,12 +66,6 @@ export class PlaygroundComponent {
       {
         text: '程序设计基础',
       }
-      // this.translate.instant('显示全部'),
-      // this.translate.instant('入门课程'),
-      // this.translate.instant('库示例'),
-      // this.translate.instant('精选项目'),
-      // this.translate.instant('物联网'),
-      // this.translate.instant('机器人'),
     ];
 
     this.electronService.setTitle('aily blockly - Playground');
