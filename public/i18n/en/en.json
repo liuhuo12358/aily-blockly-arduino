@@ -115,6 +115,7 @@
             "LANGUAGE": "Language",
             "UI_THEME": "UI Theme",
             "BLOCKLY_THEME": "Blockly Theme",
+            "BLOCKLY_MINIMAP": "Blockly Minimap",
             "COMPILATION_OPTIONS": "Compilation Options",
             "REPOSITORY_URLS": "Repository URLs",
             "BOARD_LIST": "Board List",

@@ -39,6 +39,7 @@ import { ImageUploadDialogComponent } from './components/image-upload-dialog/ima
 import { HttpErrorResponse } from '@angular/common/http';
 import { ConfigService } from '../../../../services/config.service';
 import { NoticeService } from '../../../../services/notice.service';
+import { Minimap } from '@blockly/workspace-minimap';
 
 @Component({
   selector: 'blockly-main',
@@ -253,6 +254,11 @@ export class BlocklyComponent {
 
       const multiselectPlugin = new Multiselect(this.workspace);
       multiselectPlugin.init(this.options);
+
+      if (this.configData.blockly.minimap) {
+        const minimap = new Minimap(this.workspace);
+        minimap.init();
+      }
 
       // 动态连接块监听
       this.workspace.addChangeListener(BlockDynamicConnection.finalizeConnections);
