@@ -22,6 +22,7 @@ export class BlocklyService {
     ],
   };
 
+  iconsMap =  new Map();
   blockDefinitionsMap = new Map<string, any>();
 
   codeSubject = new BehaviorSubject<string>('');
@@ -41,6 +42,10 @@ export class BlocklyService {
 
   // 加载blockly的json数据
   loadAbiJson(jsonData) {
+    jsonData.blocks.blocks.forEach(block => {
+      const ailyIcons = this.iconsMap.get(block.type);
+      if(ailyIcons) block.icons = ailyIcons;
+    });
     Blockly.serialization.workspaces.load(jsonData, this.workspace);
   }
 
@@ -297,6 +302,7 @@ export class BlocklyService {
   }
 
   reset() {
+    this.iconsMap.clear();
     this.blockDefinitionsMap.clear();
     // 移除所有加载的脚本标签（block.js 和 generator.js）
     const scripts = document.getElementsByTagName('script');
