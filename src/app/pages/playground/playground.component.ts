@@ -50,7 +50,7 @@ export class PlaygroundComponent {
 
     // 使用翻译初始化标签列表
     this.tagList = [
-      'AI-VOX', 'UNO R4', 'ESP32S3', '程序设计基础'
+      'SenseCraft AI', 'AI-VOX', 'UNO R4', 'ESP32S3', '程序设计基础'
       // this.translate.instant('显示全部'),
       // this.translate.instant('入门课程'),
       // this.translate.instant('库示例'),

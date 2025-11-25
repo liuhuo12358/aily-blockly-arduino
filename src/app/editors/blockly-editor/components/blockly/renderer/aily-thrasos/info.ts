@@ -43,12 +43,15 @@ export class RenderInfo extends Blockly.thrasos.RenderInfo {
         this.inputRows.push(activeRow);
       }
 
+      let firstField = false;
+
       // All of the fields in an input go on the same row.
       for (let j = 0, field; (field = input.fieldRow[j]); j++) {
         const fieldInfo = new Field(this.constants_, field, input);
-        if (Types.isField(fieldInfo) && !Types.isInlineInput(fieldInfo)) {
-          fieldInfo.width = fieldInfo.width + 30;
-        }
+        // if (!firstField && Types.isField(fieldInfo)) {
+        //   firstField = true;
+        //   // fieldInfo.width = fieldInfo.width + 30;
+        // }
         activeRow.elements.push(fieldInfo);
       }
       this.addInput_(input, activeRow);
@@ -67,39 +70,26 @@ export class RenderInfo extends Blockly.thrasos.RenderInfo {
     this.rows.push(this.bottomRow);
   }
 
-  override recordElemPositions_(row: Row) {
-    let xCursor = row.xPos;
-    for (let j = 0, elem; (elem = row.elements[j]); j++) {
-      // Now that row heights are finalized, make spacers use the row height.
-      if (Types.isSpacer(elem)) {
-        elem.height = row.height;
-      }
-      elem.xPos = xCursor;
-      if (
-        Types.isField(elem)
-        // !Types.isHat(elem) &&
-        // !Types.isSpacer(elem) &&
-        // !Types.isInRowSpacer(elem) &&
-        // !Types.isStatementInput(elem) &&
-        // !Types.isPreviousConnection(elem) &&
-        // !Types.isNextConnection(elem) &&
-        // !Types.isLeftRoundedCorner(elem) &&
-        // !Types.isRightRoundedCorner(elem) &&
-        // !Types.isLeftSquareCorner(elem) &&
-        // !Types.isRightSquareCorner(elem) &&
-        // !Types.isCorner(elem) &&
-        // !Types.isJaggedEdge(elem) &&
-        // !Types.isExternalInput(elem)
-      ) {
-        elem.xPos = xCursor + 30;
-      } else {
-        elem.xPos = xCursor;
-      }
-      elem.centerline = this.getElemCenterline_(row, elem);
-      xCursor += elem.width;
-    }
-  }
-
+  // override recordElemPositions_(row: Row) {
+  //   let xCursor = row.xPos;
+  //   let firstField = false;
+  //   for (let j = 0, elem; (elem = row.elements[j]); j++) {
+  //     // Now that row heights are finalized, make spacers use the row height.
+  //     if (Types.isSpacer(elem)) {
+  //       elem.height = row.height;
+  //     }
+  //     elem.xPos = xCursor;
+  //     if (!firstField && Types.isField(elem)) {
+  //       firstField = true;
+  //       elem.xPos = xCursor + 0;
+  //     } else {
+  //       elem.xPos = xCursor;
+  //     }
+  //     elem.centerline = this.getElemCenterline_(row, elem);
+  //     xCursor += elem.width;
+  //   }
+  // }
+  //
   // override finalize_() {
   //   // Performance note: this could be combined with the draw pass, if the time
   //   // that this takes is excessive.  But it shouldn't be, because it only

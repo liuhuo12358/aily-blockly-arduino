@@ -284,7 +284,7 @@
         "VERSION": "版本号",
         "VERSION_PLACEHOLDER": "请输入版本号，如：1.0.0",
         "NICKNAME": "项目昵称",
-        "NICKNAME_PLACEHOLDER": "请输入项目昵称",
+        "NICKNAME_PLACEHOLDER": "请输入项目昵称，该昵称用于软件顶部显示",
         "DESCRIPTION": "项目描述",
         "DESCRIPTION_PLACEHOLDER": "请输入项目描述",
         "DOC_URL": "文档链接",
