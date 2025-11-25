@@ -79,7 +79,7 @@ export class PlaygroundComponent {
 
   keyword: string = '';
   search(keyword = this.keyword) {
-    keyword = keyword.replace(/\s/g, '').toLowerCase();
+    // keyword = keyword.replace(/\s/g, '').toLowerCase();
     this.router.navigate(['/main/playground/list'], {
       queryParams: { keyword }
     });
