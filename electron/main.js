@@ -14,7 +14,7 @@ if (isWin32) {
   app.setAppUserModelId("pro.aily.blockly");
 }
 
-PROTOCOL = "ailyblockly";
+PROTOCOL = "abis";
 
 // OAuth实例管理
 const OAUTH_STATE_FILE = 'oauth-instances.json';
@@ -605,6 +605,9 @@ function loadEnv() {
     process.env.PATH = `${process.env.PATH}${path.delimiter}${ninjaPath}`;
   }
 
+  // 当前系统语言
+  process.env.AILY_SYSTEM_LANG = app.getLocale();
+
   // console.log("====process.env:", process.env)
 }
 
@@ -883,6 +886,24 @@ if (shouldUseMultiInstance()) {
     const protocolUrl = commandLine.find(arg => arg.startsWith(`${PROTOCOL}://`));
     if (protocolUrl) {
       console.log('在second-instance中处理协议链接:', protocolUrl);
+
+      // 检查是否是示例相关的URL，如果是则忽略（由新实例处理）
+      try {
+        const urlObj = new URL(protocolUrl);
+        let fullPath = urlObj.pathname;
+        if (urlObj.hostname && urlObj.hostname !== '') {
+          fullPath = '/' + urlObj.hostname + urlObj.pathname;
+        }
+        const normalizedPath = fullPath.replace(/\/$/, '');
+        
+        if (normalizedPath === '/examples' || normalizedPath === '/open-examples' || normalizedPath === '/open-template') {
+          console.log('检测到示例相关URL，忽略second-instance处理，将由新实例处理');
+          return;
+        }
+      } catch (e) {
+        console.error('解析协议URL失败:', e);
+      }
+
       handleProtocol(protocolUrl);
 
       // 处理协议后不要置前窗口，让具体的处理逻辑决定

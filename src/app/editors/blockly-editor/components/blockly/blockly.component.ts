@@ -1,4 +1,4 @@
-import { Component, ElementRef, Input, ViewChild } from '@angular/core';
+import { Component, ElementRef, Input, ViewChild, DoCheck } from '@angular/core';
 import * as Blockly from 'blockly';
 import * as zhHans from 'blockly/msg/zh-hans';
 // import {
@@ -40,23 +40,32 @@ import { ImageUploadDialogComponent } from './components/image-upload-dialog/ima
 import { HttpErrorResponse } from '@angular/common/http';
 import { ConfigService } from '../../../../services/config.service';
 import { NoticeService } from '../../../../services/notice.service';
+import { Minimap } from '@blockly/workspace-minimap';
 
 @Component({
   selector: 'blockly-main',
   imports: [
     NzModalModule,
-    CommonModule
+    CommonModule,
   ],
   templateUrl: './blockly.component.html',
   styleUrl: './blockly.component.scss',
 })
-export class BlocklyComponent {
+export class BlocklyComponent implements DoCheck {
   @ViewChild('blocklyDiv', { static: true }) blocklyDiv!: ElementRef;
 
   @Input() devmode;
   generator;
   // Control bitmap upload handler visibility
   showBitmapUploadHandler = true;
+
+  get aiWriting() {
+    return this.blocklyService.aiWriting;
+  }
+
+  showSpinOverlay = false;
+  isFadingOut = false;
+  private previousAiWriting = false;
 
   get workspace() {
     return this.blocklyService.workspace;
@@ -189,6 +198,25 @@ export class BlocklyComponent {
     }
   }
 
+  ngDoCheck(): void {
+    const currentAiWriting = this.aiWriting;
+    
+    if (!this.previousAiWriting && currentAiWriting) {
+      this.isFadingOut = false;
+      this.showSpinOverlay = true;
+    }
+    
+    if (this.previousAiWriting && !currentAiWriting) {
+      this.isFadingOut = true;
+      setTimeout(() => {
+        this.showSpinOverlay = false;
+        this.isFadingOut = false;
+      }, 300);
+    }
+    
+    this.previousAiWriting = currentAiWriting;
+  }
+
   ngAfterViewInit(): void {
     // this.blocklyService.init();
     setTimeout(async () => {
@@ -258,6 +286,11 @@ export class BlocklyComponent {
       const multiselectPlugin = new Multiselect(this.workspace);
       multiselectPlugin.init(this.options);
 
+      if (this.configData.blockly.minimap) {
+        const minimap = new Minimap(this.workspace);
+        minimap.init();
+      }
+
       // 动态连接块监听
       this.workspace.addChangeListener(BlockDynamicConnection.finalizeConnections);
 
@@ -270,7 +303,14 @@ export class BlocklyComponent {
       (window as any)['Blockly'] = Blockly;
       // 设置全局工作区引用，供 editBlockTool 使用
       (window as any)['blocklyWorkspace'] = this.workspace;
-      this.workspace.addChangeListener((event) => {
+      this.workspace.addChangeListener((event: any) => {
+        // if (event.type == Blockly.Events.SELECTED) {
+        //   console.log('积木选择事件：', event);
+        //   // const code = Blockly;
+        //   // console.log('代码生成结果：', code);
+        //  const block = this.workspace.getBlockById(event.newElementId);
+        //  console.log('选中的积木：', block);
+        // }
         try {
           this.codeGeneration();
         } catch (error) {

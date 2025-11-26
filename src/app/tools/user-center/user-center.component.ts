@@ -70,6 +70,7 @@ export class UserCenterComponent {
       .pipe(takeUntil(this.destroy$))
       .subscribe(isLoggedIn => {
         this.isLoggedIn = isLoggedIn;
+        this.refreshMe();
       });
 
     // 监听用户信息
@@ -96,12 +97,16 @@ export class UserCenterComponent {
     }
   }
 
-  ngAfterViewInit(): void {
+  refreshMe() {
     this.authService.refreshMe().then(() => {
-      console.log('Auth token refreshed after UserCenterComponent view init.');
-      // 刷新后重新计算配额使用百分比
+      console.log('Auth token refreshed.');
       this.calculateQuotaUsagePercent();
     });
+  }
+
+
+  ngAfterViewInit(): void {
+    this.refreshMe();
   }
 
   ngOnDestroy() {

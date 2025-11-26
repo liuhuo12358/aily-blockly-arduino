@@ -354,23 +354,21 @@ export class CloudSpaceComponent {
     // 保存当前项目
     await this.projectService.save(this.projectService.currentProjectPath);
 
-    // 获取当前项目数据
-    const currentProjectData = this.projectService.currentPackageData;
-    if (!currentProjectData) {
-      this.isSyncing = false;
-      return;
-    }
-
     const archivePath = await this.packageProject(this.projectService.currentProjectPath);
     if (!archivePath) {
       this.isSyncing = false;
       return;
     }
 
+    // 获取当前项目数据
+    const currentProjectData = await this.projectService.getPackageJson();
+    if (!currentProjectData) {
+      this.isSyncing = false;
+      return;
+    }
+
     // 等待一小段时间确保文件完全写入
     await new Promise(resolve => setTimeout(resolve, 200));
-
-    console.log("archivePath:", archivePath);
 
     this.cloudService.syncProject({
       pid: currentProjectData?.cloudId,

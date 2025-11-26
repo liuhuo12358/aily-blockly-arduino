@@ -79,6 +79,7 @@
             "LANGUAGE": "Langue",
             "UI_THEME": "Thème d'Interface",
             "BLOCKLY_THEME": "Thème Blockly",
+            "BLOCKLY_MINIMAP": "Miniature Blockly",
             "COMPILATION_OPTIONS": "Options de Compilation",
             "REPOSITORY_URLS": "URLs des Dépôts",
             "BOARD_LIST": "Liste des Cartes",

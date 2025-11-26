@@ -100,6 +100,7 @@ import { ArduinoLintService } from './services/arduino-lint.service';
 import { BlocklyService } from '../../editors/blockly-editor/services/blockly.service';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { LoginComponent } from '../../components/login/login.component';
+import { NoticeService } from '../../services/notice.service';
 
 // import { reloadAbiJsonTool, reloadAbiJsonToolSimple } from './tools';
 
@@ -714,7 +715,8 @@ appDataPath(**appDataPath**): ${window['path'].getAppDataPath() || '无'}
     private configService: ConfigService,
     private todoUpdateService: TodoUpdateService,
     private arduinoLintService: ArduinoLintService,
-    private translate: TranslateService
+    private translate: TranslateService,
+    private noticeService: NoticeService,
   ) {
   }
 
@@ -1082,8 +1084,28 @@ ${JSON.stringify(errData)}
     });
   }
 
-  isWaiting = false;
   autoScrollEnabled = true; // 控制是否自动滚动到底部
+
+  get isWaiting() {
+    return this.blocklyService.aiWriting;
+  }
+
+  set isWaiting(value: boolean) {
+    if (value) {
+      this.noticeService.update({
+        title: "AI正在操作",
+        state: 'doing',
+        showProgress: false,
+        setTimeout: 0,
+        stop: ()=>{
+          this.stop();
+        }
+      });
+    } else {
+      this.noticeService.clear();
+    }
+    this.blocklyService.aiWriting = value;
+  }
 
   async sendButtonClick(): Promise<void> {
     if (this.isWaiting) {
@@ -2247,12 +2269,17 @@ Your role is ASK (Advisory & Quick Support) - you provide analysis, recommendati
             } else {
               // 没有标题则等待3秒后检查
               // console.log('等待标题生成...');
-              setTimeout(() => {
-                // 3秒后再次检查标题,如果还是没有则使用默认标题
+              const checkAndSave = () => {
+                // 如果正在生成标题，则继续等待
+                if (this.chatService.titleIsGenerating) {
+                  setTimeout(checkAndSave, 1000);
+                  return;
+                }
                 const title = this.sessionTitle || 'q' + Date.now();
                 this.chatService.historyList.push({ sessionId: this.sessionId, name: title });
                 this.chatService.saveHistoryFile(this.projectService.currentProjectPath || this.projectService.projectRootPath);
-              }, 3000);
+              };
+              setTimeout(checkAndSave, 10000);
             }
           }
         } catch (error) {

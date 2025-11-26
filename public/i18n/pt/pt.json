@@ -76,6 +76,7 @@
             "LANGUAGE": "Idioma",
             "UI_THEME": "Tema da interface",
             "BLOCKLY_THEME": "Tema do Blockly",
+            "BLOCKLY_MINIMAP": "Minimapa do Blockly",
             "COMPILATION_OPTIONS": "Opções de compilação",
             "REPOSITORY_URLS": "URLs de repositório",
             "BOARD_LIST": "Lista de placas",
