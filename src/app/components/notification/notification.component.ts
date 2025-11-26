@@ -38,7 +38,7 @@ export class NotificationComponent {
 
   ngOnInit(): void {
     this.noticeService.stateSubject.subscribe((data) => {
-      if (data?.showProgress !== false) {
+      if (data && data.showProgress !== false) {
         data.showProgress = true;
       }
       this.data = data;
