@@ -1,4 +1,4 @@
-import { Component, ElementRef, Input, ViewChild } from '@angular/core';
+import { Component, ElementRef, Input, ViewChild, DoCheck } from '@angular/core';
 import * as Blockly from 'blockly';
 import * as zhHans from 'blockly/msg/zh-hans';
 // import {
@@ -46,18 +46,26 @@ import { Minimap } from '@blockly/workspace-minimap';
   selector: 'blockly-main',
   imports: [
     NzModalModule,
-    CommonModule
+    CommonModule,
   ],
   templateUrl: './blockly.component.html',
   styleUrl: './blockly.component.scss',
 })
-export class BlocklyComponent {
+export class BlocklyComponent implements DoCheck {
   @ViewChild('blocklyDiv', { static: true }) blocklyDiv!: ElementRef;
 
   @Input() devmode;
   generator;
   // Control bitmap upload handler visibility
   showBitmapUploadHandler = true;
+
+  get aiWriting() {
+    return this.blocklyService.aiWriting;
+  }
+
+  showSpinOverlay = false;
+  isFadingOut = false;
+  private previousAiWriting = false;
 
   get workspace() {
     return this.blocklyService.workspace;
@@ -190,6 +198,25 @@ export class BlocklyComponent {
     }
   }
 
+  ngDoCheck(): void {
+    const currentAiWriting = this.aiWriting;
+    
+    if (!this.previousAiWriting && currentAiWriting) {
+      this.isFadingOut = false;
+      this.showSpinOverlay = true;
+    }
+    
+    if (this.previousAiWriting && !currentAiWriting) {
+      this.isFadingOut = true;
+      setTimeout(() => {
+        this.showSpinOverlay = false;
+        this.isFadingOut = false;
+      }, 300);
+    }
+    
+    this.previousAiWriting = currentAiWriting;
+  }
+
   ngAfterViewInit(): void {
     // this.blocklyService.init();
     setTimeout(async () => {
@@ -273,7 +300,7 @@ export class BlocklyComponent {
       (window as any)['Blockly'] = Blockly;
       // 设置全局工作区引用，供 editBlockTool 使用
       (window as any)['blocklyWorkspace'] = this.workspace;
-      this.workspace.addChangeListener((event:any) => {
+      this.workspace.addChangeListener((event: any) => {
         // if (event.type == Blockly.Events.SELECTED) {
         //   console.log('积木选择事件：', event);
         //   // const code = Blockly;
