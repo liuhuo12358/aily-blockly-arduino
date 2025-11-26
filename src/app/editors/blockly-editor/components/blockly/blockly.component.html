@@ -1,3 +1,6 @@
 <div class="blocklyBox" id="blocklyDiv" #blocklyDiv></div>
 
-<nz-spin class="blockly-spin" *ngIf="aiWriting"></nz-spin>
+<div class="blockly-spin" 
+     *ngIf="showSpinOverlay"
+     [class.show]="aiWriting && !isFadingOut"
+     [class.fade-out]="isFadingOut"></div>

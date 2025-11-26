@@ -1,4 +1,4 @@
-import { Component, ElementRef, Input, ViewChild } from '@angular/core';
+import { Component, ElementRef, Input, ViewChild, DoCheck } from '@angular/core';
 import * as Blockly from 'blockly';
 import * as zhHans from 'blockly/msg/zh-hans';
 // import {
@@ -41,19 +41,17 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { ConfigService } from '../../../../services/config.service';
 import { NoticeService } from '../../../../services/notice.service';
 import { Minimap } from '@blockly/workspace-minimap';
-import { NzSpinModule } from 'ng-zorro-antd/spin';
 
 @Component({
   selector: 'blockly-main',
   imports: [
     NzModalModule,
     CommonModule,
-    NzSpinModule,
   ],
   templateUrl: './blockly.component.html',
   styleUrl: './blockly.component.scss',
 })
-export class BlocklyComponent {
+export class BlocklyComponent implements DoCheck {
   @ViewChild('blocklyDiv', { static: true }) blocklyDiv!: ElementRef;
 
   @Input() devmode;
@@ -64,6 +62,10 @@ export class BlocklyComponent {
   get aiWriting() {
     return this.blocklyService.aiWriting;
   }
+
+  showSpinOverlay = false;
+  isFadingOut = false;
+  private previousAiWriting = false;
 
   get workspace() {
     return this.blocklyService.workspace;
@@ -194,6 +196,25 @@ export class BlocklyComponent {
     if (this.codeGenerationTimer) {
       clearTimeout(this.codeGenerationTimer);
     }
+  }
+
+  ngDoCheck(): void {
+    const currentAiWriting = this.aiWriting;
+    
+    if (!this.previousAiWriting && currentAiWriting) {
+      this.isFadingOut = false;
+      this.showSpinOverlay = true;
+    }
+    
+    if (this.previousAiWriting && !currentAiWriting) {
+      this.isFadingOut = true;
+      setTimeout(() => {
+        this.showSpinOverlay = false;
+        this.isFadingOut = false;
+      }, 300);
+    }
+    
+    this.previousAiWriting = currentAiWriting;
   }
 
   ngAfterViewInit(): void {
