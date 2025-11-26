@@ -15,12 +15,12 @@ interface AilyIcon {
 export class Icon extends Blockly.icons.Icon implements ISerializable {
   _state: AilyIcon = {
     type: 'i',
-    width: 0,
+    width: -10,
     height: 0,
     src: 'fa-solid fa-bed-pulse',
     alt: '*',
     class: 'inner-icon',
-    fontSize: '16px',
+    fontSize: '0px',
     color: 'white',
   }
 
@@ -47,7 +47,10 @@ export class Icon extends Blockly.icons.Icon implements ISerializable {
   // }
 
   override initView(pointerdownListener) {
-    if (this.svgRoot) return;
+    if (this.svgRoot) {
+      this.svgRoot.remove();
+      return;
+    }
 
     super.initView(pointerdownListener);
 
