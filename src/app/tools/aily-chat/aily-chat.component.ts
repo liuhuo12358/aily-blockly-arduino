@@ -1241,6 +1241,7 @@ ${JSON.stringify(errData)}
 
   streamConnect(): void {
     // console.log("stream connect sessionId: ", this.sessionId);
+    let newConnect = true;
     if (!this.sessionId) {
       console.warn('无法建立流连接：sessionId 为空');
       return;
@@ -2168,8 +2169,47 @@ ${JSON.stringify(errData)}
 
             // 拼接到工具结果中返回
             if (toolResult?.content && this.chatService.currentMode === 'agent') {
-              toolContent += `\n${keyInfo}\n
-请不要经验主义或者过于自信，Blockly块创建必须遵循以下流程：
+              // 判断是否是 Blockly 相关工具
+              const isBlocklyTool = [
+                'smart_block_tool',
+                'create_code_structure_tool',
+                'configure_block_tool',
+                'connect_blocks_tool',
+                'delete_block_tool',
+                'get_workspace_overview_tool',
+                'edit_abi_file',
+                'reload_abi_json'
+              ].includes(data.tool_name);
+
+              // 判断是否需要路径信息的工具
+              const needsPathInfo = [
+                'create_project',
+                'execute_command',
+                'create_file',
+                'edit_file',
+                'delete_file',
+                'create_folder',
+                'delete_folder',
+                'check_exists',
+                'list_directory',
+                'get_directory_tree',
+                'grep_tool',
+                'glob_tool',
+                'edit_abi_file',
+                'reload_abi_json'
+              ].includes(data.tool_name);
+
+              // 只在 Blockly 工具失败或警告时添加规则提示
+              const needsRules = isBlocklyTool && (toolResult.is_error || resultState === 'warn');
+
+              // 智能决定是否包含 keyInfo：需要路径信息的工具 或 工具失败/警告时
+              const shouldIncludeKeyInfo = needsPathInfo || toolResult.is_error || resultState === 'warn';
+
+              if (needsRules || newConnect) {
+                newConnect = false;
+                // Blockly 工具失败时：同时包含 keyInfo 和 rules
+                toolContent += `\n${keyInfo}\n
+<rules>请不要经验主义或者过于自信，Blockly块创建必须遵循以下流程：
 1. 先列出计划使用的所有库(不可跳过以\`lib-core\`开始的库，特别注意lib-core-logic lib-core-variables lib-core-time等基础库)
 2. 逐一读取每个库的README确定块存在
 3. 使用smart_block_tool和create_code_structure_tool创建对应代码块
@@ -2179,17 +2219,26 @@ ${JSON.stringify(errData)}
 4. 检查工具反馈结果
 5. 修复结构或逻辑问题(多次修复仍然有误时，分析是否遗漏了相关库readme的阅读)
 - 如果发现问题，请及时修复，不要继续往下走
-- 如果部分代码块创建失败，使用第三步的工具继续创建遗漏的块，或者使用connect_blocks_tool修改连接关系
+- 如果部分代码块创建失败，使用第三步的工具继续创建遗漏的块
+- 如果发现连接的块不满足要求，可以使用第三步的工具创建新的块并替换连接
+- 如果连接逻辑问题可使用connect_blocks_tool修改连接关系
 - 避免直接删除整个代码块，优先考虑使用配置工具修改块属性或者删除某一个块后重新创建
 - 全局变量请作为独立块创建
 - 独立且无用的块请删除
 6. 重复直至完成
-JSON务必保留必要的换行和缩进格式，否则可能导致解析失败。
-<toolResult>${toolResult.content}</toolResult>`;
+JSON务必保留必要的换行和缩进格式，否则可能导致解析失败。</rules>
+<toolResult>${toolResult.content}</toolResult>\n<info>如果想结束对话，转交给用户，可以使用[to_xxx]，xxx为user</info>`;
+              } else if (shouldIncludeKeyInfo) {
+                // 需要路径信息的工具 或 工具失败时：只包含 keyInfo
+                toolContent += `\n${keyInfo}\n<toolResult>${toolResult.content}</toolResult>\n<info>如果想结束对话，转交给用户，可以使用[to_xxx]，xxx为user</info>`;
+              } else {
+                // 其他成功的工具：不包含 keyInfo
+                toolContent += `\n<toolResult>${toolResult.content}</toolResult>\n<info>如果想结束对话，转交给用户，可以使用[to_xxx]，xxx为user</info>`;
+              }
             } else {
               toolContent = `
 Your role is ASK (Advisory & Quick Support) - you provide analysis, recommendations, and guidance ONLY. You do NOT execute actual tasks or changes.
-<toolResult>${toolResult.content}</toolResult>`;
+<toolResult>${toolResult.content}</toolResult>\n<info>如果想结束对话，转交给用户，可以使用[to_xxx]，xxx为user</info>`;
             }
 
             // 显示工具完成状态（除了 todo_write_tool）
