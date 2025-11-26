@@ -33,6 +33,8 @@ export class BlocklyService {
   offsetX: number = 0;
   offsetY: number = 0;
 
+  aiWriting = false;
+
   constructor(
     private translateService: TranslateService,
     private electronService: ElectronService

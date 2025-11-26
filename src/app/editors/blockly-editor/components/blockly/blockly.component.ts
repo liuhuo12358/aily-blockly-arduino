@@ -41,12 +41,14 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { ConfigService } from '../../../../services/config.service';
 import { NoticeService } from '../../../../services/notice.service';
 import { Minimap } from '@blockly/workspace-minimap';
+import { NzSpinModule } from 'ng-zorro-antd/spin';
 
 @Component({
   selector: 'blockly-main',
   imports: [
     NzModalModule,
-    CommonModule
+    CommonModule,
+    NzSpinModule,
   ],
   templateUrl: './blockly.component.html',
   styleUrl: './blockly.component.scss',
@@ -58,6 +60,10 @@ export class BlocklyComponent {
   generator;
   // Control bitmap upload handler visibility
   showBitmapUploadHandler = true;
+
+  get aiWriting() {
+    return this.blocklyService.aiWriting;
+  }
 
   get workspace() {
     return this.blocklyService.workspace;
@@ -273,7 +279,7 @@ export class BlocklyComponent {
       (window as any)['Blockly'] = Blockly;
       // 设置全局工作区引用，供 editBlockTool 使用
       (window as any)['blocklyWorkspace'] = this.workspace;
-      this.workspace.addChangeListener((event:any) => {
+      this.workspace.addChangeListener((event: any) => {
         // if (event.type == Blockly.Events.SELECTED) {
         //   console.log('积木选择事件：', event);
         //   // const code = Blockly;
