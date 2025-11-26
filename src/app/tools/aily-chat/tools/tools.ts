@@ -74,7 +74,28 @@ export const TOOLS = [
     // },
     {
         name: "read_file",
-        description: `读取指定文件的内容，需文件完整路径，建议优先使用grep工具。支持文本文件的读取，可指定编码格式。`,
+        description: `读取指定文件的内容。支持完整读取或按行/字节范围读取，自动处理大文件。优先考虑使用 grep_tool 进行内容搜索。
+
+**读取模式：**
+1. **完整读取**（默认）：读取整个文件（文件需小于 maxSize）
+2. **按行范围读取**：指定起始行号和行数（行号从1开始）
+3. **按字节范围读取**：指定起始字节位置和字节数（推荐用于大文件，优先级最高）
+
+**大文件处理：**
+- 默认限制 1MB，超过限制需指定范围读取或增加 maxSize
+- 检测到超长行会发出警告
+- 字节范围读取使用流式读取，不会一次性加载整个文件
+
+**使用场景：**
+- 小文件（<1MB）：直接完整读取
+- 大文件：使用字节范围读取 (startByte + byteCount)
+- 已知行号：使用行范围读取 (startLine + lineCount)
+- 搜索内容：使用 grep_tool 工具
+
+**注意：**
+- 行号从 1 开始计数
+- 字节位置从 0 开始计数
+- 字节范围读取优先级最高`,
         input_schema: {
             type: 'object',
             properties: {
@@ -86,6 +107,32 @@ export const TOOLS = [
                     type: 'string',
                     description: '文件编码格式',
                     default: 'utf-8'
+                },
+                startLine: {
+                    type: 'number',
+                    description: '起始行号（从1开始）。指定后按行范围读取',
+                    minimum: 1
+                },
+                lineCount: {
+                    type: 'number',
+                    description: '要读取的行数。不指定则读到文件末尾（或达到 maxSize 限制）',
+                    minimum: 1
+                },
+                startByte: {
+                    type: 'number',
+                    description: '起始字节位置（从0开始）。指定后按字节范围读取（优先级最高，推荐用于大文件）',
+                    minimum: 0
+                },
+                byteCount: {
+                    type: 'number',
+                    description: '要读取的字节数。不指定则读到文件末尾（或达到 maxSize 限制）',
+                    minimum: 1
+                },
+                maxSize: {
+                    type: 'number',
+                    description: '最大读取大小（字节）。默认 1MB (1048576)。超过此大小需使用范围读取',
+                    default: 1048576,
+                    minimum: 1024
                 }
             },
             required: ['path']
@@ -277,12 +324,13 @@ export const TOOLS = [
 - Searches file contents using regular expressions
 - Supports full regex syntax (eg. "log.*Error", "function\\s+\\w+", etc.)
 - Use this tool when you need to find files containing specific patterns
+- Use word boundaries \\b to ensure a complete word match.
 support two modes:
 1. File name mode (default): returns a list of file paths containing the matched content
 2. Content mode: returns the specific line content, file path, and line number of the matches
 
-基本语法:
-查询boards.json中的主板信息(返回文件名)
+Basic Syntax:
+Query board info in boards.json (returns filenames)
 \`\`\`json
 {
   "pattern": "WIFI|BLE",
@@ -291,10 +339,10 @@ support two modes:
 }
 \`\`\`
 
-查询并返回具体内容(如需要查询文件中的具体信息)
+Query and return specific content (for detailed info)
 \`\`\`json
 {
-  "pattern": "WIFI|BLE",
+  "pattern": "\\\\bWIFI\\\\b|\\\\bBLE\\\\b",
   "path": "D:\\\\codes\\\\aily-blockly",
   "include": "*boards.json"
   "returnContent": true,
@@ -318,7 +366,7 @@ support two modes:
                 },
                 isRegex: {
                     type: 'boolean',
-                    description: '搜索模式是否为正则表达式。true=正则表达式，false=普通文本',
+                    description: '搜索模式是否为正则表达式。true=正则表达式（支持 | 或 .* 等元字符），false=普通文本（自动转义特殊字符）。使用正则时需手动添加 \\b 实现全词匹配',
                     default: true
                 },
                 returnContent: {
@@ -333,19 +381,24 @@ support two modes:
                 },
                 maxLineLength: {
                     type: 'number',
-                    description: '每行最大字符长度（100-2000）。用于控制返回内容的长度，避免单行超大文件（如压缩JSON）返回过多数据。推荐值：500',
+                    description: '每行最大字符长度（100-2000）。用于控制返回内容的长度，避免单行超大文件（如压缩JSON）返回过多数据。推荐值：20',
                     default: 100
                 },
                 maxResults: {
                     type: 'number',
                     description: '最大结果数量限制',
-                    default: 20
-                },
-                ignoreCase: {
-                    type: 'boolean',
-                    description: '是否忽略大小写',
-                    default: true
+                    default: 100
                 }
+                // ignoreCase: {
+                //     type: 'boolean',
+                //     description: '是否忽略大小写',
+                //     default: true
+                // },
+                // wholeWord: {
+                //     type: 'boolean',
+                //     description: '是否全词匹配（仅在 isRegex=false 时有效）。启用后只匹配完整单词，避免部分匹配。使用正则表达式时此参数无效，需手动在模式中添加 \\b 边界符',
+                //     default: false
+                // }
             },
             required: ['pattern']
         }
