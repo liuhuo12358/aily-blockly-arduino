@@ -60,7 +60,7 @@ export class CrossPlatformCmdService {
   }
 
   /**
-   * 复制目录（以硬链接的方式，直接调用node的api）
+   * 复制目录（优先使用硬链接，失败时回退到复制）
    */
   async linkItem(source: string, destination: string): Promise<any> {
     try {
@@ -79,7 +79,22 @@ export class CrossPlatformCmdService {
         if (window['fs'].existsSync(destPath)) {
           window['fs'].unlinkSync(destPath, null);
         }
-        window['fs'].linkSync(source, destPath);
+        
+        try {
+          window['fs'].linkSync(source, destPath);
+        } catch (linkError: any) {
+          // 如果是跨设备错误(EXDEV)或权限错误，回退到复制
+          const errorMsg = linkError.message || String(linkError);
+          const isExdevError = linkError.code === 'EXDEV' || linkError.code === 'EPERM' || errorMsg.includes('EXDEV') || errorMsg.includes('cross-device');
+          if (isExdevError) {
+            console.log(`[单文件]硬链接失败，使用复制: ${source} -> ${destPath}`);
+            const content = window['fs'].readFileSync(source);
+            window['fs'].writeFileSync(destPath, content);
+          } else {
+            console.error(`[单文件]硬链接失败(未知错误):`, linkError);
+            throw linkError;
+          }
+        }
         return true;
       }
 
@@ -88,7 +103,6 @@ export class CrossPlatformCmdService {
       }
 
       const items = window['fs'].readDirSync(source, { withFileTypes: true });
-      // console.log('linkDirectory items:', items);
 
       for (const item of items) {
         const srcPath = window['path'].join(source, item.name);
@@ -100,11 +114,35 @@ export class CrossPlatformCmdService {
           if (window['fs'].existsSync(destPath)) {
             window['fs'].unlinkSync(destPath, null);
           }
-          window['fs'].linkSync(srcPath, destPath);
+          
+          try {
+            window['fs'].linkSync(srcPath, destPath);
+          } catch (linkError: any) {
+            // 如果是跨设备错误(EXDEV)或权限错误，回退到复制
+            const errorMsg = linkError.message || String(linkError);
+            const isExdevError = linkError.code === 'EXDEV' || linkError.code === 'EPERM' || errorMsg.includes('EXDEV') || errorMsg.includes('cross-device');
+            if (isExdevError) {
+              console.log(`[目录文件]硬链接失败，使用复制: ${srcPath} -> ${destPath}`);
+              const content = window['fs'].readFileSync(srcPath);
+              window['fs'].writeFileSync(destPath, content);
+            } else {
+              console.error(`[目录文件]硬链接失败(未知错误):`, linkError);
+              throw linkError;
+            }
+          }
         }
       }
       return true;
-    } catch (error) {
+    } catch (error: any) {
+      console.error('linkItem外层捕获错误:', error.message, 'code:', error.code);
+      // 如果是EXDEV错误但没有被上面捕获，说明是目录级别的问题，使用copySync回退
+      const errorMsg = error.message || String(error);
+      const isExdevError = error.code === 'EXDEV' || errorMsg.includes('EXDEV') || errorMsg.includes('cross-device');
+      if (isExdevError) {
+        console.warn('外层EXDEV错误，使用copySync:', source, '->', destination);
+        window['fs'].copySync(source, destination);
+        return true;
+      }
       console.error('linkDirectory error:', error);
       throw error;
     }
