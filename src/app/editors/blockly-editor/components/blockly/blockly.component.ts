@@ -227,7 +227,7 @@ export class BlocklyComponent implements DoCheck {
           if (msg.includes('overwrites previous definition')) {
             return;
           }
-          if (msg.includes('blockly.component.ts:203 CodeGenerator init was not called before blockToCode was called.')) {
+          if (msg.includes('CodeGenerator init was not called before blockToCode was called.')) {
             return;
           }
           // 保留其他警告
