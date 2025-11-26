@@ -34,8 +34,8 @@ export class CloudService {
   /** 
    * 获取公开列表
    */
-  getPublicProjects(page, perPage, keyword): Observable<any> {
-    return this.http.get<any>(`${API.cloudPublicProjects}?page=${page}&perPage=${perPage}&keywords=${keyword}`)
+  getPublicProjects(page, perPage, keyword, id=''): Observable<any> {
+    return this.http.get<any>(`${API.cloudPublicProjects}?page=${page}&perPage=${perPage}&keywords=${keyword}&id=${id}`)
       .pipe(
         catchError(this.handleError)
       );
@@ -208,10 +208,10 @@ export class CloudService {
     let tempDir = '';
     try {
       // 检查 blob 大小和类型
-      console.log('Blob 信息:', {
-        size: blob.size,
-        type: blob.type
-      });
+      // console.log('Blob 信息:', {
+      //   size: blob.size,
+      //   type: blob.type
+      // });
       
       if (blob.size === 0) {
         throw new Error('下载的文件为空');
@@ -230,34 +230,34 @@ export class CloudService {
       }
       
       const fileStats = window['fs'].statSync(archivePath);
-      console.log('保存的文件信息:', {
-        path: archivePath,
-        size: fileStats.size,
-        exists: true
-      });
+      // console.log('保存的文件信息:', {
+      //   path: archivePath,
+      //   size: fileStats.size,
+      //   exists: true
+      // });
       
       if (fileStats.size === 0) {
         throw new Error('保存的归档文件为空');
       }
       
       // 检查文件前几个字节，验证是否为有效的7z文件（读取为Buffer）
-      const fileBuffer = window['fs'].readFileSync(archivePath, null);
-      const magic = fileBuffer.slice(0, 6);
-      const is7zFile = magic[0] === 0x37 && magic[1] === 0x7A && 
-                       magic[2] === 0xBC && magic[3] === 0xAF && 
-                       magic[4] === 0x27 && magic[5] === 0x1C;
+      // const fileBuffer = window['fs'].readFileSync(archivePath, null);
+      // const magic = fileBuffer.slice(0, 6);
+      // const is7zFile = magic[0] === 0x37 && magic[1] === 0x7A && 
+      //                  magic[2] === 0xBC && magic[3] === 0xAF && 
+      //                  magic[4] === 0x27 && magic[5] === 0x1C;
       
-      console.log('文件魔数检查:', {
-        magic: Array.from(magic).map((b: number) => b.toString(16)).join(' '),
-        is7zFile: is7zFile
-      });
+      // console.log('文件魔数检查:', {
+      //   magic: Array.from(magic).map((b: number) => b.toString(16)).join(' '),
+      //   is7zFile: is7zFile
+      // });
       
-      if (!is7zFile) {
-        // 尝试读取文件内容开头，看是否是错误响应
-        const textContent = fileBuffer.slice(0, 200).toString('utf8');
-        console.log('文件内容开头:', textContent);
-        throw new Error(`下载的文件不是有效的7z格式。文件内容: ${textContent.substring(0, 100)}`);
-      }
+      // if (!is7zFile) {
+      //   // 尝试读取文件内容开头，看是否是错误响应
+      //   const textContent = fileBuffer.slice(0, 200).toString('utf8');
+      //   // console.log('文件内容开头:', textContent);
+      //   throw new Error(`下载的文件不是有效的7z格式。文件内容: ${textContent.substring(0, 100)}`);
+      // }
       
       // 创建解压目录
       const extractPath = `${tempDir}/extracted`;
@@ -266,7 +266,7 @@ export class CloudService {
       // 使用7za.exe解压文件（明确指定7z格式）
       const extractCmd = `${this.platformService.za7} x "${archivePath}" -o"${extractPath}" -t7z -y`;
       
-      console.log('执行解压命令:', extractCmd);
+      // console.log('执行解压命令:', extractCmd);
       const result = await this.cmdService.runAsync(extractCmd);
       
       // 检查解压结果
@@ -284,12 +284,12 @@ export class CloudService {
         throw new Error('解压后没有找到任何文件');
       }
       
-      console.log('解压成功，文件数量:', extractedFiles.length);
+      // console.log('解压成功，文件数量:', extractedFiles.length);
 
       // 删除.7z文件，节省空间
       try {
         window['fs'].unlinkSync(archivePath);
-        console.log('已删除临时归档文件:', archivePath);
+        // console.log('已删除临时归档文件:', archivePath);
       } catch (error) {
         console.warn('删除临时归档文件失败:', error);
       }

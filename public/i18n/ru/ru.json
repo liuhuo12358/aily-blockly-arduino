@@ -76,6 +76,7 @@
             "LANGUAGE": "Язык",
             "UI_THEME": "Тема интерфейса",
             "BLOCKLY_THEME": "Тема Blockly",
+            "BLOCKLY_MINIMAP": "Миникарта Blockly",
             "COMPILATION_OPTIONS": "Параметры компиляции",
             "REPOSITORY_URLS": "Адреса репозиториев",
             "BOARD_LIST": "Список плат",

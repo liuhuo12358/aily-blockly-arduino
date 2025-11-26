@@ -40,6 +40,7 @@ import { ImageUploadDialogComponent } from './components/image-upload-dialog/ima
 import { HttpErrorResponse } from '@angular/common/http';
 import { ConfigService } from '../../../../services/config.service';
 import { NoticeService } from '../../../../services/notice.service';
+import { Minimap } from '@blockly/workspace-minimap';
 
 @Component({
   selector: 'blockly-main',
@@ -255,6 +256,11 @@ export class BlocklyComponent {
       const multiselectPlugin = new Multiselect(this.workspace);
       multiselectPlugin.init(this.options);
 
+      if (this.configData.blockly.minimap) {
+        const minimap = new Minimap(this.workspace);
+        minimap.init();
+      }
+
       // 动态连接块监听
       this.workspace.addChangeListener(BlockDynamicConnection.finalizeConnections);
 
@@ -267,7 +273,14 @@ export class BlocklyComponent {
       (window as any)['Blockly'] = Blockly;
       // 设置全局工作区引用，供 editBlockTool 使用
       (window as any)['blocklyWorkspace'] = this.workspace;
-      this.workspace.addChangeListener((event) => {
+      this.workspace.addChangeListener((event:any) => {
+        // if (event.type == Blockly.Events.SELECTED) {
+        //   console.log('积木选择事件：', event);
+        //   // const code = Blockly;
+        //   // console.log('代码生成结果：', code);
+        //  const block = this.workspace.getBlockById(event.newElementId);
+        //  console.log('选中的积木：', block);
+        // }
         try {
           this.codeGeneration();
         } catch (error) {

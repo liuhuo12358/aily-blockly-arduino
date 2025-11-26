@@ -27,7 +27,7 @@ import { ElectronService } from '../../services/electron.service';
 export class PlaygroundComponent {
   @Output() close = new EventEmitter();
 
-  tagList: string[] = [];
+  tagList: any[] = [];
   // exampleList = []
 
   constructor(
@@ -50,13 +50,22 @@ export class PlaygroundComponent {
 
     // 使用翻译初始化标签列表
     this.tagList = [
-      'AI-VOX', 'UNO R4', 'ESP32S3', '程序设计基础'
-      // this.translate.instant('显示全部'),
-      // this.translate.instant('入门课程'),
-      // this.translate.instant('库示例'),
-      // this.translate.instant('精选项目'),
-      // this.translate.instant('物联网'),
-      // this.translate.instant('机器人'),
+      {
+        text: 'SenseCraft AI',
+        color: '#739c19ff'
+      },
+      {
+        text: 'AI-VOX',
+      },
+      {
+        text: 'UNO R4',
+      },
+      {
+        text: 'ESP32S3',
+      },
+      {
+        text: '程序设计基础',
+      }
     ];
 
     this.electronService.setTitle('aily blockly - Playground');
@@ -64,7 +73,7 @@ export class PlaygroundComponent {
 
   keyword: string = '';
   search(keyword = this.keyword) {
-    keyword = keyword.replace(/\s/g, '').toLowerCase();
+    // keyword = keyword.replace(/\s/g, '').toLowerCase();
     this.router.navigate(['/main/playground/list'], {
       queryParams: { keyword }
     });
