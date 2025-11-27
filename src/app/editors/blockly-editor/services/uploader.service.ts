@@ -536,7 +536,7 @@ export class _UploaderService {
                     // const progressValue = this.extractProgressFromLine(trimmedLine);
                     // console.log("trimmedLine: ", trimmedLine);
                     // ESP32特定进度跟踪
-                    let isESP32Format = /Writing\s+at\s+0x[0-9a-f]+\.\.\.\s+\(\d+\s*%\)/i.test(trimmedLine);
+                    let isESP32Format = /Writing\s+at\s+0x[0-9a-f]+\s+\[[^\]]*\]\s+\d+\.\d+%\s+\d+\/\d+\s+bytes\.\.\./i.test(trimmedLine);
                     // 使用静态变量跟踪ESP32上传状态
                     if (!this['esp32UploadState']) {
                       this['esp32UploadState'] = {
@@ -569,7 +569,7 @@ export class _UploaderService {
 
                     // 优先处理ESP32格式
                     if (isESP32Format) {
-                      const numericMatch = trimmedLine.match(/\((\d+)\s*%\)/);
+                      const numericMatch = trimmedLine.match(/(\d+\.\d+)%/);
                       if (numericMatch) {
                         const regionProgress = parseInt(numericMatch[1], 10);
 
