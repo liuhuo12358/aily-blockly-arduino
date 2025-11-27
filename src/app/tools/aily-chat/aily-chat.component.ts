@@ -1086,11 +1086,21 @@ ${JSON.stringify(errData)}
 
   autoScrollEnabled = true; // 控制是否自动滚动到底部
 
+
+  private _isWaiting = false;
+
   get isWaiting() {
-    return this.blocklyService.aiWriting;
+    return this._isWaiting;
   }
 
   set isWaiting(value: boolean) {
+    this._isWaiting = value;
+    if (!value) {
+      this.aiWriting = false;
+    }
+  }
+
+  set aiWriting(value: boolean) {
     if (value) {
       this.noticeService.update({
         title: "AI正在操作",
@@ -1375,7 +1385,26 @@ ${JSON.stringify(errData)}
             let resultState = "done";
             let resultText = '';
 
-            // console.log("工具调用请求: ", data.tool_name, toolArgs);
+           // console.log("工具调用请求: ", data.tool_name, toolArgs);
+
+            // 定义 block 工具列表
+            const blockTools = [
+              'smart_block_tool',
+              'connect_blocks_tool',
+              'create_code_structure_tool',
+              'configure_block_tool',
+              'delete_block_tool',
+              'get_workspace_overview_tool',
+              'queryBlockDefinitionTool',
+              'analyze_library_blocks',
+              'verify_block_existence'
+            ];
+
+            // 检查是否是 block 工具，如果是则设置 aiWriting 状态
+            const isBlockTool = blockTools.includes(data.tool_name);
+            if (isBlockTool) {
+              this.aiWriting = true;
+            }
 
             try {
               if (data.tool_name.startsWith('mcp_')) {
