@@ -42,6 +42,8 @@ function generateSuccessInfo() {
   `;
 }
 
+let conutForGetWorkspaceOverview = 0;
+
 interface Position {
   x?: number;
   y?: number;
@@ -1979,9 +1981,15 @@ export async function smartBlockTool(args: SmartBlockArgs): Promise<SmartBlockRe
       }
     }
     
-    // if (!isError && workspaceOverview) {
-    //   enhancedMessage += `\n\n${workspaceOverview}`;
-    // }
+    // 获取工作区概览信息
+    if (conutForGetWorkspaceOverview++ > 5) {
+      const { overview: workspaceOverview, cppCode, isError } = await getWorkspaceOverviewInfo();
+
+      if (!isError && workspaceOverview) {
+        enhancedMessage += `\n\n${workspaceOverview}`;
+      }
+    }
+    console.log('conutForGetWorkspaceOverview', conutForGetWorkspaceOverview);
 
     const toolResult = {
       is_error: false,
@@ -3795,7 +3803,7 @@ export async function connectBlocksTool(args: ConnectBlocksArgs): Promise<Connec
     // console.log(message);
 
     // // 获取工作区概览，包括树状结构和生成的代码
-    // const { overview: workspaceOverview, cppCode, isError } = await getWorkspaceOverviewInfo();
+    // const { overview: workspaceOverview, cppCode, isError } = await getWorkspaceOverviewInfo();    
     
     // 生成增强的结果消息
     let enhancedMessage = `${message}`;
@@ -3811,6 +3819,16 @@ export async function connectBlocksTool(args: ConnectBlocksArgs): Promise<Connec
 
 //  📊 连接操作完成后的工作区状态:
 // ${workspaceOverview}`;
+
+    // 获取工作区概览信息
+    if (conutForGetWorkspaceOverview++ > 5) {
+      const { overview: workspaceOverview, cppCode, isError } = await getWorkspaceOverviewInfo();
+
+      if (!isError && workspaceOverview) {
+        enhancedMessage += `\n\n${workspaceOverview}`;
+      }
+    }
+    console.log('conutForGetWorkspaceOverview', conutForGetWorkspaceOverview);
 
     return {
       is_error: false,
@@ -3924,6 +3942,8 @@ async function getWorkspaceOverviewInfo(includeCode = true, includeTree = true):
       // } else {
       //   // console.log('ℹ️ 工作区概览中无变量信息');
       // }
+
+      conutForGetWorkspaceOverview = 0; // 重置计数器
       
       return { overview, cppCode, isError: false };
     } else {
