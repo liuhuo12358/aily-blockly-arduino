@@ -2244,7 +2244,7 @@ ${JSON.stringify(errData)}
 3. 逐一读取每个库的README确定块存在
 4. 使用smart_block_tool和create_code_structure_tool创建对应代码块
 - 不要一次性生成大量块，分步创建，每次创建后检查结果
-- 全局变量 setup loop 回调函数 独立结构分开创建
+- 全局变量 setup loop 回调函数 独立结构分开创建(steup/loop基础块已经存在于工作区，无需重复创建)
 - 当尝试使用代码块多次仍然无法创建成功时，安装 @aily-project/lib-core-custom 并使用库中的自定义块进行代码创建
 5. 检查工具反馈结果
 6. 修复结构或逻辑问题(多次修复仍然有误时，分析是否遗漏了相关库readme的阅读)
