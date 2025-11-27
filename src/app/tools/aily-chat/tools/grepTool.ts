@@ -33,7 +33,9 @@ async function searchWithRipgrep(
     pattern: string,
     searchPath: string,
     include?: string,
-    isRegex: boolean = true
+    isRegex: boolean = true,
+    ignoreCase: boolean = true,
+    wholeWord: boolean = false
 ): Promise<{ numFiles: number, filenames: string[], durationMs: number } | null> {
     try {
         const electronAPI = (window as any).electronAPI;
@@ -47,7 +49,8 @@ async function searchWithRipgrep(
             include,
             isRegex,
             maxResults: 100,
-            ignoreCase: true
+            ignoreCase,
+            wholeWord
         });
         
         if (!result.success) {
@@ -108,7 +111,9 @@ function searchFilesRecursive(
     pattern: string,
     includePattern?: string,
     isRegex: boolean = true,
-    maxResults: number = 100
+    maxResults: number = 100,
+    ignoreCase: boolean = true,
+    wholeWord: boolean = false
 ): { filenames: string[], numFiles: number } {
     const matchedFiles: string[] = [];
     const visited = new Set<string>();
@@ -116,15 +121,18 @@ function searchFilesRecursive(
     // 编译搜索正则表达式
     let searchRegex: RegExp;
     try {
+        const flags = ignoreCase ? 'i' : '';
         if (isRegex) {
-            searchRegex = new RegExp(pattern, 'i'); // 不区分大小写
+            searchRegex = new RegExp(pattern, flags);
         } else {
             // 如果不是正则表达式，进行转义并创建普通文本搜索
             const escapedPattern = pattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-            searchRegex = new RegExp(escapedPattern, 'i');
+            // 如果启用 wholeWord，添加单词边界
+            const finalPattern = wholeWord ? `\\b${escapedPattern}\\b` : escapedPattern;
+            searchRegex = new RegExp(finalPattern, flags);
         }
-    } catch (error) {
-        throw new Error(`无效的搜索模式: ${pattern}`);
+    } catch (error: any) {
+        throw new Error(`无效的搜索模式 "${pattern}": ${error.message}。${isRegex ? '如果使用正则表达式，请确保语法正确。如需匹配特殊字符，请设置 isRegex=false' : ''}`);
     }
     
     // 解析文件包含模式
@@ -256,6 +264,8 @@ export async function grepTool(
         contextLines?: number;
         maxLineLength?: number;
         maxResults?: number;
+        ignoreCase?: boolean;
+        wholeWord?: boolean;
     }
 ): Promise<ToolUseResult> {
     const startTime = Date.now();
@@ -269,7 +279,9 @@ export async function grepTool(
             returnContent = false,
             contextLines = 0,
             maxLineLength = 500,
-            maxResults = 100
+            maxResults = 100,
+            ignoreCase = true,
+            wholeWord = false
         } = params;
         
         // 验证搜索模式
@@ -337,7 +349,7 @@ export async function grepTool(
                     include,
                     isRegex,
                     maxResults,
-                    ignoreCase: true,
+                    ignoreCase,
                     contextLines: Math.min(Math.max(0, contextLines || 0), 5), // 限制0-5
                     maxLineLength: Math.min(Math.max(100, maxLineLength || 500), 2000) // 限制100-2000
                 });
@@ -423,7 +435,7 @@ export async function grepTool(
         
         if (ripgrepReady) {
             // console.log('使用 ripgrep 进行文件名搜索');
-            searchResult = await searchWithRipgrep(pattern, searchPath, include, isRegex);
+            searchResult = await searchWithRipgrep(pattern, searchPath, include, isRegex, ignoreCase, wholeWord);
             if (searchResult) {
                 usingRipgrep = true;
                 // console.log(`Ripgrep 搜索完成: 找到 ${searchResult.numFiles} 个文件, 耗时 ${searchResult.durationMs}ms`);
@@ -443,7 +455,9 @@ export async function grepTool(
                 pattern,
                 include,
                 isRegex,
-                MAX_RESULTS
+                MAX_RESULTS,
+                ignoreCase,
+                wholeWord
             );
             
             searchResult = {

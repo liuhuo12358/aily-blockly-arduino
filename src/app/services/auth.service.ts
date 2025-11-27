@@ -190,7 +190,8 @@ export class AuthService {
             this.userInfoSubject.next(response.data);
             resolve(response.data);
           } else {
-            reject(new Error('获取用户信息失败'));
+            console.warn('获取用户信息失败:', response);
+            reject(null);
           }
         },
         error: (error) => reject(error)
@@ -242,7 +243,7 @@ export class AuthService {
         localStorage.setItem(this.TOKEN_KEY, token);
       }
     } catch (error) {
-      console.error('保存 token 失败:', error);
+      // console.error('保存 token 失败:', error);
       throw error;
     }
   }

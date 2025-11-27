@@ -100,6 +100,7 @@ import { ArduinoLintService } from './services/arduino-lint.service';
 import { BlocklyService } from '../../editors/blockly-editor/services/blockly.service';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { LoginComponent } from '../../components/login/login.component';
+import { NoticeService } from '../../services/notice.service';
 
 // import { reloadAbiJsonTool, reloadAbiJsonToolSimple } from './tools';
 
@@ -714,7 +715,8 @@ appDataPath(**appDataPath**): ${window['path'].getAppDataPath() || '无'}
     private configService: ConfigService,
     private todoUpdateService: TodoUpdateService,
     private arduinoLintService: ArduinoLintService,
-    private translate: TranslateService
+    private translate: TranslateService,
+    private noticeService: NoticeService,
   ) {
   }
 
@@ -1082,8 +1084,38 @@ ${JSON.stringify(errData)}
     });
   }
 
-  isWaiting = false;
   autoScrollEnabled = true; // 控制是否自动滚动到底部
+
+
+  private _isWaiting = false;
+
+  get isWaiting() {
+    return this._isWaiting;
+  }
+
+  set isWaiting(value: boolean) {
+    this._isWaiting = value;
+    if (!value) {
+      this.aiWriting = false;
+    }
+  }
+
+  set aiWriting(value: boolean) {
+    if (value) {
+      this.noticeService.update({
+        title: "AI正在操作",
+        state: 'doing',
+        showProgress: false,
+        setTimeout: 0,
+        stop: ()=>{
+          this.stop();
+        }
+      });
+    } else {
+      this.noticeService.clear();
+    }
+    this.blocklyService.aiWriting = value;
+  }
 
   async sendButtonClick(): Promise<void> {
     if (this.isWaiting) {
@@ -1352,7 +1384,26 @@ ${JSON.stringify(errData)}
             let resultState = "done";
             let resultText = '';
 
-            // console.log("工具调用请求: ", data.tool_name, toolArgs);
+           // console.log("工具调用请求: ", data.tool_name, toolArgs);
+
+            // 定义 block 工具列表
+            const blockTools = [
+              'smart_block_tool',
+              'connect_blocks_tool',
+              'create_code_structure_tool',
+              'configure_block_tool',
+              'delete_block_tool',
+              'get_workspace_overview_tool',
+              'queryBlockDefinitionTool',
+              'analyze_library_blocks',
+              'verify_block_existence'
+            ];
+
+            // 检查是否是 block 工具，如果是则设置 aiWriting 状态
+            const isBlockTool = blockTools.includes(data.tool_name);
+            if (isBlockTool) {
+              this.aiWriting = true;
+            }
 
             try {
               if (data.tool_name.startsWith('mcp_')) {
@@ -2146,17 +2197,19 @@ ${JSON.stringify(errData)}
 
             // 拼接到工具结果中返回
             if (toolResult?.content && this.chatService.currentMode === 'agent') {
-              toolContent += `\n${keyInfo}\n请不要经验主义或者过于自信，Blockly块创建必须遵循以下流程：
+              toolContent += `\n${keyInfo}\n
+请不要经验主义或者过于自信，Blockly块创建必须遵循以下流程：
 1. 先列出计划使用的所有库(不可跳过以\`lib-core\`开始的库，特别注意lib-core-logic lib-core-variables lib-core-time等基础库)
 2. 逐一读取每个库的README确定块存在
 3. 使用smart_block_tool和create_code_structure_tool创建对应代码块
 - 不要一次性生成大量块，分步创建，每次创建后检查结果
 - 全局变量 setup loop 回调函数 独立结构分开创建
+- 当尝试使用代码块多次仍然无法创建成功时，安装 @aily-project/lib-core-custom 并使用库中的自定义块进行代码创建
 4. 检查工具反馈结果
 5. 修复结构或逻辑问题(多次修复仍然有误时，分析是否遗漏了相关库readme的阅读)
 - 如果发现问题，请及时修复，不要继续往下走
 - 如果部分代码块创建失败，使用第三步的工具继续创建遗漏的块，或者使用connect_blocks_tool修改连接关系
-- 避免直接删除块，优先考虑使用配置工具修改块属性
+- 避免直接删除整个代码块，优先考虑使用配置工具修改块属性或者删除某一个块后重新创建
 - 全局变量请作为独立块创建
 - 独立且无用的块请删除
 6. 重复直至完成
