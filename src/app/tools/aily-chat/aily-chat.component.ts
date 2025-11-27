@@ -1252,6 +1252,7 @@ ${JSON.stringify(errData)}
   streamConnect(): void {
     // console.log("stream connect sessionId: ", this.sessionId);
     let newConnect = true;
+    let newProject = false;
     if (!this.sessionId) {
       console.warn('无法建立流连接：sessionId 为空');
       return;
@@ -1423,6 +1424,7 @@ ${JSON.stringify(errData)}
                       resultText = '项目创建异常,即将重试';
                     } else {
                       resultText = `项目创建成功`;
+                      newProject = true;
                     }
                     break;
                   case 'execute_command':
@@ -2234,8 +2236,9 @@ ${JSON.stringify(errData)}
               // 智能决定是否包含 keyInfo：需要路径信息的工具 或 工具失败/警告时
               const shouldIncludeKeyInfo = needsPathInfo || toolResult.is_error || resultState === 'warn';
 
-              if (needsRules || newConnect) {
+              if (needsRules || newConnect || newProject) {
                 newConnect = false;
+                newProject = false;
                 // Blockly 工具失败时：同时包含 keyInfo 和 rules
                 toolContent += `\n${keyInfo}\n
 <rules>请不要经验主义或者过于自信，Blockly块创建必须遵循以下流程：
