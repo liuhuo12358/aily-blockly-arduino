@@ -1965,7 +1965,7 @@ export async function smartBlockTool(args: SmartBlockArgs): Promise<SmartBlockRe
     // if (result.totalBlocks && result.totalBlocks > 1) {
     //   enhancedMessage += `，包含 ${result.totalBlocks} 个块`;
     // }
-    let enhancedMessage = `✅ 完成创建智能块`;
+    let enhancedMessage = `✅ 完成创建智能块 ${type} id: ${result.block.id}`;
     
     // 🔧 如果有变量字段，添加处理信息
     if (parsedFields) {
