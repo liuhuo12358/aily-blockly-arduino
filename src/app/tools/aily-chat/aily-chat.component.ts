@@ -2927,6 +2927,10 @@ Your role is ASK (Advisory & Quick Support) - you provide analysis, recommendati
     this.hasInitializedForThisLogin = false;
 
     this.disconnect();
+
+    if (this.list.length > 0 && this.list[this.list.length - 1].role === 'aily') {
+      this.list[this.list.length - 1].state = 'done';
+    }
   }
 
   // 添加订阅管理
