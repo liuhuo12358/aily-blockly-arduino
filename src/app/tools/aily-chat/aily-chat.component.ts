@@ -156,6 +156,8 @@ export class AilyChatComponent implements OnDestroy {
 
   private textMessageSubscription: Subscription;
   private loginStatusSubscription: Subscription;
+  private aiWritingSubscription: Subscription;
+  private aiWaitingSubscription: Subscription;
   private mcpInitialized = false; // 添加标志位防止重复初始化MCP
 
   get sessionId() {
@@ -762,6 +764,10 @@ appDataPath(**appDataPath**): ${window['path'].getAppDataPath() || '无'}
       });
     });
 
+    this.aiWritingSubscription = this.blocklyService.aiWriting$.subscribe(this.showAiWritingNotice.bind(this));
+
+    this.aiWaitingSubscription = this.blocklyService.aiWaiting$.subscribe(this.showAiWritingNotice.bind(this));
+
     // 订阅登录状态变化
     this.loginStatusSubscription = this.authService.isLoggedIn$.subscribe(
       async isLoggedIn => {
@@ -835,6 +841,22 @@ appDataPath(**appDataPath**): ${window['path'].getAppDataPath() || '无'}
         }
       }
     );
+  }
+
+  showAiWritingNotice(isWaiting) {
+    if (isWaiting) {
+      this.noticeService.update({
+        title: "AI正在操作",
+        state: "doing",
+        showProgress: false,
+        setTimeout: 0,
+        stop: () => {
+          this.stop();
+        },
+      });
+    } else {
+      this.noticeService.clear();
+    }
   }
 
   /**
@@ -1095,25 +1117,14 @@ ${JSON.stringify(errData)}
 
   set isWaiting(value: boolean) {
     this._isWaiting = value;
+    this.blocklyService.aiWaiting = value;
     if (!value) {
       this.aiWriting = false;
+      this.blocklyService.aiWaitWriting = false;
     }
   }
 
   set aiWriting(value: boolean) {
-    if (value) {
-      this.noticeService.update({
-        title: "AI正在操作",
-        state: 'doing',
-        showProgress: false,
-        setTimeout: 0,
-        stop: ()=>{
-          this.stop();
-        }
-      });
-    } else {
-      this.noticeService.clear();
-    }
     this.blocklyService.aiWriting = value;
   }
 
@@ -2972,6 +2983,18 @@ Your role is ASK (Advisory & Quick Support) - you provide analysis, recommendati
     if (this.loginStatusSubscription) {
       this.loginStatusSubscription.unsubscribe();
       this.loginStatusSubscription = null;
+    }
+
+    // 清理 aiWriting 订阅
+    if (this.aiWritingSubscription) {
+      this.aiWritingSubscription.unsubscribe();
+      this.aiWritingSubscription = null;
+    }
+
+    // 清理 aiWaiting 订阅
+    if (this.aiWaitingSubscription) {
+      this.aiWaitingSubscription.unsubscribe();
+      this.aiWaitingSubscription = null;
     }
 
     // 重置会话启动标志和MCP初始化标志
