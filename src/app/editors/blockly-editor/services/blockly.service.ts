@@ -22,7 +22,7 @@ export class BlocklyService {
     ],
   };
 
-  iconsMap =  new Map();
+  iconsMap = new Map();
   blockDefinitionsMap = new Map<string, any>();
 
   codeSubject = new BehaviorSubject<string>('');
@@ -33,7 +33,27 @@ export class BlocklyService {
   offsetX: number = 0;
   offsetY: number = 0;
 
-  aiWriting = false;
+  aiWaiting = false;
+  private _aiWriting = new BehaviorSubject<boolean>(false);
+  aiWriting$ = this._aiWriting.asObservable();
+  private _aiWaiting = new BehaviorSubject<boolean>(false);
+  aiWaiting$ = this._aiWaiting.asObservable();
+
+  get aiWaitWriting() {
+    return this._aiWaiting.value;
+  }
+
+  set aiWaitWriting(value: boolean) {
+    this._aiWaiting.next(value);
+  }
+
+  get aiWriting(): boolean {
+    return this._aiWriting.value;
+  }
+
+  set aiWriting(value: boolean) {
+    this._aiWriting.next(value);
+  }
 
   constructor(
     private translateService: TranslateService,
@@ -46,7 +66,7 @@ export class BlocklyService {
   loadAbiJson(jsonData) {
     jsonData.blocks.blocks.forEach(block => {
       const ailyIcons = this.iconsMap.get(block.type);
-      if(ailyIcons) block.icons = ailyIcons;
+      if (ailyIcons) block.icons = ailyIcons;
     });
     Blockly.serialization.workspaces.load(jsonData, this.workspace);
   }
@@ -270,7 +290,6 @@ export class BlocklyService {
     // 通过比较找到要移除的toolbox项
     console.log(`即将移除：`, toolboxItem);
 
-
     const index = this.findToolboxItemIndex(toolboxItem);
     if (index !== -1) {
       this.toolbox.contents.splice(index, 1);
@@ -363,6 +382,22 @@ export class BlocklyService {
     // });
 
     // return dialogRef.afterClosed();
+  }
+
+  // 检查ai是否在执行会话非block操作
+  checkAiWaiting() {
+    if (this.aiWriting) {
+      return true;
+    }
+    if (this.aiWaiting) {
+      this.aiWaitWriting = true;
+      setTimeout(() => {
+        if (!this.aiWriting) {
+          this.aiWaitWriting = false;
+        }
+      }, 2000);
+    }
+    return this.aiWaiting;
   }
 }
 

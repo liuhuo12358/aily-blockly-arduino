@@ -60,7 +60,7 @@ export class BlocklyComponent implements DoCheck {
   showBitmapUploadHandler = true;
 
   get aiWriting() {
-    return this.blocklyService.aiWriting;
+    return this.blocklyService.aiWriting || this.blocklyService.aiWaitWriting;
   }
 
   showSpinOverlay = false;
@@ -200,12 +200,12 @@ export class BlocklyComponent implements DoCheck {
 
   ngDoCheck(): void {
     const currentAiWriting = this.aiWriting;
-    
+
     if (!this.previousAiWriting && currentAiWriting) {
       this.isFadingOut = false;
       this.showSpinOverlay = true;
     }
-    
+
     if (this.previousAiWriting && !currentAiWriting) {
       this.isFadingOut = true;
       setTimeout(() => {
@@ -213,7 +213,7 @@ export class BlocklyComponent implements DoCheck {
         this.isFadingOut = false;
       }, 300);
     }
-    
+
     this.previousAiWriting = currentAiWriting;
   }
 
