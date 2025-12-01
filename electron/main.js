@@ -416,7 +416,7 @@ const { registerUpdaterHandlers } = require("./updater");
 const { registerCmdHandlers } = require("./cmd");
 const { registerMCPHandlers } = require("./mcp");
 // debug模块
-const { initLogger } = require("./logger");
+const { initLogger, registerLoggerHandlers } = require("./logger");
 // tools
 const { registerToolsHandlers } = require("./tools");
 const { registerNotificationHandlers } = require("./notification");
@@ -576,7 +576,13 @@ function loadEnv() {
   // npm registry
   process.env.AILY_NPM_REGISTRY = conf["npm_registry"][0];
   // 7za path
-  process.env.AILY_7ZA_PATH = path.join(childPath, isWin32 ? "7za.exe" : "7zz");
+  if (isWin32) {
+    process.env.AILY_7ZA_PATH = path.join(childPath, "windows", "7za.exe");
+  } else if (isDarwin) {
+    process.env.AILY_7ZA_PATH = path.join(childPath, "macos", "7zz");
+  } else {
+    process.env.AILY_7ZA_PATH = path.join(childPath, "7zz");
+  }
   // aily builder path
   process.env.AILY_BUILDER_PATH = path.join(childPath, "aily-builder");
   // 全局npm包路径
@@ -756,13 +762,7 @@ function createWindow() {
     app.quit();
   });
 
-  try {
-    initLogger(process.env.AILY_APPDATA_PATH);
-  } catch (error) {
-    console.error("initLogger error: ", error);
-  }
-
-  // 注册ipc handlers
+  // 注册ipc handlers（日志处理器已在 app.on("ready") 中注册）
   registerUpdaterHandlers(mainWindow);
   registerTerminalHandlers(mainWindow);
   registerWindowHandlers(mainWindow);
@@ -970,6 +970,14 @@ app.on("ready", () => {
     console.error("loadEnv error: ", error);
   }
 
+  // 初始化日志系统并注册日志处理器（在创建窗口之前）
+  try {
+    initLogger(process.env.AILY_APPDATA_PATH);
+    registerLoggerHandlers();
+  } catch (error) {
+    console.error("initLogger error: ", error);
+  }
+
   // 检查是否是协议启动
   const protocolUrl = process.argv.find(arg => arg.startsWith(`${PROTOCOL}://`));
   if (protocolUrl) {
@@ -1120,7 +1128,11 @@ ipcMain.handle("env-set", (event, data) => {
 })
 
 ipcMain.handle("env-get", (event, key) => {
-  return process.env[key];
+  const value = process.env[key];
+  if (key === 'AILY_7ZA_PATH') {
+    console.log(`获取环境变量 ${key}:`, value);
+  }
+  return value;
 })
 
 // 移动文件到回收站
