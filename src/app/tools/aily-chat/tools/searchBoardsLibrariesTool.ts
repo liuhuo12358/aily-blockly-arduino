@@ -250,6 +250,7 @@ export const searchBoardsLibrariesTool = {
 
 /**
  * 在数组中搜索匹配项 - 支持多关键词搜索
+ * 采用智能匹配策略：优先精确词匹配，其次才是模糊匹配
  */
 function searchInArray(
     items: SearchItem[], 
@@ -288,21 +289,44 @@ function searchInArray(
             if ('keywords' in item && item.keywords) {
                 const keywords = Array.isArray(item.keywords) ? item.keywords : [];
                 for (const keyword of keywords) {
-                    if (keyword.toLowerCase().includes(query)) {
-                        queryScore += 10;
+                    const keywordLower = keyword.toLowerCase();
+                    // 精确词匹配
+                    if (keywordLower === query) {
+                        queryScore += 15; // 精确匹配权重更高
                         queryMatched = true;
-                        if (!matchedFields.includes('keywords')) {
-                            matchedFields.push('keywords');
-                        }
+                    } 
+                    // 单词边界匹配（如 "ai" 匹配 "ai-project" 但不匹配 "aily"）
+                    else if (matchesWordBoundary(keywordLower, query)) {
+                        queryScore += 12;
+                        queryMatched = true;
+                    }
+                    // 模糊匹配（部分包含）
+                    else if (keywordLower.includes(query)) {
+                        queryScore += 8;
+                        queryMatched = true;
+                    }
+                    
+                    if (queryMatched && !matchedFields.includes('keywords')) {
+                        matchedFields.push('keywords');
                     }
                 }
             }
 
             // 2. 匹配 description（权重: 5）
-            if (item.description && item.description.toLowerCase().includes(query)) {
-                queryScore += 5;
-                queryMatched = true;
-                if (!matchedFields.includes('description')) {
+            if (item.description) {
+                const descLower = item.description.toLowerCase();
+                if (descLower === query) {
+                    queryScore += 10;
+                    queryMatched = true;
+                } else if (matchesWordBoundary(descLower, query)) {
+                    queryScore += 7;
+                    queryMatched = true;
+                } else if (descLower.includes(query)) {
+                    queryScore += 4;
+                    queryMatched = true;
+                }
+                
+                if (queryMatched && !matchedFields.includes('description')) {
                     matchedFields.push('description');
                 }
             }
@@ -311,44 +335,108 @@ function searchInArray(
             if (source === 'library' && 'compatibility' in item && item.compatibility?.core) {
                 const cores = item.compatibility.core;
                 for (const core of cores) {
-                    if (core.toLowerCase().includes(query)) {
-                        queryScore += 3;
+                    const coreLower = core.toLowerCase();
+                    if (coreLower === query) {
+                        queryScore += 8;
                         queryMatched = true;
-                        if (!matchedFields.includes('core')) {
-                            matchedFields.push('core');
-                        }
+                    } else if (matchesWordBoundary(coreLower, query)) {
+                        queryScore += 5;
+                        queryMatched = true;
+                    } else if (coreLower.includes(query)) {
+                        queryScore += 2;
+                        queryMatched = true;
                     }
+                }
+                
+                if (queryMatched && !matchedFields.includes('core')) {
+                    matchedFields.push('core');
                 }
             }
 
             // 4. 匹配 name/nickname（权重: 2）
-            if (item.name && item.name.toLowerCase().includes(query)) {
-                queryScore += 2;
-                queryMatched = true;
-                if (!matchedFields.includes('name')) {
+            // 注意：对于包含 @aily-project 的项目名称，避免模糊匹配
+            if (item.name) {
+                const nameLower = item.name.toLowerCase();
+                // 标记是否为 aily-project 项目
+                const isAilyProject = nameLower.includes('@aily-project');
+                
+                if (nameLower === query) {
+                    queryScore += 20; // 完全匹配名称，权重最高
+                    queryMatched = true;
+                } else if (matchesWordBoundary(nameLower, query)) {
+                    queryScore += 10;
+                    queryMatched = true;
+                } else if (!isAilyProject && nameLower.includes(query)) {
+                    // 只对非 @aily-project 项目使用模糊匹配
+                    queryScore += 3;
+                    queryMatched = true;
+                }
+                
+                if (queryMatched && !matchedFields.includes('name')) {
                     matchedFields.push('name');
                 }
             }
-            if (item.nickname && item.nickname.toLowerCase().includes(query)) {
-                queryScore += 2;
-                queryMatched = true;
-                if (!matchedFields.includes('nickname')) {
+            
+            if (item.nickname) {
+                const nicknameLower = item.nickname.toLowerCase();
+                if (nicknameLower === query) {
+                    queryScore += 18;
+                    queryMatched = true;
+                } else if (matchesWordBoundary(nicknameLower, query)) {
+                    queryScore += 9;
+                    queryMatched = true;
+                } else if (nicknameLower.includes(query)) {
+                    queryScore += 3;
+                    queryMatched = true;
+                }
+                
+                if (queryMatched && !matchedFields.includes('nickname')) {
                     matchedFields.push('nickname');
                 }
             }
 
             // 5. 匹配 brand/author（权重: 1）
-            if ('brand' in item && item.brand && item.brand.toLowerCase().includes(query)) {
-                queryScore += 1;
-                queryMatched = true;
-                if (!matchedFields.includes('brand')) {
+            // 特别处理：避免 @aily-project 这种项目标识被误匹配
+            if ('brand' in item && item.brand) {
+                const brandLower = item.brand.toLowerCase();
+                // 避免将"aily"当作品牌名
+                const isFrameworkName = brandLower.includes('aily') || brandLower.includes('@');
+                
+                if (brandLower === query) {
+                    queryScore += 6;
+                    queryMatched = true;
+                } else if (matchesWordBoundary(brandLower, query)) {
+                    queryScore += 4;
+                    queryMatched = true;
+                } else if (!isFrameworkName && brandLower.includes(query)) {
+                    // 只对真正的品牌使用模糊匹配，避免框架名污染
+                    queryScore += 1;
+                    queryMatched = true;
+                }
+                
+                if (queryMatched && !matchedFields.includes('brand')) {
                     matchedFields.push('brand');
                 }
             }
-            if ('author' in item && item.author && item.author.toLowerCase().includes(query)) {
-                queryScore += 1;
-                queryMatched = true;
-                if (!matchedFields.includes('author')) {
+            
+            if ('author' in item && item.author) {
+                const authorLower = item.author.toLowerCase();
+                // 避免将框架名作为作者名
+                const isFrameworkName = authorLower.includes('aily') || authorLower.includes('@');
+                
+                if (authorLower === query) {
+                    queryScore += 6;
+                    queryMatched = true;
+                } else if (matchesWordBoundary(authorLower, query)) {
+                    queryScore += 4;
+                    queryMatched = true;
+                } else if (!isFrameworkName && authorLower.includes(query)) {
+                    // 只对真正的作者名使用模糊匹配
+                    queryScore += 1;
+                    queryMatched = true;
+                }
+                
+                if (queryMatched && !matchedFields.includes('author')) {
                     matchedFields.push('author');
                 }
             }
@@ -375,4 +463,35 @@ function searchInArray(
     }
 
     return results;
+}
+
+/**
+ * 单词边界匹配 - 检查query是否作为独立单词出现在text中
+ * 例如：matchesWordBoundary("ai-project", "ai") -> true
+ *       matchesWordBoundary("aily", "ai") -> false
+ *       matchesWordBoundary("@aily-project", "ai") -> false
+ */
+function matchesWordBoundary(text: string, query: string): boolean {
+    // 分隔符：空格、-、_、/、@、:、.、,、;、(、)、[、]、{、}、中文标点等
+    const delimiters = /[\s\-_\/@:.,;()\[\]{}，。！？；：、""''【】《》（）]/;
+    
+    // 查找query在text中的所有位置
+    let index = 0;
+    while ((index = text.indexOf(query, index)) !== -1) {
+        // 检查query前面是否是单词边界或字符串开始
+        const beforeOk = index === 0 || delimiters.test(text[index - 1]);
+        
+        // 检查query后面是否是单词边界或字符串结束
+        const afterIndex = index + query.length;
+        const afterOk = afterIndex === text.length || delimiters.test(text[afterIndex]);
+        
+        // 如果前后都满足边界条件，则匹配
+        if (beforeOk && afterOk) {
+            return true;
+        }
+        
+        index++;
+    }
+    
+    return false;
 }

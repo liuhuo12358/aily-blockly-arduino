@@ -319,6 +319,139 @@ export const TOOLS = [
     //     }
     // },
     {
+        name: "search_boards_libraries",
+        description: `专门用于搜索开发板(boards.json)和库(libraries.json)的高效工具。
+
+**使用场景：**
+1. 查找特定功能的库（如"温度传感器"、"舵机"、"OLED"）
+2. 查找支持特定芯片的开发板（如"esp32"、"arduino"）
+3. 查找作者或品牌相关的硬件（如"adafruit"、"seeed"）
+
+**注意：**
+- 返回结果默认限制在前50条最相关匹配
+- 使用此工具而非通用grep工具可以获得更精确、更快速的结果
+- 多关键词搜索时，匹配任一关键词即可返回结果（OR逻辑）
+
+**示例：**
+查找 ESP32 开发板：
+\`\`\`json
+{
+  "query": "esp32",
+  "type": "boards"
+}
+\`\`\`
+
+查找舵机控制库：
+\`\`\`json
+{
+  "query": "servo",
+  "type": "libraries"
+}
+\`\`\`
+
+查找温度传感器相关（开发板和库）：
+\`\`\`json
+{
+  "query": "温度传感器",
+  "type": "both"
+}
+\`\`\``,
+        input_schema: {
+            type: 'object',
+            properties: {
+                query: {
+                    type: 'array',
+                    items: {
+                        type: 'string'
+                    },
+                    description: '搜索关键词数组。例如：["esp32", "wifi"], ["temperature", "sensor"]'
+                },
+                type: {
+                    type: 'string',
+                    enum: ['boards', 'libraries', 'both'],
+                    description: '搜索类型：boards(仅开发板), libraries(仅库), both(同时搜索)。默认为 both',
+                    default: 'both'
+                },
+                maxResults: {
+                    type: 'number',
+                    description: '最大返回结果数，默认50',
+                    default: 50
+                }
+            },
+            required: ['query']
+        }
+    },
+    {
+        name: "get_board_parameters",
+        description: `获取当前项目开发板的详细参数配置工具。
+从当前打开项目的开发板配置(board.json)中读取详细的硬件配置参数。
+
+**可用参数类型：**
+引脚相关：
+- analogPins
+- digitalPins
+- pwmPins
+- servoPins
+- interruptPins
+通信接口：
+- serialPort
+- serialSpeed
+- spi
+- spiPins
+- i2c
+- i2cPins
+- i2cSpeed
+
+其他配置：
+- builtinLed
+- rgbLed
+- batteryPin
+- name
+- description
+- compilerParam
+- uploadParam
+
+**使用场景：**
+1. 用户询问"这个开发板有哪些模拟引脚"
+2. 需要知道当前开发板支持的串口波特率
+3. 查询SPI/I2C引脚配置
+4. 获取PWM引脚列表用于舵机控制
+5. 查看开发板的完整硬件参数
+
+**示例：**
+获取当前开发板的模拟和数字引脚：
+\`\`\`json
+{
+  "parameters": ["analogPins", "digitalPins"]
+}
+\`\`\`
+
+获取当前开发板的所有参数：
+\`\`\`json
+{}
+\`\`\`
+
+获取通信接口配置：
+\`\`\`json
+{
+  "parameters": ["serialPort", "spi", "i2c", "spiPins", "i2cPins"]
+}
+\`\`\``,
+        input_schema: {
+            type: 'object',
+            properties: {
+                parameters: {
+                    type: 'array',
+                    items: {
+                        type: 'string'
+                    },
+                    description: '要获取的参数列表。如果不指定，返回所有参数。常用参数：analogPins, digitalPins, pwmPins, servoPins, serialPort, spi, i2c, spiPins, i2cPins 等'
+                }
+            },
+            required: []
+        }
+    },
+    {
         name: "grep_tool",
         description: `- Fast content search tool that works with any codebase size
 - Searches file contents using regular expressions
@@ -387,7 +520,7 @@ Query and return specific content (for detailed info)
                 maxResults: {
                     type: 'number',
                     description: '最大结果数量限制',
-                    default: 100
+                    default: 20
                 }
                 // ignoreCase: {
                 //     type: 'boolean',
@@ -459,7 +592,7 @@ Query and return specific content (for detailed info)
     },
     {
         name: "fetch",
-        description: `获取网络上的信息和资源，支持HTTP/HTTPS请求，能够处理大文件下载。支持多种请求方法和响应类型。`,
+        description: `获取网络上的信息和资源，支持HTTP/HTTPS请求，能够处理大文件下载。支持多种请求方法和响应类型。注意：非必要时请避免使用此工具，以减少外部依赖和网络请求。`,
         input_schema: {
             type: 'object',
             properties: {
