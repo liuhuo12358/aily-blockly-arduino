@@ -347,14 +347,6 @@ export const TOOLS = [
   "query": "servo",
   "type": "libraries"
 }
-\`\`\`
-
-查找温度传感器相关（开发板和库）：
-\`\`\`json
-{
-  "query": "温度传感器",
-  "type": "both"
-}
 \`\`\``,
         input_schema: {
             type: 'object',
@@ -368,9 +360,9 @@ export const TOOLS = [
                 },
                 type: {
                     type: 'string',
-                    enum: ['boards', 'libraries', 'both'],
-                    description: '搜索类型：boards(仅开发板), libraries(仅库), both(同时搜索)。默认为 both',
-                    default: 'both'
+                    enum: ['boards', 'libraries'],
+                    description: '搜索类型：boards(仅开发板), libraries(仅库)。默认为 boards',
+                    default: 'boards'
                 },
                 maxResults: {
                     type: 'number',

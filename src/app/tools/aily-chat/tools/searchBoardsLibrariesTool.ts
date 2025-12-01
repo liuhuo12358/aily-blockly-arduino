@@ -250,7 +250,11 @@ export const searchBoardsLibrariesTool = {
 
 /**
  * 在数组中搜索匹配项 - 支持多关键词搜索
- * 采用智能匹配策略：优先精确词匹配，其次才是模糊匹配
+ * 采用改进的匹配策略：
+ * - 对开发板(boards)：搜索 keywords > nickname > description > name
+ * - 对库(libraries)：搜索 keywords > nickname > description > name
+ * - 避免在 name 字段上使用模糊匹配（因为都是 @aily-project 格式）
+ * - 优先在 nickname 和 description 上进行模糊匹配
  */
 function searchInArray(
     items: SearchItem[], 
@@ -285,24 +289,24 @@ function searchInArray(
             let queryScore = 0;
             let queryMatched = false;
 
-            // 1. 优先匹配 keywords（权重: 10）
+            // 1. 优先匹配 keywords（权重: 15）
             if ('keywords' in item && item.keywords) {
                 const keywords = Array.isArray(item.keywords) ? item.keywords : [];
                 for (const keyword of keywords) {
                     const keywordLower = keyword.toLowerCase();
                     // 精确词匹配
                     if (keywordLower === query) {
-                        queryScore += 15; // 精确匹配权重更高
+                        queryScore += 20; // 精确匹配权重最高
                         queryMatched = true;
                     } 
-                    // 单词边界匹配（如 "ai" 匹配 "ai-project" 但不匹配 "aily"）
+                    // 单词边界匹配
                     else if (matchesWordBoundary(keywordLower, query)) {
-                        queryScore += 12;
+                        queryScore += 15;
                         queryMatched = true;
                     }
-                    // 模糊匹配（部分包含）
+                    // 模糊匹配
                     else if (keywordLower.includes(query)) {
-                        queryScore += 8;
+                        queryScore += 10;
                         queryMatched = true;
                     }
                     
@@ -312,17 +316,36 @@ function searchInArray(
                 }
             }
 
-            // 2. 匹配 description（权重: 5）
+            // 2. 匹配 nickname（权重: 12）- 避免 name 污染，优先用 nickname
+            if (item.nickname) {
+                const nicknameLower = item.nickname.toLowerCase();
+                if (nicknameLower === query) {
+                    queryScore += 18;
+                    queryMatched = true;
+                } else if (matchesWordBoundary(nicknameLower, query)) {
+                    queryScore += 12;
+                    queryMatched = true;
+                } else if (nicknameLower.includes(query)) {
+                    queryScore += 8;
+                    queryMatched = true;
+                }
+                
+                if (queryMatched && !matchedFields.includes('nickname')) {
+                    matchedFields.push('nickname');
+                }
+            }
+
+            // 3. 匹配 description（权重: 8）- 优先在描述上进行模糊匹配
             if (item.description) {
                 const descLower = item.description.toLowerCase();
                 if (descLower === query) {
-                    queryScore += 10;
+                    queryScore += 12;
                     queryMatched = true;
                 } else if (matchesWordBoundary(descLower, query)) {
-                    queryScore += 7;
+                    queryScore += 9;
                     queryMatched = true;
                 } else if (descLower.includes(query)) {
-                    queryScore += 4;
+                    queryScore += 5;
                     queryMatched = true;
                 }
                 
@@ -331,19 +354,19 @@ function searchInArray(
                 }
             }
 
-            // 3. 匹配 core（仅库，权重: 3）
+            // 4. 匹配 core（仅库，权重: 6）
             if (source === 'library' && 'compatibility' in item && item.compatibility?.core) {
                 const cores = item.compatibility.core;
                 for (const core of cores) {
                     const coreLower = core.toLowerCase();
                     if (coreLower === query) {
-                        queryScore += 8;
+                        queryScore += 10;
                         queryMatched = true;
                     } else if (matchesWordBoundary(coreLower, query)) {
-                        queryScore += 5;
+                        queryScore += 7;
                         queryMatched = true;
                     } else if (coreLower.includes(query)) {
-                        queryScore += 2;
+                        queryScore += 3;
                         queryMatched = true;
                     }
                 }
@@ -353,54 +376,28 @@ function searchInArray(
                 }
             }
 
-            // 4. 匹配 name/nickname（权重: 2）
-            // 注意：对于包含 @aily-project 的项目名称，避免模糊匹配
+            // 5. 匹配 name（权重: 最低）- 避免 @aily-project 的模糊匹配污染
+            // 仅允许精确匹配和单词边界匹配，不允许模糊匹配
             if (item.name) {
                 const nameLower = item.name.toLowerCase();
-                // 标记是否为 aily-project 项目
-                const isAilyProject = nameLower.includes('@aily-project');
                 
                 if (nameLower === query) {
-                    queryScore += 20; // 完全匹配名称，权重最高
+                    queryScore += 15; // 完全匹配名称
                     queryMatched = true;
                 } else if (matchesWordBoundary(nameLower, query)) {
-                    queryScore += 10;
-                    queryMatched = true;
-                } else if (!isAilyProject && nameLower.includes(query)) {
-                    // 只对非 @aily-project 项目使用模糊匹配
-                    queryScore += 3;
+                    queryScore += 8;
                     queryMatched = true;
                 }
+                // 注意：不进行模糊匹配，避免 @aily-project 污染
                 
                 if (queryMatched && !matchedFields.includes('name')) {
                     matchedFields.push('name');
                 }
             }
-            
-            if (item.nickname) {
-                const nicknameLower = item.nickname.toLowerCase();
-                if (nicknameLower === query) {
-                    queryScore += 18;
-                    queryMatched = true;
-                } else if (matchesWordBoundary(nicknameLower, query)) {
-                    queryScore += 9;
-                    queryMatched = true;
-                } else if (nicknameLower.includes(query)) {
-                    queryScore += 3;
-                    queryMatched = true;
-                }
-                
-                if (queryMatched && !matchedFields.includes('nickname')) {
-                    matchedFields.push('nickname');
-                }
-            }
 
-            // 5. 匹配 brand/author（权重: 1）
-            // 特别处理：避免 @aily-project 这种项目标识被误匹配
+            // 6. 匹配 brand/author（权重: 最低）
             if ('brand' in item && item.brand) {
                 const brandLower = item.brand.toLowerCase();
-                // 避免将"aily"当作品牌名
-                const isFrameworkName = brandLower.includes('aily') || brandLower.includes('@');
                 
                 if (brandLower === query) {
                     queryScore += 6;
@@ -408,8 +405,7 @@ function searchInArray(
                 } else if (matchesWordBoundary(brandLower, query)) {
                     queryScore += 4;
                     queryMatched = true;
-                } else if (!isFrameworkName && brandLower.includes(query)) {
-                    // 只对真正的品牌使用模糊匹配，避免框架名污染
+                } else if (brandLower.includes(query)) {
                     queryScore += 1;
                     queryMatched = true;
                 }
@@ -421,8 +417,6 @@ function searchInArray(
             
             if ('author' in item && item.author) {
                 const authorLower = item.author.toLowerCase();
-                // 避免将框架名作为作者名
-                const isFrameworkName = authorLower.includes('aily') || authorLower.includes('@');
                 
                 if (authorLower === query) {
                     queryScore += 6;
@@ -430,8 +424,7 @@ function searchInArray(
                 } else if (matchesWordBoundary(authorLower, query)) {
                     queryScore += 4;
                     queryMatched = true;
-                } else if (!isFrameworkName && authorLower.includes(query)) {
-                    // 只对真正的作者名使用模糊匹配
+                } else if (authorLower.includes(query)) {
                     queryScore += 1;
                     queryMatched = true;
                 }
