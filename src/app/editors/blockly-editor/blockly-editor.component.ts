@@ -157,6 +157,9 @@ export class BlocklyEditorComponent {
   }
 
   openProjectManager() {
+    if (this.blocklyService.checkAiWaiting()) {
+      return;
+    }
     this.uiService.closeToolAll();
     this.showLibraryManager = !this.showLibraryManager;
     this.cd.detectChanges();
