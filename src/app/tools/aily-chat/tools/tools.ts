@@ -815,35 +815,22 @@ Query and return specific content (for detailed info)
     },
     {
         name: "configure_block_tool",
-        description: `块字段配置和结构修改工具。专门用于修改已存在块的字段值（如下拉菜单选项、文本输入、数字值等）和动态结构（如 controls_if 的 else/elseif 分支）。
+        description: `用途：修改已存在 Blockly 块的字段值与动态结构（extraState），用于调整块的显示/配置但不创建或删除块。
 
-**使用前提条件：**
-- 目标块必须已经存在于工作区中
-- 必须提供有效的 blockId 或 blockType
-- 字段修改：必须提供要修改的 fields 对象（不能为空）
-- 结构修改：必须提供 extraState 对象来修改动态块结构
+主要能力：
+- 更新字段（field_dropdown、field_input、field_number、field_checkbox、text 等）。
+- 修改动态结构（如 controls_if 的 else/elseif 分支、text_join 或 lists_create_with 的项目数）。
+- 支持通过 blockId 精准定位或通过 blockType 查找第一个匹配块。
 
-**功能范围：**
-1. **字段修改**：修改下拉菜单选择、文本字段值、数字字段值、布尔字段状态
-2. **结构修改**：修改支持动态输入的块结构，如：
-   - controls_if: 增加/减少 else if 分支，添加/移除 else 分支
-   - controls_ifelse: 修改 else if 分支数量
-   - text_join: 修改拼接项数量
-   - lists_create_with: 修改列表项数量
+前提条件：
+- 目标块必须已存在于工作区。
+- 必须提供有效的 blockId 或 blockType。
+- 字段修改需提供非空的 fields 对象；结构修改需提供 extraState 对象。
 
-**适用场景：**
-- 修改下拉菜单的选择（如引脚号、波特率、运算符等）
-- 更新文本字段的值
-- 修改数字字段的值
-- 调整布尔字段的状态
-- 为 controls_if 块增加 else 或 else if 分支
-- 修改动态列表或文本拼接块的项目数量
-
-**不适用场景：**
-- 创建新块（请使用 smart_block_tool）
-- 删除块（请使用 delete_block_tool）  
-- 修改块的连接关系（请使用 connect_blocks_tool）
-- 移动块位置（当前不支持）
+限制与注意：
+- 不用于创建新块（请使用 smart_block_tool）。
+- 不用于删除块或改变块之间的连接关系（请使用 delete_block_tool / connect_blocks_tool）。
+- 修改前请确保理解目标块的字段名与 extraState 结构，错误参数可能导致操作失败。
 
 **extraState 使用示例：**
 为 controls_if 块添加 1 个 else if 和 1 个 else 分支：

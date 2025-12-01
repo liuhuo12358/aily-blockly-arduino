@@ -1386,7 +1386,7 @@ ${JSON.stringify(errData)}
             let resultState = "done";
             let resultText = '';
 
-           // console.log("工具调用请求: ", data.tool_name, toolArgs);
+            console.log("工具调用请求: ", data.tool_name, toolArgs);
 
             // 定义 block 工具列表
             const blockTools = [
@@ -1395,10 +1395,10 @@ ${JSON.stringify(errData)}
               'create_code_structure_tool',
               'configure_block_tool',
               'delete_block_tool',
-              'get_workspace_overview_tool',
-              'queryBlockDefinitionTool',
-              'analyze_library_blocks',
-              'verify_block_existence'
+              // 'get_workspace_overview_tool',
+              // 'queryBlockDefinitionTool',
+              // 'analyze_library_blocks',
+              // 'verify_block_existence'
             ];
 
             // 检查是否是 block 工具，如果是则设置 aiWriting 状态
@@ -2292,7 +2292,7 @@ Your role is ASK (Advisory & Quick Support) - you provide analysis, recommendati
               this.completeToolCall(data.tool_id, data.tool_name, finalState, resultText);
             }
 
-            // console.log(`工具调用结果: `, toolResult, resultText);
+            console.log(`工具调用结果: `, toolResult, resultText);
 
             this.send("tool", JSON.stringify({
               "type": "tool",
