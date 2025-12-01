@@ -32,6 +32,8 @@ import { deleteFolderTool } from './tools/deleteFolderTool';
 import { checkExistsTool } from './tools/checkExistsTool';
 import { getDirectoryTreeTool } from './tools/getDirectoryTreeTool';
 import { grepTool } from './tools/grepTool';
+import { searchBoardsLibrariesTool } from './tools/searchBoardsLibrariesTool';
+import { getBoardParametersTool } from './tools/getBoardParametersTool';
 import globTool from './tools/globTool';
 import { fetchTool, FetchToolService } from './tools/fetchTool';
 import {
@@ -1621,6 +1623,53 @@ ${JSON.stringify(errData)}
                       resultText = `获取目录树 ${treeFolderName} 失败: ` + (toolResult.content || '未知错误');
                     } else {
                       resultText = `获取目录树 ${treeFolderName} 成功`;
+                    }
+                    break;
+                  case 'search_boards_libraries':
+                    // console.log('[开发板库搜索工具被调用]', toolArgs);
+                    const searchQuery = toolArgs.query ? toolArgs.query.substring(0, 30) : '未知查询';
+                    const searchType = toolArgs.type || 'both';
+                    const searchTypeDisplay = searchType === 'boards' ? '开发板' : searchType === 'libraries' ? '库' : '开发板和库';
+                    this.appendMessage('aily', `
+
+\`\`\`aily-state
+{
+  "state": "doing",
+  "text": "正在搜索${searchTypeDisplay}: ${searchQuery}",
+  "id": "${toolCallId}"
+}
+\`\`\`\n\n
+                    `);
+                    toolResult = await searchBoardsLibrariesTool.handler(toolArgs, this.configService);
+                    if (toolResult.is_error) {
+                      resultState = "error";
+                      resultText = `搜索失败: ` + (toolResult.content || '未知错误');
+                    } else {
+                      const totalMatches = toolResult.metadata?.totalMatches || 0;
+                      resultText = `搜索 "${searchQuery}" 成功，找到 ${totalMatches} 个匹配项`;
+                    }
+                    break;
+                  case 'get_board_parameters':
+                    // console.log('[开发板参数获取工具被调用]', toolArgs);
+                    const paramsList = toolArgs.parameters && Array.isArray(toolArgs.parameters) ? toolArgs.parameters.join(', ') : '所有参数';
+                    this.appendMessage('aily', `
+
+\`\`\`aily-state
+{
+  "state": "doing",
+  "text": "正在获取当前开发板参数 (${paramsList})",
+  "id": "${toolCallId}"
+}
+\`\`\`\n\n
+                    `);
+                    toolResult = await getBoardParametersTool.handler(this.projectService, toolArgs);
+                    if (toolResult.is_error) {
+                      resultState = "error";
+                      resultText = `获取开发板参数失败: ` + (toolResult.content || '未知错误');
+                    } else {
+                      const boardName = toolResult.metadata?.boardName || '未知';
+                      const paramsCount = toolResult.metadata?.parameterCount || 0;
+                      resultText = `获取开发板 "${boardName}" 参数成功，返回 ${paramsCount} 个参数`;
                     }
                     break;
                   case 'grep_tool':
