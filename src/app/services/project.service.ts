@@ -1307,4 +1307,28 @@ export class ProjectService {
       }
     }
   }
+
+  /**
+   * 获取当前项目的构建路径
+   * @returns 返回构建路径
+   */
+  async getBuildPath(): Promise<string> {
+    const sketchPath = window['path'].join(
+      this.currentProjectPath,
+      '.temp',
+      'sketch',
+      'sketch.ino'
+    );
+    const sketchName = window['path'].basename(sketchPath, '.ino');
+
+    // 为了避免不同项目的同名sketch冲突,使用项目路径的MD5哈希值
+    const projectPathMD5 = (await window['tools'].calculateMD5(sketchPath)).substring(0, 8); // 只取前8位MD5值
+    const uniqueSketchName = `${sketchName}_${projectPathMD5}`;
+
+    // 使用统一的构建路径获取方法
+    return window['path'].join(
+      window['path'].getAilyBuilderBuildPath(),
+      uniqueSketchName
+    );
+  }
 }
