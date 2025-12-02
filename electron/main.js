@@ -445,9 +445,10 @@ ipcMain.on('renderer-ready', () => {
   }
 });
 
-// 检查Node
-function checkNodePath(childPath) {
+// macos检查安装环境
+function macosInstallEnv(childPath) {
   const child_process = require("child_process");
+
   // 从文件名中提取版本号
   function extractVersion(filename, keyword) {
     // node 格式：node-v22.21.0-darwin-arm64.7z → 22.21.0
@@ -524,12 +525,14 @@ function checkNodePath(childPath) {
     }
   }
 
-  childPath = escapePath(childPath);
-  const z7Path = path.join(childPath, "7zz");
-  if(!fs.existsSync(z7Path)){
-    const z7SourcePath = path.join(childPath, serve ? "macos" : "", "7zz");
+  const z7Name = "7zz";
+  const z7Path = path.join(childPath, z7Name);
+  if (serve && !fs.existsSync(z7Path)) {
+    const z7SourcePath = path.join(childPath, "macos", z7Name);
     try {
-      child_process.execSync(`cp ${z7SourcePath} ${childPath}`, {stdio: 'inherit'});
+      const escapeZ7SourcePath = escapePath(z7SourcePath);
+      const escapeZ7Path = escapePath(z7Path);
+      child_process.execSync(`cp ${escapeZ7SourcePath} ${escapeZ7Path}`, { stdio: 'inherit' });
       console.log('安装解压7zz成功！');
     } catch (error) {
       console.error("安装解压7zz失败，错误码:", error);
@@ -542,7 +545,9 @@ function checkNodePath(childPath) {
     const nodeZipPath = findLatestVersionFile(sourceDir, nodeName);
     if (nodeZipPath && fs.existsSync(nodeZipPath)) {
       try {
-        child_process.execSync(`mkdir -p ${nodePath} && tar -xzf ${nodeZipPath} -C ${nodePath}`, {stdio: 'inherit'});
+        const escapeNodePath = escapePath(nodePath);
+        const escapeNodeZipPath = escapePath(nodeZipPath);
+        child_process.execSync(`mkdir -p ${escapeNodePath} && tar -xzf ${escapeNodeZipPath} -C ${escapeNodePath}`, { stdio: 'inherit' });
         console.log(`安装解压 ${nodeName}: ${nodeZipPath}成功！`);
       } catch (error) {
         console.error(`安装解压 ${nodeName}: ${nodeZipPath}失败，错误码:`, error);
@@ -558,7 +563,9 @@ function checkNodePath(childPath) {
     const ailyBuilderZipPath = findLatestVersionFile(sourceDir, ailyBuilderName);
     if (ailyBuilderZipPath && fs.existsSync(ailyBuilderZipPath)) {
       try {
-        child_process.execSync(`mkdir -p ${ailyBuilderPath} && tar -xzf ${ailyBuilderZipPath} -C ${ailyBuilderPath}`, {stdio: 'inherit'});
+        const escapeAilyBuilderPath = escapePath(ailyBuilderPath);
+        const escapeAilyBuilderZipPath = escapePath(ailyBuilderZipPath);
+        child_process.execSync(`mkdir -p ${escapeAilyBuilderPath} && tar -xzf ${escapeAilyBuilderZipPath} -C ${escapeAilyBuilderPath}`, { stdio: 'inherit' });
         console.log(`安装解压 ${ailyBuilderName}: ${ailyBuilderZipPath}成功！`);
       } catch (error) {
         console.error(`安装解压 ${ailyBuilderName}: ${ailyBuilderZipPath}失败，错误码:`, error);
@@ -588,12 +595,8 @@ function loadEnv() {
 
   if (isWin32) {
     // 添加必要的系统路径
-    const systemPaths = [
-      'C:\\Windows\\System32',
-      'C:\\Windows\\System32\\WindowsPowerShell\\v1.0',
-      'C:\\Program Files\\PowerShell\\7', // PowerShell 7 (如果存在)
-      'C:\\Windows'
-    ];
+    const systemPaths = ['C:\\Windows\\System32', 'C:\\Windows\\System32\\WindowsPowerShell\\v1.0', 'C:\\Program Files\\PowerShell\\7', // PowerShell 7 (如果存在)
+      'C:\\Windows'];
 
     // 检查路径是否存在，只添加存在的路径
     systemPaths.forEach(sysPath => {
@@ -632,7 +635,6 @@ function loadEnv() {
     // 设置macOS的环境变量
     process.env.AILY_APPDATA_PATH = conf["appdata_path"]["darwin"].replace('~', os.homedir());
     process.env.AILY_BUILDER_BUILD_PATH = path.join(os.homedir(), "Library", "aily-builder", "project");
-    checkNodePath(childPath);
   } else {
     // 设置Linux的环境变量
     process.env.AILY_APPDATA_PATH = conf["appdata_path"]["linux"];
@@ -646,6 +648,16 @@ function loadEnv() {
     } catch (error) {
       console.error("创建应用数据目录失败:", error);
     }
+  }
+
+  try {
+    initLogger(process.env.AILY_APPDATA_PATH);
+  } catch (error) {
+    console.error("initLogger error: ", error);
+  }
+
+  if (isDarwin) {
+    macosInstallEnv(childPath);
   }
 
   // 检测并读取appdata_path目录下是否有config.json文件
@@ -680,10 +692,7 @@ function loadEnv() {
   // 全局npm包路径
   process.env.AILY_NPM_PREFIX = process.env.AILY_APPDATA_PATH;
   // 默认全局编译器路径
-  process.env.AILY_COMPILERS_PATH = path.join(
-    process.env.AILY_APPDATA_PATH,
-    "tools",
-  );
+  process.env.AILY_COMPILERS_PATH = path.join(process.env.AILY_APPDATA_PATH, "tools",);
   // 默认全局烧录器路径
   process.env.AILY_TOOLS_PATH = path.join(process.env.AILY_APPDATA_PATH, "tools");
   // 默认全局SDK路径
@@ -853,12 +862,6 @@ function createWindow() {
     isRendererReady = false;
     app.quit();
   });
-
-  try {
-    initLogger(process.env.AILY_APPDATA_PATH);
-  } catch (error) {
-    console.error("initLogger error: ", error);
-  }
 
   // 注册ipc handlers
   registerUpdaterHandlers(mainWindow);
@@ -1476,7 +1479,6 @@ cleanupOldInstances();
 // Ripgrep 搜索功能
 // ============================================
 const ripgrep = require('./ripgrep');
-const child_process = require("child_process");
 
 // 检查 ripgrep 是否可用
 ipcMain.handle("ripgrep-check-available", async (event) => {
