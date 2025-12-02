@@ -4,7 +4,7 @@ import { HttpClient, HttpHeaders, HttpErrorResponse } from '@angular/common/http
 import { Observable, throwError, from } from 'rxjs';
 import { catchError, switchMap } from 'rxjs/operators';
 import { API } from '../../../configs/api.config';
-import { CmdService } from '../../../services/cmd.service';
+import { CmdService, CmdOutput } from '../../../services/cmd.service';
 import { PlatformService } from "../../../services/platform.service";
 
 declare global {
@@ -263,15 +263,75 @@ export class CloudService {
       const extractPath = `${tempDir}/extracted`;
       window['fs'].mkdirSync(extractPath);
       
-      // 使用7za.exe解压文件（明确指定7z格式）
-      const extractCmd = `${this.platformService.za7} x "${archivePath}" -o"${extractPath}" -t7z -y`;
+      // 获取7za/7zz的完整路径
+      const za7Path = await this.platformService.getZa7Path();
       
-      // console.log('执行解压命令:', extractCmd);
-      const result = await this.cmdService.runAsync(extractCmd);
+      // 使用7za/7zz解压文件（明确指定7z格式）
+      const extractCmd = `"${za7Path}" x "${archivePath}" -o"${extractPath}" -t7z -y`;
       
-      // 检查解压结果
-      if (result.type === 'error' || (result.code && result.code !== 0)) {
-        throw new Error(`7za解压失败: ${result.error || result.data || '未知错误'}`);
+      console.log('执行解压命令:', extractCmd);
+      
+      // 收集所有输出信息（包括 stdout 和 stderr）
+      let allOutput = '';
+      let allErrors = '';
+      let exitCode: number | undefined;
+      let hasError = false;
+      
+      try {
+        const result = await new Promise<CmdOutput>((resolve, reject) => {
+          const outputs: string[] = [];
+          const errors: string[] = [];
+          
+          this.cmdService.run(extractCmd, undefined, false).subscribe({
+            next: (output: CmdOutput) => {
+              if (output.type === 'stdout' && output.data) {
+                outputs.push(output.data);
+                allOutput += output.data;
+              } else if (output.type === 'stderr' && output.data) {
+                errors.push(output.data);
+                allErrors += output.data;
+              } else if (output.type === 'error') {
+                hasError = true;
+                if (output.error) {
+                  errors.push(output.error);
+                  allErrors += output.error;
+                }
+              } else if (output.type === 'close') {
+                exitCode = output.code;
+                resolve(output);
+              }
+            },
+            error: (err) => {
+              hasError = true;
+              reject(err);
+            }
+          });
+        });
+        
+        // 检查解压结果
+        if (hasError || (exitCode !== undefined && exitCode !== 0)) {
+          const errorMsg = allErrors || allOutput || result.error || result.data || `退出码: ${exitCode}`;
+          const errorDetails = JSON.stringify({
+            type: result.type,
+            code: exitCode,
+            error: result.error,
+            data: result.data,
+            signal: result.signal,
+            allOutput: allOutput.substring(0, 500), // 限制长度
+            allErrors: allErrors.substring(0, 500)
+          }, null, 2);
+          console.error('解压命令执行失败:', errorDetails);
+          throw new Error(`7za解压失败: ${errorMsg}`);
+        }
+      } catch (error: any) {
+        const errorMsg = error.message || allErrors || allOutput || '未知错误';
+        console.error('解压命令执行异常:', {
+          error: error,
+          allOutput: allOutput.substring(0, 500),
+          allErrors: allErrors.substring(0, 500),
+          exitCode
+        });
+        throw new Error(`7za解压失败: ${errorMsg}`);
       }
       
       // 验证解压目录是否存在文件
@@ -358,12 +418,14 @@ export class CloudService {
     }
   }
 
-  private handleError(error: HttpErrorResponse) {
+  private handleError(error: any) {
     let errMsg = '';
+    
+    // 检查是否是 HttpErrorResponse
     if (error.error instanceof ErrorEvent) {
       errMsg = `客户端错误: ${error.error.message}`;
-    } else {
-      // 增加更详细的错误信息
+    } else if (error.status !== undefined || error.statusText !== undefined) {
+      // 标准的 HttpErrorResponse
       console.error('HTTP错误详细信息:', {
         status: error.status,
         statusText: error.statusText,
@@ -393,9 +455,22 @@ export class CloudService {
       } else if (error.status === 400) {
         errMsg = `请求参数错误: ${errorDetail || '请检查文件格式和必要参数'}`;
       } else {
-        errMsg = `服务端错误: ${error.status} ${error.statusText}, ${errorDetail || error.message}`;
+        const status = error.status || '未知状态码';
+        const statusText = error.statusText || '未知状态';
+        errMsg = `服务端错误: ${status} ${statusText}, ${errorDetail || error.message || '无详细错误信息'}`;
+      }
+    } else {
+      // 非标准错误对象（可能是网络错误、CORS错误等）
+      console.error('非标准HTTP错误:', error);
+      if (error.message) {
+        errMsg = `网络错误: ${error.message}`;
+      } else if (typeof error === 'string') {
+        errMsg = error;
+      } else {
+        errMsg = `未知错误: ${JSON.stringify(error)}`;
       }
     }
+    
     console.error('处理后的错误信息:', errMsg);
     return throwError(() => errMsg);
   }

@@ -416,7 +416,7 @@ const { registerUpdaterHandlers } = require("./updater");
 const { registerCmdHandlers } = require("./cmd");
 const { registerMCPHandlers } = require("./mcp");
 // debug模块
-const { initLogger } = require("./logger");
+const { initLogger, registerLoggerHandlers } = require("./logger");
 // tools
 const { registerToolsHandlers } = require("./tools");
 const { registerNotificationHandlers } = require("./notification");
@@ -658,6 +658,7 @@ function loadEnv() {
 
   try {
     initLogger(process.env.AILY_APPDATA_PATH);
+    registerLoggerHandlers();
   } catch (error) {
     console.error("initLogger error: ", error);
   }
