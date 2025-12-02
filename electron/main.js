@@ -595,8 +595,12 @@ function loadEnv() {
 
   if (isWin32) {
     // 添加必要的系统路径
-    const systemPaths = ['C:\\Windows\\System32', 'C:\\Windows\\System32\\WindowsPowerShell\\v1.0', 'C:\\Program Files\\PowerShell\\7', // PowerShell 7 (如果存在)
-      'C:\\Windows'];
+    const systemPaths = [
+      'C:\\Windows\\System32',
+      'C:\\Windows\\System32\\WindowsPowerShell\\v1.0',
+      'C:\\Program Files\\PowerShell\\7', // PowerShell 7 (如果存在)
+      'C:\\Windows'
+    ];
 
     // 检查路径是否存在，只添加存在的路径
     systemPaths.forEach(sysPath => {
