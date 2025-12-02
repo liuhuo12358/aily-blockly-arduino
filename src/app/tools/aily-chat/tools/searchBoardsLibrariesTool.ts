@@ -211,11 +211,11 @@ export const searchBoardsLibrariesTool = {
                 // const sourceLabel = item.source === 'board' ? '📟 开发板' : '📦 库';
                 // resultContent += `━━━ [${index + 1}] ${sourceLabel} ━━━\n`;
                 resultContent += `[${index + 1}]\n`;
-                resultContent += `名称: ${item.name}\n`;
-                if (item.nickname && item.nickname !== item.name) {
-                    resultContent += `别名: ${item.nickname}\n`;
-                }
-                resultContent += `描述: ${item.description}\n`;
+                resultContent += `name: ${item.name}\n`;
+                // if (item.nickname && item.nickname !== item.name) {
+                //     resultContent += `别名: ${item.nickname}\n`;
+                // }
+                resultContent += `description: ${item.description}\n`;
                 // resultContent += `匹配字段: ${item.matchedFields.join(', ')}\n`;
                 // resultContent += `匹配度: ${item.score}\n\n`;
             });
