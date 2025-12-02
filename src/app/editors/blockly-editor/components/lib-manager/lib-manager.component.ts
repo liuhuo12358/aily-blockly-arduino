@@ -16,6 +16,7 @@ import { CompatibleDialogComponent } from '../compatible-dialog/compatible-dialo
 import { CmdOutput, CmdService } from '../../../../services/cmd.service';
 import { ElectronService } from '../../../../services/electron.service';
 import { BlocklyService } from '../../services/blockly.service';
+import { PlatformService } from '../../../../services/platform.service';
 
 @Component({
   selector: 'app-lib-manager',
@@ -55,8 +56,10 @@ export class LibManagerComponent {
     private translate: TranslateService,
     private modal: NzModalService,
     private cmdService: CmdService,
-    private electronService: ElectronService
-  ) { }
+    private electronService: ElectronService,
+    private platformService: PlatformService,
+  ) {
+  }
 
   async ngOnInit() {
     // 使用翻译初始化标签列表
@@ -170,6 +173,7 @@ export class LibManagerComponent {
   currentStreamId;
   output = '';
   isInstalling = false;
+
   async installLib(lib) {
     // 检查库兼容性
     // console.log('当前开发板内核：', this.projectService.currentBoardConfig.core.replace('aily:', ''));
@@ -213,8 +217,9 @@ export class LibManagerComponent {
       return;
     }
     lib.state = 'uninstalling';
+    const separator = this.platformService.getPlatformSeparator();
     this.message.loading(`${lib.nickname} ${this.translate.instant('LIB_MANAGER.UNINSTALLING')}...`);
-    const libPackagePath = this.projectService.currentProjectPath + '\\node_modules\\' + lib.name;
+    const libPackagePath = this.projectService.currentProjectPath + `${separator}node_modules${separator}` + lib.name;
     this.blocklyService.removeLibrary(libPackagePath);
     this.output = '';
     await this.cmdService.runAsync(`npm uninstall ${lib.name}`, this.projectService.currentProjectPath);
@@ -226,8 +231,9 @@ export class LibManagerComponent {
 
   checkLibUsage(lib) {
     // 检查项目代码是否使用了该库
-    const libPackagePath = this.projectService.currentProjectPath + '\\node_modules\\' + lib.name;
-    const libBlockPath = libPackagePath + '\\block.json';
+    const separator = this.platformService.getPlatformSeparator();
+    const libPackagePath = this.projectService.currentProjectPath + `${separator}node_modules${separator}` + lib.name;
+    const libBlockPath = libPackagePath + `${separator}block.json`;
     const blocksData = JSON.parse(this.electronService.readFile(libBlockPath));
     const abiJson = JSON.stringify(this.blocklyService.getWorkspaceJson());
     for (let index = 0; index < blocksData.length; index++) {
