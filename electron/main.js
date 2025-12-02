@@ -371,12 +371,12 @@ function handleProtocol(url) {
       const sessionId = searchParams.get('sessionId');
       const params = searchParams.get('params');
       const version = searchParams.get('version');
-      
+
       // 优先使用 keyword，如果有 id 则作为 keyword
       const searchKeyword = keyword || id || '';
-      
+
       console.log('打开示例列表:', { keyword, id, params, version, searchKeyword });
-      
+
       const data = {
         keyword: searchKeyword,
         id: id || '',
@@ -448,25 +448,123 @@ ipcMain.on('renderer-ready', () => {
 // 检查Node
 function checkNodePath(childPath) {
   const child_process = require("child_process");
-  childPath = escapePath(childPath);
-  const nodePath = path.join(childPath, "node");
-  if (!fs.existsSync(nodePath)) {
-    const nodeZipPath = path.join(childPath, serve ? "macos" : "", "node-v22.21.0-darwin-arm64.7z");
+  // 从文件名中提取版本号
+  function extractVersion(filename, keyword) {
+    // node 格式：node-v22.21.0-darwin-arm64.7z → 22.21.0
+    // aily-builder 格式：aily-builder-1.0.7.7z → 1.0.7
+    if (keyword === "node") {
+      const match = filename.match(/node-v(\d+\.\d+\.\d+)/);
+      return match ? match[1] : null;
+    } else if (keyword === "aily-builder") {
+      const match = filename.match(/aily-builder-(\d+\.\d+\.\d+)/);
+      return match ? match[1] : null;
+    }
+    return null;
+  }
+
+  // 比较语义化版本号
+  function compareSemver(version1, version2) {
+    if (!version1 || !version2) return 0;
+
+    // 移除可能的 'v' 前缀
+    const v1 = version1.replace(/^v/, '').split('.').map(Number);
+    const v2 = version2.replace(/^v/, '').split('.').map(Number);
+
+    // 确保两个版本号都有三个部分
+    while (v1.length < 3) v1.push(0);
+    while (v2.length < 3) v2.push(0);
+
+    // 比较主版本号
+    if (v1[0] !== v2[0]) {
+      return v1[0] > v2[0] ? 1 : -1;
+    }
+    // 比较次版本号
+    if (v1[1] !== v2[1]) {
+      return v1[1] > v2[1] ? 1 : -1;
+    }
+    // 比较修订版本号
+    if (v1[2] !== v2[2]) {
+      return v1[2] > v2[2] ? 1 : -1;
+    }
+    return 0;
+  }
+
+  // 查找指定目录下关键字匹配的最新版本文件
+  function findLatestVersionFile(directory, keyword) {
     try {
-      child_process.execSync(`mkdir -p ${nodePath} && tar -xzf ${nodeZipPath} -C ${nodePath}`, {stdio: 'inherit'});
-      console.log('安装解压node成功！');
+      if (!fs.existsSync(directory)) {
+        return null;
+      }
+
+      const files = fs.readdirSync(directory);
+      const matchingFiles = files.filter(file => {
+        return file.startsWith(keyword) && file.endsWith('.7z');
+      });
+
+      if (matchingFiles.length === 0) {
+        return null;
+      }
+
+      // 提取版本号并找到最新版本
+      let latestFile = matchingFiles[0];
+      let latestVersion = extractVersion(latestFile, keyword);
+
+      for (let i = 1; i < matchingFiles.length; i++) {
+        const currentVersion = extractVersion(matchingFiles[i], keyword);
+        if (currentVersion && compareSemver(currentVersion, latestVersion) > 0) {
+          latestFile = matchingFiles[i];
+          latestVersion = currentVersion;
+        }
+      }
+
+      return path.join(directory, latestFile);
     } catch (error) {
-      console.error("安装解压node失败，错误码:", error);
+      console.error(`查找${keyword}文件失败:`, error);
+      return null;
     }
   }
-  const ailyBuilderPath = path.join(childPath, "aily-builder");
-  if (!fs.existsSync(ailyBuilderPath)) {
-    const ailyBuilderZipPath = path.join(childPath, serve ? "macos" : "", "aily-builder-1.0.6.7z");
+
+  childPath = escapePath(childPath);
+  const z7Path = path.join(childPath, "7zz");
+  if(!fs.existsSync(z7Path)){
+    const z7SourcePath = path.join(childPath, serve ? "macos" : "", "7zz");
     try {
-      child_process.execSync(`mkdir -p ${ailyBuilderPath} && tar -xzf ${ailyBuilderZipPath} -C ${ailyBuilderPath}`, {stdio: 'inherit'});
-      console.log('安装解压aily-builder成功！');
+      child_process.execSync(`cp ${z7SourcePath} ${childPath}`, {stdio: 'inherit'});
+      console.log('安装解压7zz成功！');
     } catch (error) {
-      console.error("安装解压aily-builder失败，错误码:", error);
+      console.error("安装解压7zz失败，错误码:", error);
+    }
+  }
+  const nodeName = "node";
+  const nodePath = path.join(childPath, nodeName);
+  if (!fs.existsSync(nodePath)) {
+    const sourceDir = path.join(childPath, serve ? "macos" : "");
+    const nodeZipPath = findLatestVersionFile(sourceDir, nodeName);
+    if (nodeZipPath && fs.existsSync(nodeZipPath)) {
+      try {
+        child_process.execSync(`mkdir -p ${nodePath} && tar -xzf ${nodeZipPath} -C ${nodePath}`, {stdio: 'inherit'});
+        console.log(`安装解压 ${nodeName}: ${nodeZipPath}成功！`);
+      } catch (error) {
+        console.error(`安装解压 ${nodeName}: ${nodeZipPath}失败，错误码:`, error);
+      }
+    } else {
+      console.error(`未找到 ${nodeName}: ${nodeZipPath}，搜索目录: ${sourceDir}`);
+    }
+  }
+  const ailyBuilderName = "aily-builder";
+  const ailyBuilderPath = path.join(childPath, ailyBuilderName);
+  if (!fs.existsSync(ailyBuilderPath)) {
+    const sourceDir = path.join(childPath, serve ? "macos" : "");
+    const ailyBuilderZipPath = findLatestVersionFile(sourceDir, ailyBuilderName);
+    if (ailyBuilderZipPath && fs.existsSync(ailyBuilderZipPath)) {
+      try {
+        child_process.execSync(`mkdir -p ${ailyBuilderPath} && tar -xzf ${ailyBuilderZipPath} -C ${ailyBuilderPath}`, {stdio: 'inherit'});
+        console.log(`安装解压 ${ailyBuilderName}: ${ailyBuilderZipPath}成功！`);
+      } catch (error) {
+        console.error(`安装解压 ${ailyBuilderName}: ${ailyBuilderZipPath}失败，错误码:`, error);
+      }
+    } else {
+      console.error(`未找到 ${ailyBuilderName}: ${ailyBuilderZipPath}，搜索目录: ${sourceDir}`);
     }
   }
 }
@@ -895,7 +993,7 @@ if (shouldUseMultiInstance()) {
           fullPath = '/' + urlObj.hostname + urlObj.pathname;
         }
         const normalizedPath = fullPath.replace(/\/$/, '');
-        
+
         if (normalizedPath === '/examples' || normalizedPath === '/open-examples' || normalizedPath === '/open-template') {
           console.log('检测到示例相关URL，忽略second-instance处理，将由新实例处理');
           return;
@@ -1378,6 +1476,7 @@ cleanupOldInstances();
 // Ripgrep 搜索功能
 // ============================================
 const ripgrep = require('./ripgrep');
+const child_process = require("child_process");
 
 // 检查 ripgrep 是否可用
 ipcMain.handle("ripgrep-check-available", async (event) => {
