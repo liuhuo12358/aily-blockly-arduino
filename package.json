@@ -64,6 +64,7 @@
     },
     "mac": {
       "icon": "public/icon-512.ico",
+      "artifactName": "aily-blockly-${version}.${ext}",
       "fileAssociations": [
         {
           "ext": "abi",
