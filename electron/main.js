@@ -446,25 +446,42 @@ ipcMain.on('renderer-ready', () => {
 });
 
 // 检查Node
-function checkNodePath(childPath) {
+function checkNodePath(rawChildPath) {
   const child_process = require("child_process");
-  childPath = escapePath(childPath);
-  const nodePath = path.join(childPath, "node");
+  // 路径转义，用于shell命令
+  const shellChildPath = escapePath(rawChildPath);
+  
+  // 检查node
+  const nodePath = path.join(rawChildPath, "node");
   if (!fs.existsSync(nodePath)) {
-    const nodeZipPath = path.join(childPath, serve ? "macos" : "", "node-v22.21.0-darwin-arm64.7z");
+    const nodeZipPath = path.join(rawChildPath, serve ? "macos" : "", "node-v22.21.0-darwin-arm64.7z");
+    
+    // shell命令使用的路径
+    const shellNodePath = path.join(shellChildPath, "node");
+    const shellNodeZipPath = path.join(shellChildPath, serve ? "macos" : "", "node-v22.21.0-darwin-arm64.7z");
+    
     try {
-      child_process.execSync(`mkdir -p ${nodePath} && tar -xzf ${nodeZipPath} -C ${nodePath}`, {stdio: 'inherit'});
+      child_process.execSync(`mkdir -p ${shellNodePath} && tar -xzf ${shellNodeZipPath} -C ${shellNodePath}`, {stdio: 'inherit'});
       console.log('安装解压node成功！');
+      serve ? null : fs.unlinkSync(nodeZipPath);
     } catch (error) {
       console.error("安装解压node失败，错误码:", error);
     }
   }
-  const ailyBuilderPath = path.join(childPath, "aily-builder");
+  
+  // 检查aily-builder
+  const ailyBuilderPath = path.join(rawChildPath, "aily-builder");
   if (!fs.existsSync(ailyBuilderPath)) {
-    const ailyBuilderZipPath = path.join(childPath, serve ? "macos" : "", "aily-builder-1.0.7.7z");
+    const ailyBuilderZipPath = path.join(rawChildPath, serve ? "macos" : "", "aily-builder-1.0.7.7z");
+    
+    // shell命令使用的路径
+    const shellAilyBuilderPath = path.join(shellChildPath, "aily-builder");
+    const shellAilyBuilderZipPath = path.join(shellChildPath, serve ? "macos" : "", "aily-builder-1.0.7.7z");
+    
     try {
-      child_process.execSync(`mkdir -p ${ailyBuilderPath} && tar -xzf ${ailyBuilderZipPath} -C ${ailyBuilderPath}`, {stdio: 'inherit'});
+      child_process.execSync(`mkdir -p ${shellAilyBuilderPath} && tar -xzf ${shellAilyBuilderZipPath} -C ${shellAilyBuilderPath}`, {stdio: 'inherit'});
       console.log('安装解压aily-builder成功！');
+      serve ? null : fs.unlinkSync(ailyBuilderZipPath);
     } catch (error) {
       console.error("安装解压aily-builder失败，错误码:", error);
     }
