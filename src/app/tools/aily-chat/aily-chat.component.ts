@@ -689,7 +689,7 @@ export class AilyChatComponent implements OnDestroy {
 当前项目库存放路径(**librariesPath**): ${this.getCurrentProjectLibrariesPath() || '无'}
 appDataPath(**appDataPath**): ${window['path'].getAppDataPath() || '无'}
  - 包含SDK文件、编译器工具等，boards.json-开发板列表 libraries.json-库列表 等缓存到此路径
-转换库存放路径(**libraryConversionPath**): ${window['path'].join(window['path'].getAppDataPath(), 'libraries') || '无'}
+转换库存放路径(**libraryConversionPath**): ${this.getCurrentProjectPath() ? this.getCurrentProjectPath() : (window['path'].join(window['path'].getAppDataPath(), 'libraries') || '无')}
 当前使用的语言(**lang**)： ${this.configService.data.lang || 'zh-cn'}
 操作系统(**os**): ${window['platform'].type || 'unknown'}
 </keyinfo>
@@ -1399,7 +1399,7 @@ ${JSON.stringify(errData)}
             let resultState = "done";
             let resultText = '';
 
-            console.log("工具调用请求: ", data.tool_name, toolArgs);
+            // console.log("工具调用请求: ", data.tool_name, toolArgs);
 
             // 定义 block 工具列表
             const blockTools = [
@@ -2352,7 +2352,7 @@ Your role is ASK (Advisory & Quick Support) - you provide analysis, recommendati
               this.completeToolCall(data.tool_id, data.tool_name, finalState, resultText);
             }
 
-            console.log(`工具调用结果: `, toolResult, resultText);
+            // console.log(`工具调用结果: `, toolResult, resultText);
 
             this.send("tool", JSON.stringify({
               "type": "tool",

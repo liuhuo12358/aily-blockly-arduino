@@ -191,7 +191,8 @@ async function getProjectInfo(projectService): Promise<ProjectInfo> {
             rootFolder: prjRootPath || '',
             opened: !!currentProjectPath,
             appDataPath: appDataPath,
-            libraryConversionPath: appDataPath ? window['path'].join(appDataPath, 'libraries') : ''
+            // libraryConversionPath: appDataPath ? window['path'].join(appDataPath, 'libraries') : ''
+            libraryConversionPath: !!currentProjectPath ? currentProjectPath : (appDataPath ? window['path'].join(appDataPath, 'libraries') : '')
         };
 
         // If current project path is empty, return early
