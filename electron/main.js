@@ -549,6 +549,7 @@ function macosInstallEnv(childPath) {
         const escapeNodeZipPath = escapePath(nodeZipPath);
         child_process.execSync(`mkdir -p ${escapeNodePath} && tar -xzf ${escapeNodeZipPath} -C ${escapeNodePath}`, { stdio: 'inherit' });
         console.log(`安装解压 ${nodeName}: ${nodeZipPath}成功！`);
+        if (!serve) fs.unlinkSync(nodeZipPath);
       } catch (error) {
         console.error(`安装解压 ${nodeName}: ${nodeZipPath}失败，错误码:`, error);
       }
@@ -567,6 +568,7 @@ function macosInstallEnv(childPath) {
         const escapeAilyBuilderZipPath = escapePath(ailyBuilderZipPath);
         child_process.execSync(`mkdir -p ${escapeAilyBuilderPath} && tar -xzf ${escapeAilyBuilderZipPath} -C ${escapeAilyBuilderPath}`, { stdio: 'inherit' });
         console.log(`安装解压 ${ailyBuilderName}: ${ailyBuilderZipPath}成功！`);
+        if (!serve) fs.unlinkSync(ailyBuilderZipPath);
       } catch (error) {
         console.error(`安装解压 ${ailyBuilderName}: ${ailyBuilderZipPath}失败，错误码:`, error);
       }
