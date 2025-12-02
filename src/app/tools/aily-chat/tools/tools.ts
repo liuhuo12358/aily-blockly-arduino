@@ -319,6 +319,131 @@ export const TOOLS = [
     //     }
     // },
     {
+        name: "search_boards_libraries",
+        description: `专门用于搜索开发板(boards.json)和库(libraries.json)的高效工具。
+
+**使用场景：**
+1. 查找特定功能的库（如"温度传感器"、"舵机"、"OLED"）
+2. 查找支持特定芯片的开发板（如"esp32"、"arduino"）
+3. 查找作者或品牌相关的硬件（如"adafruit"、"seeed"）
+
+**注意：**
+- 返回结果默认限制在前50条最相关匹配
+- 使用此工具而非通用grep工具可以获得更精确、更快速的结果
+- 多关键词搜索时，匹配任一关键词即可返回结果（OR逻辑）
+
+**示例：**
+查找 ESP32 开发板：
+\`\`\`json
+{
+  "query": "esp32",
+  "type": "boards"
+}
+\`\`\`
+
+查找舵机控制库：
+\`\`\`json
+{
+  "query": "servo",
+  "type": "libraries"
+}
+\`\`\``,
+        input_schema: {
+            type: 'object',
+            properties: {
+                query: {
+                    type: 'array',
+                    items: {
+                        type: 'string'
+                    },
+                    description: '搜索关键词数组。例如：["esp32", "wifi"], ["temperature", "sensor"]'
+                },
+                type: {
+                    type: 'string',
+                    enum: ['boards', 'libraries'],
+                    description: '搜索类型：boards(仅开发板), libraries(仅库)。默认为 boards',
+                    default: 'boards'
+                },
+                maxResults: {
+                    type: 'number',
+                    description: '最大返回结果数，默认50',
+                    default: 50
+                }
+            },
+            required: ['query']
+        }
+    },
+    {
+        name: "get_board_parameters",
+        description: `获取当前项目开发板的详细参数配置工具。
+从当前打开项目的开发板配置(board.json)中读取详细的硬件配置参数。
+
+**可用参数类型：**
+引脚相关：
+- analogPins
+- digitalPins
+- pwmPins
+- servoPins
+- interruptPins
+通信接口：
+- serialPort
+- serialSpeed
+- spi
+- spiPins
+- i2c
+- i2cPins
+- i2cSpeed
+
+其他配置：
+- builtinLed
+- rgbLed
+- batteryPin
+- name
+- description
+- compilerParam
+- uploadParam
+
+**使用场景：**
+1. 用户询问"这个开发板有哪些模拟引脚"
+2. 需要知道当前开发板支持的串口波特率
+3. 查询SPI/I2C引脚配置
+4. 获取PWM引脚列表用于舵机控制
+5. 查看开发板的完整硬件参数
+
+**示例：**
+获取当前开发板的模拟和数字引脚：
+\`\`\`json
+{
+  "parameters": ["analogPins", "digitalPins"]
+}
+\`\`\`
+
+获取当前开发板的所有参数：
+\`\`\`json
+{}
+\`\`\`
+
+获取通信接口配置：
+\`\`\`json
+{
+  "parameters": ["serialPort", "spi", "i2c", "spiPins", "i2cPins"]
+}
+\`\`\``,
+        input_schema: {
+            type: 'object',
+            properties: {
+                parameters: {
+                    type: 'array',
+                    items: {
+                        type: 'string'
+                    },
+                    description: '要获取的参数列表。如果不指定，返回所有参数。常用参数：analogPins, digitalPins, pwmPins, servoPins, serialPort, spi, i2c, spiPins, i2cPins 等'
+                }
+            },
+            required: []
+        }
+    },
+    {
         name: "grep_tool",
         description: `- Fast content search tool that works with any codebase size
 - Searches file contents using regular expressions
@@ -387,7 +512,7 @@ Query and return specific content (for detailed info)
                 maxResults: {
                     type: 'number',
                     description: '最大结果数量限制',
-                    default: 100
+                    default: 20
                 }
                 // ignoreCase: {
                 //     type: 'boolean',
@@ -459,7 +584,7 @@ Query and return specific content (for detailed info)
     },
     {
         name: "fetch",
-        description: `获取网络上的信息和资源，支持HTTP/HTTPS请求，能够处理大文件下载。支持多种请求方法和响应类型。`,
+        description: `获取网络上的信息和资源，支持HTTP/HTTPS请求，能够处理大文件下载。支持多种请求方法和响应类型。注意：非必要时请避免使用此工具，以减少外部依赖和网络请求。`,
         input_schema: {
             type: 'object',
             properties: {
@@ -815,35 +940,22 @@ Query and return specific content (for detailed info)
     },
     {
         name: "configure_block_tool",
-        description: `块字段配置和结构修改工具。专门用于修改已存在块的字段值（如下拉菜单选项、文本输入、数字值等）和动态结构（如 controls_if 的 else/elseif 分支）。
+        description: `用途：修改已存在 Blockly 块的字段值与动态结构（extraState），用于调整块的显示/配置但不创建或删除块。
 
-**使用前提条件：**
-- 目标块必须已经存在于工作区中
-- 必须提供有效的 blockId 或 blockType
-- 字段修改：必须提供要修改的 fields 对象（不能为空）
-- 结构修改：必须提供 extraState 对象来修改动态块结构
+主要能力：
+- 更新字段（field_dropdown、field_input、field_number、field_checkbox、text 等）。
+- 修改动态结构（如 controls_if 的 else/elseif 分支、text_join 或 lists_create_with 的项目数）。
+- 支持通过 blockId 精准定位或通过 blockType 查找第一个匹配块。
 
-**功能范围：**
-1. **字段修改**：修改下拉菜单选择、文本字段值、数字字段值、布尔字段状态
-2. **结构修改**：修改支持动态输入的块结构，如：
-   - controls_if: 增加/减少 else if 分支，添加/移除 else 分支
-   - controls_ifelse: 修改 else if 分支数量
-   - text_join: 修改拼接项数量
-   - lists_create_with: 修改列表项数量
+前提条件：
+- 目标块必须已存在于工作区。
+- 必须提供有效的 blockId 或 blockType。
+- 字段修改需提供非空的 fields 对象；结构修改需提供 extraState 对象。
 
-**适用场景：**
-- 修改下拉菜单的选择（如引脚号、波特率、运算符等）
-- 更新文本字段的值
-- 修改数字字段的值
-- 调整布尔字段的状态
-- 为 controls_if 块增加 else 或 else if 分支
-- 修改动态列表或文本拼接块的项目数量
-
-**不适用场景：**
-- 创建新块（请使用 smart_block_tool）
-- 删除块（请使用 delete_block_tool）  
-- 修改块的连接关系（请使用 connect_blocks_tool）
-- 移动块位置（当前不支持）
+限制与注意：
+- 不用于创建新块（请使用 smart_block_tool）。
+- 不用于删除块或改变块之间的连接关系（请使用 delete_block_tool / connect_blocks_tool）。
+- 修改前请确保理解目标块的字段名与 extraState 结构，错误参数可能导致操作失败。
 
 **extraState 使用示例：**
 为 controls_if 块添加 1 个 else if 和 1 个 else 分支：

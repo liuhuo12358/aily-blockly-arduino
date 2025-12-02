@@ -45,6 +45,7 @@ interface GetContextResult {
     workspaceOverview?: string;
     cppCode?: string;
     readme?: string;
+    warn?: string;
 }
 
 /**
@@ -87,6 +88,9 @@ export async function getContextTool(prjService: ProjectService, input: GetConte
             }
         }
 
+        if (!result.project?.opened) {
+            result.warn = `当前没有打开的项目，如果需要创建或打开项目，必须先征求用户同意再进行操作。`;
+        }
         result.readme = `
 ## 上下文信息字段说明
 
@@ -187,7 +191,8 @@ async function getProjectInfo(projectService): Promise<ProjectInfo> {
             rootFolder: prjRootPath || '',
             opened: !!currentProjectPath,
             appDataPath: appDataPath,
-            libraryConversionPath: appDataPath ? window['path'].join(appDataPath, 'libraries') : ''
+            // libraryConversionPath: appDataPath ? window['path'].join(appDataPath, 'libraries') : ''
+            libraryConversionPath: !!currentProjectPath ? currentProjectPath : (appDataPath ? window['path'].join(appDataPath, 'libraries') : '')
         };
 
         // If current project path is empty, return early

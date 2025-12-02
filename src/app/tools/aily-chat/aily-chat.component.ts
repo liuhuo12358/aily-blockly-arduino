@@ -32,6 +32,8 @@ import { deleteFolderTool } from './tools/deleteFolderTool';
 import { checkExistsTool } from './tools/checkExistsTool';
 import { getDirectoryTreeTool } from './tools/getDirectoryTreeTool';
 import { grepTool } from './tools/grepTool';
+import { searchBoardsLibrariesTool } from './tools/searchBoardsLibrariesTool';
+import { getBoardParametersTool } from './tools/getBoardParametersTool';
 import globTool from './tools/globTool';
 import { fetchTool, FetchToolService } from './tools/fetchTool';
 import {
@@ -687,7 +689,7 @@ export class AilyChatComponent implements OnDestroy {
 当前项目库存放路径(**librariesPath**): ${this.getCurrentProjectLibrariesPath() || '无'}
 appDataPath(**appDataPath**): ${window['path'].getAppDataPath() || '无'}
  - 包含SDK文件、编译器工具等，boards.json-开发板列表 libraries.json-库列表 等缓存到此路径
-转换库存放路径(**libraryConversionPath**): ${window['path'].join(window['path'].getAppDataPath(), 'libraries') || '无'}
+转换库存放路径(**libraryConversionPath**): ${this.getCurrentProjectPath() ? this.getCurrentProjectPath() : (window['path'].join(window['path'].getAppDataPath(), 'libraries') || '无')}
 当前使用的语言(**lang**)： ${this.configService.data.lang || 'zh-cn'}
 操作系统(**os**): ${window['platform'].type || 'unknown'}
 </keyinfo>
@@ -1397,7 +1399,7 @@ ${JSON.stringify(errData)}
             let resultState = "done";
             let resultText = '';
 
-           // console.log("工具调用请求: ", data.tool_name, toolArgs);
+            // console.log("工具调用请求: ", data.tool_name, toolArgs);
 
             // 定义 block 工具列表
             const blockTools = [
@@ -1406,10 +1408,10 @@ ${JSON.stringify(errData)}
               'create_code_structure_tool',
               'configure_block_tool',
               'delete_block_tool',
-              'get_workspace_overview_tool',
-              'queryBlockDefinitionTool',
-              'analyze_library_blocks',
-              'verify_block_existence'
+              // 'get_workspace_overview_tool',
+              // 'queryBlockDefinitionTool',
+              // 'analyze_library_blocks',
+              // 'verify_block_existence'
             ];
 
             // 检查是否是 block 工具，如果是则设置 aiWriting 状态
@@ -1621,6 +1623,53 @@ ${JSON.stringify(errData)}
                       resultText = `获取目录树 ${treeFolderName} 失败: ` + (toolResult.content || '未知错误');
                     } else {
                       resultText = `获取目录树 ${treeFolderName} 成功`;
+                    }
+                    break;
+                  case 'search_boards_libraries':
+                    // console.log('[开发板库搜索工具被调用]', toolArgs);
+                    const searchQuery = toolArgs.query ? toolArgs.query.substring(0, 30) : '未知查询';
+                    const searchType = toolArgs.type || 'both';
+                    const searchTypeDisplay = searchType === 'boards' ? '开发板' : searchType === 'libraries' ? '库' : '开发板和库';
+                    this.appendMessage('aily', `
+
+\`\`\`aily-state
+{
+  "state": "doing",
+  "text": "正在搜索${searchTypeDisplay}: ${searchQuery}",
+  "id": "${toolCallId}"
+}
+\`\`\`\n\n
+                    `);
+                    toolResult = await searchBoardsLibrariesTool.handler(toolArgs, this.configService);
+                    if (toolResult.is_error) {
+                      resultState = "error";
+                      resultText = `搜索失败: ` + (toolResult.content || '未知错误');
+                    } else {
+                      const totalMatches = toolResult.metadata?.totalMatches || 0;
+                      resultText = `搜索 "${searchQuery}" 成功，找到 ${totalMatches} 个匹配项`;
+                    }
+                    break;
+                  case 'get_board_parameters':
+                    // console.log('[开发板参数获取工具被调用]', toolArgs);
+                    const paramsList = toolArgs.parameters && Array.isArray(toolArgs.parameters) ? toolArgs.parameters.join(', ') : '所有参数';
+                    this.appendMessage('aily', `
+
+\`\`\`aily-state
+{
+  "state": "doing",
+  "text": "正在获取当前开发板参数 (${paramsList})",
+  "id": "${toolCallId}"
+}
+\`\`\`\n\n
+                    `);
+                    toolResult = await getBoardParametersTool.handler(this.projectService, toolArgs);
+                    if (toolResult.is_error) {
+                      resultState = "error";
+                      resultText = `获取开发板参数失败: ` + (toolResult.content || '未知错误');
+                    } else {
+                      const boardName = toolResult.metadata?.boardName || '未知';
+                      const paramsCount = toolResult.metadata?.parameterCount || 0;
+                      resultText = `获取开发板 "${boardName}" 参数成功，返回 ${paramsCount} 个参数`;
                     }
                     break;
                   case 'grep_tool':
@@ -2271,18 +2320,18 @@ ${JSON.stringify(errData)}
 - 独立且无用的块请删除
 7. 重复直至完成
 JSON务必保留必要的换行和缩进格式，否则可能导致解析失败。</rules>
-<toolResult>${toolResult.content}</toolResult>\n<info>如果想结束对话，转交给用户，可以使用[to_xxx]，xxx为user</info>`;
+<toolResult>${toolResult.content}</toolResult>\n<info>如果想结束对话，转交给用户，可以使用[to_xxx]，这里的xxx为user</info>`;
               } else if (shouldIncludeKeyInfo) {
                 // 需要路径信息的工具 或 工具失败时：只包含 keyInfo
-                toolContent += `\n${keyInfo}\n<toolResult>${toolResult.content}</toolResult>\n<info>如果想结束对话，转交给用户，可以使用[to_xxx]，xxx为user</info>`;
+                toolContent += `\n${keyInfo}\n<toolResult>${toolResult.content}</toolResult>\n<info>如果想结束对话，转交给用户，可以使用[to_xxx]，这里的xxx为user</info>`;
               } else {
                 // 其他成功的工具：不包含 keyInfo
-                toolContent += `\n<toolResult>${toolResult.content}</toolResult>\n<info>如果想结束对话，转交给用户，可以使用[to_xxx]，xxx为user</info>`;
+                toolContent += `\n<toolResult>${toolResult.content}</toolResult>\n<info>如果想结束对话，转交给用户，可以使用[to_xxx]，这里的xxx为user</info>`;
               }
             } else {
               toolContent = `
 Your role is ASK (Advisory & Quick Support) - you provide analysis, recommendations, and guidance ONLY. You do NOT execute actual tasks or changes.
-<toolResult>${toolResult.content}</toolResult>\n<info>如果想结束对话，转交给用户，可以使用[to_xxx]，xxx为user</info>`;
+<toolResult>${toolResult.content}</toolResult>\n<info>如果想结束对话，转交给用户，可以使用[to_xxx]，这里的xxx为user</info>`;
             }
 
             // 显示工具完成状态（除了 todo_write_tool）
