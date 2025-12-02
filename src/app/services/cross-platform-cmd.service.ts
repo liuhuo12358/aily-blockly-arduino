@@ -46,71 +46,38 @@ export class CrossPlatformCmdService {
    * @param force 是否强制覆盖
    */
   async copyItem(source: string, destination: string, recursive: boolean = true, force: boolean = true): Promise<any> {
-    // 验证源路径存在
-    if (!window['fs'].existsSync(source)) {
-      throw new Error(`源路径不存在: ${source}`);
-    }
-    
     if (this.platformService.isWindows()) {
       const recursiveFlag = recursive ? '-Recurse' : '';
       const forceFlag = force ? '-Force' : '';
       const result = await this.cmdService.runAsync(`Copy-Item -Path "${source}" -Destination "${destination}" ${recursiveFlag} ${forceFlag}`);
-      
+
       // 验证复制结果
       if (result.type === 'error' || (result.code && result.code !== 0)) {
         throw new Error(`复制失败: ${result.error || result.data || '未知错误'}`);
       }
-      
+
       // 验证目标路径是否存在
       if (!window['fs'].existsSync(destination)) {
         throw new Error(`复制后目标路径不存在: ${destination}`);
       }
-      
+
       return result;
     } else {
-      // Mac/Linux: 使用 cp 命令
-      // 注意：cp -r source destination 的行为：
-      // - 如果 destination 不存在：创建 destination 并复制 source 的内容
-      // - 如果 destination 存在且是目录：将 source 复制到 destination/source
-      // 为了确保行为一致，我们总是确保目标目录的父目录存在，然后复制内容
-      
       const recursiveFlag = recursive ? '-r' : '';
       const forceFlag = force ? '-f' : '';
-      
-      // 确保目标目录的父目录存在
-      const destParent = window['path'].dirname(destination);
-      if (!window['fs'].existsSync(destParent)) {
-        window['fs'].mkdirSync(destParent, { recursive: true });
-      }
-      
-      // 在 Mac/Linux 上，cp -r source destination 的行为：
-      // - 如果 destination 不存在：创建 destination 并复制 source 的内容
-      // - 如果 destination 存在且是目录：将 source 复制到 destination/source（嵌套）
-      // 为了确保行为一致，我们总是先删除目标目录（如果存在），然后复制
-      
-      // 如果目标目录已存在，先删除它（确保干净复制）
-      if (window['fs'].existsSync(destination)) {
-        if (window['fs'].isDirectory(destination)) {
-          window['fs'].rmdirSync(destination, { recursive: true });
-        } else {
-          window['fs'].unlinkSync(destination);
-        }
-      }
-      
-      // 现在目标不存在，直接复制（cp 会创建目标目录并复制内容）
       const escapedSource = this.escapePath(source);
       const escapedDestination = this.escapePath(destination);
       const result = await this.cmdService.runAsync(`cp ${recursiveFlag} ${forceFlag} ${escapedSource} ${escapedDestination}`);
-      
+
       if (result.type === 'error' || (result.code && result.code !== 0)) {
         throw new Error(`复制失败: ${result.error || result.data || '未知错误'}`);
       }
-      
+
       // 验证目标路径是否存在
       if (!window['fs'].existsSync(destination)) {
         throw new Error(`复制后目标路径不存在: ${destination}`);
       }
-      
+
       return result;
     }
   }
@@ -135,7 +102,7 @@ export class CrossPlatformCmdService {
         if (window['fs'].existsSync(destPath)) {
           window['fs'].unlinkSync(destPath, null);
         }
-        
+
         try {
           window['fs'].linkSync(source, destPath);
         } catch (linkError: any) {
@@ -170,7 +137,7 @@ export class CrossPlatformCmdService {
           if (window['fs'].existsSync(destPath)) {
             window['fs'].unlinkSync(destPath, null);
           }
-          
+
           try {
             window['fs'].linkSync(srcPath, destPath);
           } catch (linkError: any) {
