@@ -267,7 +267,10 @@ export class CloudService {
       const za7Path = await this.platformService.getZa7Path();
       
       // 使用7za/7zz解压文件（明确指定7z格式）
-      const extractCmd = `"${za7Path}" x "${archivePath}" -o"${extractPath}" -t7z -y`;
+      let extractCmd = `"${za7Path}" x "${archivePath}" -o"${extractPath}" -t7z -y`;
+      if (window['platform'].isWindows) {
+        extractCmd = `& ${extractCmd}`; // PowerShell 语法
+      }
       
       console.log('执行解压命令:', extractCmd);
       
