@@ -77,7 +77,7 @@ export class _BuilderService {
   boardJson: any = null;
   buildPath = "";
   isUploading = false;
-  
+
   private initialized = false; // 防止重复初始化
 
   init() {
@@ -85,7 +85,7 @@ export class _BuilderService {
       console.warn('_BuilderService 已经初始化过了，跳过重复初始化');
       return;
     }
-    
+
     this.initialized = true;
     this.actionService.listen('compile-begin', async (action) => {
       try {
@@ -163,9 +163,21 @@ export class _BuilderService {
           return;
         }
 
+        let text = "首次编译可能会等待较长时间";
+
+        // 检测 buildPath 是否存在
+        try {
+          const buildPath = await this.projectService.getBuildPath();
+          if (buildPath && window['path'].isExists(buildPath)) {
+            text = "闪电构建系统正在运行";
+          }
+        } catch (error) {
+          console.log('首次编译');
+        }
+
         this.noticeService.update({
           title: "编译准备中",
-          text: "首次编译可能会等待较长时间",
+          text: text,
           state: 'doing',
           progress: 0,
           setTimeout: 0,
@@ -374,7 +386,7 @@ export class _BuilderService {
             const projectConfig = await this.projectService.getProjectConfig();
             if (projectConfig) {
               const buildPropertyParams: string[] = [];
-              
+
               // projectConfig是个JSON对象，包含多个配置段
               // 遍历输出每一个key及其值
               for (const [key, value] of Object.entries(projectConfig)) {
@@ -751,7 +763,7 @@ export class _BuilderService {
   private isLibraryCacheValid(lib: string, sourcePath: string): boolean {
     const cached = this.libraryCache.get(lib);
     if (!cached) return false;
-    
+
     try {
       if (!window['fs'].existsSync(sourcePath)) return false;
       const stat = window['fs'].statSync(sourcePath);
@@ -768,20 +780,20 @@ export class _BuilderService {
    */
   private async prepareLibrarySource(lib: string): Promise<string | null> {
     let sourcePath = `${this.currentProjectPath}/node_modules/${lib}/src`;
-    
+
     // 检查缓存
     if (this.isLibraryCacheValid(lib, sourcePath)) {
       console.log(`库 ${lib} 使用缓存信息`);
       return sourcePath;
     }
-    
+
     // 如果没有src文件夹，尝试解压
     if (!window['path'].isExists(sourcePath)) {
       const sourceZipPath = `${this.currentProjectPath}/node_modules/${lib}/src.7z`;
       if (!window['path'].isExists(sourceZipPath)) {
         return null;
       }
-      
+
       try {
         await this.cmdService.runAsync(`${this.platformService.za7} x "${sourceZipPath}" -o"${sourcePath}" -y`);
       } catch (error) {
@@ -804,7 +816,7 @@ export class _BuilderService {
     if (!window['fs'].existsSync(sourcePath)) {
       return sourcePath;
     }
-    
+
     try {
       const srcContents = window['fs'].readDirSync(sourcePath);
       if (srcContents.length === 1) {
@@ -819,7 +831,7 @@ export class _BuilderService {
     } catch (error) {
       console.warn(`解析嵌套src路径失败:`, error);
     }
-    
+
     return sourcePath;
   }
 
@@ -832,7 +844,7 @@ export class _BuilderService {
     if (!window['fs'].existsSync(sourcePath)) {
       return false;
     }
-    
+
     try {
       const files = window['fs'].readDirSync(sourcePath, { withFileTypes: true });
       return Array.isArray(files) && files.some(file => {
@@ -854,11 +866,11 @@ export class _BuilderService {
    */
   private async executeBatchCopyOperations(operations: CopyOperation[]): Promise<void> {
     if (operations.length === 0) return;
-    
+
     // 分组删除和复制操作
     const deleteCommands: string[] = [];
     const copyCommands: string[] = [];
-    
+
     for (const op of operations) {
       // 如果目标已存在且是开发模式，添加删除命令
       if (window['path'].isExists(op.target) && (this.configService.data.devmode || false)) {
@@ -869,14 +881,14 @@ export class _BuilderService {
       // await this.crossPlatformCmdService.copyItem(op.source, op.target, true, true);
       await this.crossPlatformCmdService.linkItem(op.source, op.target);
     }
-    
+
     try {
       // 先执行删除操作
       if (deleteCommands.length > 0) {
         const deleteScript = deleteCommands.join('; ');
         await this.cmdService.runAsync(deleteScript);
       }
-      
+
       // 再执行复制操作
       if (copyCommands.length > 0) {
         const copyScript = copyCommands.join('; ');
@@ -1060,7 +1072,7 @@ export class _BuilderService {
    */
   private async processLibrariesParallel(libsPath: string[], librariesPath: string): Promise<string[]> {
     // console.log(`开始并行处理 ${libsPath.length} 个库`);
-    
+
     try {
       // 并行处理所有库
       const libraryTasks = libsPath.map(lib => this.processLibrary(lib, librariesPath));
