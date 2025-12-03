@@ -245,34 +245,16 @@ export class CloudSpaceComponent {
     console.log('开始打包项目:', prjPath);
 
     // 构建更安全的打包命令
-    // 使用绝对路径避免路径问题，并明确指定文件
-    let packCommand = `${this.platformService.za7} a -t7z -mx=9 "${archivePath}" package.json`;
-    // 检查是否有.abi文件
-    const files = window['fs'].readDirSync(prjPath, { withFileTypes: true });
-    const abiFiles = files.filter(file => file.name.endsWith('.abi'));
-
-    if (abiFiles.length > 0) {
-      console.log('找到abi文件:', abiFiles.map(f => f.name));
-      // 逐个添加abi文件
-      for (const abiFile of abiFiles) {
-        packCommand += ` "${abiFile.name}"`;
-      }
-    } else {
-      console.log('未找到abi文件，只打包package.json');
-    }
-
-    // 检查是否有partitions.csv文件
-    const partitionFile = files.find(file => file.name.toLowerCase() === 'partitions.csv');
-    if (partitionFile) {
-      console.log('找到partitions.csv文件:', partitionFile.name);
-      packCommand += ` "${partitionFile.name}"`;
-    } else {
-      console.log('未找到partitions.csv文件');
-    }
-
+    // 打包所有文件，但排除特定目录和文件
+    // -x!node_modules: 递归排除 node_modules
+    // -x!.chat: 递归排除 .chat
+    // -x!.history: 递归排除 .history
+    // -x!package-lock.json: 排除 package-lock.json
+    // -x!project.7z: 排除自身
+    // 注意：在某些shell环境下，!可能需要转义或引用，这里使用引号包裹排除项
+    let packCommand = `${this.platformService.za7} a -t7z -mx=9 "${archivePath}" * "-x!node_modules" "-x!.chat" "-x!.history" "-x!package-lock.json" "-x!project.7z"`;
+    
     console.log('执行打包命令:', packCommand);
-
-    // 打包文件
     const result = await this.cmdService.runAsync(packCommand, prjPath, false);
 
     console.log('打包命令执行结果:', result);
