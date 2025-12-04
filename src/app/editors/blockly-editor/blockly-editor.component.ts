@@ -110,6 +110,9 @@ export class BlocklyEditorComponent {
     // 设置当前项目路径和package.json数据
     this._projectService.currentPackageData = packageJson;
     this.projectService.currentPackageData = packageJson;
+    window['packageJson'] = packageJson;    
+    // 暴露 ProjectService 到全局，供 generator.js 使用
+    window['projectService'] = this.projectService;
 
     // 检查是否有node_modules目录，没有则安装依赖，有则跳过
     const nodeModulesExist = this.electronService.exists(projectPath + '/node_modules');
@@ -167,6 +170,7 @@ export class BlocklyEditorComponent {
 
   // 测试用
   reload() {
+    window.location.reload();
     this.projectService.projectOpen();
   }
 }

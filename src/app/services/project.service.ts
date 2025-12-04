@@ -304,6 +304,12 @@ export class ProjectService {
 
     // set之前重新获取最新的package.json内容，然后进行合并
     const currentPackageJson = await this.getPackageJson();
+    // 对比写入内容和当前内容是否相同，如果相同则不写入
+    if (JSON.stringify(currentPackageJson) === JSON.stringify(data)) {
+      // console.log('package.json内容未更改，跳过写入');
+      return;
+    }
+
     if (currentPackageJson) {
       data = { ...currentPackageJson, ...data };
     }
@@ -333,6 +339,69 @@ export class ProjectService {
     this.currentPackageData = data;
 
     this.boardChangeSubject.next();
+  }
+
+  /**
+   * 添加或更新宏定义
+   * @param macro 宏定义字符串，如 "BOARD_SCREEN_COMBO=501"
+   */
+  async addMacro(macro: string) {
+    const pkg = await this.getPackageJson();
+    if (!pkg.MACROS) {
+      pkg.MACROS = [];
+    }
+    
+    // 提取宏名称（等号前的部分）
+    const macroName = macro.split('=')[0];
+    
+    // 检查是否已存在相同名称的宏，如果存在则替换
+    const existingIndex = pkg.MACROS.findIndex(m => m[0].startsWith(macroName + '='));
+    if (existingIndex !== -1) {
+      pkg.MACROS[existingIndex] = [macro];
+    } else {
+      pkg.MACROS.push([macro]);
+    }
+    
+    await this.setPackageJson(pkg);
+    // console.log('✅ 添加宏定义:', macro, '当前宏列表:', pkg.MACROS);
+  }
+
+  /**
+   * 删除宏定义
+   * @param macroName 宏名称，如 "BOARD_SCREEN_COMBO"
+   */
+  async removeMacro(macroName: string) {
+    const pkg = await this.getPackageJson();
+    if (!pkg.MACROS || pkg.MACROS.length === 0) {
+      return;
+    }
+    
+    // 过滤掉匹配的宏定义
+    pkg.MACROS = pkg.MACROS.filter(m => !m[0].startsWith(macroName + '='));
+    
+    await this.setPackageJson(pkg);
+    // console.log('🗑️ 删除宏定义:', macroName, '当前宏列表:', pkg.MACROS);
+  }
+
+  /**
+   * 获取所有宏定义
+   * @returns 宏定义数组，如 ["BOARD_SCREEN_COMBO=501", "BBXX"]
+   */
+  async getMacros(): Promise<string[]> {
+    const pkg = await this.getPackageJson();
+    if (!pkg.MACROS || pkg.MACROS.length === 0) {
+      return [];
+    }
+    return pkg.MACROS.map(m => m[0]);
+  }
+
+  /**
+   * 获取编译时的宏定义参数
+   * @returns 如 "BOARD_SCREEN_COMBO=501,BBXX"
+   */
+  async getBuildMacrosString(): Promise<string> {
+    const macros = await this.getMacros();
+    return macros.join(',');
   }
 
   // 获取开发板名称
