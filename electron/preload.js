@@ -528,5 +528,20 @@ contextBridge.exposeInMainWorld("electronAPI", {
   },
   base64: {
     atob: (b64String) => Buffer.from(b64String, 'base64').toString('binary'),
+  },
+  // 日志 API - 将渲染进程的日志发送到主进程记录
+  log: {
+    error: (message, error) => {
+      ipcRenderer.invoke('log-error', message, error ? {
+        message: error.message || String(error),
+        stack: error.stack
+      } : null);
+    },
+    warn: (message) => {
+      ipcRenderer.invoke('log-warn', message);
+    },
+    info: (message) => {
+      ipcRenderer.invoke('log-info', message);
+    }
   }
 });

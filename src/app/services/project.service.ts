@@ -315,8 +315,25 @@ export class ProjectService {
     }
 
     const packageJsonPath = `${this.currentProjectPath}/package.json`;
-    // 写入新的package.json
-    window['fs'].writeFileSync(packageJsonPath, JSON.stringify(data, null, 2));
+
+    try {
+      // 尝试直接写入
+      window['fs'].writeFileSync(packageJsonPath, JSON.stringify(data, null, 2));
+    } catch (error) {
+      // 如果写入失败，尝试移除只读属性后重试
+      console.warn('写入package.json失败，尝试修改权限后重试:', error);
+      try {
+        if (window['fs'].existsSync(packageJsonPath)) {
+          // 0o666 确保文件可读写
+          window['fs'].chmodSync(packageJsonPath, 0o666);
+          // 重试写入
+          window['fs'].writeFileSync(packageJsonPath, JSON.stringify(data, null, 2));
+        }
+      } catch (retryError) {
+        console.error('修改权限后写入仍然失败:', retryError);
+        throw retryError;
+      }
+    }
 
     // 更新当前packageData
     this.currentPackageData = data;
@@ -1375,5 +1392,29 @@ export class ProjectService {
         return prefix + 'a' + Date.now(); // 极端情况下使用时间戳
       }
     }
+  }
+
+  /**
+   * 获取当前项目的构建路径
+   * @returns 返回构建路径
+   */
+  async getBuildPath(): Promise<string> {
+    const sketchPath = window['path'].join(
+      this.currentProjectPath,
+      '.temp',
+      'sketch',
+      'sketch.ino'
+    );
+    const sketchName = window['path'].basename(sketchPath, '.ino');
+
+    // 为了避免不同项目的同名sketch冲突,使用项目路径的MD5哈希值
+    const projectPathMD5 = (await window['tools'].calculateMD5(sketchPath)).substring(0, 8); // 只取前8位MD5值
+    const uniqueSketchName = `${sketchName}_${projectPathMD5}`;
+
+    // 使用统一的构建路径获取方法
+    return window['path'].join(
+      window['path'].getAilyBuilderBuildPath(),
+      uniqueSketchName
+    );
   }
 }

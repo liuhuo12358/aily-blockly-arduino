@@ -245,35 +245,17 @@ export class CloudSpaceComponent {
     console.log('开始打包项目:', prjPath);
 
     // 构建更安全的打包命令
-    // 使用绝对路径避免路径问题，并明确指定文件
-    let packCommand = `${this.platformService.za7} a -t7z -mx=9 "${archivePath}" package.json`;
-
-    // 检查是否有.abi文件
-    const files = window['fs'].readDirSync(prjPath, { withFileTypes: true });
-    const abiFiles = files.filter(file => file.name.endsWith('.abi'));
-
-    if (abiFiles.length > 0) {
-      console.log('找到abi文件:', abiFiles.map(f => f.name));
-      // 逐个添加abi文件
-      for (const abiFile of abiFiles) {
-        packCommand += ` "${abiFile.name}"`;
-      }
-    } else {
-      console.log('未找到abi文件，只打包package.json');
-    }
-
-    // 检查是否有partitions.csv文件
-    const partitionFile = files.find(file => file.name.toLowerCase() === 'partitions.csv');
-    if (partitionFile) {
-      console.log('找到partitions.csv文件:', partitionFile.name);
-      packCommand += ` "${partitionFile.name}"`;
-    } else {
-      console.log('未找到partitions.csv文件');
-    }
-
+    // 打包所有文件，但排除特定目录和文件
+    // -x!node_modules: 排除 node_modules
+    // -x!.chat: 排除 .chat
+    // -x!.history: 排除 .history
+    // -x!.temp: 排除 .temp
+    // -x!package-lock.json: 排除 package-lock.json
+    // -x!project.7z: 排除自身
+    // 注意：在某些shell环境下，!可能需要转义或引用，这里使用引号包裹排除项
+    let packCommand = `${this.platformService.za7} a -t7z -mx=9 "${archivePath}" * "-x!node_modules" "-x!.chat" "-x!.history" "-x!.temp" "-x!package-lock.json" "-x!project.7z"`;
+    
     console.log('执行打包命令:', packCommand);
-
-    // 打包文件
     const result = await this.cmdService.runAsync(packCommand, prjPath, false);
 
     console.log('打包命令执行结果:', result);
@@ -375,18 +357,24 @@ export class CloudSpaceComponent {
       projectData: currentProjectData,
       archive: archivePath
     }).subscribe(async res => {
-      if (res && res.status === 200) {
-        await this.setCurrentProjectCloudId(res.data.id);
-        this.message.success('同步成功');
-        // 更新项目列表
-        await this.getCloudProjects();
-        console.log('同步成功, 云端项目ID:', res.data.id);
-      } else {
-        console.error('同步失败, 服务器返回错误:', res);
-        this.message.error('同步失败: ' + (res?.messages || '未知错误'));
+      try {
+        if (res && res.status === 200) {
+          await this.setCurrentProjectCloudId(res.data.id);
+          this.message.success('同步成功');
+          // 更新项目列表
+          await this.getCloudProjects();
+          console.log('同步成功, 云端项目ID:', res.data.id);
+        } else {
+          console.error('同步失败, 服务器返回错误:', res);
+          this.message.error('同步失败: ' + (res?.messages || '未知错误'));
+        }
+      } catch (e) {
+        console.error('同步后处理失败:', e);
+        this.message.error('同步成功但更新本地信息失败: ' + (e.message || e));
+      } finally {
+        this.isSyncing = false;
+        this.delete7zFile(archivePath);
       }
-      this.isSyncing = false;
-      this.delete7zFile(archivePath);
     }, err => {
       this.isSyncing = false;
       console.error('同步失败:', err);

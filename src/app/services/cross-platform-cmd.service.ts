@@ -49,13 +49,36 @@ export class CrossPlatformCmdService {
     if (this.platformService.isWindows()) {
       const recursiveFlag = recursive ? '-Recurse' : '';
       const forceFlag = force ? '-Force' : '';
-      return await this.cmdService.runAsync(`Copy-Item -Path "${source}" -Destination "${destination}" ${recursiveFlag} ${forceFlag}`);
+      const result = await this.cmdService.runAsync(`Copy-Item -Path "${source}" -Destination "${destination}" ${recursiveFlag} ${forceFlag}`);
+
+      // 验证复制结果
+      if (result.type === 'error' || (result.code && result.code !== 0)) {
+        throw new Error(`复制失败: ${result.error || result.data || '未知错误'}`);
+      }
+
+      // 验证目标路径是否存在
+      if (!window['fs'].existsSync(destination)) {
+        throw new Error(`复制后目标路径不存在: ${destination}`);
+      }
+
+      return result;
     } else {
       const recursiveFlag = recursive ? '-r' : '';
       const forceFlag = force ? '-f' : '';
       const escapedSource = this.escapePath(source);
       const escapedDestination = this.escapePath(destination);
-      return await this.cmdService.runAsync(`cp ${recursiveFlag} ${forceFlag} ${escapedSource} ${escapedDestination}`);
+      const result = await this.cmdService.runAsync(`cp ${recursiveFlag} ${forceFlag} ${escapedSource} ${escapedDestination}`);
+
+      if (result.type === 'error' || (result.code && result.code !== 0)) {
+        throw new Error(`复制失败: ${result.error || result.data || '未知错误'}`);
+      }
+
+      // 验证目标路径是否存在
+      if (!window['fs'].existsSync(destination)) {
+        throw new Error(`复制后目标路径不存在: ${destination}`);
+      }
+
+      return result;
     }
   }
 
@@ -79,7 +102,7 @@ export class CrossPlatformCmdService {
         if (window['fs'].existsSync(destPath)) {
           window['fs'].unlinkSync(destPath, null);
         }
-        
+
         try {
           window['fs'].linkSync(source, destPath);
         } catch (linkError: any) {
@@ -114,7 +137,7 @@ export class CrossPlatformCmdService {
           if (window['fs'].existsSync(destPath)) {
             window['fs'].unlinkSync(destPath, null);
           }
-          
+
           try {
             window['fs'].linkSync(srcPath, destPath);
           } catch (linkError: any) {
