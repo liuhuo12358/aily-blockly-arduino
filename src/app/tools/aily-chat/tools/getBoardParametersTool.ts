@@ -154,12 +154,12 @@ export const getBoardParametersTool = {
         }
       }
 
-      // 去掉换行和多余空格
-      for (const key in extractedParams) {
-        if (typeof extractedParams[key] === 'string') {
-          extractedParams[key] = extractedParams[key].replace(/\s+/g, ' ').trim();
-        }
-      }
+      // // 去掉换行和多余空格
+      // for (const key in extractedParams) {
+      //   if (typeof extractedParams[key] === 'string') {
+      //     extractedParams[key] = extractedParams[key].replace(/\s+/g, ' ').trim();
+      //   }
+      // }
 
       const result: any = {
         boardName,
@@ -172,9 +172,13 @@ export const getBoardParametersTool = {
         result.warning = `以下参数在board.json中不存在: ${missingParams.join(', ')}`;
       }
 
+      // 去掉json中的多余空格和换行
+      let contentData = JSON.stringify(result, null, 2);
+      contentData = contentData.replace(/\s+/g, ' ').trim();
+
       return {
         is_error: false,
-        content: JSON.stringify(result, null, 2),
+        content: contentData,
         metadata: {
           boardName,
           parameterCount: Object.keys(extractedParams).length,
