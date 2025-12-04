@@ -567,7 +567,7 @@ export class _BuilderService {
                       try {
                         const current = parseInt(fractionProgressMatch[1], 10);
                         const total = parseInt(fractionProgressMatch[2], 10);
-                        progressValue = Math.round((current / total) * 100);
+                        progressValue = Math.floor((current / total) * 100);
                       } catch (error) {
                         progressValue = 0;
                         console.warn('分数进度解析错误:', error);
