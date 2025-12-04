@@ -7,6 +7,14 @@ import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { NzSkeletonModule } from 'ng-zorro-antd/skeleton';
 import { ElectronService } from '../../../services/electron.service';
 import { UiService } from '../../../services/ui.service';
+import { TranslateModule } from '@ngx-translate/core';
+import {
+  getSupportedBoards,
+  getTaskDescription,
+  getModelFormatDescription,
+  getPrecisionDescription,
+  formatFileSize
+} from '../model-constants';
 
 
 @Component({
@@ -16,7 +24,8 @@ import { UiService } from '../../../services/ui.service';
     CommonModule,
     NzButtonModule,
     NzSpinModule,
-    NzSkeletonModule
+    NzSkeletonModule,
+    TranslateModule
   ],
   templateUrl: './model-detail.component.html',
   styleUrl: './model-detail.component.scss'
@@ -57,10 +66,49 @@ export class ModelDetailComponent implements OnInit {
     return this.sanitizer.sanitize(1, html) || '';
   }
 
-  onDeploy(modelDetail): void {
+  // 获取支持的开发板列表
+  getSupportedBoards(): string[] {
+    if (!this.modelDetail?.uniform_types) return [];
+    return getSupportedBoards(this.modelDetail.uniform_types);
+  }
+
+  // 获取任务类型描述
+  getTaskDescription(): string {
+    if (!this.modelDetail?.task) return '-';
+    return getTaskDescription(this.modelDetail.task);
+  }
+
+  // 获取模型格式
+  getModelFormat(): string {
+    if (!this.modelDetail?.model_format) return '-';
+    return getModelFormatDescription(this.modelDetail.model_format);
+  }
+
+  // 获取精度描述
+  getPrecision(): string {
+    if (!this.modelDetail?.precision) return '-';
+    return getPrecisionDescription(this.modelDetail.precision);
+  }
+
+  // 格式化文件大小
+  getFormattedSize(): string {
+    if (!this.modelDetail?.model_size) return '-';
+    return formatFileSize(this.modelDetail.model_size);
+  }
+
+  onDeploy(modelDetail: ModelDetail): void {
+    if (!modelDetail) {
+      console.error('模型数据为空，无法部署');
+      return;
+    }
+    
+    // 将模型数据存储到 localStorage（用于跨窗口传递）
+    localStorage.setItem('current_model_deploy', JSON.stringify(modelDetail));
+    
+    // 打开部署窗口
     this.uiService.openWindow({
       path: 'model-deploy',
-      title: '模型部署',
+      title: '模型部署 - ' + modelDetail.name,
       alwaysOnTop: true,
       width: 1200,
       height: 640

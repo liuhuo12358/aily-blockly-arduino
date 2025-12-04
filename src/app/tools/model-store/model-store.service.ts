@@ -28,10 +28,18 @@ export interface ModelItem {
 }
 
 export interface ModelListResponse {
+  code: string;
   data: {
+    count: string;  // 总模型数量
     list: ModelItem[];
   };
   [key: string]: any;
+}
+
+export interface ModelListResult {
+  list: ModelItem[];
+  total: number;  // 总数
+  totalPages: number;  // 总页数
 }
 
 export interface ModelLabel {
@@ -83,21 +91,37 @@ export interface ModelDetailResponse {
   providedIn: 'root'
 })
 export class ModelStoreService {
-  private apiUrl = 'https://sensecraft.seeed.cc/aiserverapi/model/list_model';
+  private baseUrl = 'https://sensecraft.seeed.cc/aiserverapi/model/list_model';
   private detailApiUrl = 'https://sensecraft.seeed.cc/aiserverapi/model/view_model';
+  private readonly pageSize = 12;  // 每页显示数量
+  private readonly uniformType = 32;  // XIAO ESP32S3 Sense
 
   constructor(private http: HttpClient) { }
 
   /**
    * 获取模型列表
-   * @returns Observable<ModelItem[]>
+   * @param page 页码（从1开始）
+   * @param uniformType 开发板类型（可选）
+   * @returns Observable<ModelListResult>
    */
-  getModelList(): Observable<ModelItem[]> {
-    return this.http.get<ModelListResponse>(this.apiUrl).pipe(
-      map(response => response.data.list || []),
+  getModelList(page: number = 1, uniformType?: number): Observable<ModelListResult> {
+    const type = uniformType || this.uniformType;
+    const url = `${this.baseUrl}?page=${page}&length=${this.pageSize}&uniform_type=${type}`;
+    
+    return this.http.get<ModelListResponse>(url).pipe(
+      map(response => {
+        const total = parseInt(response.data.count || '0', 10);
+        const totalPages = Math.ceil(total / this.pageSize);
+        
+        return {
+          list: response.data.list || [],
+          total,
+          totalPages
+        };
+      }),
       catchError(error => {
         console.error('获取模型列表失败:', error);
-        return of([]);
+        return of({ list: [], total: 0, totalPages: 0 });
       })
     );
   }
@@ -111,6 +135,7 @@ export class ModelStoreService {
     return this.http.get<ModelDetailResponse>(`${this.detailApiUrl}?model_id=${id}`).pipe(
       map(response => {
         if (response.code === '0' && response.data) {
+          console.log('模型详情:', response.data);
           return response.data;
         }
         return null;
