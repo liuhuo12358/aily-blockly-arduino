@@ -309,8 +309,25 @@ export class ProjectService {
     }
 
     const packageJsonPath = `${this.currentProjectPath}/package.json`;
-    // 写入新的package.json
-    window['fs'].writeFileSync(packageJsonPath, JSON.stringify(data, null, 2));
+
+    try {
+      // 尝试直接写入
+      window['fs'].writeFileSync(packageJsonPath, JSON.stringify(data, null, 2));
+    } catch (error) {
+      // 如果写入失败，尝试移除只读属性后重试
+      console.warn('写入package.json失败，尝试修改权限后重试:', error);
+      try {
+        if (window['fs'].existsSync(packageJsonPath)) {
+          // 0o666 确保文件可读写
+          window['fs'].chmodSync(packageJsonPath, 0o666);
+          // 重试写入
+          window['fs'].writeFileSync(packageJsonPath, JSON.stringify(data, null, 2));
+        }
+      } catch (retryError) {
+        console.error('修改权限后写入仍然失败:', retryError);
+        throw retryError;
+      }
+    }
 
     // 更新当前packageData
     this.currentPackageData = data;

@@ -357,18 +357,24 @@ export class CloudSpaceComponent {
       projectData: currentProjectData,
       archive: archivePath
     }).subscribe(async res => {
-      if (res && res.status === 200) {
-        await this.setCurrentProjectCloudId(res.data.id);
-        this.message.success('同步成功');
-        // 更新项目列表
-        await this.getCloudProjects();
-        console.log('同步成功, 云端项目ID:', res.data.id);
-      } else {
-        console.error('同步失败, 服务器返回错误:', res);
-        this.message.error('同步失败: ' + (res?.messages || '未知错误'));
+      try {
+        if (res && res.status === 200) {
+          await this.setCurrentProjectCloudId(res.data.id);
+          this.message.success('同步成功');
+          // 更新项目列表
+          await this.getCloudProjects();
+          console.log('同步成功, 云端项目ID:', res.data.id);
+        } else {
+          console.error('同步失败, 服务器返回错误:', res);
+          this.message.error('同步失败: ' + (res?.messages || '未知错误'));
+        }
+      } catch (e) {
+        console.error('同步后处理失败:', e);
+        this.message.error('同步成功但更新本地信息失败: ' + (e.message || e));
+      } finally {
+        this.isSyncing = false;
+        this.delete7zFile(archivePath);
       }
-      this.isSyncing = false;
-      this.delete7zFile(archivePath);
     }, err => {
       this.isSyncing = false;
       console.error('同步失败:', err);
