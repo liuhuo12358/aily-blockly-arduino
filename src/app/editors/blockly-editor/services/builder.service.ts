@@ -372,6 +372,7 @@ export class _BuilderService {
           let buildProperties = '';
           try {
             const projectConfig = await this.projectService.getProjectConfig();
+            const macros = await this.projectService.getMacros();
             if (projectConfig) {
               const buildPropertyParams: string[] = [];
               
@@ -410,6 +411,25 @@ export class _BuilderService {
               if (buildProperties) {
                 buildProperties = ' ' + buildProperties; // 在前面添加空格
               }
+            }            
+
+            if (macros) {
+              let macroParams: string[] = [];
+
+              macros.forEach((macroDef: string | string[]) => {
+                if (Array.isArray(macroDef)) {
+                  macroDef.forEach(macro => {
+                    macroParams.push(`--build-macros ${macro}`);
+                  });
+                } else if (typeof macroDef === 'string') {
+                  macroParams.push(`--build-macros ${macroDef}`);
+                }
+              });
+
+              if (macroParams.length > 0) {
+                buildProperties += ' ' + macroParams.join(' ');
+              }
+              // console.log('解析宏定义参数:', macroParams);
             }
           } catch (error) {
             console.warn('获取项目配置失败:', error);
