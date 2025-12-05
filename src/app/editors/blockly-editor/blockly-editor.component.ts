@@ -170,7 +170,6 @@ export class BlocklyEditorComponent {
 
   // 测试用
   reload() {
-    window.location.reload();
     this.projectService.projectOpen();
   }
 }
