@@ -2,14 +2,37 @@
  * 模型商店常量和映射配置
  */
 
+export interface SupportBoardInfo {
+  board: string;
+  url: string;
+}
+
 // 开发板类型映射
-export const BOARD_TYPES: Record<string, string> = {
-  '26': 'reComputer Jetson',
-  '32': 'XIAO ESP32S3 Sense',
-  '36': 'Grove - Vision AI V2',
-  '37': 'SenseCAP Watcher',
-  '40': 'reCamera',
-  '41': 'SenseCAP A1102'
+export const BOARD_INFOS: Record<string, SupportBoardInfo> = {
+  '26': {
+    board:'reComputer Jetson',
+    url:'https://www.seeedstudio.com/XIAO-ESP32S3-p-5627.html'
+  },
+  '32': {
+    board:'XIAO ESP32S3 Sense',
+    url:'https://www.seeedstudio.com/XIAO-ESP32S3-p-5627.html'
+  },
+  '36': {
+    board:'Grove - Vision AI V2',
+    url:'https://www.seeedstudio.com/XIAO-ESP32S3-p-5627.html'
+  },
+  '37': {
+    board:'SenseCAP Watcher',
+    url:'https://www.seeedstudio.com/XIAO-ESP32S3-p-5627.html'
+  },
+  '40': {
+    board:'reCamera',
+    url:'https://www.seeedstudio.com/XIAO-ESP32S3-p-5627.html'
+  },
+  '41': {
+    board:'SenseCAP A1102',
+    url:'https://www.seeedstudio.com/XIAO-ESP32S3-p-5627.html'
+  }
 };
 
 // adapteds 到 uniform_type 的映射
@@ -109,10 +132,16 @@ export const DEPLOY_TITLE: Record<string, string> = {
 /**
  * 根据 uniform_types 获取支持的开发板列表
  */
-export function getSupportedBoards(uniformTypes: string[]): string[] {
-  return uniformTypes
-    .map(type => BOARD_TYPES[type])
-    .filter(Boolean);
+export function getSupportedBoards(uniformTypes: string[]): SupportBoardInfo[] {
+  const boards: SupportBoardInfo[] = [];
+  if (!uniformTypes || uniformTypes.length === 0) return boards;
+  for (const type of uniformTypes) {
+    const boardInfo = BOARD_INFOS[type];
+    if (boardInfo) {
+      boards.push(boardInfo);
+    }
+  }
+  return boards;
 }
 
 /**

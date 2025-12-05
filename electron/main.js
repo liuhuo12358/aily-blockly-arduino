@@ -785,6 +785,8 @@ function createWindow() {
       nodeIntegration: true,
       webSecurity: false,
       preload: path.join(__dirname, "preload.js"),
+      // 启用 Web Serial API 支持
+      enableBlinkFeatures: 'Serial',
     },
   });
 
@@ -1091,6 +1093,48 @@ app.on("ready", () => {
   // 创建主窗口
   createWindow();
   listenMoveResize();
+});
+
+// 处理 Web Serial API 的串口选择请求
+app.on('web-contents-created', (event, contents) => {
+  contents.session.on('select-serial-port', (event, portList, webContents, callback) => {
+    event.preventDefault();
+    console.log('Web Serial API: 可用串口列表', portList);
+    
+    // 如果有可用的串口，选择第一个（或者可以根据 VID/PID 筛选）
+    if (portList && portList.length > 0) {
+      // 查找 ESP32S3 设备 (VID: 0x303a, PID: 0x1001)
+      const esp32Port = portList.find(port => 
+        port.vendorId === '303a' && port.productId === '1001'
+      );
+      
+      if (esp32Port) {
+        console.log('选择 ESP32S3 串口:', esp32Port.portId);
+        callback(esp32Port.portId);
+      } else {
+        // 如果没找到 ESP32S3，选择第一个
+        console.log('未找到 ESP32S3，选择第一个串口:', portList[0].portId);
+        callback(portList[0].portId);
+      }
+    } else {
+      console.log('没有可用的串口');
+      callback('');
+    }
+  });
+
+  contents.session.setPermissionCheckHandler((webContents, permission, requestingOrigin, details) => {
+    if (permission === 'serial') {
+      return true;
+    }
+    return false;
+  });
+
+  contents.session.setDevicePermissionHandler((details) => {
+    if (details.deviceType === 'serial') {
+      return true;
+    }
+    return false;
+  });
 });
 
 // 当所有窗口都被关闭时退出应用（macOS 除外）

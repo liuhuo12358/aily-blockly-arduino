@@ -41,7 +41,7 @@
                 <div class="info-item">
                   <div class="tag-list">
                     @for (board of getSupportedBoards(); track board) {
-                      <span class="tag-board">{{ board }}</span>
+                      <span class="tag-board">{{ board.board }}</span>
                     }
                     <span class="tag-task">{{ getTaskDescription() }}</span>
                     <span class="tag-model">{{ getModelFormat() }}</span>
@@ -79,8 +79,8 @@
                 <div class="device-info">{{ 'MODEL_DEPLOY.DEVICE_INFO' | translate }}</div>
                 <div class="device-list">
                   @for (board of getSupportedBoards(); track board) {
-                    <div class="device-item">
-                      <span class="device-tag">{{ board }}</span>
+                    <div class="device-item" (click)="board.url && openUrl(board.url)">
+                      <span class="device-tag">{{ board.board }}</span>
                     </div>
                   }
                 </div>
@@ -101,9 +101,32 @@
                   <!-- </div> -->
                   <!-- <div class="connect-step"> -->
                     <div class="step-text">{{ getDeviceConnectionSteps()[2] | translate }}</div>
+
+                    <div class="item-inner ccenter" (click)="openPortList($event)">
+                      <div class="value">{{currentPort}}</div>
+                      <div class="arrow-box">
+                        <i class="fa-light fa-angle-right arrow" [ngClass]="{'down':showPortList}"></i>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
+
+              <!-- 部署进度 -->
+              @if (isDeploying || deployStatus) {
+                <div class="section deploy-progress-section">
+                  <div class="section-title">{{ 'MODEL_DEPLOY.DEPLOY_STATUS' | translate }}</div>
+                  <div class="deploy-status">
+                    <div class="status-text">{{ deployStatus }}</div>
+                    @if (isDeploying) {
+                      <div class="progress-bar">
+                        <div class="progress-fill" [style.width.%]="deployProgress"></div>
+                      </div>
+                      <div class="progress-text">{{ deployProgress }}%</div>
+                    }
+                  </div>
+                </div>
+              }
             </div>
           } @else {
             <!-- 第二步：选择部署配置（其他作者） -->
@@ -142,8 +165,8 @@
             }
             
             @if (currentStep < (deployStepConfig?.steps.length ?? 3) - 1) {
-              <button nz-button nzType="primary" (click)="nextStep()">
-                {{ 'MODEL_DEPLOY.BUTTONS.DEPLOY' | translate }}
+              <button nz-button nzType="primary" (click)="startDeploy()" [disabled]="!currentPort || isDeploying">
+                {{ isDeploying ? 'MODEL_DEPLOY.BUTTONS.DEPLOYING' : 'MODEL_DEPLOY.BUTTONS.DEPLOY' | translate }}
               </button>
             } @else {
               <button nz-button nzType="primary">
@@ -188,3 +211,8 @@
     </div>
   </div>
 </app-sub-window>
+
+@if (showPortList) {
+<app-menu [position]="position" [width]="260" [menuList]="portList" (closeEvent)="closePortList()"
+  [keywords]="boardKeywords" (itemClickEvent)="selectPort($event)"></app-menu>
+}

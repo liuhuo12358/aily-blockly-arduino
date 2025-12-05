@@ -1399,7 +1399,7 @@ ${JSON.stringify(errData)}
             let resultState = "done";
             let resultText = '';
 
-            // console.log("工具调用请求: ", data.tool_name, toolArgs);
+            console.log("工具调用请求: ", data.tool_name, toolArgs);
 
             // 定义 block 工具列表
             const blockTools = [
@@ -1441,7 +1441,7 @@ ${JSON.stringify(errData)}
                     }
                     break;
                   case 'execute_command':
-                    // console.log('[执行命令工具被调用]', toolArgs);
+                    console.log('[执行命令工具被调用]', toolArgs);
                     // Extract the command main body for display
                     const commandParts = toolArgs.command.split(' ');
                     let displayCommand = toolArgs.command;
@@ -1464,38 +1464,54 @@ ${JSON.stringify(errData)}
                     toolResult = await executeCommandTool(this.cmdService, toolArgs);
                     // Get project path from command args or default
                     const projectPath = toolArgs.cwd || this.prjPath;
+                    
+                    // Check if this is an npm install command (无论成功与否都需要检查)
+                    const command = toolArgs.command;
+                    const isNpmInstall = command.includes('npm i') || command.includes('npm install');
+                    
                     if (!toolResult.is_error) {
-                      // Check if this is an npm install command
-                      const command = toolArgs.command;
-                      if (command.includes('npm i') || command.includes('npm install')) {
-                        // console.log('检测到 npm install 命令，尝试加载库');
+                      if (isNpmInstall) {
+                        console.log('检测到 npm install 命令，尝试加载库');
                         // Extract all @aily-project/ packages from the command
                         const npmRegex = /@aily-project\/[a-zA-Z0-9-_]+/g;  // 使用全局匹配
                         const matches = command.match(npmRegex);
 
-                        // console.log('npmRegex matches:', matches);
+                        console.log('npmRegex matches:', matches);
 
                         if (matches && matches.length > 0) {
+                          // 使用 Set 去重，避免重复加载
+                          const uniqueLibs = [...new Set(matches)];
+                          console.log('去重后的库列表:', uniqueLibs);
+                          
                           // 遍历所有匹配到的库包名
-                          for (const libPackageName of matches) {
-                            // console.log('Installing library:', libPackageName);
-
+                          for (const libPackageName of uniqueLibs) {
                             // Load the library into blockly
                             try {
                               await this.blocklyService.loadLibrary(libPackageName, projectPath);
+                              console.log("库加载成功:", libPackageName);
                             } catch (e) {
-                              console.log("加载库失败:", libPackageName, e);
+                              console.warn("加载库失败:", libPackageName, e);
+                              // 加载失败不影响其他库的加载，继续处理
                             }
                           }
                         } else {
-                          // console.log("projectOpen: ", projectPath);
+                          console.log("projectOpen: ", projectPath);
                           this.projectService.projectOpen(projectPath);
                         }
                       }
+                      console.log(`命令${displayCommand}执行成功`);
                       resultText = `命令${displayCommand}执行成功`
                     } else {
-                      resultState = "warn";
-                      resultText = `命令${displayCommand}执行异常, 即将重试`;
+                      // npm install 失败时不重试，避免重复加载库
+                      if (isNpmInstall) {
+                        console.log(`npm install命令执行失败，不触发重试以避免重复加载库`);
+                        resultState = "done";  // 标记为完成，不触发重试
+                        resultText = `npm install命令执行失败，请检查网络或依赖配置`;
+                      } else {
+                        console.log(`命令${displayCommand}执行异常, 即将重试`);
+                        resultState = "warn";
+                        resultText = `命令${displayCommand}执行异常, 即将重试`;
+                      }
                     }
                     break;
                   case 'get_context':
@@ -2304,9 +2320,9 @@ ${JSON.stringify(errData)}
 <rules>请不要经验主义或者过于自信，Blockly块创建必须遵循以下流程：
 1. 在开始编程前使用get_workspace_overview_tool分析当前工作区，了解已有块和结构情况
 2. 先列出计划使用的所有库(不可跳过以\`lib-core\`开始的库，特别注意lib-core-logic lib-core-variables lib-core-time等基础库)
-3. 逐一读取每个库的README确定块存在
+3. 逐一完整读取每个库的README确定块存在
 4. 使用smart_block_tool和create_code_structure_tool创建对应代码块
-- 不要一次性生成大量块，分步创建，每次创建后检查结果
+- 不要一次性生成大量块(超过10个)，分步创建，每次创建后检查结果
 - 全局变量 setup loop 回调函数 独立结构分开创建(steup/loop基础块已经存在于工作区，无需重复创建)
 - 当尝试使用代码块多次仍然无法创建成功时，安装 @aily-project/lib-core-custom 并使用库中的自定义块进行代码创建
 5. 检查工具反馈结果
@@ -2352,7 +2368,7 @@ Your role is ASK (Advisory & Quick Support) - you provide analysis, recommendati
               this.completeToolCall(data.tool_id, data.tool_name, finalState, resultText);
             }
 
-            // console.log(`工具调用结果: `, toolResult, resultText);
+            console.log(`工具调用结果: `, toolResult, resultText);
 
             this.send("tool", JSON.stringify({
               "type": "tool",

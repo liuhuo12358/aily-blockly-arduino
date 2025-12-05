@@ -9,6 +9,7 @@ import { ElectronService } from '../../../services/electron.service';
 import { UiService } from '../../../services/ui.service';
 import { TranslateModule } from '@ngx-translate/core';
 import {
+  SupportBoardInfo,
   getSupportedBoards,
   getTaskDescription,
   getModelFormatDescription,
@@ -39,6 +40,7 @@ export class ModelDetailComponent implements OnInit {
   private sanitizer = inject(DomSanitizer);
 
   modelDetail: ModelDetail | null = null;
+  supportedBoards: SupportBoardInfo[] = [];
 
   constructor(
     private electronService: ElectronService,
@@ -67,7 +69,7 @@ export class ModelDetailComponent implements OnInit {
   }
 
   // 获取支持的开发板列表
-  getSupportedBoards(): string[] {
+  getSupportedBoards(): SupportBoardInfo[] {
     if (!this.modelDetail?.uniform_types) return [];
     return getSupportedBoards(this.modelDetail.uniform_types);
   }

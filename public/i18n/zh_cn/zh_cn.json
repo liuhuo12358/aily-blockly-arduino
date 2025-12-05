@@ -329,6 +329,7 @@
         "SUCCESS_DEPLOY": "模型部署成功！",
         "ERROR_DEPLOY_FAILED": "模型部署失败，请稍后重试",
         "NO_MODELS": "暂无可用模型，请先在模型商店下载模型",
+        "DEPLOY_STATUS": "部署状态",
         "STEPS": {
             "SELECT": "选择模型",
             "CONTACT": "连接设备",
@@ -340,7 +341,8 @@
             "NEXT": "下一步",
             "PREV": "上一步",
             "FINISH": "完成",
-            "DEPLOY": "部署"
+            "DEPLOY": "开始部署",
+            "DEPLOYING": "部署中..."
         },
         "SUPPORTED_DEVICES": "支持的设备类型",
         "DEVICE_INFO": "该模型可以部署在以下设备上，若您没有此类型的设备，可以点击下面的链接购买",
