@@ -291,7 +291,7 @@ export class ModelDeployComponent implements OnInit, OnDestroy {
         }
       }
       
-      alert(`请在弹出的对话框中选择串口：${portName}\n\n这是首次使用 Web Serial API 烧录功能，需要授权访问串口。`);
+      // alert(`请在弹出的对话框中选择串口：${portName}\n\n这是首次使用 Web Serial API 烧录功能，需要授权访问串口。`);
       
       const port = await serial.requestPort({
         filters: [
@@ -319,6 +319,8 @@ export class ModelDeployComponent implements OnInit, OnDestroy {
     }
 
     this.isDeploying = true;
+    // 部署开始时滚动到页面底部，方便查看进度
+    this.scrollToBottom();
     this.deployStatus = '正在准备部署...';
     this.cd.detectChanges();
 
@@ -402,13 +404,17 @@ export class ModelDeployComponent implements OnInit, OnDestroy {
 
       // 6. 执行烧录
       this.deployStatus = '正在烧录...';
+      const totalFiles = flashFiles.length;
       await this.espLoaderService.flash({
         fileArray: flashFiles,
         flashSize: 'keep',
         eraseAll: false,
         compress: true,
         reportProgress: (fileIndex, written, total) => {
-          this.deployProgress = Math.floor((written / total) * 100);
+          const perFilePercent = total > 0 ? Math.floor((written / total) * 100) : 0;
+          // 显示当前是第几个文件以及该文件的进度
+          this.deployStatus = `正在烧录 第 ${fileIndex + 1}/${totalFiles} 个文件 (${perFilePercent}%)`;
+          this.deployProgress = perFilePercent;
           this.cd.detectChanges();
         }
       });
@@ -446,6 +452,21 @@ export class ModelDeployComponent implements OnInit, OnDestroy {
       this.isDeploying = false;
       this.cd.detectChanges();
     }
+  }
+
+  /**
+   * 将页面滚动到底部，给用户展示部署进度区域
+   */
+  private scrollToBottom(): void {
+    // 延迟一点以确保 DOM 已更新
+    setTimeout(() => {
+      try {
+        const top = document.documentElement.scrollHeight || document.body.scrollHeight;
+        window.scrollTo({ top, behavior: 'smooth' });
+      } catch (e) {
+        // 失败时静默处理
+      }
+    }, 50);
   }
 
   nextStep(){

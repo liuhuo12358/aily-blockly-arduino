@@ -164,9 +164,13 @@
               </button>
             }
             
-            @if (currentStep < (deployStepConfig?.steps.length ?? 3) - 1) {
+            @if (currentStep === 1 || currentStep === (deployStepConfig?.steps.length ?? 3) - 1) {
               <button nz-button nzType="primary" (click)="startDeploy()" [disabled]="!currentPort || isDeploying">
-                {{ isDeploying ? 'MODEL_DEPLOY.BUTTONS.DEPLOYING' : 'MODEL_DEPLOY.BUTTONS.DEPLOY' | translate }}
+                {{ (isDeploying ? 'MODEL_DEPLOY.BUTTONS.DEPLOYING' : 'MODEL_DEPLOY.BUTTONS.DEPLOY') | translate }}
+              </button>
+            } @else if (currentStep < (deployStepConfig?.steps.length ?? 3) - 1) {
+              <button nz-button nzType="primary" (click)="nextStep()">
+                {{ 'MODEL_DEPLOY.BUTTONS.NEXT' | translate }}
               </button>
             } @else {
               <button nz-button nzType="primary">
@@ -180,7 +184,7 @@
               </button>
             }
             
-            @if (currentStep < (deployStepConfig?.steps.length ?? 3) - 1) {
+            @if (currentStep === 1 || currentStep < (deployStepConfig?.steps.length ?? 3) - 1) {
               <button nz-button nzType="primary" (click)="nextStep()">
                 {{ 'MODEL_DEPLOY.BUTTONS.NEXT' | translate }}
               </button>
@@ -197,7 +201,7 @@
             </button>
           }
           
-          @if (currentStep < (deployStepConfig?.steps.length ?? 3) - 1) {
+          @if (currentStep === 1 || currentStep < (deployStepConfig?.steps.length ?? 3) - 1) {
             <button nz-button nzType="primary" (click)="nextStep()">
               {{ 'MODEL_DEPLOY.BUTTONS.NEXT' | translate }}
             </button>
