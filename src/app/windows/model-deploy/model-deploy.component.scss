@@ -333,7 +333,7 @@
               }
 
               .arrow-box {
-                pointer-events: none;
+                pointer-events: auto;
                 position: absolute;
                 right: 8px;
 
@@ -343,6 +343,13 @@
                   &.down {
                     transform: rotate(90deg);
                   }
+                }
+              }
+              
+              // Hover: 改变箭头颜色以提示可交互
+              &:hover {
+                .arrow {
+                  color: #818992;
                 }
               }
             }

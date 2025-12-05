@@ -10,6 +10,8 @@ import { PortItem, SerialService } from '../../services/serial.service';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { FirmwareService, FirmwareType, XiaoType, FirmwareInfo, FlashFile } from '../../services/firmware.service';
 import { EspLoaderService, ModelInfo } from '../../services/esploader.service';
+import { AtCommandService } from '../../services/at-command.service';
+import { encode } from 'js-base64';
 import {
   getDeployStepConfig,
   DeployStepConfig,
@@ -46,6 +48,7 @@ export class ModelDeployComponent implements OnInit, OnDestroy {
   supportBoardInfo: SupportBoardInfo | null = null;
   currentStep = 1;
   currentPort;
+  // currentBoard;
 
   // 固件和部署相关
   firmwareInfo: FirmwareInfo | null = null;
@@ -60,7 +63,8 @@ export class ModelDeployComponent implements OnInit, OnDestroy {
     private electronService: ElectronService,
     private cd: ChangeDetectorRef,
     private firmwareService: FirmwareService,
-    private espLoaderService: EspLoaderService
+    private espLoaderService: EspLoaderService,
+    private atCommandService: AtCommandService
   ) { }
 
   ngOnInit(): void {
@@ -213,6 +217,7 @@ export class ModelDeployComponent implements OnInit, OnDestroy {
       if (ports && ports.length === 1 && !this.currentPort) {
         // 只有一个串口且当前没有选择串口时，设为默认
         this.currentPort = ports[0].name;
+        // this.currentBoard = ports[0].boardName;
         this.cd.detectChanges();
       }
     } catch (error) {
@@ -227,6 +232,7 @@ export class ModelDeployComponent implements OnInit, OnDestroy {
 
   selectPort(portItem) {
     this.currentPort = portItem.name;
+    // this.currentBoard = portItem.boardName;
     this.closePortList();
   }
 
@@ -402,7 +408,7 @@ export class ModelDeployComponent implements OnInit, OnDestroy {
         throw new Error(`${errorMsg}\n请确保：\n1. 设备已正确连接到 ${this.currentPort}\n2. 设备未被其他程序占用\n3. 设备驱动已正确安装`);
       }
 
-      // 6. 执行烧录
+      // 6. 执行烧录（使用累积字节计算总进度）
       this.deployStatus = '正在烧录...';
       const totalFiles = flashFiles.length;
       await this.espLoaderService.flash({
@@ -413,17 +419,40 @@ export class ModelDeployComponent implements OnInit, OnDestroy {
         reportProgress: (fileIndex, written, total) => {
           const perFilePercent = total > 0 ? Math.floor((written / total) * 100) : 0;
           // 显示当前是第几个文件以及该文件的进度
-          this.deployStatus = `正在烧录 第 ${fileIndex + 1}/${totalFiles} 个文件 (${perFilePercent}%)`;
+          this.deployStatus = `正在烧录 第 ${fileIndex + 1}/${totalFiles} 个文件`;
           this.deployProgress = perFilePercent;
           this.cd.detectChanges();
         }
       });
 
-      // 7. 重启设备
-      this.deployStatus = '正在重启设备...';
-      await this.espLoaderService.resetDevice(3000);
+      // 7. 断开 ESPLoader 并重启设备（使用硬件信号）
+      // this.deployStatus = '正在准备设备重启...';
+      
+      // 7.1 获取串口引用（在 disconnect 之前）
+      const serialPort = this.espLoaderService.getSerialPort();
+      
+      if (!serialPort) {
+        throw new Error('无法获取串口对象');
+      }
 
-      // 8. 设置模型信息
+      // 7.2 完全断开 Program 模式
+      await this.espLoaderService.disconnect();
+      console.log('ESPLoader 已断开');
+      
+      // 7.3 等待串口完全释放
+      await this.delay(500);
+      
+      // 7.4 使用 Web Serial API 直接操作 DTR/RTS 重启设备
+      this.deployStatus = '正在重启设备...';
+      await serialPort.open({ baudRate: 115200 });
+      await serialPort.setSignals({ dataTerminalReady: false, requestToSend: true });
+      await this.delay(100);
+      await serialPort.setSignals({ dataTerminalReady: true, requestToSend: false });
+      await serialPort.close();  // 立即关闭,释放给AT命令使用
+      await this.delay(3000);  // 等待设备启动
+      console.log('设备重启完成');
+
+      // 8. 设置模型信息（使用 AT 命令）
       this.deployStatus = '正在设置模型信息...';
       const modelInfo: ModelInfo = {
         model_id: snapshot.model_id,
@@ -436,14 +465,72 @@ export class ModelDeployComponent implements OnInit, OnDestroy {
         classes: detail.labels.map(l => l.object_name),
         checksum: snapshot.checksum || ''
       };
-      await this.espLoaderService.setModelInfo(modelInfo);
+      
+      try {
+        // 附加到串口
+        await this.atCommandService.attachToPort(serialPort);
+        
+        // 等待串口稳定
+        await this.delay(300);
+        
+        // 1. 测试连接：发送 AT+STAT? 命令并等待响应
+        console.log('[AT] 测试连接...');
+        await this.atCommandService.sendCommand('AT+STAT?\r');
+        const statResponse = await this.atCommandService.waitForResponse('STAT', 2000);
+        if (!statResponse) {
+          console.warn('[AT] 设备未响应 AT+STAT? 命令，继续尝试...');
+        } else {
+          console.log('[AT] 设备响应正常');
+        }
+        
+        await this.delay(200);
+        
+        // 2. 发送 AT+INFO 命令（使用 js-base64 编码）
+        console.log('[AT] 发送模型信息...');
+        const infoJson = JSON.stringify(modelInfo);
+        const encodedInfo = encode(infoJson);  // 使用 js-base64 的 encode
+        await this.atCommandService.sendCommand(`AT+INFO="${encodedInfo}"\r`);
+        
+        // 等待 AT+INFO 响应
+        const infoResponse = await this.atCommandService.waitForResponse('INFO', 3000);
+        if (!infoResponse) {
+          console.warn('[AT] AT+INFO 命令未收到 OK 响应');
+        } else {
+          console.log('[AT] AT+INFO 命令执行成功');
+        }
+        
+        await this.delay(200);
+        
+        // 3. 发送 AT+TRIGGER 命令
+        console.log('[AT] 触发设备更新...');
+        await this.atCommandService.sendCommand('AT+TRIGGER=""\r');
+        
+        // 等待 AT+TRIGGER 响应
+        const triggerResponse = await this.atCommandService.waitForResponse('TRIGGER', 2000);
+        if (!triggerResponse) {
+          console.warn('[AT] AT+TRIGGER 命令未收到 OK 响应');
+        } else {
+          console.log('[AT] AT+TRIGGER 命令执行成功');
+        }
+        
+        await this.delay(200);
+        
+        // 断开 AT 命令服务
+        await this.atCommandService.detach();
+        console.log('[AT] AT 命令流程完成');
+      } catch (atError) {
+        console.error('AT 命令执行失败:', atError);
+        throw new Error('设置模型信息失败: ' + (atError as Error).message);
+      }
 
       // 9. 完成
       this.deployStatus = '部署完成！';
       this.deployProgress = 100;
 
-      // 断开连接
-      await this.espLoaderService.disconnect();
+      // 测试完成后关闭串口
+      if (serialPort) {
+        await serialPort.close();
+      }
 
     } catch (error) {
       console.error('部署失败:', error);

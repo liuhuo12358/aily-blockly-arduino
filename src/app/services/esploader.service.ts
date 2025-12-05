@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { ESPLoader, Transport } from 'esptool-js';
-import { encode } from 'js-base64';
+// encode 已不再需要，AT 命令由 AtCommandService 处理
+// import { encode } from 'js-base64';
 
 /**
  * 烧录进度回调
@@ -199,48 +200,45 @@ export class EspLoaderService {
     }
   }
 
-  /**
-   * 向设备写入 AT 命令
-   * @param command AT 命令
-   * @returns Promise<void>
-   */
-  async writeCommand(command: string): Promise<void> {
-    if (!this.transport) {
-      console.error('传输对象不存在');
-      return;
-    }
-
-    try {
-      const encoder = new TextEncoder();
-      const data = encoder.encode(command);
-      await this.transport.write(data);
-    } catch (error) {
-      console.error('发送命令失败:', error);
-    }
-  }
+  // 注意: writeCommand 和 setModelInfo 方法已移除
+  // 现在使用 AtCommandService 来发送 AT 命令，避免 SLIP 协议包装问题
 
   /**
-   * 设置模型信息到设备
-   * @param modelInfo 模型信息
+   * 断开 ESPLoader 和 Transport，但保留串口对象
    * @returns Promise<void>
    */
-  async setModelInfo(modelInfo: ModelInfo): Promise<void> {
+  async disconnectWithoutClosingPort(): Promise<void> {
     try {
-      // 编码模型信息为 Base64
-      const infoJson = JSON.stringify(modelInfo);
-      const encodedInfo = encode(infoJson);
-
-      // 发送 AT+INFO 命令
-      const infoCommand = `AT+INFO="${encodedInfo}"\r`;
-      await this.writeCommand(infoCommand);
-
-      // 等待设备处理
-      await this.delay(500);
-
-      // 触发设备更新
-      await this.writeCommand('AT+TRIGGER=""\r');
+      if (this.transport) {
+        // 完全断开 Transport（释放所有锁，但不调用 device.close()）
+        const transport = this.transport as any;
+        
+        // 取消并释放 reader
+        if (transport.reader) {
+          try {
+            await transport.reader.cancel();
+          } catch (e) {
+            console.warn('取消 reader 失败:', e);
+          }
+          transport.reader = undefined;
+        }
+        
+        // 等待串口解锁
+        if (transport.device && transport.waitForUnlock) {
+          try {
+            await transport.waitForUnlock(400);
+          } catch (e) {
+            console.warn('等待串口解锁失败:', e);
+          }
+        }
+      }
+      
+      // 清理 ESPLoader 和 Transport 引用，但保留 serialPort
+      this.esploader = null;
+      this.transport = null;
+      console.log('已断开 ESPLoader 和 Transport（串口保持打开）');
     } catch (error) {
-      console.error('设置模型信息失败:', error);
+      console.error('断开失败:', error);
     }
   }
 
@@ -268,6 +266,14 @@ export class EspLoaderService {
   getChipType(): string {
     if (!this.esploader) return 'Unknown';
     return (this.esploader as any).chip?.CHIP_NAME || 'Unknown';
+  }
+
+  /**
+   * 获取当前串口对象（用于 AT 命令服务）
+   * @returns 串口对象或 null
+   */
+  getSerialPort(): any {
+    return this.serialPort;
   }
 
   /**
