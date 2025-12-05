@@ -640,6 +640,8 @@
     display: -webkit-box;
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 3;
+    line-clamp: 3;
+    overflow: hidden;
   }
 }
 
@@ -669,7 +671,7 @@
     cursor: pointer;
   }
 }
-// ²¿Êð½ø¶ÈÑùÊ½
+// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê½
 .deploy-progress-section {
   margin-top: 20px;
   

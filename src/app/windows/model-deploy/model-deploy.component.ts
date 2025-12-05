@@ -25,7 +25,6 @@ import {
   getDeviceConnectionSteps
 } from '../../tools/model-store/model-constants';
 import { MenuComponent } from '../../components/menu/menu.component';
-import { BoardInfo } from '../project-new/project-new.component';
 
 @Component({
   selector: 'app-model-deploy',
@@ -74,7 +73,6 @@ export class ModelDeployComponent implements OnInit, OnDestroy {
     if (storedData) {
       try {
         this.modelDetail = JSON.parse(storedData);
-        console.log('模型数据加载成功:', this.modelDetail.name);
         
         // 根据作者名称配置部署步骤
         if (this.modelDetail?.author_name) {
@@ -103,9 +101,7 @@ export class ModelDeployComponent implements OnInit, OnDestroy {
   
   ngOnDestroy(): void {
     // 清理 localStorage 中的临时数据
-    const storageKey = 'current_model_deploy';
-    localStorage.removeItem(storageKey);
-    console.log('🗑️ 已清理 localStorage 数据:', storageKey);
+    localStorage.removeItem('current_model_deploy');
   }
 
   /**
@@ -175,26 +171,20 @@ export class ModelDeployComponent implements OnInit, OnDestroy {
   }
 
   openUrl(url: string): void {
-    console.log('打开外部链接:', url);
     this.electronService.openUrl(url);
   }
 
   // 串口选择列表相关 
   showPortList = false;
   portList: PortItem[] = []
-  boardKeywords = []; // 这个用来高亮显示正确开发板，如['arduino uno']，则端口菜单中如有包含'arduino uno'的串口则高亮显示
-  position = { x: 0, y: 0 }; // 右键菜单位置
+  boardKeywords = [];
+  position = { x: 0, y: 0 };
   openPortList(el) {
-    console.log(el.srcElement);
     // 获取元素左下角位置
     let rect = el.srcElement.getBoundingClientRect();
     this.position.x = rect.left;
     this.position.y = rect.bottom + 2;
 
-    // if (this.currentBoard) {
-    //   let boardname = this.currentBoard.replace(' 2560', ' ').replace(' R3', '');
-    //   this.boardKeywords = [boardname];
-    // }
     this.getDevicePortList();
     this.showPortList = true;
   }
@@ -270,15 +260,7 @@ export class ModelDeployComponent implements OnInit, OnDestroy {
   private async loadFirmwareInfo() {
     try {
       const firmwareType = this.getFirmwareType();
-      console.log('获取固件信息:', firmwareType);
-      
       this.firmwareInfo = await this.firmwareService.getFirmwareInfo(firmwareType);
-      
-      if (this.firmwareInfo) {
-        console.log('固件版本:', this.firmwareInfo.fwv);
-      } else {
-        console.warn('获取固件信息失败');
-      }
     } catch (error) {
       console.error('加载固件信息失败:', error);
     }
@@ -298,26 +280,16 @@ export class ModelDeployComponent implements OnInit, OnDestroy {
         throw new Error('当前环境不支持 Web Serial API。请确保使用 Chromium 内核的 Electron 版本。');
       }
 
-      console.log('提示：需要烧录的串口是', portName);
-      console.log('正在检查 Web Serial API 授权的串口...');
-      
       // 获取已授权的串口列表
       const ports = await serial.getPorts();
-      console.log('Web Serial API 已授权串口数量:', ports.length);
       
       // 尝试找到 ESP32S3 设备
       for (const port of ports) {
         const info = port.getInfo();
-        console.log('检查串口:', info);
         if (info.usbVendorId === 0x303a && info.usbProductId === 0x1001) {
-          console.log('✓ 找到已授权的 ESP32S3 设备');
           return port;
         }
       }
-      
-      // 如果没有找到，需要用户授权
-      console.log('⚠ 未找到已授权的 ESP32S3 设备');
-      console.log('即将弹出串口选择对话框，请选择:', portName);
       
       alert(`请在弹出的对话框中选择串口：${portName}\n\n这是首次使用 Web Serial API 烧录功能，需要授权访问串口。`);
       
@@ -327,14 +299,12 @@ export class ModelDeployComponent implements OnInit, OnDestroy {
         ]
       });
       
-      console.log('✓ 用户已授权串口');
       return port;
       
     } catch (error) {
       if (error.name === 'NotFoundError') {
         throw new Error(`未选择串口。请确保：\n1. 设备已连接到 ${portName}\n2. 在弹出的对话框中选择了正确的串口`);
       }
-      console.error('获取串口失败:', error);
       throw error;
     }
   }
@@ -366,9 +336,7 @@ export class ModelDeployComponent implements OnInit, OnDestroy {
       // 2. 准备烧录文件列表
       const flashFiles: FlashFile[] = [];
 
-      // 3. 检查是否需要更新固件
-      // 这里需要先读取设备当前版本，暂时跳过
-      // if (this.firmwareInfo && this.firmwareService.needFirmwareUpdate(currentVersion, this.firmwareInfo.fwv)) {
+      // 3. 下载固件文件
       if (this.firmwareInfo) {
         this.deployStatus = '正在下载固件...';
         const firmwareFiles = await this.firmwareService.downloadFirmware(this.firmwareInfo);
@@ -379,8 +347,6 @@ export class ModelDeployComponent implements OnInit, OnDestroy {
       this.deployStatus = '正在下载模型文件...';
       const modelFile = await this.firmwareService.downloadModelFile(snapshot, this.xiaoType);
       flashFiles.push(modelFile);
-
-      console.log('准备烧录的文件:', flashFiles);
 
       // 5. 初始化 ESPLoader（使用已选择的串口）
       this.deployStatus = '正在连接设备...';
@@ -396,8 +362,6 @@ export class ModelDeployComponent implements OnInit, OnDestroy {
         throw new Error(`无法创建串口对象: ${this.currentPort}`);
       }
 
-      console.log('串口对象已创建，等待 ESPLoader 打开...');
-
       // 使用串口对象初始化 ESPLoader，带重试机制
       let success = false;
       let lastError: any = null;
@@ -406,7 +370,6 @@ export class ModelDeployComponent implements OnInit, OnDestroy {
       for (let retry = 0; retry < maxRetries; retry++) {
         try {
           if (retry > 0) {
-            console.log(`重试连接 (${retry + 1}/${maxRetries})...`);
             this.deployStatus = `正在重试连接设备 (${retry + 1}/${maxRetries})...`;
             await this.delay(1000);
           }
@@ -422,12 +385,10 @@ export class ModelDeployComponent implements OnInit, OnDestroy {
           );
           
           if (success) {
-            console.log('ESPLoader 连接成功');
             break;
           }
         } catch (error) {
           lastError = error;
-          console.warn(`连接失败 (尝试 ${retry + 1}/${maxRetries}):`, error);
           if (retry < maxRetries - 1) {
             await this.delay(500);
           }
@@ -474,7 +435,6 @@ export class ModelDeployComponent implements OnInit, OnDestroy {
       // 9. 完成
       this.deployStatus = '部署完成！';
       this.deployProgress = 100;
-      console.log('模型部署成功');
 
       // 断开连接
       await this.espLoaderService.disconnect();
@@ -491,7 +451,6 @@ export class ModelDeployComponent implements OnInit, OnDestroy {
   nextStep(){
     if (this.modelDetail?.author_name === 'SenseCraft AI') {
       if (this.currentStep === 1) {
-        console.log('部署下载步骤，阻止跳转到下一步');
         return; // 阻止从步骤2到步骤3的跳转
       }
     }
