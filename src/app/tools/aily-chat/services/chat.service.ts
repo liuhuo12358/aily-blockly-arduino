@@ -3,6 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Observable, Subject } from 'rxjs';
 import { MCPTool } from './mcp.service';
 import { API } from "../../../configs/api.config";
+import { ConfigService } from '../../../services/config.service';
 
 export interface ChatTextOptions {
   sender?: string;
@@ -35,9 +36,30 @@ export class ChatService {
   private static instance: ChatService;
 
   constructor(
-    private http: HttpClient
+    private http: HttpClient,
+    private configService: ConfigService
   ) {
     ChatService.instance = this;
+    // 从配置加载AI聊天模式
+    this.loadChatMode();
+  }
+
+  /**
+   * 从配置加载AI聊天模式
+   */
+  private loadChatMode(): void {
+    if (this.configService.data.aiChatMode) {
+      this.currentMode = this.configService.data.aiChatMode;
+    }
+  }
+
+  /**
+   * 保存AI聊天模式到配置
+   */
+  saveChatMode(mode: 'agent' | 'ask'): void {
+    this.currentMode = mode;
+    this.configService.data.aiChatMode = mode;
+    this.configService.save();
   }
 
   // 打开.history

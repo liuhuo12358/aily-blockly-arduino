@@ -3002,7 +3002,8 @@ Your role is ASK (Advisory & Quick Support) - you provide analysis, recommendati
       return;
     }
 
-    this.chatService.currentMode = mode;
+    // 保存模式到配置
+    this.chatService.saveChatMode(mode as 'agent' | 'ask');
     // console.log('切换AI模式为:', this.currentMode);
     await this.stopAndCloseSession();
     this.startSession().then((res) => {
