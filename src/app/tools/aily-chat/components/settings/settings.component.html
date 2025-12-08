@@ -1,0 +1,40 @@
+<div class="editor-box">
+    <div></div>
+    <div class="content">
+        <div class="item">
+            <div>最大循环次数:</div>
+            <div>
+                <input nz-input />
+            </div>
+        </div>
+        <div class="item">
+            <div>使用自有APIKEY:</div>
+            <div>
+                <input nz-input />
+                <input nz-input />
+            </div>
+        </div>
+        <div class="item">
+            <div>安全工作区:</div>
+            <div>
+                <div>项目文件</div>
+                <div>库文件</div>
+            </div>
+        </div>
+        <div class="item">
+            <div>可用工具</div>
+            <div>
+       
+            </div>
+        </div>
+    </div>
+
+    <div class="bottom">
+        <button class="sync-btn" nz-button (click)="onClose()">
+            返回
+        </button>
+        <button class="sync-btn" nz-button nzType="primary" (click)="onSave()">
+            保存
+        </button>
+    </div>
+</div>

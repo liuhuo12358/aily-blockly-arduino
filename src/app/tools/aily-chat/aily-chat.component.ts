@@ -103,6 +103,7 @@ import { BlocklyService } from '../../editors/blockly-editor/services/blockly.se
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { LoginComponent } from '../../components/login/login.component';
 import { NoticeService } from '../../services/notice.service';
+import { AilyChatSettingsComponent } from './components/settings/settings.component';
 
 // import { reloadAbiJsonTool, reloadAbiJsonToolSimple } from './tools';
 
@@ -121,7 +122,8 @@ import { NoticeService } from '../../services/notice.service';
     MenuComponent,
     FloatingTodoComponent,
     TranslateModule,
-    LoginComponent
+    LoginComponent,
+    AilyChatSettingsComponent
   ],
   templateUrl: './aily-chat.component.html',
   styleUrl: './aily-chat.component.scss',
@@ -3067,6 +3069,15 @@ Your role is ASK (Advisory & Quick Support) - you provide analysis, recommendati
 
 
   demandEdit() {
+
+  }
+
+  showSettings = false;
+  openSettings(event) {
+    this.showSettings = !this.showSettings
+  }
+
+  onSettingsSaved() {
 
   }
 }
