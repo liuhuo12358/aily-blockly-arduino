@@ -75,54 +75,6 @@ export class BlocklyService {
     Blockly.serialization.workspaces.load(jsonData, this.workspace);
   }
 
-  // async loadLibrariesByUrl() {
-  //   let coreLibraries = await lastValueFrom(
-  //     this.http.get<any[]>('arduino/core/core.json', { responseType: 'json' }),
-  //   );
-  //   let otherLibraries = await lastValueFrom(
-  //     this.http.get<any[]>('arduino/libraries/libraries.json', {
-  //       responseType: 'json',
-  //     }),
-  //   );
-  //   for (let index = 0; index < coreLibraries.length; index++) {
-  //     const libName = coreLibraries[index];
-  //     await this.loadLibraryByUrl(libName, 'core');
-  //   }
-  //   // core和第三方库之间加一个分割线
-  //   // this.addToolboxSep();
-  //   for (let index = 0; index < otherLibraries.length; index++) {
-  //     const libName = otherLibraries[index];
-  //     await this.loadLibraryByUrl(libName);
-  //   }
-  // }
-
-  // async loadLibraryByUrl(libName: String, path: String = 'libraries') {
-  //   let blocks;
-  //   blocks = await lastValueFrom(
-  //     this.http.get<LibData>(`arduino/${path}/${libName}/block.json`, {
-  //       responseType: 'json',
-  //     }),
-  //   ).catch((error) => {
-  //     blocks = null;
-  //   });
-  //   // console.log(blocks);
-
-  //   if (blocks) {
-  //     this.loadLibBlocks(blocks);
-  //   } else {
-  //     //  加载js形式的block定义
-  //     this.loadLibBlocksJS(`arduino/${path}/${libName}/block.js`);
-  //   }
-  //   let toolbox = await lastValueFrom(
-  //     this.http.get<Blockly.utils.toolbox.ToolboxDefinition>(
-  //       `arduino/${path}/${libName}/toolbox.json`,
-  //       { responseType: 'json' },
-  //     ),
-  //   );
-  //   if (toolbox) this.loadLibToolbox(toolbox);
-  //   this.loadLibGenerator(`arduino/${path}/${libName}/generator.js`);
-  // }
-
   // 通过node_modules加载库
   async loadLibrary(libPackageName, projectPath) {
     const libPackagePath = projectPath + '/node_modules/' + libPackageName;
@@ -211,16 +163,6 @@ export class BlocklyService {
       document.getElementsByTagName('head')[0].appendChild(script);
     });
   }
-
-  // addToolboxSep() {
-  //   this.toolbox.contents.push({
-  //     "kind": "sep",
-  //     "cssConfig": {
-  //       "container": "sepLine"
-  //     }
-  //   })
-  //   this.workspace.updateToolbox(this.toolbox)
-  // }
 
   loadLibToolbox(toolboxItem) {
     // 检查是否已存在相同的toolboxItem
