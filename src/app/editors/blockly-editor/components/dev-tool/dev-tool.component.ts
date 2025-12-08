@@ -118,7 +118,6 @@ export class DevToolComponent implements OnInit {
     if (this.autoSave) {
       this.projectService.save();
       // 给一点时间让保存完成
-      window.location.reload();
       // console.log('页面重载中...');
       setTimeout(() => {
         this.projectService.projectOpen();
