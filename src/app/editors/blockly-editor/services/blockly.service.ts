@@ -208,6 +208,13 @@ export class BlocklyService {
   // }
 
   loadLibToolbox(toolboxItem) {
+    // 检查是否已存在相同的toolboxItem
+    const existingIndex = this.findToolboxItemIndex(toolboxItem);
+    if (existingIndex !== -1) {
+      console.log(`工具箱项 "${toolboxItem.name}" 已存在，跳过添加`);
+      return;
+    }
+    
     this.toolbox.contents.push(toolboxItem);
     this.workspace.updateToolbox(this.toolbox);
     this.workspace.render();
@@ -289,7 +296,6 @@ export class BlocklyService {
   removeLibToolbox(toolboxItem) {
     // 通过比较找到要移除的toolbox项
     console.log(`即将移除：`, toolboxItem);
-
     const index = this.findToolboxItemIndex(toolboxItem);
     if (index !== -1) {
       this.toolbox.contents.splice(index, 1);
