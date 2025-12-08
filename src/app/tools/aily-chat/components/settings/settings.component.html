@@ -1,31 +1,64 @@
 <div class="editor-box">
     <div></div>
-    <div class="content">
+    <div class="content sscroll">
         <div class="item">
-            <div>最大循环次数:</div>
+            <div>最大循环次数</div>
             <div>
-                <input nz-input />
+                <input nz-input [(ngModel)]="maxCount" />
             </div>
         </div>
-        <div class="item">
-            <div>使用自有APIKEY:</div>
-            <div>
-                <input nz-input />
-                <input nz-input />
+        <div class="item items-section">
+            <div>安全工作区</div>
+            <div class="items-list">
+                <div class="items-header">
+                    <label nz-checkbox [(ngModel)]="allWorkspaceChecked" [nzIndeterminate]="workspaceIndeterminate"
+                        (ngModelChange)="onAllWorkspaceCheckedChange($event)">
+                        全选
+                    </label>
+                </div>
+                <div class="items-container">
+                    <div *ngFor="let option of workspaceOptions" class="item-wrapper">
+                        <label nz-checkbox [(ngModel)]="option.enabled" (ngModelChange)="onWorkspaceCheckedChange()"
+                            class="list-item">
+                            {{ option.displayName }}
+                        </label>
+                    </div>
+                </div>
             </div>
         </div>
-        <div class="item">
-            <div>安全工作区:</div>
-            <div>
-                <div>项目文件</div>
-                <div>库文件</div>
-            </div>
-        </div>
-        <div class="item">
+        <div class="item items-section">
             <div>可用工具</div>
-            <div>
-       
+            <div class="items-list">
+                <div class="items-header">
+                    <label nz-checkbox [(ngModel)]="allChecked" [nzIndeterminate]="indeterminate"
+                        (ngModelChange)="onAllCheckedChange($event)">
+                        全选
+                    </label>
+                    <span class="items-count">{{ enabledToolsCount }} / {{ availableTools.length }} 已启用</span>
+                </div>
+                <div class="items-container sscroll">
+                    <div *ngFor="let tool of availableTools" class="item-wrapper" [nz-tooltip]="tool.description"
+                        nzTooltipPlacement="topLeft">
+                        <label nz-checkbox [(ngModel)]="tool.enabled" (ngModelChange)="onToolCheckedChange()"
+                            class="list-item">
+                            {{ tool.displayName }}
+                        </label>
+                    </div>
+                </div>
             </div>
+        </div>
+
+        <div class="item">
+            <div>使用自有API KEY <span style="margin-left: 10px;">
+                    <nz-switch [(ngModel)]="useCustomApiKey" [nzSize]="'small'"></nz-switch>
+                </span>
+            </div>
+            @if(useCustomApiKey){
+            <div>
+                <input nz-input [(ngModel)]="baseUrl" placeholder="base url" />
+                <input nz-input [(ngModel)]="apiKey" placeholder="api key" />
+            </div>
+            }
         </div>
     </div>
 

@@ -5,18 +5,25 @@
     width: 100%;
     height: 100%;
     background: #333;
-    padding: 10px;
+    padding: 0 10px;
     z-index: 9;
+    overflow-y: auto;
+
+    .content {
+        max-height: calc(100% - 50px);
+        overflow-y: auto;
+    }
 
     .item {
         display: flex;
+        flex-direction: column;
         // align-items: center;
-        margin-bottom: 15px;
+        margin-bottom: 10px;
         min-width: 32px;
         position: relative;
 
         >div:first-child {
-            width: 80px;
+            // width: 80px;
             height: 32px;
             flex-shrink: 0;
             display: flex;
@@ -27,6 +34,7 @@
             background: #363636;
             z-index: 1;
             height: 32px;
+            margin-bottom: 5px;
             color: rgba(255, 255, 255, 0.7) !important;
 
             &.board {
@@ -41,11 +49,71 @@
             bottom: -15px;
             left: 130px;
         }
+
+        // 通用的列表样式
+        &.items-section {
+            flex-direction: column;
+            align-items: stretch;
+
+            .items-list {
+                width: 100%;
+                background: #2a2a2a;
+                border-radius: 4px;
+                padding: 10px;
+
+                .items-header {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    margin-bottom: 10px;
+                    padding-bottom: 10px;
+                    border-bottom: 1px solid #444;
+
+                    .items-count {
+                        color: rgba(255, 255, 255, 0.6);
+                        font-size: 12px;
+                    }
+                }
+
+                .items-container {
+                    display: grid;
+                    grid-template-columns: 1fr;
+                    gap: 8px;
+                    max-height: 320px;
+                    overflow-y: auto;
+
+                    &.sscroll {
+                        margin-right: -10px;
+                    }
+
+                    .item-wrapper {
+                        .list-item {
+                            display: flex;
+                            padding: 5px 10px;
+                            background: #363636;
+                            border-radius: 3px;
+                            transition: all 0.2s;
+                            cursor: pointer;
+                            white-space: nowrap;
+                            overflow: hidden;
+                            text-overflow: ellipsis;
+
+                            &:hover {
+                                background: #404040;
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 
 .bottom {
-    margin-top: 15px;
+    position: absolute;
+    right:15px;
+    bottom: 15px;
+    width: 100%;
     text-align: right;
 
     button {
