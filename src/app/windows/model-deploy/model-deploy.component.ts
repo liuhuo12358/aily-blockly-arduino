@@ -46,7 +46,7 @@ export class ModelDeployComponent implements OnInit, OnDestroy {
   
   deployStepConfig: DeployStepConfig | null = null;
   supportBoardInfo: SupportBoardInfo | null = null;
-  currentStep = 1;
+  currentStep = 0;
   currentPort;
   // currentBoard;
 
@@ -90,6 +90,21 @@ export class ModelDeployComponent implements OnInit, OnDestroy {
 
         // 获取固件信息
         this.loadFirmwareInfo();
+        
+        // 检查是否有要打开的指定页（localStorage 中的可选键）
+        try {
+          const pageStr = localStorage.getItem('current_model_deploy_page');
+          if (pageStr !== null) {
+            const pageNum = parseInt(pageStr, 10);
+            if (!isNaN(pageNum)) {
+              this.currentStep = pageNum;
+            }
+            // 读取后删除该键
+            localStorage.removeItem('current_model_deploy_page');
+          }
+        } catch (e) {
+          // ignore
+        }
       } catch (error) {
         console.error('解析模型数据失败:', error);
       }
@@ -386,8 +401,8 @@ export class ModelDeployComponent implements OnInit, OnDestroy {
             serialPortObj,
             115200,
             {
-              write: (text: string) => console.log(text),
-              writeLine: (text: string) => console.log(text),
+              write: (text: string) => {}, // console.log(text),
+              writeLine: (text: string) => {}, // console.log(text),
               clean: () => { /* 清空终端 */ }
             }
           );

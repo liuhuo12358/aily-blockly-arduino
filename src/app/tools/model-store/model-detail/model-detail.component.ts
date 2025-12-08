@@ -98,7 +98,7 @@ export class ModelDetailComponent implements OnInit {
     return formatFileSize(this.modelDetail.model_size);
   }
 
-  onDeploy(modelDetail: ModelDetail): void {
+  onDeploy(modelDetail: ModelDetail, page: number = 1): void {
     if (!modelDetail) {
       console.error('模型数据为空，无法部署');
       return;
@@ -106,6 +106,12 @@ export class ModelDetailComponent implements OnInit {
     
     // 将模型数据存储到 localStorage（用于跨窗口传递）
     localStorage.setItem('current_model_deploy', JSON.stringify(modelDetail));
+    // 存储要打开的页面（可选）
+    try {
+      localStorage.setItem('current_model_deploy_page', String(page));
+    } catch (e) {
+      // ignore
+    }
     
     // 打开部署窗口
     this.uiService.openWindow({
