@@ -54,7 +54,7 @@ export class SSCMACommandService {
   async connect(portPath: string, baudRate: number = 921600): Promise<void> {
     if (this.isConnected$.value) {
       if (this.currentPortPath === portPath) {
-        console.log('[AT] 串口已连接:', portPath);
+        // console.log('[AT] 串口已连接:', portPath);
         return;
       }
       // 断开旧连接
@@ -63,7 +63,7 @@ export class SSCMACommandService {
 
     return new Promise((resolve, reject) => {
       try {
-        console.log(`[AT] 连接串口: ${portPath}, 波特率: ${baudRate}`);
+        // console.log(`[AT] 连接串口: ${portPath}, 波特率: ${baudRate}`);
         
         this.serialPort = window['electronAPI'].SerialPort.create({
           path: portPath,
@@ -76,7 +76,7 @@ export class SSCMACommandService {
 
         // 监听打开事件
         this.serialPort.on('open', () => {
-          console.log('[AT] 串口已打开');
+          // console.log('[AT] 串口已打开');
           this.currentPortPath = portPath;
           this.isConnected$.next(true);
           this.receiveBuffer = '';
@@ -96,7 +96,7 @@ export class SSCMACommandService {
 
         // 监听关闭
         this.serialPort.on('close', () => {
-          console.log('[AT] 串口已关闭');
+          // console.log('[AT] 串口已关闭');
           this.isConnected$.next(false);
           this.serialPort = null;
           this.currentPortPath = '';
@@ -125,7 +125,7 @@ export class SSCMACommandService {
     }
 
     return new Promise((resolve) => {
-      console.log('[AT] 断开串口连接');
+      // console.log('[AT] 断开串口连接');
       this.serialPort.close((err: Error) => {
         if (err) {
           console.warn('[AT] 关闭串口警告:', err);
@@ -152,7 +152,7 @@ export class SSCMACommandService {
         // 逗号分隔的 ASCII 码字符串，如 "72,101,108,108,111"
         const bytes = data.split(',').map(s => parseInt(s, 10));
         text = String.fromCharCode(...bytes);
-        console.log('[AT] 检测到逗号分隔的 ASCII 码，已转换');
+        // console.log('[AT] 检测到逗号分隔的 ASCII 码，已转换');
       } else {
         text = data;
       }
@@ -166,7 +166,7 @@ export class SSCMACommandService {
         // toString() 返回的是逗号分隔的 ASCII 码
         const bytes = dataStr.split(',').map(s => parseInt(s, 10));
         text = String.fromCharCode(...bytes);
-        console.log('[AT] 对象转字符串后检测到逗号分隔的 ASCII 码，已转换');
+        // console.log('[AT] 对象转字符串后检测到逗号分隔的 ASCII 码，已转换');
       } else {
         text = dataStr;
       }
@@ -179,13 +179,13 @@ export class SSCMACommandService {
     const now = new Date().toLocaleTimeString();
     
     // 调试：输出原始接收数据
-    console.log('[AT RX Raw]', {
-      type: typeof data,
-      isArray: Array.isArray(data),
-      text: text,
-      length: text.length,
-      preview: text.substring(0, 100)
-    });
+    // console.log('[AT RX Raw]', {
+    //   type: typeof data,
+    //   isArray: Array.isArray(data),
+    //   text: text,
+    //   length: text.length,
+    //   preview: text.substring(0, 100)
+    // });
     
     // 发布原始数据事件（供监控界面使用）
     this.dataReceived$.next({
@@ -199,10 +199,10 @@ export class SSCMACommandService {
     
     // 只在缓冲区较小时打印预览，避免性能问题
     if (this.receiveBuffer.length < 2000) {
-      console.log('[AT] 缓冲区当前长度:', this.receiveBuffer.length);
-      console.log('[AT] 缓冲区预览:', this.receiveBuffer);
+      // console.log('[AT] 缓冲区当前长度:', this.receiveBuffer.length);
+      // console.log('[AT] 缓冲区预览:', this.receiveBuffer);
     } else {
-      console.log('[AT] 缓冲区当前长度:', this.receiveBuffer.length, '字节 (包含大数据，不显示预览)');
+      // console.log('[AT] 缓冲区当前长度:', this.receiveBuffer.length, '字节 (包含大数据，不显示预览)');
     }
     
     // 尝试解析 AT 响应
@@ -232,7 +232,7 @@ export class SSCMACommandService {
       const jsonStr = match[1];
       try {
         const response: AtResponse = JSON.parse(jsonStr);
-        console.log('[AT] 解析到响应 (标准格式), 数据长度:', jsonStr.length);
+        // console.log('[AT] 解析到响应 (标准格式), 数据长度:', jsonStr.length);
         
         // 发布解析后的响应
         this.responseReceived$.next(response);
@@ -241,7 +241,7 @@ export class SSCMACommandService {
         // 从缓冲区移除已解析的部分
         const matchEnd = match.index! + match[0].length;
         this.receiveBuffer = this.receiveBuffer.substring(matchEnd);
-        console.log('[AT] 移除已解析数据，剩余缓冲区长度:', this.receiveBuffer.length);
+        // console.log('[AT] 移除已解析数据，剩余缓冲区长度:', this.receiveBuffer.length);
       } catch (error) {
         console.warn('[AT] JSON 解析失败 (标准格式):', error);
       }
@@ -256,7 +256,7 @@ export class SSCMACommandService {
         const jsonStr = match[1];
         try {
           const response: AtResponse = JSON.parse(jsonStr);
-          console.log('[AT] 解析到响应 (简单格式), 数据长度:', jsonStr.length);
+          // console.log('[AT] 解析到响应 (简单格式), 数据长度:', jsonStr.length);
           
           // 发布解析后的响应
           this.responseReceived$.next(response);
@@ -265,7 +265,7 @@ export class SSCMACommandService {
           // 从缓冲区移除已解析的部分
           const matchEnd = match.index! + match[0].length;
           this.receiveBuffer = this.receiveBuffer.substring(matchEnd);
-          console.log('[AT] 移除已解析数据，剩余缓冲区长度:', this.receiveBuffer.length);
+          // console.log('[AT] 移除已解析数据，剩余缓冲区长度:', this.receiveBuffer.length);
         } catch (error) {
           console.warn('[AT] JSON 解析失败 (简单格式):', error);
         }
@@ -305,7 +305,7 @@ export class SSCMACommandService {
           return;
         }
         
-        console.log('[AT TX]', fullCommand.trim());
+        // console.log('[AT TX]', fullCommand.trim());
         
         // 发布 TX 事件
         this.dataReceived$.next({

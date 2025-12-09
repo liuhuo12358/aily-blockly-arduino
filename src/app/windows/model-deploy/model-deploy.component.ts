@@ -87,7 +87,7 @@ export class ModelDeployComponent implements OnInit, OnDestroy {
    * 处理部署完成事件
    */
   onDeployComplete(): void {
-    console.log('部署完成');
+    // console.log('部署完成');
   }
 
   /**

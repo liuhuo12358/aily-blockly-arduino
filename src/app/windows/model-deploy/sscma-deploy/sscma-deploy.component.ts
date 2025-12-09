@@ -139,13 +139,13 @@ export class SscmaDeployComponent implements OnInit {
    */
   private async checkEsptool() {
     try {
-      console.log('[Deploy] 正在检测 esptool...');
+      // console.log('[Deploy] 正在检测 esptool...');
       this.esptoolPackage = await this.esptoolPyService.detectEsptool();
       
       if (this.esptoolPackage) {
-        console.log('[Deploy] esptool 已就绪:', this.esptoolPackage);
+        // console.log('[Deploy] esptool 已就绪:', this.esptoolPackage);
       } else {
-        console.log('[Deploy] esptool 未安装，将在部署时安装');
+        // console.log('[Deploy] esptool 未安装，将在部署时安装');
       }
     } catch (error) {
       console.error('[Deploy] 检测 esptool 失败:', error);
@@ -305,7 +305,7 @@ export class SscmaDeployComponent implements OnInit {
       return;
     }
 
-    console.log('[Deploy] 用户请求取消部署');
+    // console.log('[Deploy] 用户请求取消部署');
     this.isCancelling = true;
     
     try {
@@ -420,7 +420,7 @@ export class SscmaDeployComponent implements OnInit {
         });
         const firmwareFiles = await this.firmwareService.downloadFirmware(this.firmwareInfo);
         flashFiles.push(...firmwareFiles);
-        console.log('[Deploy] 固件下载完成');
+        // console.log('[Deploy] 固件下载完成');
       }
 
       // 2.2 下载模型文件
@@ -435,7 +435,7 @@ export class SscmaDeployComponent implements OnInit {
       });
       const modelFile = await this.firmwareService.downloadModelFile(snapshot, this.xiaoType);
       flashFiles.push(modelFile);
-      console.log('[Deploy] 模型文件下载完成');
+      // console.log('[Deploy] 模型文件下载完成');
       
       // 显示下载完成提示
       this.deployStatus = '所有文件下载完成';
@@ -448,7 +448,7 @@ export class SscmaDeployComponent implements OnInit {
         stop: () => this.cancelDeploy()
       });
       
-      console.log('[Deploy] 所有文件已下载，共 ' + flashFiles.length + ' 个文件');
+      // console.log('[Deploy] 所有文件已下载，共 ' + flashFiles.length + ' 个文件');
 
       // 3. 检查并安装 esptool（如果需要）
       if (!this.esptoolPackage) {
@@ -487,7 +487,7 @@ export class SscmaDeployComponent implements OnInit {
       }
 
       // 4. 分步烧录所有文件
-      console.log('[Deploy] 开始烧录流程');
+      // console.log('[Deploy] 开始烧录流程');
       
       // 4.1 先烧录固件（如果有）
       let firmwareFlashed = false;
@@ -537,7 +537,7 @@ export class SscmaDeployComponent implements OnInit {
           
           this.flashStreamId = firmwareResult.streamId;
           firmwareFlashed = true;
-          console.log('[Deploy] 固件烧录完成');
+          // console.log('[Deploy] 固件烧录完成');
           
         } catch (error) {
           console.error('[Deploy] 固件烧录失败:', error);
@@ -590,14 +590,14 @@ export class SscmaDeployComponent implements OnInit {
         );
         
         this.flashStreamId = modelResult.streamId;
-        console.log('[Deploy] 模型烧录完成');
+        // console.log('[Deploy] 模型烧录完成');
         
       } catch (error) {
         console.error('[Deploy] 模型烧录失败:', error);
         throw new Error('模型烧录失败: ' + (error as Error).message);
       }
 
-      console.log('[Deploy] 所有文件烧录完成，准备设置模型信息');
+      // console.log('[Deploy] 所有文件烧录完成，准备设置模型信息');
 
       // 7. 等待设备重启
       this.deployStatus = '正在等待设备重启...';
@@ -641,10 +641,10 @@ export class SscmaDeployComponent implements OnInit {
       try {
         // 使用 Native Service 连接串口
         await this.sscmaCommandService.connect(this.currentPort!);
-        console.log('[AT Native] 串口连接成功');
+        // console.log('[AT Native] 串口连接成功');
         
         // 等待设备完全准备好（设备可能刚重启）
-        console.log('[AT Native] 等待设备准备就绪...');
+        // console.log('[AT Native] 等待设备准备就绪...');
         await this.delay(1500);
         
         this.deployStatus = '正在设置模型信息...';
@@ -657,23 +657,23 @@ export class SscmaDeployComponent implements OnInit {
           stop: () => this.cancelDeploy()
         });
         
-        console.log('[AT Native] 测试连接，发送 AT+STAT?...');
+        // console.log('[AT Native] 测试连接，发送 AT+STAT?...');
         await this.sscmaCommandService.sendCommand('AT+STAT?');
-        console.log('[AT Native] AT+STAT? 命令已发送，等待响应...');
+        // console.log('[AT Native] AT+STAT? 命令已发送，等待响应...');
         await this.delay(500);
         
-        console.log('[AT Native] 发送模型信息...');
+        // console.log('[AT Native] 发送模型信息...');
         const infoJson = JSON.stringify(modelInfo);
         const encodedInfo = encode(infoJson);
         await this.sscmaCommandService.sendCommand(`AT+INFO="${encodedInfo}"`);
         await this.delay(200);
         
-        console.log('[AT Native] 触发设备更新...');
+        // console.log('[AT Native] 触发设备更新...');
         await this.sscmaCommandService.sendCommand('AT+TRIGGER=""');
         await this.delay(200);
         
         await this.sscmaCommandService.disconnect();
-        console.log('[AT Native] AT 命令流程完成');
+        // console.log('[AT Native] AT 命令流程完成');
       } catch (atError) {
         console.error('[AT Native] 命令执行失败:', atError);
         await this.sscmaCommandService.disconnect();
@@ -700,7 +700,7 @@ export class SscmaDeployComponent implements OnInit {
       this.currentStep = 2;
       this.cd.detectChanges();
       
-      console.log('[Deploy] 部署完成，已进入配置页面');
+      // console.log('[Deploy] 部署完成，已进入配置页面');
 
     } catch (error) {
       console.error('部署失败:', error);
@@ -709,7 +709,7 @@ export class SscmaDeployComponent implements OnInit {
       const errorMsg = (error as Error).message || '';
       if (errorMsg.includes('用户取消')) {
         // 用户取消，不显示错误，cancelDeploy 方法已经处理了通知
-        console.log('[Deploy] 用户取消部署');
+        // console.log('[Deploy] 用户取消部署');
         return;
       }
       
@@ -767,7 +767,7 @@ export class SscmaDeployComponent implements OnInit {
    * 配置完成回调
    */
   onConfigComplete(): void {
-    console.log('[Deploy] 配置完成');
+    // console.log('[Deploy] 配置完成');
     this.deployComplete.emit();
   }
 }

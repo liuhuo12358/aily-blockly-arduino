@@ -306,7 +306,7 @@ export class SscmaConfigComponent implements OnInit, OnDestroy, OnChanges {
         try {
           await this.atService.setScoreThreshold(value);
           this.scoreThreshold = value;
-          console.log('置信度已设置为:', value);
+          // console.log('置信度已设置为:', value);
           // Success feedback (subtle, no blocking notification)
         } catch (error) {
           console.error('设置置信度失败:', error);
@@ -328,7 +328,7 @@ export class SscmaConfigComponent implements OnInit, OnDestroy, OnChanges {
         try {
           await this.atService.setIouThreshold(value);
           this.iouThreshold = value;
-          console.log('IOU阈值已设置为:', value);
+          // console.log('IOU阈值已设置为:', value);
         } catch (error) {
           console.error('设置IOU阈值失败:', error);
           this.message.error('设置IOU阈值失败');
@@ -523,7 +523,7 @@ export class SscmaConfigComponent implements OnInit, OnDestroy, OnChanges {
         this.deviceInfo.device_version = this.deviceInfo.version.software as any;
       }
 
-      console.log('设备信息:', this.deviceInfo);
+      // console.log('设备信息:', this.deviceInfo);
 
       await this.loadDefaultTransport().catch(err => {
         console.warn('读取默认传输类型失败:', err);
@@ -569,7 +569,7 @@ export class SscmaConfigComponent implements OnInit, OnDestroy, OnChanges {
       if (infoVal) {
         let decoded = this.decodeBase64IfNeeded(infoVal);
         this.infoDecoded = decoded;
-        console.log('Decoded AT+INFO? info:', decoded);
+        // console.log('Decoded AT+INFO? info:', decoded);
 
         this.parseModelMetadata(decoded);
       }
@@ -655,12 +655,12 @@ export class SscmaConfigComponent implements OnInit, OnDestroy, OnChanges {
       // 同步到置信度显示值
       this.confidenceThreshold = this.scoreThreshold;
       
-      console.log('当前配置:', {
-        model: this.modelInfo,
-        sensor: this.sensorInfo,
-        score: this.scoreThreshold,
-        iou: this.iouThreshold
-      });
+      // console.log('当前配置:', {
+      //   model: this.modelInfo,
+      //   sensor: this.sensorInfo,
+      //   score: this.scoreThreshold,
+      //   iou: this.iouThreshold
+      // });
       
       this.message.success('配置信息加载完成');
     } catch (error) {
@@ -762,12 +762,12 @@ export class SscmaConfigComponent implements OnInit, OnDestroy, OnChanges {
   private handleInvokeResult(response: AtResponse): void {
     const result = response.data as InvokeResultData;
     
-    console.log('[预览] 收到推理结果:', {
-      hasImage: !!result.image,
-      isPreviewMode: this.isPreviewMode,
-      responseType: response.type,
-      responseName: response.name
-    });
+    // console.log('[预览] 收到推理结果:', {
+    //   hasImage: !!result.image,
+    //   isPreviewMode: this.isPreviewMode,
+    //   responseType: response.type,
+    //   responseName: response.name
+    // });
     
     if (this.isPreviewMode && result.image) {
       this.updatePreviewImage(result);
@@ -790,12 +790,12 @@ export class SscmaConfigComponent implements OnInit, OnDestroy, OnChanges {
     this.imageVersion++;
     this.lastUpdateTime = new Date().toLocaleTimeString();
     
-    console.log('[预览] 更新图片:', {
-      frameCount: result.count,
-      imageLength: result.image?.length,
-      imageVersion: this.imageVersion,
-      timestamp: this.lastUpdateTime
-    });
+    // console.log('[预览] 更新图片:', {
+    //   frameCount: result.count,
+    //   imageLength: result.image?.length,
+    //   imageVersion: this.imageVersion,
+    //   timestamp: this.lastUpdateTime
+    // });
     
     this.cdr.detectChanges();
   }
@@ -1017,7 +1017,7 @@ export class SscmaConfigComponent implements OnInit, OnDestroy, OnChanges {
 
     try {
       const rulesString = this.buildCombinedTriggerRules();
-      console.log('发送 AT+TRIGGER 规则:', rulesString);
+      // console.log('发送 AT+TRIGGER 规则:', rulesString);
       
       const response = await this.atService.sendCommand(`AT+TRIGGER="${rulesString}"`);
       
@@ -1047,7 +1047,7 @@ export class SscmaConfigComponent implements OnInit, OnDestroy, OnChanges {
       if (response && response.code === 0) {
         const data = response.data as any;
         const rulesString = data?.trigger_rules || '';
-        console.log('当前 AT+TRIGGER 规则:', rulesString);
+        // console.log('当前 AT+TRIGGER 规则:', rulesString);
         
         if (rulesString && rulesString.trim()) {
           this.message.info('当前规则: ' + rulesString);
@@ -1147,7 +1147,7 @@ export class SscmaConfigComponent implements OnInit, OnDestroy, OnChanges {
 
     try {
       const cmd = `AT+WIFI="${this.wifiConfigForm.ssid}",${this.wifiConfigForm.security},"${this.wifiConfigForm.password || ''}"`;
-      console.log('应用 WiFi 配置:', cmd);
+      // console.log('应用 WiFi 配置:', cmd);
       
       const response = await this.atService.sendCommand(cmd);
       
@@ -1183,7 +1183,7 @@ export class SscmaConfigComponent implements OnInit, OnDestroy, OnChanges {
     try {
       // 构建 MQTT 服务器配置命令
       const cmd = `AT+MQTTSERVER="${this.mqttConfigForm.host}",${this.mqttConfigForm.port},"${this.mqttConfigForm.clientId}","${this.mqttConfigForm.username || ''}","${this.mqttConfigForm.password || ''}"`;
-      console.log('应用 MQTT 配置:', cmd);
+      // console.log('应用 MQTT 配置:', cmd);
       
       const response = await this.atService.sendCommand(cmd);
       
