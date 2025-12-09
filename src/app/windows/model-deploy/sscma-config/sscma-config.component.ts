@@ -1,4 +1,4 @@
-import { Component, Input, OnInit, OnDestroy, Output, EventEmitter, ChangeDetectorRef, OnChanges, SimpleChanges } from '@angular/core';
+import { Component, Input, OnInit, OnDestroy, Output, EventEmitter, ChangeDetectorRef, OnChanges, SimpleChanges, ViewChild, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { NzSliderModule } from 'ng-zorro-antd/slider';
@@ -62,6 +62,11 @@ export class SscmaConfigComponent implements OnInit, OnDestroy, OnChanges {
   @Input() portPath!: string;
   @Output() configComplete = new EventEmitter<void>();
   @Output() backToDeploy = new EventEmitter<void>();
+
+  // ===================
+  // 视图引用
+  // ===================
+  @ViewChild('rightPanel') rightPanelRef?: ElementRef<HTMLDivElement>;
 
   // ===================
   // 串口相关
@@ -527,6 +532,13 @@ export class SscmaConfigComponent implements OnInit, OnDestroy, OnChanges {
       await this.loadInfoFromDevice().catch(err => {
         console.warn('读取 AT+INFO? 失败:', err);
       });
+
+      // 重置滚动位置到顶部,避免自动滚动到底部的设置区域
+      setTimeout(() => {
+        if (this.rightPanelRef?.nativeElement) {
+          this.rightPanelRef.nativeElement.scrollTop = 0;
+        }
+      }, 100);
     } catch (error) {
       console.error('获取设备信息失败:', error);
       this.message.warning('部分设备信息获取失败');
@@ -1105,6 +1117,13 @@ export class SscmaConfigComponent implements OnInit, OnDestroy, OnChanges {
       }
 
       this.cdr.detectChanges();
+      
+      // 重置滚动位置到顶部
+      setTimeout(() => {
+        if (this.rightPanelRef?.nativeElement) {
+          this.rightPanelRef.nativeElement.scrollTop = 0;
+        }
+      }, 0);
     } catch (error) {
       console.error('loadNetworkInfo error:', error);
       this.message.error('加载网络信息失败');

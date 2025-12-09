@@ -355,7 +355,7 @@ export class SscmaDeployComponent implements OnInit {
 
     this.isDeploying = true;
     this.isCancelling = false;
-    this.scrollToBottom();
+    // this.scrollToBottom();
     this.deployStatus = '正在准备部署...';
     
     // 使用 NoticeService 显示进度（带取消按钮）
@@ -720,16 +720,16 @@ export class SscmaDeployComponent implements OnInit {
   /**
    * 滚动到底部
    */
-  private scrollToBottom(): void {
-    setTimeout(() => {
-      try {
-        const top = document.documentElement.scrollHeight || document.body.scrollHeight;
-        window.scrollTo({ top, behavior: 'smooth' });
-      } catch (e) {
-        // ignore
-      }
-    }, 50);
-  }
+  // private scrollToBottom(): void {
+  //   setTimeout(() => {
+  //     try {
+  //       const top = document.documentElement.scrollHeight || document.body.scrollHeight;
+  //       window.scrollTo({ top, behavior: 'smooth' });
+  //     } catch (e) {
+  //       // ignore
+  //     }
+  //   }, 50);
+  // }
 
   // ==================== 步骤导航 ====================
   

@@ -20,8 +20,8 @@
       [disabled]="!currentPort || isConnecting"
       [nzLoading]="isConnecting"
       (click)="isConnected ? disconnect() : connectToDevice()"
-      [style.background-color]="isConnected ? '' : '#8fc31f'"
-      [style.border-color]="isConnected ? '' : '#8fc31f'">
+      [style.background-color]="(!currentPort || isConnecting) ? '' : (isConnected ? '' : '#8fc31f')"
+      [style.border-color]="(!currentPort || isConnecting) ? '' : (isConnected ? '' : '#8fc31f')">
       <span nz-icon [nzType]="isConnected ? 'disconnect' : 'link'" nzTheme="outline"></span>
       {{ isConnected ? '断开连接' : '连接设备' }}
     </button>
@@ -105,8 +105,8 @@
               [nzType]="isPreviewMode ? 'default' : 'primary'"
               [nzDanger]="isPreviewMode"
               [disabled]="!isConnected || isConnecting"
-              [style.background-color]="isPreviewMode ? '' : '#8fc31f'"
-              [style.border-color]="isPreviewMode ? '' : '#8fc31f'"
+              [style.background-color]="(!isConnected || isConnecting) ? '' : (isPreviewMode ? '' : '#8fc31f')"
+              [style.border-color]="(!isConnected || isConnecting) ? '' : (isPreviewMode ? '' : '#8fc31f')"
               (click)="isPreviewMode ? stopPreview() : startPreview()">
               <i nz-icon [nzType]="isPreviewMode ? 'stop' : 'play-circle'" nzTheme="outline"></i>
               {{ isPreviewMode ? '停止预览' : '开始预览' }}
@@ -147,6 +147,127 @@
                   <div class="class-label">{{ label || '-' }}</div>
                 </div>
               </div>
+            </div>
+          }
+        </div>
+
+        <!-- 设置区域 -->
+        <!-- <div class="section settings-section">
+          <div class="section-title">设置</div>
+          @if (!isConnected) {
+            <div class="connected-info">
+              <p>未连接设备，请先连接设备</p>
+            </div>
+          } @else {
+            <div class="setting-item">
+              <label>置信度阈值:</label>
+              <div class="setting-control">
+                <nz-slider
+                  [(ngModel)]="confidenceThreshold"
+                  [nzMin]="0"
+                  [nzMax]="100"
+                  [nzStep]="1"
+                  (ngModelChange)="onConfidenceChange($event)">
+                </nz-slider>
+                <nz-input-number
+                  [(ngModel)]="confidenceThreshold"
+                  [nzMin]="0"
+                  [nzMax]="100"
+                  [nzStep]="1"
+                  [nzPrecision]="0"
+                  (ngModelChange)="onConfidenceChange($event)">
+                </nz-input-number>
+              </div>
+            </div>
+
+            <div class="setting-item">
+              <label>IOU阈值:</label>
+              <div class="setting-control">
+                <nz-slider
+                  [(ngModel)]="iouThreshold"
+                  [nzMin]="0"
+                  [nzMax]="100"
+                  [nzStep]="1"
+                  (ngModelChange)="onIouChange($event)">
+                </nz-slider>
+                <nz-input-number
+                  [(ngModel)]="iouThreshold"
+                  [nzMin]="0"
+                  [nzMax]="100"
+                  [nzStep]="1"
+                  [nzPrecision]="0"
+                  (ngModelChange)="onIouChange($event)">
+                </nz-input-number>
+              </div>
+            </div>
+          }
+        </div> -->
+      </div>
+
+      <!-- 中线分隔 -->
+      <div class="center-divider" aria-hidden="true"></div>
+
+      <!-- 右侧：设备信息 -->
+      <div class="config-main-right">
+        <div class="section device-section">
+          <div class="section-title">设备</div>
+          @if (!isConnected) {
+            <div class="connected-info">
+              <p>未连接设备，请先连接设备</p>
+            </div>
+          } @else {
+            <div class="device-row">
+              <label>设备编号:</label>
+              <span>{{ deviceInfo?.device_id || '-' }}</span>
+            </div>
+            
+            <div class="device-row">
+              <label>设备名称:</label>
+              <span>{{ deviceInfo?.device_name || '-' }}</span>
+            </div>
+            
+            <div class="device-row">
+              <label>设备版本:</label>
+              <span>{{ deviceInfo?.device_version || '-' }}</span>
+            </div>
+            
+            <div class="device-row">
+              <label>默认传输:</label>
+              <div class="transport-selector">
+                <div class="item-inner" (click)="openTransportList($event)">
+                  <div class="value">{{ currentTransportName || (currentTransport ? currentTransport : 'UART(GPIO)') }}</div>
+                  <div class="arrow-box">
+                    <i class="fa-light fa-angle-right arrow" [ngClass]="{'down': showTransportList}"></i>
+                  </div>
+                </div>
+              </div>
+            </div>
+          }
+        </div>
+        <!-- WIFI&MQTT信息 -->
+        <div class="section mqtt-section">
+          <div class="mqtt-header">
+            <div class="section-title">WIFI & MQTT</div>
+            <button
+              nz-button
+              nzSize="small"
+              [disabled]="!isConnected"
+              (click)="selectSidebar('mqtt')">
+              {{ '网络配置' }}
+            </button>
+          </div>
+          @if (!isConnected) {
+            <div class="connected-info">
+              <p>未连接设备，请先连接设备</p>
+            </div>
+          } @else {
+            <div class="mqtt-row">
+              <label>IP地址:</label>
+              <span>{{ wifiInfo.ip || '-' }}</span>
+            </div>
+            <div class="mqtt-row">
+              <label>服务状态:</label>
+              <span>{{ mqttInfo.status === 2 ? '已连接' : (mqttInfo.status === 1 ? '已连接/未生效' : (mqttInfo.status === 0 ? '未初始化' : '-')) }}</span>
             </div>
           }
         </div>
@@ -199,73 +320,6 @@
                   (ngModelChange)="onIouChange($event)">
                 </nz-input-number>
               </div>
-            </div>
-          }
-        </div>
-      </div>
-
-      <!-- 中线分隔 -->
-      <div class="center-divider" aria-hidden="true"></div>
-
-      <!-- 右侧：设备信息 -->
-      <div class="config-main-right">
-        <div class="section device-section">
-          <div class="section-title">设备</div>
-          @if (!isConnected) {
-            <div class="connected-info">
-              <p>未连接设备，请先连接设备</p>
-            </div>
-          } @else {
-            <div class="device-row">
-              <label>设备编号:</label>
-              <span>{{ deviceInfo?.device_id || '-' }}</span>
-            </div>
-            
-            <div class="device-row">
-              <label>设备名称:</label>
-              <span>{{ deviceInfo?.device_name || '-' }}</span>
-            </div>
-            
-            <div class="device-row">
-              <label>设备版本:</label>
-              <span>{{ deviceInfo?.device_version || '-' }}</span>
-            </div>
-            
-            <div class="device-row">
-              <label>默认传输:</label>
-              <div class="transport-selector">
-                <div class="item-inner" (click)="openTransportList($event)">
-                  <div class="value">{{ currentTransportName || (currentTransport ? currentTransport : 'UART(GPIO)') }}</div>
-                  <div class="arrow-box">
-                    <i class="fa-light fa-angle-right arrow" [ngClass]="{'down': showTransportList}"></i>
-                  </div>
-                </div>
-              </div>
-            </div>
-          }
-        </div>
-        <!-- WIFI&MQTT信息 -->
-        <div class="section mqtt-section">
-          <div class="mqtt-header">
-            <div class="section-title">WIFI & MQTT</div>
-            <button
-              nz-button
-              nzSize="small">
-              {{ '网络配置' }}
-            </button>
-          </div>
-          @if (!isConnected) {
-            <div class="connected-info">
-              <p>未连接设备，请先连接设备</p>
-            </div>
-          } @else {
-            <div class="mqtt-row">
-              <label>IP地址:</label>
-              <span>{{ wifiInfo.ip || '-' }}</span>
-            </div>
-            <div class="mqtt-row">
-              <label>服务状态:</label>
-              <span>{{ mqttInfo.status === 2 ? '已连接' : (mqttInfo.status === 1 ? '已连接/未生效' : (mqttInfo.status === 0 ? '未初始化' : '-')) }}</span>
             </div>
           }
         </div>
