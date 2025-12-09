@@ -252,6 +252,8 @@
               nz-button
               nzSize="small"
               [disabled]="!isConnected"
+              [style.background-color]="(!isConnected || isConnecting) ? '' : '#8fc31f'"
+              [style.border-color]="(!isConnected || isConnecting) ? '' : '#8fc31f'"
               (click)="selectSidebar('mqtt')">
               {{ '网络配置' }}
             </button>

@@ -198,9 +198,9 @@
 
 /* keep handle sizing consistent with ant default while allowing color override */
 ::ng-deep .sscma-config .settings-section nz-slider .ant-slider-handle {
-  width: 14px !important;
-  height: 14px !important;
-  margin-top: -6px !important;
+  width: 10px !important;
+  height: 10px !important;
+  margin-top: -4px !important;
   box-sizing: border-box !important;
 }
 
@@ -476,7 +476,7 @@
       min-width: 100px;
       padding-left: 8px;
       color: #fff;
-      font-size: 13px;
+      font-size: 14px;
       text-align: right;
     }
 
