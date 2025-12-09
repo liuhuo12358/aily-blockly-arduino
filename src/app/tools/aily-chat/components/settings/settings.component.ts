@@ -8,6 +8,7 @@ import { NzCheckboxModule } from 'ng-zorro-antd/checkbox';
 import { NzToolTipModule } from 'ng-zorro-antd/tooltip';
 import { NzSwitchModule } from 'ng-zorro-antd/switch';
 import { TOOLS } from '../../tools/tools';
+import { ElectronService } from '../../../../services/electron.service';
 
 @Component({
   selector: 'aily-chat-settings',
@@ -30,7 +31,7 @@ export class AilyChatSettingsComponent implements OnInit {
 
   // API 配置
   useCustomApiKey: boolean = false; // 是否使用自有 API Key
-  maxCount: number = 10; // 最大循环次数
+  maxCount: number = 100; // 最大循环次数
   baseUrl: string = ''; // API Base URL
   apiKey: string = ''; // API Key
 
@@ -42,7 +43,7 @@ export class AilyChatSettingsComponent implements OnInit {
   // 安全工作区配置
   workspaceOptions = [
     { name: 'project', displayName: '项目文件', enabled: true },
-    { name: 'library', displayName: '库文件', enabled: false }
+    { name: 'library', displayName: '库文件', enabled: true }
   ];
   allWorkspaceChecked = false;
   workspaceIndeterminate = false;
@@ -55,7 +56,8 @@ export class AilyChatSettingsComponent implements OnInit {
   }
 
   constructor(
-    private message: NzMessageService
+    private message: NzMessageService,
+    private electronService: ElectronService
   ) {
   }
 
@@ -148,5 +150,20 @@ export class AilyChatSettingsComponent implements OnInit {
     console.log('已启用的工作区:', enabledWorkspaces);
     this.message.success('设置已保存');
     this.saved.emit();
+  }
+
+  /**
+   * 打开帮助链接
+   */
+  openHelpUrl(type: 'maxCount' | 'workspace' | 'tools' | 'apiKey') {
+    const helpUrls = {
+      maxCount: 'https://example.com/help/max-count',
+      workspace: 'https://example.com/help/workspace',
+      tools: 'https://example.com/help/tools',
+      apiKey: 'https://example.com/help/api-key'
+    };
+
+    // https://aily.pro/doc/ai-usage-guide
+    this.electronService.openUrl('https://aily.pro/doc/ai-usage-guide');
   }
 }
