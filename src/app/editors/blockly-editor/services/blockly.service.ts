@@ -78,8 +78,14 @@ export class BlocklyService {
   // 通过node_modules加载库
   async loadLibrary(libPackageName, projectPath) {
     // 统一路径分隔符，确保在Windows上使用反斜杠
-    const normalizedProjectPath = projectPath.replace(/\//g, '\\');
-    const libPackagePath = normalizedProjectPath + '\\node_modules\\' + libPackageName.replace(/\//g, '\\');
+    // const normalizedProjectPath = projectPath.replace(/\//g, '\\');
+    // const libPackagePath = normalizedProjectPath + '\\node_modules\\' + libPackageName.replace(/\//g, '\\');
+
+    const libPackagePath = this.electronService.pathJoin(
+      projectPath,
+      'node_modules',
+      ...libPackageName.split('/')
+    );
     
     // 防止重复加载
     if (this.loadedLibraries.has(libPackagePath)) {
@@ -88,30 +94,32 @@ export class BlocklyService {
     
     try {
       // 加载block
-      const blockFileIsExist = this.electronService.exists(libPackagePath + '\\block.json');
+      // const blockFileIsExist = this.electronService.exists(libPackagePath + '\\block.json');
+      const blockFileIsExist = this.electronService.exists(this.electronService.pathJoin(libPackagePath, 'block.json'));
       
       if (blockFileIsExist) {
         // 加载generator
-        const generatorFileIsExist = this.electronService.exists(libPackagePath + '\\generator.js');
+        // const generatorFileIsExist = this.electronService.exists(libPackagePath + '\\generator.js');
+        const generatorFileIsExist = this.electronService.exists(this.electronService.pathJoin(libPackagePath, 'generator.js'));
         if (generatorFileIsExist) {
-          await this.loadLibGenerator(libPackagePath + '\\generator.js');
+          await this.loadLibGenerator(this.electronService.pathJoin(libPackagePath, 'generator.js'));
         }
         // 加载blocks
-        let blocks = JSON.parse(this.electronService.readFile(libPackagePath + '\\block.json'));
+        let blocks = JSON.parse(this.electronService.readFile(this.electronService.pathJoin(libPackagePath, 'block.json')));
         let i18nData = null;
         // 检查多语言文件是否存在
-        const i18nFilePath = libPackagePath + '\\i18n\\' + this.translateService.currentLang + '.json';
+        const i18nFilePath = this.electronService.pathJoin(libPackagePath, 'i18n', this.translateService.currentLang + '.json');
         if (this.electronService.exists(i18nFilePath)) {
           i18nData = JSON.parse(this.electronService.readFile(i18nFilePath));
           blocks = processI18n(blocks, i18nData);
         }
         // 替换block中静态图片路径
-        const staticFileIsExist = this.electronService.exists(libPackagePath + '\\static');
-        this.loadLibBlocks(blocks, staticFileIsExist ? (libPackagePath + '\\static') : null);
+        const staticFileIsExist = this.electronService.exists(this.electronService.pathJoin(libPackagePath, 'static'));
+        this.loadLibBlocks(blocks, staticFileIsExist ? this.electronService.pathJoin(libPackagePath, 'static') : null);
         // 加载toolbox
-        const toolboxFileIsExist = this.electronService.exists(libPackagePath + '\\toolbox.json');
+        const toolboxFileIsExist = this.electronService.exists(this.electronService.pathJoin(libPackagePath, 'toolbox.json'));
         if (toolboxFileIsExist) {
-          let toolbox = JSON.parse(this.electronService.readFile(libPackagePath + '\\toolbox.json'));
+          let toolbox = JSON.parse(this.electronService.readFile(this.electronService.pathJoin(libPackagePath, 'toolbox.json')));
           if (i18nData) {
             toolbox.name = i18nData.toolbox_name;
           }
@@ -225,7 +233,8 @@ export class BlocklyService {
 
   removeLibrary(libPackagePath) {
     // 统一路径分隔符
-    libPackagePath = libPackagePath.replace(/\//g, '\\');
+    // libPackagePath = libPackagePath.replace(/\//g, '\\');
+    libPackagePath = this.electronService.pathJoin(...libPackagePath.split('/'));
     
     // 检查是否已加载
     if (!this.loadedLibraries.has(libPackagePath)) {
@@ -237,23 +246,23 @@ export class BlocklyService {
     
     // 读取要移除的库的信息
     // 移除block定义
-    const blockFileIsExist = this.electronService.exists(libPackagePath + '\\block.json');
+    const blockFileIsExist = this.electronService.exists(this.electronService.pathJoin(libPackagePath, 'block.json'));
     if (blockFileIsExist) {
-      let blocks = JSON.parse(this.electronService.readFile(libPackagePath + '\\block.json'));
+      let blocks = JSON.parse(this.electronService.readFile(this.electronService.pathJoin(libPackagePath, 'block.json')));
       this.removeLibBlocks(blocks);
     } else {
       // 对于JS形式加载的block，需要使用block文件名作为标识
-      const blockJsPath = libPackagePath + '\\block.js';
+      const blockJsPath = this.electronService.pathJoin(libPackagePath, 'block.js');
       this.removeLibBlocksJS(blockJsPath);
     }
 
     // 移除toolbox项
-    const toolboxFileIsExist = this.electronService.exists(libPackagePath + '\\toolbox.json');
+    const toolboxFileIsExist = this.electronService.exists(this.electronService.pathJoin(libPackagePath, 'toolbox.json'));
     if (toolboxFileIsExist) {
-      let toolbox = JSON.parse(this.electronService.readFile(libPackagePath + '\\toolbox.json'));
+      let toolbox = JSON.parse(this.electronService.readFile(this.electronService.pathJoin(libPackagePath, 'toolbox.json')));
       // 检查多语言文件是否存在，（2025.5.29 修复因为多语言造成的移除不了toolbox的问题）
       let i18nData = null;
-      const i18nFilePath = libPackagePath + '\\i18n\\' + this.translateService.currentLang + '.json';
+      const i18nFilePath = this.electronService.pathJoin(libPackagePath, 'i18n', this.translateService.currentLang + '.json');
       if (this.electronService.exists(i18nFilePath)) {
         i18nData = JSON.parse(this.electronService.readFile(i18nFilePath));
         if (i18nData) toolbox.name = i18nData.toolbox_name;
@@ -262,9 +271,9 @@ export class BlocklyService {
     }
 
     // 移除generator相关引用
-    const generatorFileIsExist = this.electronService.exists(libPackagePath + '\\generator.js');
+    const generatorFileIsExist = this.electronService.exists(this.electronService.pathJoin(libPackagePath, 'generator.js'));
     if (generatorFileIsExist) {
-      this.removeLibGenerator(libPackagePath + '\\generator.js');
+      this.removeLibGenerator(this.electronService.pathJoin(libPackagePath, 'generator.js'));
     }
     
     // 从已加载库列表中移除

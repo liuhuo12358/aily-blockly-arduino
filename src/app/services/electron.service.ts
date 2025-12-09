@@ -91,6 +91,11 @@ export class ElectronService {
     return window['fs'].isFile(path);
   }
 
+  // join路径
+  pathJoin(...paths: string[]) {
+    return window['path'].join(...paths);
+  }
+
   // 调用浏览器打开url
   openUrl(url) {
     window['other'].openByBrowser(url);
