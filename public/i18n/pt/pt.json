@@ -219,7 +219,8 @@
         "SEND": "Enviar",
         "STOP": "Parar",
         "MODE_AGENT_FULL": "Modo Agente",
-        "MODE_QA_FULL": "Modo P&R"
+        "MODE_QA_FULL": "Modo P&R",
+        "STOP_CURRENT_SESSION_FIRST": "Por favor, pare a sessão atual antes de criar uma nova"
     },
     "PROJECT_SETTING_DIALOG": {
         "TITLE": "Configurações do Projeto",

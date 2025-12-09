@@ -219,7 +219,8 @@
         "SEND": "전송",
         "STOP": "중지",
         "MODE_AGENT_FULL": "에이전트 모드",
-        "MODE_QA_FULL": "Q&A 모드"
+        "MODE_QA_FULL": "Q&A 모드",
+        "STOP_CURRENT_SESSION_FIRST": "새 세션을 생성하기 전에 먼저 현재 세션을 중지하세요"
     },
     "PROJECT_SETTING_DIALOG": {
         "TITLE": "프로젝트 설정",

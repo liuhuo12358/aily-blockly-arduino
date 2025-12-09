@@ -238,7 +238,8 @@
         "SEND": "Senden",
         "STOP": "Stoppen",
         "MODE_AGENT_FULL": "Agent-Modus",
-        "MODE_QA_FULL": "F&A-Modus"
+        "MODE_QA_FULL": "F&A-Modus",
+        "STOP_CURRENT_SESSION_FIRST": "Bitte stoppen Sie zuerst die aktuelle Sitzung, bevor Sie eine neue erstellen"
     },
     "PROJECT_SETTING_DIALOG": {
         "TITLE": "Projekteinstellungen",

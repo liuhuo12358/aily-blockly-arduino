@@ -240,7 +240,8 @@
         "SEND": "送信",
         "STOP": "停止",
         "MODE_AGENT_FULL": "エージェントモード",
-        "MODE_QA_FULL": "Q&Aモード"
+        "MODE_QA_FULL": "Q&Aモード",
+        "STOP_CURRENT_SESSION_FIRST": "新しいセッションを作成する前に、現在のセッションを停止してください"
     },
     "PROJECT_SETTING_DIALOG": {
         "TITLE": "プロジェクト設定",
