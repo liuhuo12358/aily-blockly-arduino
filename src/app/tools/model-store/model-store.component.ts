@@ -9,6 +9,7 @@ import { NzTagModule } from 'ng-zorro-antd/tag';
 import { ModelStoreService, ModelItem } from './model-store.service';
 import { NzBreadCrumbModule } from 'ng-zorro-antd/breadcrumb';
 import { ModelDetailComponent } from './model-detail/model-detail.component';
+import { NzButtonModule } from 'ng-zorro-antd/button';
 
 @Component({
   selector: 'app-model-store',
@@ -19,7 +20,8 @@ import { ModelDetailComponent } from './model-detail/model-detail.component';
     CommonModule,
     NzTagModule,
     NzBreadCrumbModule,
-    ModelDetailComponent
+    ModelDetailComponent,
+    NzButtonModule
   ],
   templateUrl: './model-store.component.html',
   styleUrl: './model-store.component.scss'
@@ -182,5 +184,16 @@ export class ModelStoreComponent implements OnInit {
 
   close() {
     this.uiService.closeTool('model-store');
+  }
+
+
+  onTrain(): void {
+    this.uiService.openWindow({
+      path: 'model-train',
+      title: '模型训练',
+      alwaysOnTop: true,
+      width: 1200,
+      height: 640
+    });
   }
 }

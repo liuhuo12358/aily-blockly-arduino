@@ -225,6 +225,7 @@
     },
     "AILY_CHAT": {
         "TITLE": "مساعد الذكاء الاصطناعي",
+        "SETTINGS": "إعدادات الذكاء الاصطناعي",
         "HISTORY": "سجل المحادثة",
         "NEW_CHAT": "محادثة جديدة",
         "SERVICE_TITLE": "aily assistant service",
@@ -238,7 +239,8 @@
         "SEND": "إرسال",
         "STOP": "إيقاف",
         "MODE_AGENT_FULL": "وضع الوكيل",
-        "MODE_QA_FULL": "وضع سؤال وجواب"
+        "MODE_QA_FULL": "وضع سؤال وجواب",
+        "STOP_CURRENT_SESSION_FIRST": "يرجى إيقاف الجلسة الحالية أولاً قبل إنشاء جلسة جديدة"
     },
     "PROJECT_SETTING_DIALOG": {
         "TITLE": "إعدادات المشروع",

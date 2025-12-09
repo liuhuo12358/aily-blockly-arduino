@@ -276,4 +276,7 @@ interface AppConfig {
 
   /** 开发板使用次数统计 */
   boardUsageCount?: Record<string, number>;
+
+  /** AI聊天模式 */
+  aiChatMode?: 'agent' | 'ask';
 }

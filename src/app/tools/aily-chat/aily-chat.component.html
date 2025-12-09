@@ -8,6 +8,10 @@
     <!-- <div class="btn ccenter" (click)="demandEdit()" nz-tooltip nzTooltipPlacement="bottom" nzTooltipTitle="需求管理">
       <i class="fa-light fa-list-check"></i>
     </div> -->
+    <div class="btn ccenter" [class.active]="showSettings" (click)="openSettings($event)" nz-tooltip nzTooltipPlacement="bottom"
+      [nzTooltipTitle]="'AILY_CHAT.SETTINGS' | translate">
+      <i class="fa-light fa-gear"></i>
+    </div>
     <div class="btn ccenter" (click)="openHistoryChat($event)" nz-tooltip nzTooltipPlacement="bottom"
       [nzTooltipTitle]="'AILY_CHAT.HISTORY' | translate">
       <i class="fa-light fa-clock-rotate-left"></i>
@@ -88,31 +92,31 @@
             (keydown)="onKeyDown($event)">
           </textarea>
           <div class="btns">
-            <div class="btn ccenter enter" nz-tooltip nzTooltipPlacement="bottom"
+            <div class="btn ccenter" nz-tooltip nzTooltipPlacement="bottom"
               [nzTooltipTitle]="'AILY_CHAT.ADD_CONTEXT' | translate" (click)="openAddList()">
               <i class="fa-light fa-paperclip"></i>
             </div>
             @if(showAddList){
-            <div class="list-box animate__animated animate__fadeIn animate__faster">
-              <div class="btn2 ccenter enter" (click)="openAddList()" style="margin-top: -1px;">
+            <div class="list-box">
+              <div class="btn2 ccenter" (click)="openAddList()" style="margin-top: -1px;">
                 <i class="fa-light fa-angle-left"></i>
               </div>
             </div>
-            <div class="btn2 ccenter enter animate__animated animate__fadeInLeft animate__faster" nz-tooltip
-              [nzTooltipTitle]="'AILY_CHAT.ADD_FILE' | translate" (click)="addFile()">
+            <div class="btn2 ccenter " nz-tooltip [nzTooltipTitle]="'AILY_CHAT.ADD_FILE' | translate"
+              (click)="addFile()">
               <i class="fa-light fa-file-plus"></i>
             </div>
-            <div class="btn2 ccenter enter animate__animated animate__fadeInLeft animate__faster" nz-tooltip
-              [nzTooltipTitle]="'AILY_CHAT.ADD_FOLDER' | translate" (click)="addFolder()">
+            <div class="btn2 ccenter " nz-tooltip [nzTooltipTitle]="'AILY_CHAT.ADD_FOLDER' | translate"
+              (click)="addFolder()">
               <i class="fa-light fa-folder-plus"></i>
             </div>
-            <div class="btn2 ccenter enter animate__animated animate__fadeInLeft animate__faster" nz-tooltip
-              [nzTooltipTitle]="'AILY_CHAT.ADD_WEBSITE' | translate" (click)="addUrl()">
+            <!-- <div class="btn2 ccenter " nz-tooltip [nzTooltipTitle]="'AILY_CHAT.ADD_WEBSITE' | translate"
+              (click)="addUrl()">
               <i class="fa-light fa-globe-pointer"></i>
-            </div>
+            </div> -->
             }
             <!-- 模式选择 -->
-            <div class="btn mode ccenter enter" (click)="switchMode($event)">
+            <div class="btn mode ccenter" (click)="switchMode($event)">
               @if(currentMode === 'agent') {
               <i class="fa-light fa-user-astronaut"></i><span>{{ 'AILY_CHAT.MODE_AGENT' | translate }}</span>
               } @else {
@@ -135,9 +139,11 @@
             </div>
           </div>
         </div>
-
       </div>
     </div>
+    @if(showSettings){
+    <aily-chat-settings (close)="showSettings = false" (saved)="onSettingsSaved()"></aily-chat-settings>
+    }
   </div>
   @if(!isLoggedIn){
   <app-login></app-login>

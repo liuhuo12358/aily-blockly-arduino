@@ -5,6 +5,9 @@
 
 .breadcrumb {
     padding: 5px 0 5px 10px;
+    position: relative;
+    display: flex;
+    align-items: center;
 
     .home {
         cursor: pointer;
@@ -12,6 +15,12 @@
         &:hover {
             color: #ffffff;
         }
+    }
+
+    button{
+        position: absolute;
+        right: 10px;
+        margin-top: 2px;
     }
 }
 

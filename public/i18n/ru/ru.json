@@ -206,6 +206,7 @@
     },
     "AILY_CHAT": {
         "TITLE": "ИИ-ассистент",
+        "SETTINGS": "Настройки ИИ",
         "HISTORY": "История чата",
         "NEW_CHAT": "Новый чат",
         "SERVICE_TITLE": "aily assistant service",
@@ -219,7 +220,8 @@
         "SEND": "Отправить",
         "STOP": "Остановить",
         "MODE_AGENT_FULL": "Режим агента",
-        "MODE_QA_FULL": "Режим вопрос-ответ"
+        "MODE_QA_FULL": "Режим вопрос-ответ",
+        "STOP_CURRENT_SESSION_FIRST": "Пожалуйста, остановите текущий сеанс перед созданием нового"
     },
     "PROJECT_SETTING_DIALOG": {
         "TITLE": "Настройки Проекта",

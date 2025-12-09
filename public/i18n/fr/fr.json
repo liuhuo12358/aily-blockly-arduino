@@ -225,6 +225,7 @@
     },
     "AILY_CHAT": {
         "TITLE": "Assistant IA",
+        "SETTINGS": "Paramètres IA",
         "HISTORY": "Historique des discussions",
         "NEW_CHAT": "Nouvelle discussion",
         "SERVICE_TITLE": "aily assistant service",
@@ -238,7 +239,8 @@
         "SEND": "Envoyer",
         "STOP": "Arrêter",
         "MODE_AGENT_FULL": "Mode Agent",
-        "MODE_QA_FULL": "Mode Q&R"
+        "MODE_QA_FULL": "Mode Q&R",
+        "STOP_CURRENT_SESSION_FIRST": "Veuillez d'abord arrêter la session en cours avant d'en créer une nouvelle"
     },
     "PROJECT_SETTING_DIALOG": {
         "TITLE": "Paramètres du Projet",

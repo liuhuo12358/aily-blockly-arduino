@@ -103,6 +103,7 @@ import { BlocklyService } from '../../editors/blockly-editor/services/blockly.se
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { LoginComponent } from '../../components/login/login.component';
 import { NoticeService } from '../../services/notice.service';
+import { AilyChatSettingsComponent } from './components/settings/settings.component';
 
 // import { reloadAbiJsonTool, reloadAbiJsonToolSimple } from './tools';
 
@@ -121,7 +122,8 @@ import { NoticeService } from '../../services/notice.service';
     MenuComponent,
     FloatingTodoComponent,
     TranslateModule,
-    LoginComponent
+    LoginComponent,
+    AilyChatSettingsComponent
   ],
   templateUrl: './aily-chat.component.html',
   styleUrl: './aily-chat.component.scss',
@@ -137,13 +139,14 @@ export class AilyChatComponent implements OnDestroy {
   @ViewChild('chatList') chatList: ElementRef;
   @ViewChild('chatTextarea') chatTextarea: ElementRef;
 
-  defaultList: ChatMessage[] = [{
-    "role": "system",
-    "content": "欢迎使用AI助手服务，我可以帮助你 分析项目、转换blockly库、修复错误、生成程序，告诉我你需要什么帮助吧~🤓\n\n >当前为测试版本，可能会有不少问题，如遇故障，群里呼叫`奈何col`哦",
-    "state": "done"
-  }];
+  // defaultList: ChatMessage[] = [{
+  //   "role": "system",
+  //   "content": "欢迎使用AI助手服务，我可以帮助你 分析项目、转换blockly库、修复错误、生成程序，告诉我你需要什么帮助吧~🤓\n\n >当前为测试版本，可能会有不少问题，如遇故障，群里呼叫`奈何col`哦",
+  //   "state": "done"
+  // }];
 
-  list: ChatMessage[] = [...this.defaultList.map(item => ({ ...item }))];
+  list: ChatMessage[] = [];
+  // ...this.defaultList.map(item => ({ ...item }))
   // list = ChatListExamples  // 示例数据
 
   currentUrl;
@@ -783,7 +786,7 @@ appDataPath(**appDataPath**): ${window['path'].getAppDataPath() || '无'}
         if (!this.hasInitializedForThisLogin && !this.isSessionStarting && isLoggedIn) {
           this.isLoggedIn = isLoggedIn;
           this.hasInitializedForThisLogin = true;
-          this.list = [...this.defaultList.map(item => ({ ...item }))]; // 重置消息列表
+          this.list = []; // 重置消息列表
 
           this.startSession().then((res) => {
             // console.log("startSession result: ", res);
@@ -819,7 +822,7 @@ appDataPath(**appDataPath**): ${window['path'].getAppDataPath() || '无'}
           this.chatService.currentSessionId = '';
 
           // 重置消息列表为默认状态
-          this.list = [...this.defaultList.map(item => ({ ...item }))];
+          this.list = [];
 
           //           let errData = {
           //             status: 422,
@@ -940,7 +943,7 @@ appDataPath(**appDataPath**): ${window['path'].getAppDataPath() || '无'}
 
   ngAfterViewInit(): void {
     this.chatService.openHistoryFile(this.projectService.currentProjectPath || this.projectService.projectRootPath);
-    this.HistoryList = this.chatService.historyList;
+    this.HistoryList = [...this.chatService.historyList].reverse();
     this.scrollToBottom();
 
     // this.mcpService.init().then(() => {
@@ -1063,7 +1066,7 @@ appDataPath(**appDataPath**): ${window['path'].getAppDataPath() || '无'}
             this.isSessionStarting = false;
 
             if (this.list.length === 0) {
-              this.list = [...this.defaultList.map(item => ({ ...item }))];
+              this.list = [];
             }
 
             resolve();
@@ -2402,18 +2405,15 @@ Your role is ASK (Advisory & Quick Support) - you provide analysis, recommendati
         }
       },
       complete: () => {
-        // console.log('streamConnect complete: ', this.list[this.list.length - 1]);
-        // 设置最后一条消息状态为done(输出完成)
-        // console.log("currentList: ", this.list)
         if (this.list.length > 0 && this.list[this.list.length - 1].role === 'aily') {
           this.list[this.list.length - 1].state = 'done';
         }
         this.isWaiting = false;
         this.isCompleted = true;
 
-        if (this.list.length <= this.defaultList.length) {
-          return;
-        }
+        // if (this.list.length <= this.defaultList.length) {
+        //   return;
+        // }
 
         // 保存会话, 如果sessionId存在的话
         try {
@@ -2423,6 +2423,7 @@ Your role is ASK (Advisory & Quick Support) - you provide analysis, recommendati
             if (this.sessionTitle && this.sessionTitle.trim() !== '') {
               // console.log('使用现有会话标题:', this.sessionTitle);
               this.chatService.historyList.push({ sessionId: this.sessionId, name: this.sessionTitle });
+              this.HistoryList = [...this.chatService.historyList].reverse();
               this.chatService.saveHistoryFile(this.projectService.currentProjectPath || this.projectService.projectRootPath);
             } else {
               // 没有标题则等待3秒后检查
@@ -2435,6 +2436,7 @@ Your role is ASK (Advisory & Quick Support) - you provide analysis, recommendati
                 }
                 const title = this.sessionTitle || 'q' + Date.now();
                 this.chatService.historyList.push({ sessionId: this.sessionId, name: title });
+                this.HistoryList = [...this.chatService.historyList].reverse();
                 this.chatService.saveHistoryFile(this.projectService.currentProjectPath || this.projectService.projectRootPath);
               };
               setTimeout(checkAndSave, 10000);
@@ -2467,7 +2469,7 @@ Your role is ASK (Advisory & Quick Support) - you provide analysis, recommendati
   getHistory(): void {
     if (!this.sessionId) return;
 
-    this.list = [...this.defaultList.map(item => ({ ...item }))];
+    this.list = [];
     // console.log('获取历史消息，sessionId:', this.sessionId);
     // this.chatService.getHistory(this.sessionId).subscribe((res: any) => {
     //   // console.log('get history', res);
@@ -2707,13 +2709,19 @@ Your role is ASK (Advisory & Quick Support) - you provide analysis, recommendati
   async newChat() {
     // console.log('启动新会话');
 
+    // 检查当前会话是否还在进行中
+    if (this.isWaiting) {
+      this.message.warning(this.translate.instant('AILY_CHAT.STOP_CURRENT_SESSION_FIRST') || '请先停止当前会话，再新建');
+      return;
+    }
+
     // 防止重复创建新会话
     if (this.isSessionStarting) {
       // console.log('新会话正在创建中，跳过重复调用');
       return;
     }
 
-    this.list = [...this.defaultList.map(item => ({ ...item }))];
+    this.list = [];
 
     // console.log("CurrentList: ", this.list);
     // 新会话时重新启用自动滚动
@@ -3018,7 +3026,8 @@ Your role is ASK (Advisory & Quick Support) - you provide analysis, recommendati
       return;
     }
 
-    this.chatService.currentMode = mode;
+    // 保存模式到配置
+    this.chatService.saveChatMode(mode as 'agent' | 'ask');
     // console.log('切换AI模式为:', this.currentMode);
     await this.stopAndCloseSession();
     this.startSession().then((res) => {
@@ -3082,6 +3091,15 @@ Your role is ASK (Advisory & Quick Support) - you provide analysis, recommendati
 
 
   demandEdit() {
+
+  }
+
+  showSettings = false;
+  openSettings(event) {
+    this.showSettings = !this.showSettings
+  }
+
+  onSettingsSaved() {
 
   }
 }
