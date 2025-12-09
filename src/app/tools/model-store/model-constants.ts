@@ -73,11 +73,11 @@ export const AUTHOR_LOGOS: Record<string, string> = {
 
 // 设备连接图片映射（根据 uniform_type）
 export const DEVICE_CONNECTION_IMAGES: Record<string, string> = {
-  '32': 'http://sensecraft.seeed.cc/ai/static/img/xiao.5062b0e1.gif', // XIAO ESP32S3 Sense
-  '36': 'http://sensecraft.seeed.cc/ai/static/img/xiao.5062b0e1.gif', // Grove - Vision AI V2
-  '37': 'http://sensecraft.seeed.cc/ai/static/img/xiao.5062b0e1.gif', // SenseCAP Watcher
-  '40': 'http://sensecraft.seeed.cc/ai/static/img/xiao.5062b0e1.gif', // reCamera
-  '41': 'http://sensecraft.seeed.cc/ai/static/img/xiao.5062b0e1.gif'  // SenseCAP A1102
+  '32': 'http://localhost:4200/model/xiao.webp', // XIAO ESP32S3 Sense
+  '36': 'http://localhost:4200/model/xiao.webp', // Grove - Vision AI V2
+  '37': 'http://localhost:4200/model/xiao.webp', // SenseCAP Watcher
+  '40': 'http://localhost:4200/model/xiao.webp', // reCamera
+  '41': 'http://localhost:4200/model/xiao.webp'  // SenseCAP A1102
 };
 
 export const DEVICE_CONNECTION_STEPS: Record<string, string[]> = {
