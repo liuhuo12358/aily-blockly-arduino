@@ -17,6 +17,8 @@ import { IMenuItem } from '../../configs/menu.config';
 import { McpService } from './services/mcp.service';
 import { ProjectService } from '../../services/project.service';
 import { CmdService } from '../../services/cmd.service';
+import { PlatformService } from '../../services/platform.service';
+import { ElectronService } from '../../services/electron.service';
 import { newProjectTool } from './tools/createProjectTool';
 import { executeCommandTool } from './tools/executeCommandTool';
 import { askApprovalTool } from './tools/askApprovalTool';
@@ -724,6 +726,8 @@ appDataPath(**appDataPath**): ${window['path'].getAppDataPath() || '无'}
     private arduinoLintService: ArduinoLintService,
     private translate: TranslateService,
     private noticeService: NoticeService,
+    private platformService: PlatformService,
+    private electronService: ElectronService,
   ) {
   }
 
@@ -1464,13 +1468,84 @@ ${JSON.stringify(errData)}
                     if (!toolArgs.cwd) {
                       toolArgs.cwd = this.projectService.currentProjectPath || this.projectService.projectRootPath;
                     }
-                    toolResult = await executeCommandTool(this.cmdService, toolArgs);
+                    
                     // Get project path from command args or default
                     const projectPath = toolArgs.cwd || this.prjPath;
                     
-                    // Check if this is an npm install command (无论成功与否都需要检查)
+                    // Check if this is an npm uninstall command
                     const command = toolArgs.command;
-                    const isNpmInstall = command.includes('npm i') || command.includes('npm install');
+                    const isNpmInstall = command.includes('npm i') || command.includes('npm install')
+                    const isNpmUninstall = command.includes('npm uninstall');
+                    
+                    // 如果是 npm uninstall，需要在执行命令之前先卸载库（因为命令执行后文件就被删除了）
+                    if (isNpmUninstall) {
+                      console.log('检测到 npm uninstall 命令，在执行前先卸载库');
+                      // Extract all @aily-project/ packages from the uninstall command
+                      const npmRegex = /@aily-project\/[a-zA-Z0-9-_]+/g;
+                      const matches = command.match(npmRegex);
+
+                      console.log('npm uninstall matches:', matches);
+
+                      if (matches && matches.length > 0) {
+                        // 使用 Set 去重，避免重复处理
+                        const uniqueLibs = [...new Set(matches)];
+                        console.log('去重后的卸载库列表:', uniqueLibs);
+                        
+                        // 检查库是否正在使用中
+                        const separator = this.platformService.getPlatformSeparator();
+                        const libsInUse: string[] = [];
+                        
+                        for (const libPackageName of uniqueLibs as string[]) {
+                          try {
+                            const libPackagePath = projectPath + `${separator}node_modules${separator}` + libPackageName;
+                            const libBlockPath = libPackagePath + `${separator}block.json`;
+                            
+                            // 检查 block.json 文件是否存在
+                            if (this.electronService.exists(libBlockPath)) {
+                              const blocksData = JSON.parse(this.electronService.readFile(libBlockPath));
+                              const abiJson = JSON.stringify(this.blocklyService.getWorkspaceJson());
+                              
+                              // 检查工作区中是否使用了该库的任何块
+                              for (let index = 0; index < blocksData.length; index++) {
+                                const element = blocksData[index];
+                                if (abiJson.includes(element.type)) {
+                                  libsInUse.push(libPackageName);
+                                  break;
+                                }
+                              }
+                            }
+                          } catch (e) {
+                            console.warn("检查库使用情况失败:", libPackageName, e);
+                          }
+                        }
+                        
+                        // 如果有库正在使用中，阻止卸载并返回错误消息
+                        if (libsInUse.length > 0) {
+                          const errorMsg = `无法卸载以下库，因为项目代码正在使用它们：${libsInUse.join(', ')}。请先删除相关代码块后再尝试卸载。`;
+                          console.warn(errorMsg);
+                          toolResult = {
+                            content: errorMsg,
+                            is_error: true
+                          };
+                          // 直接跳过命令执行
+                          break;
+                        }
+                        
+                        // 遍历所有匹配到的库包名进行卸载
+                        for (const libPackageName of uniqueLibs) {
+                          try {
+                            await this.blocklyService.unloadLibrary(libPackageName, projectPath);
+                            console.log("库卸载成功:", libPackageName);
+                          } catch (e) {
+                            console.warn("卸载库失败:", libPackageName, e);
+                            // 卸载失败不影响其他库的处理，继续
+                          }
+                        }
+                      }
+                    }
+                    
+                    // 执行命令
+                    toolResult = await executeCommandTool(this.cmdService, toolArgs);
                     
                     if (!toolResult.is_error) {
                       if (isNpmInstall) {
