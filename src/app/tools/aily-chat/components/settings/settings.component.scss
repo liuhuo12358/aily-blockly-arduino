@@ -1,7 +1,16 @@
 .test {
-    font-size: 12px;
-    color: rgb(155, 0, 0);
-    margin: 10px 0;
+    font-size: 14px;
+    color: #ccc;
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 9999;
+    height: 100%;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.5);
 }
 
 .editor-box {
@@ -15,6 +24,7 @@
     z-index: 9;
     overflow-y: auto;
     overflow-x: hidden;
+
 
     .content {
         max-height: calc(100% - 50px);
