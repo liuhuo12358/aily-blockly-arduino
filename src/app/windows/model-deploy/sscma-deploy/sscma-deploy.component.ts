@@ -9,7 +9,7 @@ import { ElectronService } from '../../../services/electron.service';
 import { PortItem, SerialService } from '../../../services/serial.service';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { FirmwareService, FirmwareType, XiaoType, FirmwareInfo, FlashFile } from '../../../services/firmware.service';
-import { EspLoaderService, ModelInfo } from '../../../services/esploader.service';
+// import { EspLoaderService, ModelInfo } from '../../../services/esploader.service';
 import { EsptoolPyService, EsptoolPackageInfo } from '../../../services/esptool-py.service';
 // import { AtCommandService } from '../../../services/at-command.service';
 import { SSCMACommandService } from '../../../services/sscma-command.service';
@@ -30,6 +30,21 @@ import {
 } from '../../../tools/model-store/model-constants';
 import { MenuComponent } from '../../../components/menu/menu.component';
 import { SscmaConfigComponent } from '../sscma-config/sscma-config.component';
+
+/**
+ * 模型信息
+ */
+export interface ModelInfo {
+  model_id: string;
+  version: string;
+  arguments: any;
+  model_name: string;
+  model_format: string;
+  ai_framwork: string;
+  author: string;
+  classes: string[];
+  checksum: string;
+}
 
 /**
  * SSCMA 模型部署组件
@@ -83,7 +98,7 @@ export class SscmaDeployComponent implements OnInit {
     private electronService: ElectronService,
     private cd: ChangeDetectorRef,
     private firmwareService: FirmwareService,
-    private espLoaderService: EspLoaderService,
+    // private espLoaderService: EspLoaderService,
     private esptoolPyService: EsptoolPyService,
     // private atCommandService: AtCommandService,
     private sscmaCommandService: SSCMACommandService,
@@ -300,7 +315,7 @@ export class SscmaDeployComponent implements OnInit {
         this.esptoolPyService.cancelFlash(this.flashStreamId);
       } else {
         // 使用 ESPLoader 烧录时
-        this.espLoaderService.requestCancel();
+        // this.espLoaderService.requestCancel();
       }
       
       // 更新通知
@@ -314,12 +329,12 @@ export class SscmaDeployComponent implements OnInit {
       // 等待一小段时间让取消生效
       await this.delay(500);
       
-      // 尝试断开连接
-      try {
-        await this.espLoaderService.disconnect();
-      } catch (e) {
-        console.warn('[Deploy] 断开连接时出错:', e);
-      }
+      // // 尝试断开连接
+      // try {
+      //   await this.espLoaderService.disconnect();
+      // } catch (e) {
+      //   console.warn('[Deploy] 断开连接时出错:', e);
+      // }
       
       // 重置状态
       this.isDeploying = false;
