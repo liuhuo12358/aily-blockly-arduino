@@ -107,4 +107,15 @@ export class ModelStoreComponent implements OnInit {
   close() {
     this.uiService.closeTool('model-store');
   }
+
+
+  onTrain(): void {
+    this.uiService.openWindow({
+      path: 'model-train',
+      title: '模型训练',
+      alwaysOnTop: true,
+      width: 1200,
+      height: 640
+    });
+  }
 }

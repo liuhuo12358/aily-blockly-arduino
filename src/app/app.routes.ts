@@ -95,5 +95,9 @@ export const routes: Routes = [
     {
         path: "model-deploy",
         loadComponent: () => import('./windows/model-deploy/model-deploy.component').then(m => m.ModelDeployComponent)
+    },
+    {
+        path: "model-train",
+        loadComponent: () => import('./windows/model-train/model-train.component').then(m => m.ModelTrainComponent)
     }
 ];
