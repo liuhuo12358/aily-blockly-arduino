@@ -64,6 +64,7 @@ export class EspLoaderService {
   private transport: Transport | null = null;
   private serialPort: any = null;
   private terminalHandler: TerminalHandler | null = null;
+  private isCancelled = false;  // 取消标志
 
   constructor() { }
 
@@ -147,6 +148,28 @@ export class EspLoaderService {
   }
 
   /**
+   * 请求取消当前烧录操作
+   */
+  requestCancel(): void {
+    console.log('[ESPLoader] 收到取消请求');
+    this.isCancelled = true;
+  }
+
+  /**
+   * 重置取消标志
+   */
+  resetCancelFlag(): void {
+    this.isCancelled = false;
+  }
+
+  /**
+   * 检查是否已取消
+   */
+  isCancelRequested(): boolean {
+    return this.isCancelled;
+  }
+
+  /**
    * 烧录固件和模型文件
    * @param options 烧录选项
    * @returns Promise<boolean>
@@ -157,7 +180,12 @@ export class EspLoaderService {
       return false;
     }
 
+    // 重置取消标志
+    this.resetCancelFlag();
+
     try {
+      const originalProgressCallback = options.reportProgress;
+      
       const flashOptions = {
         fileArray: options.fileArray,
         flashSize: options.flashSize || 'keep',
@@ -165,15 +193,31 @@ export class EspLoaderService {
         flashFreq: '80m',
         eraseAll: options.eraseAll || false,
         compress: options.compress !== false,
-        reportProgress: options.reportProgress || ((fileIndex, written, total) => {
-          const progress = ((written / total) * 100).toFixed(2);
-          console.log(`文件 ${fileIndex + 1} 烧录进度: ${progress}%`);
-        }),
+        reportProgress: (fileIndex: number, written: number, total: number) => {
+          // 检查是否被取消
+          if (this.isCancelled) {
+            console.log('[ESPLoader] 检测到取消请求，中断烧录');
+            throw new Error('用户取消烧录');
+          }
+          
+          // 调用原始进度回调
+          if (originalProgressCallback) {
+            originalProgressCallback(fileIndex, written, total);
+          } else {
+            const progress = ((written / total) * 100).toFixed(2);
+            console.log(`文件 ${fileIndex + 1} 烧录进度: ${progress}%`);
+          }
+        },
       };
 
       await this.esploader.writeFlash(flashOptions);
       return true;
     } catch (error) {
+      // 区分用户取消和其他错误
+      if (this.isCancelled || (error as Error).message?.includes('用户取消')) {
+        console.log('[ESPLoader] 烧录已取消');
+        throw new Error('用户取消烧录');
+      }
       console.error('烧录失败:', error);
       return false;
     }

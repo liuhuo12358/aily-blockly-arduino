@@ -1,0 +1,158 @@
+<div class="sscma-config">
+  <!-- 顶部：工具栏（选项 + 串口选择） -->
+  <div class="config-sidebar">
+    <!-- 串口选择器 -->
+    <div class="port-selector">
+      <!-- <label>选择串口：</label> -->
+      <div class="item-inner ccenter" (click)="openPortList($event)">
+        <div class="value">{{ currentPort || '请选择串口' }}</div>
+        <div class="arrow-box">
+          <i class="fa-light fa-angle-right arrow" [ngClass]="{'down': showPortList}"></i>
+        </div>
+      </div>
+    </div>
+    
+    <!-- 连接/断开按钮 -->
+    <button 
+      nz-button 
+      nzBlock
+      [nzType]="isConnected ? 'default' : 'primary'"
+      [nzDanger]="isConnected"
+      [disabled]="!currentPort || isConnecting"
+      [nzLoading]="isConnecting"
+      (click)="isConnected ? disconnect() : connectToDevice()"
+      [style.background-color]="isConnected ? '' : '#52c41a'"
+      [style.border-color]="isConnected ? '' : '#52c41a'">
+      <span nz-icon [nzType]="isConnected ? 'disconnect' : 'link'" nzTheme="outline"></span>
+      {{ isConnected ? '断开连接' : '连接设备' }}
+    </button>
+    
+    <!-- 连接状态显示 -->
+    <!-- <div class="status-info" *ngIf="currentPort">
+      <div class="status-item">
+        <nz-tag [nzColor]="isConnected ? 'success' : 'default'">
+          {{ isConnected ? '已连接' : '未连接' }}
+        </nz-tag>
+      </div>
+      <div class="port-info">{{ currentPort }}</div>
+    </div> -->
+    <!-- 侧边栏选项 -->
+    <div class="sidebar-tabs">
+      <button nz-button nzType="default" class="tab-btn" [ngClass]="{ 'active': selectedSidebar === 'device' }" (click)="selectSidebar('device')">设备信息</button>
+      <button nz-button nzType="default" class="tab-btn" [ngClass]="{ 'active': selectedSidebar === 'mqtt' }" (click)="selectSidebar('mqtt')">MQTT</button>
+      <button nz-button nzType="default" class="tab-btn" [ngClass]="{ 'active': selectedSidebar === 'gpio' }" (click)="selectSidebar('gpio')">GPIO</button>
+      <button nz-button nzType="default" class="tab-btn" [ngClass]="{ 'active': selectedSidebar === 'serial' }" (click)="selectSidebar('serial')">串口</button>
+    </div>
+  </div>
+
+  <!-- 右侧：主内容区 -->
+  <div class="config-main">
+    <!-- 左侧占位（实时预览区） -->
+    <div class="config-main-left">
+      <!-- 模型详情区 -->
+      <div class="section model-section">
+        <div class="section-title">模型</div>
+        <div class="model-detail">
+          <div class="model-left">
+            <div class="model-row"><label>模型名称:</label><span>{{ modelMeta.name || '-' }}</span></div>
+            <div class="model-row"><label>模型版本:</label><span>{{ modelMeta.version || '-' }}</span></div>
+            <!-- <div *ngIf="infoDecoded" class="model-row info-raw"><label>设备 INFO:</label><span class="mono">{{ infoDecoded }}</span></div> -->
+             
+            <div class="preview-controls">
+              <button
+                nz-button
+                [nzType]="isPreviewMode ? 'default' : 'primary'"
+                [nzDanger]="isPreviewMode"
+                [disabled]="!isConnected || isConnecting"
+                (click)="isPreviewMode ? stopPreview() : startPreview()">
+                <i nz-icon [nzType]="isPreviewMode ? 'stop' : 'play-circle'" nzTheme="outline"></i>
+                {{ isPreviewMode ? '停止预览' : '开始预览' }}
+              </button>
+            </div>
+          </div>
+          <div class="model-right">
+            <img *ngIf="modelMeta.pic_url" [src]="modelMeta.pic_url" alt="model" class="model-image" />
+            <div *ngIf="!modelMeta.pic_url" class="model-image placeholder"></div>
+          </div>
+        </div>
+      </div>
+      <!-- 实时预览区域 -->
+      <div class="section preview-section">
+        <div class="section-title">预览</div>
+        <nz-spin [nzSpinning]="isPreviewMode && !previewImageUrl" nzTip="等待图像数据...">
+          <img 
+            *ngIf="previewImageUrl" 
+            [src]="previewImageUrl"
+            [attr.data-version]="imageVersion"
+            alt="实时预览 v{{ imageVersion }}"
+            class="preview-image"
+            style="display: block;">
+        </nz-spin>
+        <!-- 识别信息区域 -->
+        <div class="recognition-area" *ngIf="modelMeta?.classes && modelMeta.classes.length">
+          <div class="recognition-title">识别信息</div>
+          <div class="recognition-list">
+            <div class="recognition-row" *ngFor="let label of modelMeta.classes; let i = index">
+              <div class="score-bar">
+                <div
+                  class="bar-fill"
+                  [ngStyle]="{ 'width': (classScores[i] || 0) + '%', 'background': getBarBackground(i) }"
+                >
+                  <div class="bar-text" [ngClass]="{ 'narrow': (classScores[i] || 0) < 12 }">{{ (classScores[i] || 0) }}%</div>
+                </div>
+              </div>
+              <div class="class-label">{{ label || '-' }}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 中线分割线 -->
+    <div class="center-divider" aria-hidden="true"></div>
+
+    <!-- 右侧占位（信息/配置区） -->
+    <div class="config-main-right">
+      <!-- 设备详情区 -->
+      <div class="device-section">
+        <div class="section-title">设备</div>
+        <div class="device-row"><label>设备编号:</label><span>{{ deviceInfo?.device_id || '-' }}</span></div>
+        <div class="device-row"><label>设备名称:</label><span>{{ deviceInfo?.device_name || '-' }}</span></div>
+        <div class="device-row"><label>设备版本:</label><span>{{ deviceInfo?.device_version || '-' }}</span></div>
+        <!-- <div class="device-row"><label>推理帧间隔:</label><span>{{ deviceInfo?.inference_interval_ms ? deviceInfo.inference_interval_ms + ' ms' : '-' }}</span></div> -->
+        <!-- <div class="device-row"><label>默认上电推理模式:</label><span>{{ deviceInfo?.default_inference_mode || '-' }}</span></div> -->
+         <!-- 默认传输类型选择 -->
+        <div class="device-row"><label>默认上电推理模式:</label>
+          <div class="transport-selector">
+            <div class="item-inner ccenter" (click)="openTransportList($event)">
+              <div class="value">{{ currentTransportName || ('默认上电推理模式: ' + (currentTransport || '-')) }}</div>
+              <div class="arrow-box">
+                <i class="fa-light fa-angle-right arrow" [ngClass]="{'down': showTransportList}"></i>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 串口选择菜单 -->
+<app-menu
+  *ngIf="showPortList"
+  [position]="position"
+  [width]="260"
+  [menuList]="portList"
+  (closeEvent)="closePortList()"
+  (itemClickEvent)="selectPort($event)">
+</app-menu>
+
+<!-- 传输类型选择菜单 -->
+<app-menu
+  *ngIf="showTransportList"
+  [position]="position"
+  [width]="220"
+  [menuList]="transportMenuList"
+  (closeEvent)="closeTransportList()"
+  (itemClickEvent)="selectTransport($event)">
+</app-menu>

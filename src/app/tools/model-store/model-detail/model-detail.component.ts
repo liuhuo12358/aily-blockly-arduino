@@ -98,7 +98,7 @@ export class ModelDetailComponent implements OnInit {
     return formatFileSize(this.modelDetail.model_size);
   }
 
-  onDeploy(modelDetail: ModelDetail, page: number = 1): void {
+  onDeploy(modelDetail: ModelDetail, page: number = 2): void {
     if (!modelDetail) {
       console.error('模型数据为空，无法部署');
       return;

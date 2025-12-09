@@ -10,7 +10,9 @@ import { PortItem, SerialService } from '../../../services/serial.service';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { FirmwareService, FirmwareType, XiaoType, FirmwareInfo, FlashFile } from '../../../services/firmware.service';
 import { EspLoaderService, ModelInfo } from '../../../services/esploader.service';
-import { AtCommandService } from '../../../services/at-command.service';
+import { EsptoolPyService, EsptoolPackageInfo } from '../../../services/esptool-py.service';
+// import { AtCommandService } from '../../../services/at-command.service';
+import { SSCMACommandService } from '../../../services/sscma-command.service';
 import { NoticeService } from '../../../services/notice.service';
 import { encode } from 'js-base64';
 import {
@@ -27,6 +29,7 @@ import {
   getAuthorLogo
 } from '../../../tools/model-store/model-constants';
 import { MenuComponent } from '../../../components/menu/menu.component';
+import { SscmaConfigComponent } from '../sscma-config/sscma-config.component';
 
 /**
  * SSCMA 模型部署组件
@@ -41,7 +44,8 @@ import { MenuComponent } from '../../../components/menu/menu.component';
     TranslateModule,
     NzStepsModule,
     NzButtonModule,
-    MenuComponent
+    MenuComponent,
+    SscmaConfigComponent
   ],
   templateUrl: './sscma-deploy.component.html',
   styleUrl: './sscma-deploy.component.scss'
@@ -64,6 +68,8 @@ export class SscmaDeployComponent implements OnInit {
   deployStatus = '';
   xiaoType: XiaoType = XiaoType.VISION;
   isCancelling = false;  // 正在取消标志
+  esptoolPackage: EsptoolPackageInfo | null = null;  // esptool 包信息
+  flashStreamId: string = '';  // 烧录流ID，用于取消
 
   // 串口选择列表相关 
   showPortList = false;
@@ -78,7 +84,9 @@ export class SscmaDeployComponent implements OnInit {
     private cd: ChangeDetectorRef,
     private firmwareService: FirmwareService,
     private espLoaderService: EspLoaderService,
-    private atCommandService: AtCommandService,
+    private esptoolPyService: EsptoolPyService,
+    // private atCommandService: AtCommandService,
+    private sscmaCommandService: SSCMACommandService,
     private noticeService: NoticeService
   ) { }
 
@@ -106,6 +114,27 @@ export class SscmaDeployComponent implements OnInit {
     
     // 检查并设置默认串口
     this.checkAndSetDefaultPort();
+
+    // 检测 esptool
+    this.checkEsptool();
+  }
+
+  /**
+   * 检测并准备 esptool
+   */
+  private async checkEsptool() {
+    try {
+      console.log('[Deploy] 正在检测 esptool...');
+      this.esptoolPackage = await this.esptoolPyService.detectEsptool();
+      
+      if (this.esptoolPackage) {
+        console.log('[Deploy] esptool 已就绪:', this.esptoolPackage);
+      } else {
+        console.log('[Deploy] esptool 未安装，将在部署时安装');
+      }
+    } catch (error) {
+      console.error('[Deploy] 检测 esptool 失败:', error);
+    }
   }
 
   /**
@@ -163,45 +192,6 @@ export class SscmaDeployComponent implements OnInit {
       }
     } catch (error) {
       console.warn('获取串口列表失败:', error);
-    }
-  }
-
-  /**
-   * 获取串口对象（Web Serial API）
-   */
-  private async getSerialPortObject(portName: string): Promise<any> {
-    try {
-      const serial = (navigator as any).serial;
-      
-      if (!serial) {
-        throw new Error('当前环境不支持 Web Serial API');
-      }
-
-      // 获取已授权的串口列表
-      const ports = await serial.getPorts();
-      
-      // 尝试找到 ESP32S3 设备
-      for (const port of ports) {
-        const info = port.getInfo();
-        if (info.usbVendorId === 0x303a && info.usbProductId === 0x1001) {
-          return port;
-        }
-      }
-      
-      // 请求授权
-      const port = await serial.requestPort({
-        filters: [
-          { usbVendorId: 0x303a, usbProductId: 0x1001 }
-        ]
-      });
-      
-      return port;
-      
-    } catch (error) {
-      if (error.name === 'NotFoundError') {
-        throw new Error(`未选择串口。请确保设备已连接到 ${portName}`);
-      }
-      throw error;
     }
   }
 
@@ -304,8 +294,14 @@ export class SscmaDeployComponent implements OnInit {
     this.isCancelling = true;
     
     try {
-      // 请求 ESPLoader 取消
-      this.espLoaderService.requestCancel();
+      // 请求取消烧录（Python esptool 或 ESPLoader）
+      if (this.flashStreamId) {
+        // 使用 Python esptool 烧录时
+        this.esptoolPyService.cancelFlash(this.flashStreamId);
+      } else {
+        // 使用 ESPLoader 烧录时
+        this.espLoaderService.requestCancel();
+      }
       
       // 更新通知
       this.noticeService.update({
@@ -330,6 +326,7 @@ export class SscmaDeployComponent implements OnInit {
       this.isCancelling = false;
       this.deployStatus = '部署已取消';
       this.deployProgress = 0;
+      this.flashStreamId = '';
       
       this.noticeService.update({
         title: '部署已取消',
@@ -392,10 +389,10 @@ export class SscmaDeployComponent implements OnInit {
 
       const { snapshot, detail } = modelFileResult;
 
-      // 2. 准备烧录文件列表
+      // 2. 先下载所有文件（固件 + 模型）
       const flashFiles: FlashFile[] = [];
-
-      // 3. 下载固件文件
+      
+      // 2.1 下载固件文件
       if (this.firmwareInfo) {
         this.deployStatus = '正在下载固件...';
         this.noticeService.update({
@@ -403,156 +400,217 @@ export class SscmaDeployComponent implements OnInit {
           text: '正在下载固件...',
           state: 'doing',
           showProgress: true,
-          progress: 10,
+          progress: 5,
           stop: () => this.cancelDeploy()
         });
         const firmwareFiles = await this.firmwareService.downloadFirmware(this.firmwareInfo);
         flashFiles.push(...firmwareFiles);
+        console.log('[Deploy] 固件下载完成');
       }
 
-      // 4. 下载模型文件
+      // 2.2 下载模型文件
       this.deployStatus = '正在下载模型文件...';
       this.noticeService.update({
         title: '模型部署',
         text: '正在下载模型文件...',
         state: 'doing',
         showProgress: true,
-        progress: 15,
+        progress: 10,
         stop: () => this.cancelDeploy()
       });
       const modelFile = await this.firmwareService.downloadModelFile(snapshot, this.xiaoType);
       flashFiles.push(modelFile);
+      console.log('[Deploy] 模型文件下载完成');
+      
+      // 显示下载完成提示
+      this.deployStatus = '所有文件下载完成';
+      this.noticeService.update({
+        title: '模型部署',
+        text: '所有文件下载完成，准备烧录...',
+        state: 'doing',
+        showProgress: true,
+        progress: 15,
+        stop: () => this.cancelDeploy()
+      });
+      
+      console.log('[Deploy] 所有文件已下载，共 ' + flashFiles.length + ' 个文件');
 
-      // 5. 初始化 ESPLoader
+      // 3. 检查并安装 esptool（如果需要）
+      if (!this.esptoolPackage) {
+        this.deployStatus = '正在准备烧录工具...';
+        this.noticeService.update({
+          title: '模型部署',
+          text: '正在安装 esptool 烧录工具...',
+          state: 'doing',
+          showProgress: true,
+          progress: 18,
+          stop: () => this.cancelDeploy()
+        });
+        
+        const installSuccess = await this.esptoolPyService.installEsptool();
+        if (!installSuccess) {
+          throw new Error('安装 esptool 失败，请检查网络连接');
+        }
+        
+        this.esptoolPackage = this.esptoolPyService.getEsptoolPackage();
+        if (!this.esptoolPackage) {
+          // 安装成功但检测失败，可能是文件系统缓存问题
+          console.warn('[Deploy] esptool 安装失败，可能是文件系统缓存问题');
+          
+          // 给用户提示
+          this.noticeService.update({
+            title: '提示',
+            text: 'esptool 工具已安装，但需要重新打开窗口才能使用',
+            detail: '请关闭此窗口后重新打开，即可正常部署模型',
+            state: 'warn',
+            showProgress: false,
+            setTimeout: 10000
+          });
+          
+          throw new Error('esptool 工具已安装，但需要重新打开窗口才能使用。这是文件系统缓存导致的，请关闭窗口后重新打开即可。');
+        }
+      }
+
+      // 4. 分步烧录所有文件
+      console.log('[Deploy] 开始烧录流程');
+      
+      // 4.1 先烧录固件（如果有）
+      let firmwareFlashed = false;
+      if (flashFiles.length > 1) {
+        // 有固件需要烧录
+        this.deployStatus = '正在烧录固件...';
+        this.noticeService.update({
+          title: '模型部署',
+          text: '正在烧录固件...',
+          state: 'doing',
+          showProgress: true,
+          progress: 25,
+          stop: () => this.cancelDeploy()
+        });
+        
+        try {
+          const firmwareFile = flashFiles[0]; // 固件总是第一个
+          const firmwareResult = await this.esptoolPyService.flashSingleFile(
+            { data: firmwareFile.data, address: firmwareFile.address },
+            this.currentPort,
+            {
+              chip: 'esp32s3',
+              baudRate: 460800,
+              beforeFlash: 'default_reset',
+              afterFlash: 'hard_reset',
+              progressCallback: (progress: number, status: string) => {
+                if (this.isCancelling) return;
+                
+                this.deployProgress = progress;
+                this.deployStatus = `烧录固件: ${status}`;
+                
+                // 固件烧录占 25%-55%
+                const overallProgress = 25 + Math.floor(progress * 0.3);
+                this.noticeService.update({
+                  title: '模型部署',
+                  text: `烧录固件: ${status}`,
+                  state: 'doing',
+                  showProgress: true,
+                  progress: overallProgress,
+                  stop: () => this.cancelDeploy()
+                });
+                
+                this.cd.detectChanges();
+              }
+            }
+          );
+          
+          this.flashStreamId = firmwareResult.streamId;
+          firmwareFlashed = true;
+          console.log('[Deploy] 固件烧录完成');
+          
+        } catch (error) {
+          console.error('[Deploy] 固件烧录失败:', error);
+          throw new Error('固件烧录失败: ' + (error as Error).message);
+        }
+      }
+      
+      // 6.2 烧录模型文件
+      this.deployStatus = '正在烧录模型文件...';
+      this.noticeService.update({
+        title: '模型部署',
+        text: '正在烧录模型文件...',
+        state: 'doing',
+        showProgress: true,
+        progress: firmwareFlashed ? 55 : 25,
+        stop: () => this.cancelDeploy()
+      });
+      
+      try {
+        const modelFile = flashFiles[flashFiles.length - 1]; // 模型文件总是最后一个
+        const modelResult = await this.esptoolPyService.flashSingleFile(
+          { data: modelFile.data, address: modelFile.address },
+          this.currentPort,
+          {
+            chip: 'esp32s3',
+            baudRate: 460800,
+            beforeFlash: 'default_reset',
+            afterFlash: 'hard_reset',
+            progressCallback: (progress: number, status: string) => {
+              if (this.isCancelling) return;
+              
+              this.deployProgress = progress;
+              this.deployStatus = `烧录模型: ${status}`;
+              
+              // 模型烧录占 55%-85%（如果有固件）或 25%-85%（仅模型）
+              const startProgress = firmwareFlashed ? 55 : 25;
+              const overallProgress = startProgress + Math.floor(progress * 0.3);
+              this.noticeService.update({
+                title: '模型部署',
+                text: `烧录模型: ${status}`,
+                state: 'doing',
+                showProgress: true,
+                progress: overallProgress,
+                stop: () => this.cancelDeploy()
+              });
+              
+              this.cd.detectChanges();
+            }
+          }
+        );
+        
+        this.flashStreamId = modelResult.streamId;
+        console.log('[Deploy] 模型烧录完成');
+        
+      } catch (error) {
+        console.error('[Deploy] 模型烧录失败:', error);
+        throw new Error('模型烧录失败: ' + (error as Error).message);
+      }
+
+      console.log('[Deploy] 所有文件烧录完成，准备设置模型信息');
+
+      // 7. 等待设备重启
+      this.deployStatus = '正在等待设备重启...';
+      this.noticeService.update({
+        title: '模型部署',
+        text: '正在等待设备重启...',
+        state: 'doing',
+        showProgress: true,
+        progress: 88,
+        stop: () => this.cancelDeploy()
+      });
+      await this.delay(3000);
+
+      // 8. 设置模型信息（AT 命令 - 使用 Native Service）
+      if (this.isCancelling) {
+        throw new Error('用户取消部署');
+      }
+
       this.deployStatus = '正在连接设备...';
       this.noticeService.update({
         title: '模型部署',
         text: '正在连接设备...',
         state: 'doing',
         showProgress: true,
-        progress: 20,
-        stop: () => this.cancelDeploy()
-      });
-      
-      if (!this.electronService.isElectron) {
-        throw new Error('当前仅支持在 Electron 环境下部署');
-      }
-
-      const serialPortObj = await this.getSerialPortObject(this.currentPort);
-      if (!serialPortObj) {
-        throw new Error(`无法创建串口对象: ${this.currentPort}`);
-      }
-
-      // 带重试机制的初始化
-      let success = false;
-      let lastError: any = null;
-      const maxRetries = 3;
-      
-      for (let retry = 0; retry < maxRetries; retry++) {
-        try {
-          if (retry > 0) {
-            this.deployStatus = `正在重试连接设备 (${retry + 1}/${maxRetries})...`;
-            await this.delay(1000);
-          }
-          
-          success = await this.espLoaderService.initializeWithPort(
-            serialPortObj,
-            115200,
-            {
-              write: (text: string) => {},
-              writeLine: (text: string) => {},
-              clean: () => {}
-            }
-          );
-          
-          if (success) {
-            break;
-          }
-        } catch (error) {
-          lastError = error;
-          if (retry < maxRetries - 1) {
-            await this.delay(500);
-          }
-        }
-      }
-
-      if (!success) {
-        const errorMsg = lastError ? `连接失败: ${lastError.message || lastError}` : '无法连接到设备';
-        throw new Error(`${errorMsg}\n请确保设备已正确连接`);
-      }
-
-      // 6. 执行烧录
-      this.deployStatus = '正在烧录...';
-      const totalFiles = flashFiles.length;
-      await this.espLoaderService.flash({
-        fileArray: flashFiles,
-        flashSize: 'keep',
-        eraseAll: false,
-        compress: true,
-        reportProgress: (fileIndex, written, total) => {
-          // 检查是否被取消
-          if (this.isCancelling) {
-            return;
-          }
-          
-          const perFilePercent = total > 0 ? Math.floor((written / total) * 100) : 0;
-        //   this.deployStatus = `正在烧录 第 ${fileIndex + 1}/${totalFiles} 个文件`;
-          this.deployProgress = perFilePercent;
-          
-          // 烧录进度占 25%-75%
-          const overallProgress = 25 + Math.floor((fileIndex / totalFiles + perFilePercent / 100 / totalFiles) * 50);
-          this.noticeService.update({
-            title: '模型部署',
-            text: `正在烧录...`,
-            state: 'doing',
-            showProgress: true,
-            progress: overallProgress,
-            stop: () => this.cancelDeploy()  // 烧录过程中也可以取消
-          });
-          
-          this.cd.detectChanges();
-        }
-      });
-
-      // 7. 设备重启
-      const serialPort = this.espLoaderService.getSerialPort();
-      
-      if (!serialPort) {
-        throw new Error('无法获取串口对象');
-      }
-
-      await this.espLoaderService.disconnect();
-      console.log('ESPLoader 已断开');
-      
-      await this.delay(500);
-      
-      this.deployStatus = '正在重启设备...';
-      this.noticeService.update({
-        title: '模型部署',
-        text: '正在重启设备...',
-        state: 'doing',
-        showProgress: true,
-        progress: 80,
-        stop: () => this.cancelDeploy()
-      });
-      await serialPort.open({ baudRate: 115200 });
-      await serialPort.setSignals({ dataTerminalReady: false, requestToSend: true });
-      await this.delay(100);
-      await serialPort.setSignals({ dataTerminalReady: true, requestToSend: false });
-      await serialPort.close();
-      await this.delay(3000);
-      console.log('设备重启完成');
-
-      // 8. 设置模型信息（AT 命令）
-      this.deployStatus = '正在设置模型信息...';
-      this.noticeService.update({
-        title: '模型部署',
-        text: '正在设置模型信息...',
-        state: 'doing',
-        showProgress: true,
         progress: 85,
         stop: () => this.cancelDeploy()
       });
+
       const modelInfo: ModelInfo = {
         model_id: snapshot.model_id,
         version: snapshot.version,
@@ -566,71 +624,68 @@ export class SscmaDeployComponent implements OnInit {
       };
       
       try {
-        await this.atCommandService.attachToPort(serialPort);
-        await this.delay(300);
+        // 使用 Native Service 连接串口
+        await this.sscmaCommandService.connect(this.currentPort!);
+        console.log('[AT Native] 串口连接成功');
         
-        console.log('[AT] 测试连接...');
-        await this.atCommandService.sendCommand('AT+STAT?\r');
-        const statResponse = await this.atCommandService.waitForResponse('STAT', 2000);
-        if (!statResponse) {
-          console.warn('[AT] 设备未响应 AT+STAT?');
-        } else {
-          console.log('[AT] 设备响应正常');
-        }
+        // 等待设备完全准备好（设备可能刚重启）
+        console.log('[AT Native] 等待设备准备就绪...');
+        await this.delay(1500);
         
-        await this.delay(200);
+        this.deployStatus = '正在设置模型信息...';
+        this.noticeService.update({
+          title: '模型部署',
+          text: '正在设置模型信息...',
+          state: 'doing',
+          showProgress: true,
+          progress: 90,
+          stop: () => this.cancelDeploy()
+        });
         
-        console.log('[AT] 发送模型信息...');
+        console.log('[AT Native] 测试连接，发送 AT+STAT?...');
+        await this.sscmaCommandService.sendCommand('AT+STAT?');
+        console.log('[AT Native] AT+STAT? 命令已发送，等待响应...');
+        await this.delay(500);
+        
+        console.log('[AT Native] 发送模型信息...');
         const infoJson = JSON.stringify(modelInfo);
         const encodedInfo = encode(infoJson);
-        await this.atCommandService.sendCommand(`AT+INFO="${encodedInfo}"\r`);
-        
-        const infoResponse = await this.atCommandService.waitForResponse('INFO', 3000);
-        if (!infoResponse) {
-          console.warn('[AT] AT+INFO 未收到响应');
-        } else {
-          console.log('[AT] AT+INFO 执行成功');
-        }
-        
+        await this.sscmaCommandService.sendCommand(`AT+INFO="${encodedInfo}"`);
         await this.delay(200);
         
-        console.log('[AT] 触发设备更新...');
-        await this.atCommandService.sendCommand('AT+TRIGGER=""\r');
-        
-        const triggerResponse = await this.atCommandService.waitForResponse('TRIGGER', 2000);
-        if (!triggerResponse) {
-          console.warn('[AT] AT+TRIGGER 未收到响应');
-        } else {
-          console.log('[AT] AT+TRIGGER 执行成功');
-        }
-        
+        console.log('[AT Native] 触发设备更新...');
+        await this.sscmaCommandService.sendCommand('AT+TRIGGER=""');
         await this.delay(200);
-        await this.atCommandService.detach();
-        console.log('[AT] AT 命令流程完成');
+        
+        await this.sscmaCommandService.disconnect();
+        console.log('[AT Native] AT 命令流程完成');
       } catch (atError) {
-        console.error('AT 命令执行失败:', atError);
+        console.error('[AT Native] 命令执行失败:', atError);
+        await this.sscmaCommandService.disconnect();
         throw new Error('设置模型信息失败: ' + (atError as Error).message);
       }
 
-      // 9. 完成
+      // 9. 完成部署，进入配置页面
       this.deployStatus = '部署完成！';
       this.deployProgress = 100;
       
       this.noticeService.update({
         title: '模型部署',
-        text: '部署完成！',
+        text: '部署完成！正在进入配置页面...',
         state: 'done',
         showProgress: true,
         progress: 100,
-        setTimeout: 3000
+        setTimeout: 2000
       });
 
-      if (serialPort) {
-        await serialPort.close();
-      }
+      // 等待一小段时间让用户看到完成提示
+      await this.delay(1000);
       
-      // 发送完成事件
-      this.deployComplete.emit();
+      // 自动进入配置页面（第三步）
+      this.currentStep = 2;
+      this.cd.detectChanges();
+      
+      console.log('[Deploy] 部署完成，已进入配置页面');
 
     } catch (error) {
       console.error('部署失败:', error);
@@ -691,5 +746,13 @@ export class SscmaDeployComponent implements OnInit {
     if (this.currentStep > 0) {
       this.currentStep -= 1;
     }
+  }
+
+  /**
+   * 配置完成回调
+   */
+  onConfigComplete(): void {
+    console.log('[Deploy] 配置完成');
+    this.deployComplete.emit();
   }
 }

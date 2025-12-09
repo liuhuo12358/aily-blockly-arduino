@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, firstValueFrom } from 'rxjs';
 import SparkMD5 from 'spark-md5';
+import { CmdService, CmdOutput } from './cmd.service';
 
 /**
  * 固件类型
@@ -88,7 +89,10 @@ export class FirmwareService {
   private readonly portalApiUrl = 'https://sensecap.seeed.cc';  // 修正为 sensecap
   private readonly sensecraftApiUrl = 'https://sensecraft.seeed.cc/aiserverapi';
 
-  constructor(private http: HttpClient) { }
+  constructor(
+    private http: HttpClient,
+    private cmdService: CmdService
+  ) { }
 
   /**
    * 获取固件信息
@@ -161,7 +165,7 @@ export class FirmwareService {
   }
 
   /**
-   * 下载固件文件
+   * 下载固件文件（原方法，使用 fetch）
    * @param firmwareInfo 固件信息
    * @param deviceType 设备类型（32 表示 XIAO 设备）
    * @returns Promise<FlashFile[]>
@@ -182,6 +186,249 @@ export class FirmwareService {
       console.error('下载固件失败:', error);
       throw error;
     }
+  }
+
+  /**
+   * 使用 PowerShell 脚本下载固件（支持中断）
+   * @param firmwareInfo 固件信息
+   * @param progressCallback 进度回调函数
+   * @param deviceType 设备类型（32 表示 XIAO 设备）
+   * @returns Promise<{ flashFiles: FlashFile[], streamId: string }>
+   */
+  async downloadFirmwareWithScript(
+    firmwareInfo: FirmwareInfo,
+    progressCallback?: (progress: number, status: string) => void,
+    deviceType: number = 32
+  ): Promise<{ flashFiles: FlashFile[], streamId: string }> {
+    return new Promise((resolve, reject) => {
+      try {
+        // 生成临时文件路径
+        const tempDir = window['path'].join(window['os'].tmpdir(), 'aily-firmware');
+        if (!window['fs'].existsSync(tempDir)) {
+          window['fs'].mkdirSync(tempDir, { recursive: true });
+        }
+        
+        const fileName = firmwareInfo.filename || 'firmware.bin';
+        const outputPath = window['path'].join(tempDir, fileName);
+        
+        // 如果文件已存在，先删除
+        if (window['fs'].existsSync(outputPath)) {
+          window['fs'].unlinkSync(outputPath);
+        }
+        
+        // 构建 PowerShell 脚本路径
+        const scriptPath = window['path'].join(process.cwd(), 'tools', 'download-firmware.ps1');
+        
+        // 检查脚本是否存在
+        if (!window['fs'].existsSync(scriptPath)) {
+          reject(new Error(`下载脚本不存在: ${scriptPath}`));
+          return;
+        }
+        
+        // 构建命令
+        const command = `powershell.exe -ExecutionPolicy Bypass -File "${scriptPath}" -Url "${firmwareInfo.file_url}" -OutputPath "${outputPath}"`;
+        
+        console.log('执行下载命令:', command);
+        
+        let streamId = '';
+        let lastProgress = 0;
+        
+        // 执行命令
+        this.cmdService.run(command, undefined, false).subscribe({
+          next: (output: CmdOutput) => {
+            streamId = output.streamId;
+            
+            if (output.data) {
+              const line = output.data.trim();
+              
+              // 解析进度
+              const progressMatch = line.match(/进度:\s*(\d+)%/);
+              if (progressMatch) {
+                const progress = parseInt(progressMatch[1], 10);
+                if (progress !== lastProgress) {
+                  lastProgress = progress;
+                  if (progressCallback) {
+                    progressCallback(progress, `正在下载固件: ${progress}%`);
+                  }
+                }
+              }
+              
+              // 检查成功
+              if (line.includes('SUCCESS')) {
+                console.log('固件下载成功:', outputPath);
+              }
+              
+              // 检查错误
+              if (line.startsWith('ERROR:')) {
+                const errorMsg = line.substring(6).trim();
+                console.error('下载错误:', errorMsg);
+              }
+            }
+          },
+          error: (error) => {
+            console.error('下载命令执行失败:', error);
+            reject(error);
+          },
+          complete: async () => {
+            try {
+              // 验证文件是否存在
+              if (!window['fs'].existsSync(outputPath)) {
+                reject(new Error('下载失败，文件不存在'));
+                return;
+              }
+              
+              // 读取文件为二进制字符串
+              const fileBuffer = window['fs'].readFileSync(outputPath);
+              const blob = new Blob([fileBuffer]);
+              const data = await this.readFileAsBinaryString(blob);
+              
+              const flashFiles: FlashFile[] = [{
+                data,
+                address: 0  // 固件从 0x0 地址开始烧录
+              }];
+              
+              // 清理临时文件
+              try {
+                window['fs'].unlinkSync(outputPath);
+              } catch (e) {
+                console.warn('清理临时文件失败:', e);
+              }
+              
+              resolve({ flashFiles, streamId });
+            } catch (error) {
+              reject(error);
+            }
+          }
+        });
+      } catch (error) {
+        console.error('下载固件异常:', error);
+        reject(error);
+      }
+    });
+  }
+
+  /**
+   * 使用 PowerShell 脚本下载模型文件（支持中断）
+   * @param modelSnapshot 模型快照
+   * @param xiaoType XIAO 设备类型
+   * @param progressCallback 进度回调函数
+   * @returns Promise<{ flashFile: FlashFile, streamId: string }>
+   */
+  async downloadModelFileWithScript(
+    modelSnapshot: ModelSnapshot,
+    xiaoType: XiaoType,
+    progressCallback?: (progress: number, status: string) => void
+  ): Promise<{ flashFile: FlashFile, streamId: string }> {
+    return new Promise((resolve, reject) => {
+      try {
+        const downloadUrl = modelSnapshot.arguments.url;
+        
+        // 生成临时文件路径
+        const tempDir = window['path'].join(window['os'].tmpdir(), 'aily-models');
+        if (!window['fs'].existsSync(tempDir)) {
+          window['fs'].mkdirSync(tempDir, { recursive: true });
+        }
+        
+        const fileName = `model_${modelSnapshot.model_id}.bin`;
+        const outputPath = window['path'].join(tempDir, fileName);
+        
+        // 如果文件已存在，先删除
+        if (window['fs'].existsSync(outputPath)) {
+          window['fs'].unlinkSync(outputPath);
+        }
+        
+        // 构建 PowerShell 脚本路径
+        const scriptPath = window['path'].join(process.cwd(), 'tools', 'download-firmware.ps1');
+        
+        // 检查脚本是否存在
+        if (!window['fs'].existsSync(scriptPath)) {
+          reject(new Error(`下载脚本不存在: ${scriptPath}`));
+          return;
+        }
+        
+        // 构建命令
+        const command = `powershell.exe -ExecutionPolicy Bypass -File "${scriptPath}" -Url "${downloadUrl}" -OutputPath "${outputPath}"`;
+        
+        console.log('执行模型下载命令:', command);
+        
+        let streamId = '';
+        let lastProgress = 0;
+        
+        // 执行命令
+        this.cmdService.run(command, undefined, false).subscribe({
+          next: (output: CmdOutput) => {
+            streamId = output.streamId;
+            
+            if (output.data) {
+              const line = output.data.trim();
+              
+              // 解析进度
+              const progressMatch = line.match(/进度:\s*(\d+)%/);
+              if (progressMatch) {
+                const progress = parseInt(progressMatch[1], 10);
+                if (progress !== lastProgress) {
+                  lastProgress = progress;
+                  if (progressCallback) {
+                    progressCallback(progress, `正在下载模型: ${progress}%`);
+                  }
+                }
+              }
+              
+              // 检查成功
+              if (line.includes('SUCCESS')) {
+                console.log('模型下载成功:', outputPath);
+              }
+              
+              // 检查错误
+              if (line.startsWith('ERROR:')) {
+                const errorMsg = line.substring(6).trim();
+                console.error('下载错误:', errorMsg);
+              }
+            }
+          },
+          error: (error) => {
+            console.error('下载命令执行失败:', error);
+            reject(error);
+          },
+          complete: async () => {
+            try {
+              // 验证文件是否存在
+              if (!window['fs'].existsSync(outputPath)) {
+                reject(new Error('下载失败，文件不存在'));
+                return;
+              }
+              
+              // 读取文件为二进制字符串
+              const fileBuffer = window['fs'].readFileSync(outputPath);
+              const blob = new Blob([fileBuffer]);
+              const data = await this.readFileAsBinaryString(blob);
+              
+              // 确定模型烧录地址
+              const address = this.getModelAddress(xiaoType);
+              
+              const flashFile: FlashFile = {
+                data,
+                address
+              };
+              
+              // 清理临时文件
+              try {
+                window['fs'].unlinkSync(outputPath);
+              } catch (e) {
+                console.warn('清理临时文件失败:', e);
+              }
+              
+              resolve({ flashFile, streamId });
+            } catch (error) {
+              reject(error);
+            }
+          }
+        });
+      } catch (error) {
+        console.error('下载模型异常:', error);
+        reject(error);
+      }
+    });
   }
 
   /**

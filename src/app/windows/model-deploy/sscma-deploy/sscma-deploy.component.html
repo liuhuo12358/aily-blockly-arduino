@@ -121,11 +121,13 @@
             </div>
           }
         } @else if (currentStep == 2) {
-          <!-- 第三步：部署或配置 -->
+          <!-- 第三步：模型配置 -->
           <div class="right-inner">
-            <div class="step-content">
-              <p>步骤 3 内容（根据 author_name 可能是配置或部署）</p>
-            </div>
+            <app-sscma-config
+              [portPath]="currentPort!"
+              (configComplete)="onConfigComplete()"
+              (backToDeploy)="prevStep()">
+            </app-sscma-config>
           </div>
         }
       </div>
