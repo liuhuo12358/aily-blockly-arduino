@@ -8,7 +8,7 @@
     <!-- <div class="btn ccenter" (click)="demandEdit()" nz-tooltip nzTooltipPlacement="bottom" nzTooltipTitle="需求管理">
       <i class="fa-light fa-list-check"></i>
     </div> -->
-    <div class="btn ccenter" (click)="openSettings($event)" nz-tooltip nzTooltipPlacement="bottom"
+    <div class="btn ccenter" [class.active]="showSettings" (click)="openSettings($event)" nz-tooltip nzTooltipPlacement="bottom"
       [nzTooltipTitle]="'AILY_CHAT.SETTINGS' | translate">
       <i class="fa-light fa-gear"></i>
     </div>

@@ -257,4 +257,9 @@ nz-resize-handle {
     }
 
   }
+
+  &.active {
+    color: var(--vscode-focusBorder, #007acc) !important;
+    background: rgba(0, 122, 204, 0.1);
+  }
 }
