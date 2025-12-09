@@ -260,6 +260,7 @@
     },
     "AILY_CHAT": {
         "TITLE": "AI助手",
+        "SETTINGS": "AI设置",
         "HISTORY": "历史会话",
         "NEW_CHAT": "新建会话",
         "SERVICE_TITLE": "aily assistant service",

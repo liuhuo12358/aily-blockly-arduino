@@ -225,6 +225,7 @@
     },
     "AILY_CHAT": {
         "TITLE": "مساعد الذكاء الاصطناعي",
+        "SETTINGS": "إعدادات الذكاء الاصطناعي",
         "HISTORY": "سجل المحادثة",
         "NEW_CHAT": "محادثة جديدة",
         "SERVICE_TITLE": "aily assistant service",

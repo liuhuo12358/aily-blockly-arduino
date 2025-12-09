@@ -225,6 +225,7 @@
     },
     "AILY_CHAT": {
         "TITLE": "Assistant IA",
+        "SETTINGS": "Paramètres IA",
         "HISTORY": "Historique des discussions",
         "NEW_CHAT": "Nouvelle discussion",
         "SERVICE_TITLE": "aily assistant service",

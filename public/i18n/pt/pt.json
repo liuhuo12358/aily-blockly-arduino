@@ -206,6 +206,7 @@
     },
     "AILY_CHAT": {
         "TITLE": "Assistente IA",
+        "SETTINGS": "Configurações de IA",
         "HISTORY": "Histórico de chat",
         "NEW_CHAT": "Novo chat",
         "SERVICE_TITLE": "aily assistant service",

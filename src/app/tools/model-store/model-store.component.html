@@ -14,7 +14,6 @@
                 <div class="tags">
                     <nz-tag>视觉</nz-tag>
                     <nz-tag>声音</nz-tag>
-                    <nz-tag>其他</nz-tag>
                 </div>
                 <div class="search-box">
                     <input nz-input placeholder="搜索可用模型" [(ngModel)]="searchKeyword"
@@ -37,6 +36,7 @@
                 <nz-breadcrumb-item>{{currentModelName}}</nz-breadcrumb-item>
                 }
             </nz-breadcrumb>
+            <button nz-button nzSize="small" nzType="primary">自训练模型</button>
         </div>
         <div class="content">
             <div class="item-list sscroll">

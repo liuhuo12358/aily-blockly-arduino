@@ -225,6 +225,7 @@
     },
     "AILY_CHAT": {
         "TITLE": "AI助手",
+        "SETTINGS": "AI設置",
         "HISTORY": "歷史會話",
         "NEW_CHAT": "新建會話",
         "SERVICE_TITLE": "aily assistant service",
