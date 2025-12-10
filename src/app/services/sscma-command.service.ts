@@ -233,6 +233,7 @@ export class SSCMACommandService {
       try {
         const response: AtResponse = JSON.parse(jsonStr);
         // console.log('[AT] 解析到响应 (标准格式), 数据长度:', jsonStr.length);
+        // console.log('[AT] 响应内容:', response);
         
         // 发布解析后的响应
         this.responseReceived$.next(response);
@@ -257,6 +258,7 @@ export class SSCMACommandService {
         try {
           const response: AtResponse = JSON.parse(jsonStr);
           // console.log('[AT] 解析到响应 (简单格式), 数据长度:', jsonStr.length);
+          // console.log('[AT] 响应内容:', response);
           
           // 发布解析后的响应
           this.responseReceived$.next(response);
@@ -532,7 +534,7 @@ export class SSCMACommandService {
   async startInvoke(
     times: number = -1,
     differed: number = 0,
-    resultOnly: number = 1,
+    resultOnly: number = 0,
     onEvent?: (event: AtResponse) => void
   ): Promise<void> {
     // 订阅事件响应

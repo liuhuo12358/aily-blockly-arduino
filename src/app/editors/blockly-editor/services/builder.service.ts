@@ -496,6 +496,17 @@ export class _BuilderService {
 
           this.buildStartTime = Date.now(); // 记录编译开始时间
 
+          this.noticeService.update({
+            title: "编译依赖分析中",
+            text: lastBuildText,
+            state: 'doing',
+            progress: 0,
+            setTimeout: 0,
+            stop: () => {
+              this.cancel();
+            }
+          });
+
           this.cmdService.run(compileCommand, null, false).subscribe({
             next: (output: CmdOutput) => {
               // console.log('编译命令输出:', output);

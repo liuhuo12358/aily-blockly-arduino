@@ -441,6 +441,7 @@
     .preview-image {
       width: 100%;
       height: 100%;
+      border-radius: 4px;
       max-width: none;
       max-height: none;
       object-fit: contain;
@@ -482,9 +483,9 @@
 
     .score-bar {
       flex: 1 1 auto;
-      height: 20px;
+      height: 28px;
       background: rgba(255, 255, 255, 0.06);
-      border-radius: 6px;
+      border-radius: 4px;
       overflow: hidden;
       position: relative;
     }
@@ -505,9 +506,9 @@
       right: 0;
       top: 50%;
       transform: translateY(-50%);
-      text-align: center;
+      text-align: right;
       color: #fff;
-      font-size: 11px;
+      font-size: 12px;
       font-weight: 600;
       text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
 

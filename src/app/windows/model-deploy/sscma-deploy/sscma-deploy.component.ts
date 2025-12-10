@@ -609,7 +609,7 @@ export class SscmaDeployComponent implements OnInit {
         progress: 88,
         stop: () => this.cancelDeploy()
       });
-      await this.delay(3000);
+      await this.delay(1000);
 
       // 8. 设置模型信息（AT 命令 - 使用 Native Service）
       if (this.isCancelling) {
@@ -645,7 +645,7 @@ export class SscmaDeployComponent implements OnInit {
         
         // 等待设备完全准备好（设备可能刚重启）
         // console.log('[AT Native] 等待设备准备就绪...');
-        await this.delay(1500);
+        await this.delay(500);
         
         this.deployStatus = '正在设置模型信息...';
         this.noticeService.update({
@@ -672,7 +672,7 @@ export class SscmaDeployComponent implements OnInit {
         await this.sscmaCommandService.sendCommand('AT+TRIGGER=""');
         await this.delay(200);
         
-        await this.sscmaCommandService.disconnect();
+        // await this.sscmaCommandService.disconnect();
         // console.log('[AT Native] AT 命令流程完成');
       } catch (atError) {
         console.error('[AT Native] 命令执行失败:', atError);

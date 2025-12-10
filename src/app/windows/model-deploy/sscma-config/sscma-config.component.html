@@ -119,16 +119,20 @@
             </div>
           } @else {
             <!-- <nz-spin [nzSpinning]="isLoadingPreview" nzTip="加载中..."> -->
-            <img 
-              *ngIf="previewImageUrl" 
-              [src]="previewImageUrl"
-              [attr.data-version]="imageVersion"
-              alt="实时预览"
-              class="preview-image">
+            <div *ngIf="previewImageUrl" class="preview-image-wrapper" style="position:relative; display:inline-block;">
+              <img
+                #previewImg
+                [src]="previewImageUrl"
+                [attr.data-version]="imageVersion"
+                alt="实时预览"
+                class="preview-image"
+                (load)="onPreviewImageLoad()">
+              <canvas #overlayCanvas class="preview-overlay-canvas" style="position:absolute; left:0; top:0; pointer-events:none;"></canvas>
+            </div>
             <!-- </nz-spin> -->
             
             <!-- 识别结果 -->
-            <div class="recognition-area" *ngIf="modelMeta?.classes && modelMeta.classes.length">
+            <div class="recognition-area" *ngIf="modelMeta?.classes && modelMeta.classes.length && classScores.length">
               <div class="recognition-title">识别信息</div>
               <div class="recognition-list">
                 <div class="recognition-row" *ngFor="let label of modelMeta.classes; let i = index">
@@ -283,7 +287,7 @@
             </div>
           } @else {
             <div class="setting-item">
-              <label>置信度阈值:</label>
+              <label>置信度:</label>
               <div class="setting-control">
                 <nz-slider
                   [(ngModel)]="confidenceThreshold"

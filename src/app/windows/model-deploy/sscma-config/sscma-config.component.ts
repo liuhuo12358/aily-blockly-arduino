@@ -67,6 +67,8 @@ export class SscmaConfigComponent implements OnInit, OnDestroy, OnChanges {
   // 视图引用
   // ===================
   @ViewChild('rightPanel') rightPanelRef?: ElementRef<HTMLDivElement>;
+  @ViewChild('overlayCanvas') overlayCanvasRef?: ElementRef<HTMLCanvasElement>;
+  @ViewChild('previewImg') previewImgRef?: ElementRef<HTMLImageElement>;
 
   // ===================
   // 串口相关
@@ -155,6 +157,8 @@ export class SscmaConfigComponent implements OnInit, OnDestroy, OnChanges {
   resultCount = 0;
   classScores: number[] = [];
   barColors: string[] = ['#52c41a', '#1890ff', '#fa8c16', '#f5222d', '#722ed1', '#13c2c2'];
+  // 当前用于绘制的 boxes（每项为 [x,y,w,h,score,targetId]）
+  currentBoxes: number[][] = [];
 
   // ===================
   // GPIO 触发规则 (AT+TRIGGER)
@@ -269,7 +273,11 @@ export class SscmaConfigComponent implements OnInit, OnDestroy, OnChanges {
   
   wifiSecurityOptions = [
     { label: 'AUTO', value: 0 },
-    { label: 'WPA2', value: 4 }
+    { label: 'NONE', value: 1 },
+    { label: 'WEP', value: 2 },
+    { label: 'WPA1_WPA2', value: 3 },
+    { label: 'WPA2_WPA3', value: 4 },
+    { label: 'WPA3', value: 5 }
   ];
 
   // ===================
@@ -372,6 +380,17 @@ export class SscmaConfigComponent implements OnInit, OnDestroy, OnChanges {
         if (!connected) {
           this.isPreviewMode = false;
           this.previewImage = null;
+        } else {
+          // 连接成功后启动预览
+          this.startPreview().catch(err => {
+            console.warn('自动启动预览失败:', err);
+          });
+          this.loadDeviceInfo().catch(err => {
+            console.warn('加载设备信息失败:', err);
+          });
+          this.loadCurrentConfig().catch(err => {
+            console.warn('加载当前配置失败:', err);
+          });
         }
       })
     );
@@ -770,7 +789,20 @@ export class SscmaConfigComponent implements OnInit, OnDestroy, OnChanges {
     // });
     
     if (this.isPreviewMode && result.image) {
+      if (result.boxes && Array.isArray(result.boxes)) {
+        // 保存 boxes，等待图片更新后绘制
+        console.log('[预览] 收到检测框数据:', result.boxes);
+        try {
+          this.currentBoxes = result.boxes as number[][];
+        } catch (e) {
+          this.currentBoxes = [];
+        }
+      } else {
+        this.currentBoxes = [];
+      }
       this.updatePreviewImage(result);
+      // 触发一次绘制（图片 load 事件会再次触发 onPreviewImageLoad）
+      setTimeout(() => this.onPreviewImageLoad(), 20);
     } else if (!result.image) {
       console.warn('[预览] 结果中没有图片数据');
     }
@@ -798,6 +830,116 @@ export class SscmaConfigComponent implements OnInit, OnDestroy, OnChanges {
     // });
     
     this.cdr.detectChanges();
+  }
+
+  // 图片加载后触发，绘制检测框
+  onPreviewImageLoad(): void {
+    const img = this.previewImgRef?.nativeElement;
+    const canvas = this.overlayCanvasRef?.nativeElement;
+    if (!img || !canvas) return;
+
+    const rect = img.getBoundingClientRect();
+    const displayW = rect.width;
+    const displayH = rect.height;
+    const dpr = window.devicePixelRatio || 1;
+
+    // set canvas physical size
+    canvas.width = Math.round(displayW * dpr);
+    canvas.height = Math.round(displayH * dpr);
+    // set CSS size
+    canvas.style.width = `${displayW}px`;
+    canvas.style.height = `${displayH}px`;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    // clear previous
+    ctx.clearRect(0, 0, displayW, displayH);
+
+    if (this.currentBoxes && this.currentBoxes.length > 0) {
+      // compute scaling from image natural size to displayed size
+      const naturalW = img.naturalWidth || displayW;
+      const naturalH = img.naturalHeight || displayH;
+      const scaleX = naturalW > 0 ? displayW / naturalW : 1;
+      const scaleY = naturalH > 0 ? displayH / naturalH : 1;
+
+      this.drawBoxes(this.currentBoxes, ctx, scaleX, scaleY);
+    }
+  }
+
+  // 绘制检测框 boxes: [x,y,w,h,score,targetId]
+  private drawBoxes(boxes: number[][], ctx: CanvasRenderingContext2D, scaleX = 1, scaleY = 1): void {
+    if (!boxes || boxes.length === 0) return;
+
+    const displayW = Number(ctx.canvas.style.width.replace('px', '')) || ctx.canvas.width;
+    const displayH = Number(ctx.canvas.style.height.replace('px', '')) || ctx.canvas.height;
+
+    const boxLineWidth = Math.max(2, Math.round(Math.max(displayW, displayH) * 0.002));
+    const fontSize = Math.max(14, Math.round(displayW * 0.03));
+    ctx.lineWidth = boxLineWidth;
+    ctx.font = `bold ${fontSize}px Arial, sans-serif`;
+    ctx.textBaseline = 'top';
+
+    for (const b of boxes) {
+      if (!Array.isArray(b) || b.length < 6) continue;
+      const x = Number(b[0] - b[2] / 2) * scaleX;
+      const y = Number(b[1] - b[3] / 2) * scaleY;
+      const w = Number(b[2]) * scaleX;
+      const h = Number(b[3]) * scaleY;
+      const scoreRaw = Number(b[4]) || 0;
+      const targetId = Number(b[5]) || 0;
+
+      const className = (this.modelMeta && Array.isArray(this.modelMeta.classes) && this.modelMeta.classes[targetId])
+        ? this.modelMeta.classes[targetId]
+        : `id:${targetId}`;
+
+      const color = this.colorForId(targetId);
+
+      // rectangle
+      ctx.strokeStyle = color;
+      ctx.fillStyle = color;
+      ctx.lineWidth = boxLineWidth;
+      ctx.strokeRect(x, y, w, h);
+
+      // label
+      const scorePercent = this.normalizeScoreToPercent(scoreRaw);
+      const label = `${className}:${scorePercent}`;
+      const padding = 6;
+      const textMetrics = ctx.measureText(label);
+      const textW = Math.ceil(textMetrics.width);
+      const textH = Math.ceil(fontSize * 1.2);
+
+      // label background: prefer above box, fallback inside
+      let labelX = x;
+      let labelY = y - textH - padding;
+      if (labelY < 0) labelY = y + 4;
+
+      ctx.globalAlpha = 0.85;
+      ctx.fillStyle = color;
+      ctx.fillRect(labelX - 1, labelY - 1, textW + padding * 2, textH + padding);
+      ctx.globalAlpha = 1.0;
+
+      ctx.fillStyle = this.contrastColor(color);
+      ctx.fillText(label, labelX + padding, labelY + (padding / 4));
+    }
+  }
+
+  private colorForId(id: number): string {
+    const palette = [
+      '#e6194b', '#3cb44b', '#ffe119', '#4363d8', '#f58231',
+      '#911eb4', '#46f0f0', '#f032e6', '#bcf60c', '#fabebe',
+      '#008080', '#e6beff', '#9a6324', '#fffac8', '#800000'
+    ];
+    return palette[Math.abs(id) % palette.length];
+  }
+
+  private contrastColor(hexColor: string): string {
+    const c = (hexColor || '#000000').replace('#', '');
+    const r = parseInt(c.substring(0, 2), 16) || 0;
+    const g = parseInt(c.substring(2, 4), 16) || 0;
+    const b = parseInt(c.substring(4, 6), 16) || 0;
+    const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+    return luminance > 0.6 ? 'black' : 'white';
   }
 
   private updateClassScoresFromResult(result: InvokeResultData): void {
@@ -828,10 +970,12 @@ export class SscmaConfigComponent implements OnInit, OnDestroy, OnChanges {
           if (!isNaN(v)) scores[i] = this.normalizeScoreToPercent(v);
         }
       }
+      this.classScores = scores;
+      this.cdr.detectChanges();
+    } else {
+      this.classScores = [];
+      this.cdr.detectChanges();
     }
-
-    this.classScores = scores;
-    this.cdr.detectChanges();
   }
 
   private normalizeScoreToPercent(raw: number): number {
@@ -905,7 +1049,7 @@ export class SscmaConfigComponent implements OnInit, OnDestroy, OnChanges {
       this.invokeResults = [];
       this.resultCount = 0;
       
-      await this.atService.startInvoke(-1, 0, 1);
+      await this.atService.startInvoke(-1, 0, 0);
       this.message.success('推理已启动');
     } catch (error) {
       console.error('启动推理失败:', error);
