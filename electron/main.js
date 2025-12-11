@@ -772,8 +772,8 @@ function updateMainWindowWithPendingData() {
 
 function createWindow() {
   const mainWindowState = windowStateKeeper({
-    defaultWidth: 800,
-    defaultHeight: 600,
+    defaultWidth: 1200,
+    defaultHeight: 780,
     path: path.join(process.env.AILY_APPDATA_PATH),
   })
 
