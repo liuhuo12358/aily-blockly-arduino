@@ -139,6 +139,11 @@ export class AilyChatComponent implements OnDestroy {
   @ViewChild('chatList') chatList: ElementRef;
   @ViewChild('chatTextarea') chatTextarea: ElementRef;
 
+  // 用于区分“用户滚动” vs “内容高度变化导致的滚动回跳”
+  private _scrollTrackLastTop: number | null = null;
+  private _scrollTrackLastHeight: number | null = null;
+  private _scrollTrackLastAtBottom: boolean | null = null;
+
   // defaultList: ChatMessage[] = [{
   //   "role": "system",
   //   "content": "欢迎使用AI助手服务，我可以帮助你 分析项目、转换blockly库、修复错误、生成程序，告诉我你需要什么帮助吧~🤓\n\n >当前为测试版本，可能会有不少问题，如遇故障，群里呼叫`奈何col`哦",
@@ -2549,26 +2554,49 @@ Your role is ASK (Advisory & Quick Support) - you provide analysis, recommendati
       return;
     }
 
-    setTimeout(() => {
-      try {
-        if (this.chatContainer?.nativeElement) {
-          const element = this.chatContainer.nativeElement;
-          const currentScrollTop = element.scrollTop;
-          const maxScrollTop = element.scrollHeight - element.clientHeight;
+    if (!this.chatContainer?.nativeElement) {
+      return;
+    }
 
-          // 只有当不在底部时才滚动，避免不必要的滚动
+    const element = this.chatContainer.nativeElement;
+    let lastScrollHeight = 0;
+    let stableCount = 0;
+    const maxAttempts = 20; // 尝试20次（约2秒）
+    const stableThreshold = 2; // 连续2次scrollHeight不变则认为稳定
+
+    const attemptScroll = () => {
+      try {
+        const currentScrollTop = element.scrollTop;
+        const scrollHeight = element.scrollHeight;
+        const clientHeight = element.clientHeight;
+        const maxScrollTop = scrollHeight - clientHeight;
+
+        if (scrollHeight === lastScrollHeight) {
+          stableCount++;
+        } else {
+          stableCount = 0;
+          lastScrollHeight = scrollHeight;
+        }
+
+        if (stableCount >= stableThreshold || stableCount >= maxAttempts) {
           if (currentScrollTop < maxScrollTop - 2) {
-            // 使用 scrollTo 方法实现平滑滚动
             element.scrollTo({
-              top: element.scrollHeight,
+              top: scrollHeight,
               behavior,
             });
           }
+          return;
+        }
+
+        if (stableCount < maxAttempts) {
+          setTimeout(attemptScroll, 100);
         }
       } catch (error) {
         console.warn('滚动到底部失败:', error);
       }
-    }, 100);
+    };
+
+    setTimeout(attemptScroll, 100);
   }
 
   /**
@@ -2583,16 +2611,31 @@ Your role is ASK (Advisory & Quick Support) - you provide analysis, recommendati
     const threshold = 30; // 减小容差值，提高检测精度
     const isAtBottom = element.scrollTop + element.clientHeight >= element.scrollHeight - threshold;
 
-    // 如果用户不在底部，说明手动向上滚动了，禁用自动滚动
+    const prevTop = this._scrollTrackLastTop;
+    const prevHeight = this._scrollTrackLastHeight;
+    const deltaTop = (prevTop == null) ? 0 : (element.scrollTop - prevTop);
+    const deltaHeight = (prevHeight == null) ? 0 : (element.scrollHeight - prevHeight);
+
+    // 内容增长可能造成 scrollTop 轻微回跳（不是用户手动上滑）
+    const contentGrew = prevHeight != null && deltaHeight > 0;
+    const likelyReflowNudge = contentGrew && Math.abs(deltaTop) <= 10;
+
+    const userScrolledUp = deltaTop < -30 && !likelyReflowNudge;
+
     if (!isAtBottom && this.autoScrollEnabled) {
-      this.autoScrollEnabled = false;
-      // console.log('用户手动滚动，已禁用自动滚动');
+      const shouldDisable = userScrolledUp || (!contentGrew && (this._scrollTrackLastAtBottom === true));
+      if (shouldDisable) {
+        this.autoScrollEnabled = false;
+      }
     }
-    // 如果用户滚动到底部附近，重新启用自动滚动
     else if (isAtBottom && !this.autoScrollEnabled) {
       this.autoScrollEnabled = true;
       // console.log('用户滚动到底部，已启用自动滚动');
     }
+
+    this._scrollTrackLastTop = element.scrollTop;
+    this._scrollTrackLastHeight = element.scrollHeight;
+    this._scrollTrackLastAtBottom = isAtBottom;
   }
 
   HistoryList: any[] = [
