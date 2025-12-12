@@ -4,6 +4,8 @@ import { Observable, firstValueFrom } from 'rxjs';
 import SparkMD5 from 'spark-md5';
 import { CmdService, CmdOutput } from './cmd.service';
 
+import { API } from '../configs/api.config';
+
 /**
  * 固件类型
  */
@@ -103,7 +105,8 @@ export class FirmwareService {
   async getFirmwareInfo(firmwareType: FirmwareType, version: string | null = null): Promise<FirmwareInfo | null> {
     try {
       // 使用正确的固件下载地址
-      const url = 'https://sensecap.seeed.cc/directapi/hardware/get_new_version';
+      // const url = 'https://sensecap.seeed.cc/directapi/hardware/get_new_version';
+      const url = API.firmwareInfo;
       const params: any = {
         sku: firmwareType,
         version: version || '',

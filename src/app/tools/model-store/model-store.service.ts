@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, map, catchError, of } from 'rxjs';
+import { API } from '../../configs/api.config';
 
 export interface ModelItem {
   id: string;
@@ -91,8 +92,12 @@ export interface ModelDetailResponse {
   providedIn: 'root'
 })
 export class ModelStoreService {
-  private baseUrl = 'https://sensecraft.seeed.cc/aiserverapi/model/list_model';
-  private detailApiUrl = 'https://sensecraft.seeed.cc/aiserverapi/model/view_model';
+  // private baseUrl = 'https://sensecraft.seeed.cc/aiserverapi/model/list_model';
+  // private detailApiUrl = 'https://sensecraft.seeed.cc/aiserverapi/model/view_model';
+
+  private baseUrl = API.modelList;
+  private detailApiUrl = API.modelDetails;
+
   private readonly pageSize = 12;  // 每页显示数量
   private readonly uniformType = 32;  // XIAO ESP32S3 Sense
 
