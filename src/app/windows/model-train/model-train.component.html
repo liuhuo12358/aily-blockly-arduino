@@ -1,6 +1,31 @@
 <app-sub-window [title]="'MODEL_TRAIN.TITLE' | translate" [winBtns]="['close']">
   <div class="window-inner">
     <div class="window-content">
+      <div class="type-selector">
+        <div class="text">选择你要训练的模型类型</div>
+        <div class="type-list">
+          <div class="item ccenter">
+            <i class="fa-thin fa-eye"></i>
+            视觉模型
+          </div>
+          <div class="item ccenter">
+            <i class="fa-thin fa-ear"></i>
+            听觉模型
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="window-footer">
+      <div class="btns">
+        <button nz-button nzType="primary" (click)="close()">
+          关闭
+        </button>
+      </div>
+    </div>
+  </div>
+  @if(false){
+  <div class="window-inner">
+    <div class="window-content">
       <div class="left">
         <div class="left-inner">
           <nz-steps [nzCurrent]="currentStep" nzDirection="vertical" nzSize="small">
@@ -81,4 +106,5 @@
       </div>
     </div>
   </div>
+  }
 </app-sub-window>

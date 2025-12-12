@@ -11,6 +11,7 @@ import { NzBreadCrumbModule } from 'ng-zorro-antd/breadcrumb';
 import { ModelDetailComponent } from './model-detail/model-detail.component';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzMessageService } from 'ng-zorro-antd/message';
+import { NzPaginationModule } from 'ng-zorro-antd/pagination';
 
 @Component({
   selector: 'app-model-store',
@@ -22,7 +23,8 @@ import { NzMessageService } from 'ng-zorro-antd/message';
     NzTagModule,
     NzBreadCrumbModule,
     ModelDetailComponent,
-    NzButtonModule
+    NzButtonModule,
+    NzPaginationModule
   ],
   templateUrl: './model-store.component.html',
   styleUrl: './model-store.component.scss'
@@ -191,13 +193,13 @@ export class ModelStoreComponent implements OnInit {
 
 
   onTrain(): void {
-    this.message.warning('当前版本暂不可用，敬请期待');
-    return;
+    // this.message.warning('当前版本暂不可用，敬请期待');
+    // return;
     this.uiService.openWindow({
       path: 'model-train',
       title: '模型训练',
       alwaysOnTop: true,
-      width: 1200,
+      width: 960,
       height: 640
     });
   }

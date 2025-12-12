@@ -25,4 +25,8 @@ export class ModelTrainComponent {
   nextStep(){
     this.currentStep += 1;
   }
+
+  close(){
+    
+  }
 }
