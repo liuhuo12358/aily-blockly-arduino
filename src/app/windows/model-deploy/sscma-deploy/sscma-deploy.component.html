@@ -20,7 +20,7 @@
       </div>
 
       <!-- 右侧内容区域 -->
-      <div class="right">
+      <div class="right sscroll">
         @if (currentStep == 0 && modelDetail) {
           <!-- 第一步：显示模型详情 -->
           <div class="right-inner model-info-view">
@@ -74,7 +74,7 @@
             <!-- 第二步：连接设备（SenseCraft AI） -->
             <div class="right-inner device-connect-view">
               <!-- 支持的设备类型 -->
-              <div class="section">
+              <!-- <div class="section">
                 <div class="section-title">{{ 'MODEL_DEPLOY.SUPPORTED_DEVICES' | translate }}</div>
                 <div class="device-info">{{ 'MODEL_DEPLOY.DEVICE_INFO' | translate }}</div>
                 <div class="device-list">
@@ -84,7 +84,7 @@
                     </div>
                   }
                 </div>
-              </div>
+              </div> -->
 
               <!-- 连接设备步骤 -->
               <div class="section">
@@ -102,7 +102,7 @@
                   <!-- <div class="connect-step"> -->
                     <div class="step-text">{{ getDeviceConnectionSteps()[2] | translate }}</div>
 
-                    <div class="item-inner ccenter" (click)="openPortList($event)">
+                    <div class="item-inner serial-btn ccenter" (click)="openPortList($event)">
                       <div class="value">{{currentPort}}</div>
                       <div class="arrow-box">
                         <i class="fa-light fa-angle-right arrow" [ngClass]="{'down':showPortList}"></i>
@@ -136,9 +136,9 @@
     <!-- 底部操作按钮 -->
     <div class="window-footer">
       <div class="footer-left">
-        @if (getAuthorLogo()) {
+        <!-- @if (getAuthorLogo()) {
           <img [src]="getAuthorLogo()" alt="Author Logo" class="author-logo">
-        }
+        } -->
       </div>
       
       <div class="btns">

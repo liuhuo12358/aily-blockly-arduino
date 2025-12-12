@@ -118,7 +118,7 @@ export class ModelDetailComponent implements OnInit {
       path: 'model-deploy',
       title: '模型部署 - ' + modelDetail.name,
       alwaysOnTop: true,
-      width: 1200,
+      width: 960,
       height: 640
     });
   }

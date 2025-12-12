@@ -10,6 +10,7 @@ import { ModelStoreService, ModelItem } from './model-store.service';
 import { NzBreadCrumbModule } from 'ng-zorro-antd/breadcrumb';
 import { ModelDetailComponent } from './model-detail/model-detail.component';
 import { NzButtonModule } from 'ng-zorro-antd/button';
+import { NzMessageService } from 'ng-zorro-antd/message';
 
 @Component({
   selector: 'app-model-store',
@@ -32,14 +33,15 @@ export class ModelStoreComponent implements OnInit {
   constructor(
     private uiService: UiService,
     private router: Router,
-    private modelStoreService: ModelStoreService
+    private modelStoreService: ModelStoreService,
+    private message: NzMessageService
   ) { }
 
   itemList: ModelItem[] = []
   filteredItemList: ModelItem[] = [] // 过滤后的项目列表
   showSearch = false;
   searchKeyword = ''; // 搜索关键词
-  
+
   // 分页相关
   currentPage = 1;  // 当前页码
   totalPages = 1;   // 总页数
@@ -71,7 +73,7 @@ export class ModelStoreComponent implements OnInit {
       }
     });
   }
-  
+
   // 跳转到指定页
   goToPage(page: number) {
     if (page < 1 || page > this.totalPages || page === this.currentPage) {
@@ -79,36 +81,36 @@ export class ModelStoreComponent implements OnInit {
     }
     this.loadModelList(page);
   }
-  
+
   // 上一页
   prevPage() {
     if (this.currentPage > 1) {
       this.goToPage(this.currentPage - 1);
     }
   }
-  
+
   // 下一页
   nextPage() {
     if (this.currentPage < this.totalPages) {
       this.goToPage(this.currentPage + 1);
     }
   }
-  
+
   // 第一页
   firstPage() {
     this.goToPage(1);
   }
-  
+
   // 最后一页
   lastPage() {
     this.goToPage(this.totalPages);
   }
-  
+
   // 获取显示的页码列表
   getPageNumbers(): number[] {
     const pages: number[] = [];
     const maxVisible = 5; // 最多显示5个页码
-    
+
     if (this.totalPages <= maxVisible) {
       // 总页数少于等于最大显示数，显示所有页码
       for (let i = 1; i <= this.totalPages; i++) {
@@ -133,7 +135,7 @@ export class ModelStoreComponent implements OnInit {
         }
       }
     }
-    
+
     return pages;
   }
 
@@ -189,6 +191,8 @@ export class ModelStoreComponent implements OnInit {
 
 
   onTrain(): void {
+    this.message.warning('当前版本暂不可用，敬请期待');
+    return;
     this.uiService.openWindow({
       path: 'model-train',
       title: '模型训练',
