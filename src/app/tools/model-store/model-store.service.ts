@@ -32,7 +32,7 @@ export interface ModelItem {
 export interface ModelListResponse {
   code: string;
   data: {
-    count: string;  // 总模型数量
+    total: string;  // 总模型数量
     list: ModelItem[];
   };
   [key: string]: any;
@@ -120,7 +120,7 @@ export class ModelStoreService {
     // console.log('请求模型列表URL:', url);
     return this.http.get<ModelListResponse>(url).pipe(
       map(response => {
-        const total = parseInt(response.data.count || '0', 10);
+        const total = parseInt(response.data.total || '0', 10);
         const totalPages = Math.ceil(total / this.pageSize);
         
         return {

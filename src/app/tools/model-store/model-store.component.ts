@@ -57,6 +57,7 @@ export class ModelStoreComponent implements OnInit {
     this.loading = true;
     this.modelStoreService.getModelList(page).subscribe({
       next: (result) => {
+        console.log('加载的模型列表结果:', result);
         this.itemList = result.list;
         this.totalCount = result.total;
         this.totalPages = result.totalPages;
