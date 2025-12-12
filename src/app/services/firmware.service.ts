@@ -179,7 +179,7 @@ export class FirmwareService {
   async downloadFirmware(firmwareInfo: FirmwareInfo, deviceType: number = 32): Promise<FlashFile[]> {
     try {
       // const response = await fetch(`${firmwareInfo.file_url}?timestamp=${Date.now()}`);
-      const response = await fetch(API.downloadFirmware + '?' + firmwareInfo.url);
+      const response = await fetch(API.downloadFirmware + '?file_url=' + firmwareInfo.url);
       const blob = await response.blob();
 
       // XIAO 设备使用二进制字符串格式
