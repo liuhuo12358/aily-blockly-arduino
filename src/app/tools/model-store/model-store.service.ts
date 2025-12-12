@@ -1,5 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
+import { TranslateService } from '@ngx-translate/core';
 import { Observable, map, catchError, of } from 'rxjs';
 import { API } from '../../configs/api.config';
 
@@ -84,6 +85,7 @@ export interface ModelDetail {
 }
 
 export interface ModelDetailResponse {
+  status: number;
   code: string;
   data: ModelDetail;
 }
@@ -101,7 +103,10 @@ export class ModelStoreService {
   private readonly pageSize = 12;  // 每页显示数量
   private readonly uniformType = 32;  // XIAO ESP32S3 Sense
 
-  constructor(private http: HttpClient) { }
+  constructor(
+    private translateService: TranslateService,
+    private http: HttpClient
+  ) { }
 
   /**
    * 获取模型列表
@@ -111,8 +116,8 @@ export class ModelStoreService {
    */
   getModelList(page: number = 1, uniformType?: number): Observable<ModelListResult> {
     const type = uniformType || this.uniformType;
-    const url = `${this.baseUrl}?page=${page}&length=${this.pageSize}&uniform_type=${type}`;
-    
+    const url = `${this.baseUrl}?page=${page}&length=${this.pageSize}&uniform_type=${type}&lang=${this.translateService.currentLang}`;
+    // console.log('请求模型列表URL:', url);
     return this.http.get<ModelListResponse>(url).pipe(
       map(response => {
         const total = parseInt(response.data.count || '0', 10);
@@ -137,10 +142,11 @@ export class ModelStoreService {
    * @returns Observable<ModelDetail | null>
    */
   getModelDetail(id: string): Observable<ModelDetail | null> {
-    return this.http.get<ModelDetailResponse>(`${this.detailApiUrl}?model_id=${id}`).pipe(
+    return this.http.get<ModelDetailResponse>(`${this.detailApiUrl}?model_id=${id}&lang=${this.translateService.currentLang}`).pipe(
       map(response => {
-        if (response.code === '0' && response.data) {
-          console.log('模型详情:', response.data);
+        // console.log('模型详情响应:', response);
+        if (response.status === 200 && response.data) {
+          // console.log('模型详情:', response.data);
           return response.data;
         }
         return null;

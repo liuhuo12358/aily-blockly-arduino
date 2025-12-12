@@ -65,7 +65,7 @@ export class CloudSpaceComponent {
 
   ngOnInit(): void {
     this.projectService.currentProjectPath$.subscribe(path => {
-      console.log('当前项目路径变化:', path);
+      // console.log('当前项目路径变化:', path);
       this.canSync = !!path;
     });
 
@@ -121,7 +121,7 @@ export class CloudSpaceComponent {
     if (this.openingProjectIds.has(item.id)) return;
 
     this.openingProjectIds.add(item.id);
-    console.log('打开云上项目:', item);
+    // console.log('打开云上项目:', item);
     this.cloudService.getProjectArchive(item.archive_url).subscribe({
       next: async res => {
         try {
@@ -184,7 +184,7 @@ export class CloudSpaceComponent {
           this.itemList.push(prj);
         });
         this.totalProjects = res.data.total;
-        console.log('获取云上项目列表成功:', this.itemList);
+        // console.log('获取云上项目列表成功:', this.itemList);
         // 应用搜索过滤
         this.filterProjects();
       } else {
@@ -206,7 +206,7 @@ export class CloudSpaceComponent {
         return nickname.includes(keyword) || description.includes(keyword) || name.includes(keyword);
       });
     }
-    console.log('过滤后的项目列表:', this.filteredItemList);
+    // console.log('过滤后的项目列表:', this.filteredItemList);
   }
 
   // 搜索关键词变化时触发
@@ -218,7 +218,7 @@ export class CloudSpaceComponent {
   async delete7zFile(archivePath: string) {
     if (await window['fs'].existsSync(archivePath)) {
       await window['fs'].unlinkSync(archivePath);
-      console.log('删除已存在的7z文件:', archivePath);
+      // console.log('删除已存在的7z文件:', archivePath);
     }
   }
 
@@ -242,7 +242,7 @@ export class CloudSpaceComponent {
       return;
     }
 
-    console.log('开始打包项目:', prjPath);
+    // console.log('开始打包项目:', prjPath);
 
     // 构建更安全的打包命令
     // 打包所有文件，但排除特定目录和文件
@@ -255,10 +255,10 @@ export class CloudSpaceComponent {
     // 注意：在某些shell环境下，!可能需要转义或引用，这里使用引号包裹排除项
     let packCommand = `${this.platformService.za7} a -t7z -mx=9 "${archivePath}" * "-x!node_modules" "-x!.chat" "-x!.history" "-x!.temp" "-x!package-lock.json" "-x!project.7z"`;
     
-    console.log('执行打包命令:', packCommand);
+    // console.log('执行打包命令:', packCommand);
     const result = await this.cmdService.runAsync(packCommand, prjPath, false);
 
-    console.log('打包命令执行结果:', result);
+    // console.log('打包命令执行结果:', result);
 
     // 检查打包是否成功
     if (result.type === 'error' || (result.code && result.code !== 0)) {
@@ -283,7 +283,7 @@ export class CloudSpaceComponent {
 
     // 如果文件大小为0，等待一段时间后重试
     while (fileStats.size === 0 && retryCount < 5) {
-      console.log(`文件大小为0，等待重试... (${retryCount + 1}/5)`);
+      // console.log(`文件大小为0，等待重试... (${retryCount + 1}/5)`);
       await new Promise(resolve => setTimeout(resolve, 300));
       fileStats = window['fs'].statSync(archivePath);
       retryCount++;
@@ -298,10 +298,10 @@ export class CloudSpaceComponent {
       return;
     }
 
-    console.log('7z文件生成成功:', {
-      path: archivePath,
-      size: fileStats.size
-    });
+    // console.log('7z文件生成成功:', {
+    //   path: archivePath,
+    //   size: fileStats.size
+    // });
 
     return archivePath;
   }
@@ -363,7 +363,7 @@ export class CloudSpaceComponent {
           this.message.success('同步成功');
           // 更新项目列表
           await this.getCloudProjects();
-          console.log('同步成功, 云端项目ID:', res.data.id);
+          // console.log('同步成功, 云端项目ID:', res.data.id);
         } else {
           console.error('同步失败, 服务器返回错误:', res);
           this.message.error('同步失败: ' + (res?.messages || '未知错误'));
@@ -409,7 +409,7 @@ export class CloudSpaceComponent {
 
   toggleVisibility(item) {
     // 切换公开/私有状态
-    console.log('切换项目可见性:', item);
+    // console.log('切换项目可见性:', item);
     if (item.is_published) {
       this.cloudService.unpublishProject(item.id).subscribe(res => {
         this.message.info(`项目 "${item.nickname}" 已设为私有`);

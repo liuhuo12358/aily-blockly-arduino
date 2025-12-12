@@ -22,7 +22,7 @@
       (click)="isConnected ? disconnect() : connectToDevice()"
       [style.background-color]="(!currentPort || isConnecting) ? '' : (isConnected ? '' : '#8fc31f')"
       [style.border-color]="(!currentPort || isConnecting) ? '' : (isConnected ? '' : '#8fc31f')">
-      <span nz-icon [nzType]="isConnected ? 'disconnect' : 'link'" nzTheme="outline"></span>
+      <!-- <span nz-icon [nzType]="isConnected ? 'disconnect' : 'link'" nzTheme="outline"></span> -->
       {{ isConnected ? '断开连接' : '连接设备' }}
     </button>
     
@@ -108,7 +108,7 @@
               [style.background-color]="(!isConnected || isConnecting) ? '' : (isPreviewMode ? '' : '#8fc31f')"
               [style.border-color]="(!isConnected || isConnecting) ? '' : (isPreviewMode ? '' : '#8fc31f')"
               (click)="isPreviewMode ? stopPreview() : startPreview()">
-              <i nz-icon [nzType]="isPreviewMode ? 'stop' : 'play-circle'" nzTheme="outline"></i>
+              <!-- <i nz-icon [nzType]="isPreviewMode ? 'stop' : 'play-circle'" nzTheme="outline"></i> -->
               {{ isPreviewMode ? '停止预览' : '开始预览' }}
             </button>
           </div>
@@ -387,12 +387,12 @@
                     placeholder="········" />
                 </nz-input-group>
                 <ng-template #wifiPasswordSuffix>
-                  <span 
+                  <!-- <span 
                     nz-icon 
                     [nzType]="showWifiPassword ? 'eye-invisible' : 'eye'"
                     (click)="showWifiPassword = !showWifiPassword"
                     style="cursor: pointer; color: #999;">
-                  </span>
+                  </span> -->
                 </ng-template>
               </div>
             </div>
@@ -505,12 +505,12 @@
                       placeholder="请输入密码" />
                   </nz-input-group>
                   <ng-template #mqttPasswordSuffix>
-                    <span 
+                    <!-- <span 
                       nz-icon 
                       [nzType]="showMqttPassword ? 'eye-invisible' : 'eye'"
                       (click)="showMqttPassword = !showMqttPassword"
                       style="cursor: pointer; color: #999;">
-                    </span>
+                    </span> -->
                   </ng-template>
                 </div>
               </div>
@@ -700,7 +700,7 @@
                         nzSize="small"
                         (click)="deleteTriggerRule(rule.id)"
                         class="delete-btn">
-                        <span nz-icon nzType="delete" nzTheme="outline"></span>
+                        <!-- <span nz-icon nzType="delete" nzTheme="outline"></span> -->
                       </button>
                     </div>
                   </div>
@@ -714,7 +714,7 @@
                   nzType="dashed" 
                   (click)="addTriggerRule()"
                   class="add-row-btn">
-                  <span nz-icon nzType="plus" nzTheme="outline"></span>
+                  <!-- <span nz-icon nzType="plus" nzTheme="outline"></span> -->
                   满足事件条件时触发操作
                 </button>
               </div>

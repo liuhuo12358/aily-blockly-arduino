@@ -33,6 +33,7 @@ export interface FirmwareInfo {
   file_url: string;      // 文件下载地址
   resource_url: string;  // 资源配置地址
   [key: string]: any;
+  url: string;        // 直接下载地址
 }
 
 /**
@@ -108,7 +109,7 @@ export class FirmwareService {
       // const url = 'https://sensecap.seeed.cc/directapi/hardware/get_new_version';
       const url = API.firmwareInfo;
       const params: any = {
-        sku: firmwareType,
+        firmwareType: firmwareType,
         version: version || '',
         appid: '131'
       };
@@ -117,7 +118,9 @@ export class FirmwareService {
         this.http.get<any>(url, { params })
       );
 
-      if (response.code !== 0 && response.code !== '0') {
+      // console.log('固件信息响应:', response);
+
+      if (response.status !== 200 && response.status !== '200') {
         return null;
       }
 
@@ -159,7 +162,7 @@ export class FirmwareService {
         firmwareData.file_url = firmwareData.url;
       }
 
-      console.log('固件信息获取成功:', firmwareData);
+      // console.log('固件信息获取成功:', firmwareData);
       return firmwareData;
     } catch (error) {
       console.error('获取固件信息失败:', error);
@@ -175,7 +178,8 @@ export class FirmwareService {
    */
   async downloadFirmware(firmwareInfo: FirmwareInfo, deviceType: number = 32): Promise<FlashFile[]> {
     try {
-      const response = await fetch(`${firmwareInfo.file_url}?timestamp=${Date.now()}`);
+      // const response = await fetch(`${firmwareInfo.file_url}?timestamp=${Date.now()}`);
+      const response = await fetch(API.downloadFirmware+ firmwareInfo.url);
       const blob = await response.blob();
 
       // XIAO 设备使用二进制字符串格式
@@ -231,7 +235,7 @@ export class FirmwareService {
         // 构建命令
         const command = `powershell.exe -ExecutionPolicy Bypass -File "${scriptPath}" -Url "${firmwareInfo.file_url}" -OutputPath "${outputPath}"`;
         
-        console.log('执行下载命令:', command);
+        // console.log('执行下载命令:', command);
         
         let streamId = '';
         let lastProgress = 0;
@@ -258,7 +262,7 @@ export class FirmwareService {
               
               // 检查成功
               if (line.includes('SUCCESS')) {
-                console.log('固件下载成功:', outputPath);
+                // console.log('固件下载成功:', outputPath);
               }
               
               // 检查错误
@@ -352,7 +356,7 @@ export class FirmwareService {
         // 构建命令
         const command = `powershell.exe -ExecutionPolicy Bypass -File "${scriptPath}" -Url "${downloadUrl}" -OutputPath "${outputPath}"`;
         
-        console.log('执行模型下载命令:', command);
+        // console.log('执行模型下载命令:', command);
         
         let streamId = '';
         let lastProgress = 0;
@@ -379,7 +383,7 @@ export class FirmwareService {
               
               // 检查成功
               if (line.includes('SUCCESS')) {
-                console.log('模型下载成功:', outputPath);
+                // console.log('模型下载成功:', outputPath);
               }
               
               // 检查错误
@@ -442,28 +446,29 @@ export class FirmwareService {
   async getModelFile(modelId: string): Promise<{ snapshot: ModelSnapshot, detail: ModelDetailInfo } | null> {
     try {
       // 1. 获取模型详情
-      const detailUrl = `${this.sensecraftApiUrl}/model/view_model`;
+      // const detailUrl = `${this.sensecraftApiUrl}/model/view_model`;
+      const detailUrl = API.modelDetails;
       const detailResponse = await firstValueFrom(
         this.http.get<any>(detailUrl, { params: { model_id: modelId } })
       );
 
-      if (detailResponse.code !== 0 && detailResponse.code !== '0') {
+      if (detailResponse.status !== 200 && detailResponse.data !== '200') {
         console.error('获取模型详情失败:', detailResponse);
         return null;
       }
 
-      // 2. 获取模型文件快照
-      const snapshotUrl = `${this.sensecraftApiUrl}/model/apply_model`;
-      const snapshotResponse = await firstValueFrom(
-        this.http.get<any>(snapshotUrl, { params: { model_id: modelId } })
-      );
-
-      if (snapshotResponse.code !== 0 && snapshotResponse.code !== '0') {
-        console.error('获取模型文件快照失败:', snapshotResponse);
-        return null;
-      }
-
-      const snapshot = JSON.parse(snapshotResponse.data.model_snapshot) as ModelSnapshot;
+      // 直接根据 detailResponse.data 构建 ModelSnapshot（兼容不同 API 返回格式）
+      const d = detailResponse.data || detailResponse;
+      const snapshot: ModelSnapshot = {
+        model_id: d.model_id || d.id || modelId,
+        version: d.version || d.v || '',
+        arguments: {
+          url: d.file_url || d.url || ''
+        },
+        checksum: d.checksum || d.md5 || undefined,
+        model_format: d.model_format || d.format || '',
+        ai_framwork: d.ai_framwork || d.ai_framework || ''
+      } as any;
 
       return {
         snapshot,
@@ -485,7 +490,8 @@ export class FirmwareService {
     try {
       const downloadUrl = modelSnapshot.arguments.url;
 
-      const response = await fetch(`${downloadUrl}?timestamp=${Date.now()}`);
+      // const response = await fetch(`${downloadUrl}?timestamp=${Date.now()}`);
+      const response = await fetch(downloadUrl);
       const blob = await response.blob();
 
       // 读取为二进制字符串

@@ -190,6 +190,7 @@ export class SscmaDeployComponent implements OnInit {
     try {
       const firmwareType = this.getFirmwareType();
       this.firmwareInfo = await this.firmwareService.getFirmwareInfo(firmwareType);
+      // console.log('固件信息加载完成:', this.firmwareInfo);
     } catch (error) {
       console.error('加载固件信息失败:', error);
     }

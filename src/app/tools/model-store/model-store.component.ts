@@ -179,7 +179,7 @@ export class ModelStoreComponent implements OnInit {
         return name.includes(keyword) || description.includes(keyword) || authorName.includes(keyword);
       });
     }
-    console.log('过滤后的项目列表:', this.filteredItemList);
+    // console.log('过滤后的项目列表:', this.filteredItemList);
   }
 
   close() {
