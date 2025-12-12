@@ -1,8 +1,8 @@
 const SERVER_URL: string = 'https://aily-chat.diandeng.tech';
-const CHAT_SERVER_URL: string = 'http://114.132.150.141:8100';
-const AUTH_SERVER_URL: string = 'http://114.132.150.141:8101';
-const WORKSPACE_SERVER_URL: string = 'http://114.132.150.141:8102';
-const MODELS_SERVER_URL: string = 'http://114.132.150.141:8103';
+const CHAT_SERVER_URL: string = 'http://114.132.150.141:8000';
+const AUTH_SERVER_URL: string = 'http://114.132.150.141:8001';
+const WORKSPACE_SERVER_URL: string = 'http://114.132.150.141:8002';
+const MODELS_SERVER_URL: string = 'http://114.132.150.141:8003';
 const REGISTRY_URL: string = 'https://registry.diandeng.tech';
 
 export const API = {
@@ -40,5 +40,6 @@ export const API = {
   // model details
   modelDetails: `${MODELS_SERVER_URL}/api/v1/model`,
   // firmware info
-  firmwareInfo: `${SERVER_URL}/api/v1/firmware/info`
+  firmwareInfo: `${MODELS_SERVER_URL}/api/v1/firmware/info`,
+  downloadFirmware: `${MODELS_SERVER_URL}/api/v1/firmware/download`,
 };
