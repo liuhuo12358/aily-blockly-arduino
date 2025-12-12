@@ -321,5 +321,60 @@
     },
     "SERIAL": {
         "SELECT_PORT_FIRST": "请先选择串口"
+    },
+    "MODEL_DEPLOY": {
+        "TITLE": "模型部署",
+        "SELECT_MODEL": "选择模型",
+        "SELECT_DEVICE": "选择设备",
+        "DEPLOY": "部署",
+        "DEPLOYING": "正在部署",
+        "SUCCESS_DEPLOY": "模型部署成功！",
+        "ERROR_DEPLOY_FAILED": "模型部署失败，请稍后重试",
+        "NO_MODELS": "暂无可用模型，请先在模型商店下载模型",
+        "DEPLOY_STATUS": "部署状态",
+        "STEPS": {
+            "SELECT": "选择模型",
+            "CONTACT": "连接设备",
+            "CONFIGURE": "配置参数",
+            "DEPLOY": "部署模型",
+            "TEST": "测试模型"
+        },
+        "BUTTONS": {
+            "NEXT": "下一步",
+            "PREV": "上一步",
+            "FINISH": "完成",
+            "DEPLOY": "开始部署",
+            "DEPLOYING": "部署中..."
+        },
+        "SUPPORTED_DEVICES": "支持的设备类型",
+        "DEVICE_INFO": "该模型可以部署在以下设备上，若您没有此类型的设备，可以点击下面的链接购买",
+        "CONNECT_DEVICE": "连接设备"
+    },
+    "MODEL_STORE": {
+        "TITLE": "模型商店",
+        "DESCRIPTION": "描述",
+        "MODEL_INFO": "模型信息",
+        "SUPPORTED_BOARDS": "支持的开发板",
+        "MODEL_TYPE": "模型类型",
+        "MODEL_FORMAT": "模型格式",
+        "MODEL_PRECISION": "模型精度",
+        "MODEL_SIZE": "模型大小",
+        "VERSION": "版本",
+        "MODEL_DETAILS": "模型详情",
+        "MODEL_LABELS": "模型类别",
+        "AUTHOR": "作者",
+        "DEPLOY_COUNT": "部署次数",
+        "VIEW_COUNT": "浏览次数",
+        "LIKE_COUNT": "点赞数"
+    },
+    "MODEL_DEPLOY_STEP2": {
+        "STEP1": "1. 将摄像头传感器扩展板上的连接器与 XIAO ESP32S3 Sense 上的 B2B 连接器对准，然后按下以安装摄像头传感器。",
+        "STEP2": "2. 通过USB将 XIAO ESP32S3 Sense 连接到电脑",
+        "STEP3": "3. 选择USB JAG/serial 调试器进行连接"
+    },
+    "XIAO_ESP32S3_SENSE_CONNECT": {
+        "STEP1": "1. 将摄像头传感器扩展板上的连接器与 XIAO ESP32S3 Sense 上的 B2B 连接器对准，然后按下以安装摄像头传感器。",
+        "STEP2": "2. 通过USB将 XIAO ESP32S3 Sense 连接到电脑",
+        "STEP3": "3. 选择USB JAG/serial 调试器进行连接"
     }
 }

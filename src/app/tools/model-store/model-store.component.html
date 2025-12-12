@@ -40,6 +40,12 @@
         </div>
         <div class="content">
             <div class="item-list sscroll">
+                @if (loading) {
+                <div class="loading-container">
+                    <i class="fa-duotone fa-spinner-third fa-spin"></i>
+                    <span>加载中...</span>
+                </div>
+                }
                 @for (item of filteredItemList; track item.id) {
                 <div class="item" (click)="loadModelDetail(item)">
                     <div class="item-content">
@@ -52,29 +58,57 @@
                             <div class="author">{{item?.author_name || 'unknown'}}</div>
                         </div>
                     </div>
-                    <!-- <div class="btns ccenter">
-                    <button (click)="openInNewTab(item)">
-                        <i class="fa-light fa-folder-open"></i>
-                        打开
-                    </button>
-                    <button (click)="openEditor(item)">
-                        <i class="fa-light fa-pen"></i>
-                        编辑
-                    </button>
-                    <button (click)="toggleVisibility(item)">
-                        @if (item?.is_published === false) {
-                        <i class="fa-light fa-eye"></i>
-                        公开
-                        } @else {
-                        <i class="fa-light fa-eye-slash"></i>
-                        私有
+                </div>
+                }
+                
+                <!-- 分页导航 -->
+                @if (!loading && totalPages > 1 && !showDetail) {
+                <div class="pagination">
+                    <div class="pagination-info">
+                        第 {{currentPage}} / {{totalPages}} 页，共 {{totalCount}} 个模型
+                    </div>
+                    <div class="pagination-controls">
+                        <!-- 第一页 -->
+                        <button class="page-btn" 
+                                [disabled]="currentPage === 1" 
+                                (click)="firstPage()"
+                                title="第一页">
+                            <i class="fa-light fa-angles-left"></i>
+                        </button>
+                        
+                        <!-- 上一页 -->
+                        <button class="page-btn" 
+                                [disabled]="currentPage === 1" 
+                                (click)="prevPage()"
+                                title="上一页">
+                            <i class="fa-light fa-angle-left"></i>
+                        </button>
+                        
+                        <!-- 页码列表 -->
+                        @for (page of getPageNumbers(); track page) {
+                        <button class="page-number" 
+                                [class.active]="page === currentPage"
+                                (click)="goToPage(page)">
+                            {{page}}
+                        </button>
                         }
-                    </button>
-                    <button class="delete" (click)="deleteCloudProject(item)">
-                        <i class="fa-light fa-trash"></i>
-                        删除
-                    </button>
-                </div> -->
+                        
+                        <!-- 下一页 -->
+                        <button class="page-btn" 
+                                [disabled]="currentPage === totalPages" 
+                                (click)="nextPage()"
+                                title="下一页">
+                            <i class="fa-light fa-angle-right"></i>
+                        </button>
+                        
+                        <!-- 最后一页 -->
+                        <button class="page-btn" 
+                                [disabled]="currentPage === totalPages" 
+                                (click)="lastPage()"
+                                title="最后一页">
+                            <i class="fa-light fa-angles-right"></i>
+                        </button>
+                    </div>
                 </div>
                 }
             </div>

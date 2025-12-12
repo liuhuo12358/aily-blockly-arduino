@@ -74,7 +74,7 @@ export const TOOLS = [
     // },
     {
         name: "read_file",
-        description: `读取指定文件的内容。支持完整读取或按行/字节范围读取，自动处理大文件。优先考虑使用 grep_tool 进行内容搜索。
+        description: `读取指定文件的内容。支持完整读取或按行/字节范围读取，自动处理大文件。
 
 **读取模式：**
 1. **完整读取**（默认）：读取整个文件（文件需小于 maxSize）
@@ -810,7 +810,12 @@ Query and return specific content (for detailed info)
     },
     {
         name: "create_code_structure_tool", 
-        description: `动态结构创建工具，<system-reminder>使用工具前必须确保已经读取了将要使用的block所属库的Readme</system-reminder>。建议分步生成代码，如：全局变量-初始化-loop-回调函数 不要一次性生成超过10个block的代码块。使用动态结构处理器创建任意复杂的代码块结构，支持自定义块组合和连接规则。
+        description: `动态结构创建工具，使用动态结构处理器创建任意复杂的代码块结构，支持自定义块组合和连接规则。
+注意事项:
+- 使用工具前必须确保已经读取了使用的block所属库的Readme
+- 建议分步生成代码，如：全局变量-初始化-loop-回调函数。
+- 不要一次性生成超过10个block的代码块结构。
+
 基本语法:
 \`\`\`json
 {

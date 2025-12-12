@@ -15,13 +15,6 @@
         color: #ffffff;
     }
 
-    .description {
-        color: #ccc;
-        margin-bottom: 20px;
-        padding-bottom: 5px;
-        border-bottom: 1px solid #444;
-    }
-
     .content {
         font-size: 14px;
         line-height: 1.8;
@@ -29,28 +22,164 @@
         height: calc(100% - 78px);
         overflow-y: auto;
         padding-bottom: 50px;
-
-        ::ng-deep {
-            p {
-                margin-bottom: 12px;
-            }
-
-            br {
-                display: block;
-                content: "";
-                margin-top: 8px;
-            }
-        }
     }
 
     .model-image {
-        margin-bottom: 10px;
+        margin-bottom: 20px;
         text-align: center;
+        background: #2a2b2e;
+        border-radius: 8px;
+        padding: 10px;
 
         img {
             max-width: 100%;
+            max-height: 300px;
             height: auto;
-            border-radius: 8px;
+            border-radius: 4px;
+            object-fit: contain;
+        }
+    }
+
+    .section {
+        margin-bottom: 24px;
+
+        .section-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #ffffff;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #444;
+        }
+
+        .description {
+            color: #ccc;
+            line-height: 1.6;
+        }
+
+        .info-tags {
+            .info-item {
+                display: flex;
+                align-items: center;
+                margin-bottom: 10px;
+                color: #ccc;
+
+                .label {
+                    min-width: 100px;
+                    font-weight: 500;
+                    color: #aaa;
+                }
+
+                .value {
+                    color: #fff;
+                }
+
+                .tag-list {
+                    display: flex;
+                    flex-wrap: wrap;
+                    gap: 8px;
+
+                    .tag-board {
+                        display: inline-block;
+                        padding: 4px 12px;
+                        background: #8fc31fc7;
+                        border-radius: 4px;
+                        font-size: 12px;
+                        color: #fff;
+                    }
+
+                    .tag-task {
+                        display: inline-block;
+                        padding: 4px 12px;
+                        background: #951fc3c7;
+                        border-radius: 4px;
+                        font-size: 12px;
+                        color: #fff;
+                    }
+
+                    .tag-model {
+                        display: inline-block;
+                        padding: 4px 12px;
+                        background: #4a4d52;
+                        border-radius: 4px;
+                        font-size: 12px;
+                        color: #fff;
+                    }
+
+                    .tag-precision {
+                        display: inline-block;
+                        padding: 4px 12px;
+                        background: #4a4d52;
+                        border-radius: 4px;
+                        font-size: 12px;
+                        color: #fff;
+                    }
+
+                    .tag {
+                        display: inline-block;
+                        padding: 4px 12px;
+                        background: #4a4d52;
+                        border-radius: 4px;
+                        font-size: 12px;
+                        color: #fff;
+                    }
+                }
+            }
+        }
+
+        .detail-content {
+            color: #ccc;
+            line-height: 1.8;
+
+            ::ng-deep {
+                p {
+                    margin-bottom: 12px;
+                }
+
+                br {
+                    display: block;
+                    content: "";
+                    margin-top: 8px;
+                }
+
+                ul, ol {
+                    margin-left: 20px;
+                    margin-bottom: 12px;
+                }
+
+                strong {
+                    color: #fff;
+                }
+
+                img {
+                    max-width: 100%;
+                    max-height: 400px;
+                    height: auto;
+                    display: block;
+                    margin: 12px auto;
+                    border-radius: 4px;
+                    object-fit: contain;
+                }
+            }
+        }
+
+        .labels-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+
+            .label-item {
+                padding: 6px 14px;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                border-radius: 20px;
+                font-size: 13px;
+                color: #fff;
+                font-weight: 500;
+
+                .label-name {
+                    display: inline-block;
+                }
+            }
         }
     }
 

@@ -17,6 +17,8 @@ import { IMenuItem } from '../../configs/menu.config';
 import { McpService } from './services/mcp.service';
 import { ProjectService } from '../../services/project.service';
 import { CmdService } from '../../services/cmd.service';
+import { PlatformService } from '../../services/platform.service';
+import { ElectronService } from '../../services/electron.service';
 import { newProjectTool } from './tools/createProjectTool';
 import { executeCommandTool } from './tools/executeCommandTool';
 import { askApprovalTool } from './tools/askApprovalTool';
@@ -724,6 +726,8 @@ appDataPath(**appDataPath**): ${window['path'].getAppDataPath() || '无'}
     private arduinoLintService: ArduinoLintService,
     private translate: TranslateService,
     private noticeService: NoticeService,
+    private platformService: PlatformService,
+    private electronService: ElectronService,
   ) {
   }
 
@@ -1402,7 +1406,7 @@ ${JSON.stringify(errData)}
             let resultState = "done";
             let resultText = '';
 
-            // console.log("工具调用请求: ", data.tool_name, toolArgs);
+            console.log("工具调用请求: ", data.tool_name, toolArgs);
 
             // 定义 block 工具列表
             const blockTools = [
@@ -1444,7 +1448,7 @@ ${JSON.stringify(errData)}
                     }
                     break;
                   case 'execute_command':
-                    // console.log('[执行命令工具被调用]', toolArgs);
+                    console.log('[执行命令工具被调用]', toolArgs);
                     // Extract the command main body for display
                     const commandParts = toolArgs.command.split(' ');
                     let displayCommand = toolArgs.command;
@@ -1464,41 +1468,128 @@ ${JSON.stringify(errData)}
                     if (!toolArgs.cwd) {
                       toolArgs.cwd = this.projectService.currentProjectPath || this.projectService.projectRootPath;
                     }
-                    toolResult = await executeCommandTool(this.cmdService, toolArgs);
+                    
                     // Get project path from command args or default
                     const projectPath = toolArgs.cwd || this.prjPath;
+                    
+                    // Check if this is an npm uninstall command
+                    const command = toolArgs.command;
+                    const isNpmInstall = command.includes('npm i') || command.includes('npm install')
+                    const isNpmUninstall = command.includes('npm uninstall');
+                    
+                    // 如果是 npm uninstall，需要在执行命令之前先卸载库（因为命令执行后文件就被删除了）
+                    if (isNpmUninstall) {
+                      console.log('检测到 npm uninstall 命令，在执行前先卸载库');
+                      // Extract all @aily-project/ packages from the uninstall command
+                      const npmRegex = /@aily-project\/[a-zA-Z0-9-_]+/g;
+                      const matches = command.match(npmRegex);
+
+                      console.log('npm uninstall matches:', matches);
+
+                      if (matches && matches.length > 0) {
+                        // 使用 Set 去重，避免重复处理
+                        const uniqueLibs = [...new Set(matches)];
+                        console.log('去重后的卸载库列表:', uniqueLibs);
+                        
+                        // 检查库是否正在使用中
+                        const separator = this.platformService.getPlatformSeparator();
+                        const libsInUse: string[] = [];
+                        
+                        for (const libPackageName of uniqueLibs as string[]) {
+                          try {
+                            const libPackagePath = projectPath + `${separator}node_modules${separator}` + libPackageName;
+                            const libBlockPath = libPackagePath + `${separator}block.json`;
+                            
+                            // 检查 block.json 文件是否存在
+                            if (this.electronService.exists(libBlockPath)) {
+                              const blocksData = JSON.parse(this.electronService.readFile(libBlockPath));
+                              const abiJson = JSON.stringify(this.blocklyService.getWorkspaceJson());
+                              
+                              // 检查工作区中是否使用了该库的任何块
+                              for (let index = 0; index < blocksData.length; index++) {
+                                const element = blocksData[index];
+                                if (abiJson.includes(element.type)) {
+                                  libsInUse.push(libPackageName);
+                                  break;
+                                }
+                              }
+                            }
+                          } catch (e) {
+                            console.warn("检查库使用情况失败:", libPackageName, e);
+                          }
+                        }
+                        
+                        // 如果有库正在使用中，阻止卸载并返回错误消息
+                        if (libsInUse.length > 0) {
+                          const errorMsg = `无法卸载以下库，因为项目代码正在使用它们：${libsInUse.join(', ')}。请先删除相关代码块后再尝试卸载。`;
+                          console.warn(errorMsg);
+                          toolResult = {
+                            content: errorMsg,
+                            is_error: true
+                          };
+                          // 直接跳过命令执行
+                          break;
+                        }
+                        
+                        // 遍历所有匹配到的库包名进行卸载
+                        for (const libPackageName of uniqueLibs) {
+                          try {
+                            await this.blocklyService.unloadLibrary(libPackageName, projectPath);
+                            console.log("库卸载成功:", libPackageName);
+                          } catch (e) {
+                            console.warn("卸载库失败:", libPackageName, e);
+                            // 卸载失败不影响其他库的处理，继续
+                          }
+                        }
+                      }
+                    }
+                    
+                    // 执行命令
+                    toolResult = await executeCommandTool(this.cmdService, toolArgs);
+                    
                     if (!toolResult.is_error) {
-                      // Check if this is an npm install command
-                      const command = toolArgs.command;
-                      if (command.includes('npm i') || command.includes('npm install')) {
-                        // console.log('检测到 npm install 命令，尝试加载库');
+                      if (isNpmInstall) {
+                        console.log('检测到 npm install 命令，尝试加载库');
                         // Extract all @aily-project/ packages from the command
                         const npmRegex = /@aily-project\/[a-zA-Z0-9-_]+/g;  // 使用全局匹配
                         const matches = command.match(npmRegex);
 
-                        // console.log('npmRegex matches:', matches);
+                        console.log('npmRegex matches:', matches);
 
                         if (matches && matches.length > 0) {
+                          // 使用 Set 去重，避免重复加载
+                          const uniqueLibs = [...new Set(matches)];
+                          console.log('去重后的库列表:', uniqueLibs);
+                          
                           // 遍历所有匹配到的库包名
-                          for (const libPackageName of matches) {
-                            // console.log('Installing library:', libPackageName);
-
+                          for (const libPackageName of uniqueLibs) {
                             // Load the library into blockly
                             try {
                               await this.blocklyService.loadLibrary(libPackageName, projectPath);
+                              console.log("库加载成功:", libPackageName);
                             } catch (e) {
-                              console.log("加载库失败:", libPackageName, e);
+                              console.warn("加载库失败:", libPackageName, e);
+                              // 加载失败不影响其他库的加载，继续处理
                             }
                           }
                         } else {
-                          // console.log("projectOpen: ", projectPath);
+                          console.log("projectOpen: ", projectPath);
                           this.projectService.projectOpen(projectPath);
                         }
                       }
+                      console.log(`命令${displayCommand}执行成功`);
                       resultText = `命令${displayCommand}执行成功`
                     } else {
-                      resultState = "warn";
-                      resultText = `命令${displayCommand}执行异常, 即将重试`;
+                      // npm install 失败时不重试，避免重复加载库
+                      if (isNpmInstall) {
+                        console.log(`npm install命令执行失败，不触发重试以避免重复加载库`);
+                        resultState = "done";  // 标记为完成，不触发重试
+                        resultText = `npm install命令执行失败，请检查网络或依赖配置`;
+                      } else {
+                        console.log(`命令${displayCommand}执行异常, 即将重试`);
+                        resultState = "warn";
+                        resultText = `命令${displayCommand}执行异常, 即将重试`;
+                      }
                     }
                     break;
                   case 'get_context':
@@ -2307,9 +2398,9 @@ ${JSON.stringify(errData)}
 <rules>请不要经验主义或者过于自信，Blockly块创建必须遵循以下流程：
 1. 在开始编程前使用get_workspace_overview_tool分析当前工作区，了解已有块和结构情况
 2. 先列出计划使用的所有库(不可跳过以\`lib-core\`开始的库，特别注意lib-core-logic lib-core-variables lib-core-time等基础库)
-3. 逐一读取每个库的README确定块存在
+3. 逐一完整读取每个库的README确定块存在
 4. 使用smart_block_tool和create_code_structure_tool创建对应代码块
-- 不要一次性生成大量块，分步创建，每次创建后检查结果
+- 不要一次性生成大量块(超过10个)，分步创建，每次创建后检查结果
 - 全局变量 setup loop 回调函数 独立结构分开创建(steup/loop基础块已经存在于工作区，无需重复创建)
 - 当尝试使用代码块多次仍然无法创建成功时，安装 @aily-project/lib-core-custom 并使用库中的自定义块进行代码创建
 5. 检查工具反馈结果
@@ -2355,7 +2446,7 @@ Your role is ASK (Advisory & Quick Support) - you provide analysis, recommendati
               this.completeToolCall(data.tool_id, data.tool_name, finalState, resultText);
             }
 
-            // console.log(`工具调用结果: `, toolResult, resultText);
+            console.log(`工具调用结果: `, toolResult, resultText);
 
             this.send("tool", JSON.stringify({
               "type": "tool",

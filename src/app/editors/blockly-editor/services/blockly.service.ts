@@ -137,6 +137,16 @@ export class BlocklyService {
     }
   }
 
+  // 卸载库（通过包名和项目路径）
+  async unloadLibrary(libPackageName, projectPath) {
+    // 统一路径分隔符，确保在Windows上使用反斜杠
+    const normalizedProjectPath = projectPath.replace(/\//g, '\\');
+    const libPackagePath = normalizedProjectPath + '\\node_modules\\' + libPackageName.replace(/\//g, '\\');
+    
+    // 直接调用 removeLibrary 函数
+    this.removeLibrary(libPackagePath);
+  }
+
   loadLibBlocks(blocks, libStaticPath) {
     for (let index = 0; index < blocks.length; index++) {
       let block = blocks[index];

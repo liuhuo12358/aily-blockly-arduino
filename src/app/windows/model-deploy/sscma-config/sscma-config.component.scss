@@ -1,0 +1,1369 @@
+/**
+ * SSCMA 模型配置组件样式
+ * 布局：左侧工具栏 + 中间分割线 + 双列主内容（模型/预览 | 设备信息）
+ */
+
+// ===================
+// 容器主体
+// ===================
+.sscma-config {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  height: 100%;
+  overflow: hidden;
+}
+
+// ===================
+// 左侧工具栏
+// ===================
+.config-sidebar {
+  width: 120px;
+  flex-shrink: 0;
+  overflow: visible;
+  display: flex;
+  flex-direction: row;
+  gap: 16px;
+
+  // 串口选择器
+  .port-selector {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+
+    label {
+      font-size: 14px;
+      color: rgba(255, 255, 255, 0.85);
+      font-weight: 500;
+    }
+  }
+
+  // 选择器内部样式
+  .item-inner {
+    height: 32px;
+    width: 100%;
+    background-color: #222;
+    border-radius: 4px;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-left: 10px;
+    padding-right: 20px;
+    color: #eee;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+
+    &:hover {
+      background-color: #2a2a2a;
+    }
+
+    .value {
+      flex: 1;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    
+    .status-item {
+      display: flex;
+      align-items: center;
+    }
+
+    .port-info {
+      font-size: 12px;
+      color: rgba(255, 255, 255, 0.65);
+      font-family: 'Consolas', monospace;
+    }
+
+    .arrow-box {
+      pointer-events: auto;
+      position: absolute;
+      right: 8px;
+
+      .arrow {
+        transition: transform 0.3s;
+
+        &.down {
+          transform: rotate(90deg);
+        }
+      }
+    }
+  }
+
+  // 按钮样式
+  button[nz-button] {
+    height: 32px;
+    font-size: 14px;
+    font-weight: 500;
+    border-radius: 4px;
+
+    // ng-zorro 按钮默认有 padding: 4px 15px，但内部 span 有额外的 margin
+    // 需要重置以确保完美居中
+    ::ng-deep {
+      padding: 4px 15px !important;
+      
+      > span {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        margin: 0 !important;  // 移除 ng-zorro 默认的 margin-left: 8px
+      }
+
+      // 图标居中
+      .anticon {
+        display: inline-flex;
+        align-items: center;
+        margin: 0 !important;
+      }
+    }
+
+    &:not([nzDanger]):not([disabled]) {
+      &[nzType="primary"] {
+        background-color: #8fc31fc7;
+        border-color: #8fc31fc7;
+
+        &:hover {
+          background-color: #8fc31f8e;
+          border-color: #8fc31f8e;
+        }
+      }
+    }
+
+    &[nzDanger] {
+      &:hover {
+        opacity: 0.85;
+      }
+    }
+  }
+
+  // 侧边栏选项卡
+  .sidebar-tabs {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .tab-btn {
+    height: 36px;
+    padding: 0 10px;
+    background: transparent;
+    border: 1px solid transparent;
+    color: #eaeaea;
+    border-radius: 4px;
+    transition: all 0.15s;
+    cursor: pointer;
+
+    &.active,
+    &:hover {
+      background: rgba(255, 255, 255, 0.03);
+      border-color: rgba(255, 255, 255, 0.06);
+    }
+  }
+}
+
+/* Slider color overrides for this component (ng-zorro nz-slider) */
+::ng-deep .sscma-config .settings-section nz-slider .ant-slider-track {
+  background-color: #8fc31f !important;
+}
+
+::ng-deep .sscma-config .settings-section nz-slider .ant-slider-rail {
+  background-color: rgba(143, 195, 31, 0.14) !important;
+}
+
+::ng-deep .sscma-config .settings-section nz-slider .ant-slider-handle {
+  border-color: #8fc31f !important;
+  box-shadow: none !important;
+}
+
+::ng-deep .sscma-config .settings-section nz-slider .ant-slider-handle::before,
+::ng-deep .sscma-config .settings-section nz-slider .ant-slider-handle::after {
+  background: #8fc31f !important;
+}
+
+/* Make the slider active track use the same gradient as other UI accents */
+::ng-deep .sscma-config .settings-section nz-slider .ant-slider-track {
+  background: linear-gradient(90deg, #8fc31fc7, #8fc31f8e) !important;
+}
+
+/* Ensure the draggable handle remains circular */
+::ng-deep .sscma-config .settings-section nz-slider .ant-slider-handle,
+::ng-deep .sscma-config .settings-section nz-slider .ant-slider-handle::before,
+::ng-deep .sscma-config .settings-section nz-slider .ant-slider-handle::after {
+  border-radius: 50% !important;
+  border: 2px solid !important;
+}
+
+/* keep handle sizing consistent with ant default while allowing color override */
+::ng-deep .sscma-config .settings-section nz-slider .ant-slider-handle {
+  width: 10px !important;
+  height: 10px !important;
+  margin-top: -4px !important;
+  box-sizing: border-box !important;
+}
+
+
+// ===================
+// 主内容区域
+// ===================
+.config-main {
+  flex: 1;
+  display: flex;
+  gap: 16px;
+  overflow: hidden;
+  background-color: #2a2b2e;
+  border-radius: 8px;
+  position: relative;
+
+  button[nz-button] {
+    height: 32px;
+    font-size: 14px;
+    font-weight: 500;
+    border-radius: 4px;
+
+    &:not([nzDanger]):not([disabled]) {
+      &[nzType="primary"] {
+        background-color: #8fc31fc7;
+        border-color: #8fc31fc7;
+
+        &:hover {
+          background-color: #8fc31f8e;
+          border-color: #8fc31f8e;
+        }
+      }
+    }
+
+    &[nzDanger] {
+      &:hover {
+        opacity: 0.85;
+      }
+    }
+  }
+
+  // 中间分割线
+  .center-divider {
+    position: absolute;
+    left: 50%;
+    top: 0;
+    bottom: 0;
+    width: 1px;
+    background: rgba(255, 255, 255, 0.06);
+    transform: translateX(-0.5px);
+    z-index: 6;
+    pointer-events: none;
+  }
+}
+
+// ===================
+// 左侧：模型与预览
+// ===================
+.config-main-left {
+  width: 50%;
+  padding: 12px;
+  flex-shrink: 0;
+  overflow-y: auto;
+
+  .section-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: #ffffff;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #444;
+  }
+
+  .connected-info {
+    // height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #ff9100;
+    font-size: 14px;
+    text-align: center;
+  }
+
+  // 模型信息区
+  .model-section {
+    padding: 12px;
+
+    .model-detail {
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+    }
+
+    .model-left {
+      flex: 1;
+
+      .model-row {
+        display: flex;
+        gap: 6px;
+        align-items: center;
+        margin-bottom: 8px;
+
+        label {
+          min-width: 72px;
+          color: #bbb;
+          font-weight: 600;
+        }
+
+        span {
+          color: #fff;
+          flex: 1 1 auto;
+          text-align: left;
+        }
+      }
+    }
+
+    .model-right {
+      width: 160px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      .model-image {
+        max-width: 140px;
+        max-height: 120px;
+        object-fit: contain;
+        border-radius: 6px;
+        background: #2a2b2e;
+        // 靠右对齐
+        margin-left: auto;
+      }
+
+      .placeholder {
+        color: #777;
+        font-size: 12px;
+        padding: 8px 10px;
+      }
+    }
+
+    .preview-controls {
+      display: flex;
+      gap: 8px;
+      margin-top: 12px;
+
+      button {
+        flex: 1;
+      }
+    }
+  }
+
+  // 实时预览区
+  .preview-section {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+    padding: 12px;
+
+    .preview-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid #444;
+
+      .section-title {
+        font-weight: 600;
+        margin-bottom: 0;
+        padding-bottom: 0;
+        border-bottom: none;
+        flex: 1;
+      }
+
+      button[nz-button] {
+        height: 28px;
+        font-size: 13px;
+        margin-left: 12px;
+        flex-shrink: 0;
+
+        // ng-zorro 按钮默认有 padding: 4px 15px，但内部 span 有额外的 margin
+        // 需要重置以确保完美居中
+        ::ng-deep {
+          padding: 4px 15px !important;
+          
+          > span {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            margin: 0 !important;  // 移除 ng-zorro 默认的 margin-left: 8px
+          }
+
+          // 图标居中
+          .anticon {
+            display: inline-flex;
+            align-items: center;
+            margin: 0 !important;
+          }
+        }
+
+        &:not([nzDanger]):not([disabled]) {
+          &[nzType="primary"] {
+            background-color: #8fc31fc7;
+            border-color: #8fc31fc7;
+
+            &:hover {
+              background-color: #8fc31f8e;
+              border-color: #8fc31f8e;
+            }
+          }
+        }
+
+        &[nzDanger] {
+          &:hover {
+            opacity: 0.85;
+          }
+        }
+      }
+    }
+
+    ::ng-deep .ant-spin {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+    }
+
+    ::ng-deep .ant-spin-container {
+      flex: 1 1 auto;
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 0;
+    }
+
+    .preview-image {
+      width: 100%;
+      height: 100%;
+      border-radius: 4px;
+      max-width: none;
+      max-height: none;
+      object-fit: contain;
+      display: block;
+    }
+  }
+
+  // 识别结果区
+  .recognition-area {
+    margin-top: 12px;
+    color: #eaeaea;
+
+    .recognition-title {
+      font-size: 14px;
+      color: #fff;
+      margin-bottom: 8px;
+      font-weight: 600;
+    }
+
+    .recognition-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .recognition-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .class-label {
+      min-width: 100px;
+      padding-left: 8px;
+      color: #fff;
+      font-size: 14px;
+      text-align: right;
+    }
+
+    .score-bar {
+      flex: 1 1 auto;
+      height: 28px;
+      background: rgba(255, 255, 255, 0.06);
+      border-radius: 4px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .bar-fill {
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 0%;
+      background: linear-gradient(90deg, #8fc31fc7, #8fc31f8e);
+      transition: width 120ms ease;
+    }
+
+    .bar-text {
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: 50%;
+      transform: translateY(-50%);
+      text-align: right;
+      color: #fff;
+      font-size: 12px;
+      font-weight: 600;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+
+      &.narrow {
+        font-size: 10px;
+      }
+    }
+
+    .score-text {
+      width: 48px;
+      text-align: right;
+      color: #d0ffd6;
+      font-size: 12px;
+      font-weight: 600;
+    }
+  }
+
+  .settings-section {
+    padding: 12px;
+
+    // .section-title {
+    //   font-size: 16px;
+    //   font-weight: 600;
+    //   color: #ffffff;
+    //   margin-bottom: 12px;
+    //   padding-bottom: 8px;
+    //   border-bottom: 1px solid #444;
+    // }
+
+    .settings-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+
+      label {
+        color: #bbb;
+        font-weight: 600;
+      }
+
+      .value {
+        color: #fff;
+        text-align: right;
+      }
+    }
+  }
+
+  // // 设置区域
+  // .settings-section {
+  //   padding: 12px;
+  //   margin-top: 16px;
+
+  //   .setting-item {
+  //     display: flex;
+  //     flex-direction: column;
+  //     gap: 8px;
+  //     margin-bottom: 20px;
+
+  //     label {
+  //       color: #fff;
+  //       font-weight: 600;
+  //       font-size: 14px;
+  //     }
+
+  //     .setting-control {
+  //       display: flex;
+  //       align-items: center;
+  //       gap: 16px;
+
+  //       nz-slider {
+  //         flex: 1;
+  //       }
+
+  //       nz-input-number {
+  //         width: 80px;
+  //         flex-shrink: 0;
+  //       }
+  //     }
+  //   }
+  // }
+}
+
+// ===================
+// 通用样式
+// ===================
+// .connected-info {
+//   padding: 24px;
+//   text-align: center;
+//   color: #999;
+  
+//   p {
+//     margin: 0;
+//     font-size: 14px;
+//   }
+// }
+
+// ===================
+// 右侧：设备信息
+// ===================
+.config-main-right {
+  flex: 1;
+  padding: 12px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+
+  .connected-info {
+    // height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #ff9100;
+    font-size: 14px;
+    text-align: center;
+  }
+
+  .device-section {
+    padding: 12px 12px 12px 0;
+
+    .section-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: #ffffff;
+      margin-bottom: 12px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid #444;
+    }
+
+    .device-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 8px;
+
+      label {
+        min-width: 88px;
+        color: #bbb;
+        font-weight: 600;
+      }
+
+      span {
+        color: #fff;
+        flex: 1 1 auto;
+        text-align: right;
+      }
+    }
+
+    // 传输类型选择器
+    .transport-selector {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-left: auto;
+
+      label {
+        font-size: 14px;
+        color: rgba(255, 255, 255, 0.85);
+        font-weight: 500;
+      }
+
+      .item-inner {
+        height: 32px;
+        width: 100%;
+        background-color: #222;
+        border-radius: 4px;
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding-left: 10px;
+        padding-right: 20px;
+        color: #eee;
+        font-size: 14px;
+        cursor: pointer;
+        transition: all 0.2s;
+
+        &:hover {
+          background-color: #2a2a2a;
+        }
+
+        .value {
+          flex: 1;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+        .arrow-box {
+          pointer-events: auto;
+          position: absolute;
+          right: 8px;
+
+          .arrow {
+            transition: transform 0.3s;
+
+            &.down {
+              transform: rotate(90deg);
+            }
+          }
+        }
+      }
+    }
+  }
+
+  .mqtt-section {
+    // display: flex;
+    // flex-direction: column;
+    // flex: 1 1 auto;
+    // min-height: 0;
+    padding: 12px 12px 12px 0;
+
+    .mqtt-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid #444;
+
+      .section-title {
+        font-weight: 600;
+        margin-bottom: 0;
+        padding-bottom: 0;
+        border-bottom: none;
+        flex: 1;
+      }
+    }
+
+    button[nz-button] {
+      height: 28px;
+      font-size: 13px;
+      margin-left: 12px;
+      flex-shrink: 0;
+
+      // ng-zorro 按钮默认有 padding: 4px 15px，但内部 span 有额外的 margin
+      // 需要重置以确保完美居中
+      ::ng-deep {
+        padding: 4px 15px !important;
+        
+        > span {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 6px;
+          margin: 0 !important;  // 移除 ng-zorro 默认的 margin-left: 8px
+        }
+
+        // 图标居中
+        .anticon {
+          display: inline-flex;
+          align-items: center;
+          margin: 0 !important;
+        }
+      }
+
+      &:not([nzDanger]):not([disabled]) {
+        &[nzType="primary"] {
+          background-color: #8fc31fc7;
+          border-color: #8fc31fc7;
+
+          &:hover {
+            background-color: #8fc31f8e;
+            border-color: #8fc31f8e;
+          }
+        }
+      }
+
+      &[nzDanger] {
+        &:hover {
+          opacity: 0.85;
+        }
+      }
+    }
+
+    ::ng-deep .ant-spin {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+    }
+
+    ::ng-deep .ant-spin-container {
+      flex: 1 1 auto;
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 0;
+    }
+
+    .mqtt-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 8px;
+
+      label {
+        min-width: 88px;
+        color: #bbb;
+        font-weight: 600;
+      }
+
+      span {
+        color: #fff;
+        flex: 1 1 auto;
+        text-align: right;
+      }
+    }
+  }
+
+  .settings-section {
+    padding: 12px 12px 12px 0;
+
+    .section-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: #ffffff;
+      margin-bottom: 12px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid #444;
+    }
+
+    .setting-item {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-bottom: 20px;
+
+      label {
+        color: #fff;
+        font-weight: 600;
+        font-size: 14px;
+      }
+
+      .setting-control {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+
+        nz-slider {
+          flex: 1;
+        }
+
+        nz-input-number {
+          width: 80px;
+          flex-shrink: 0;
+        }
+      }
+    }
+  }
+}
+
+// ===================
+// 串口使用说明区域
+// ===================
+.serial-main {
+  flex: 1;
+  display: flex;
+  gap: 16px;
+  overflow: hidden;
+  background-color: #2a2b2e;
+  border-radius: 8px;
+  position: relative;
+
+  .serial-section {
+    width: 100%;
+    padding: 24px;
+    flex-shrink: 0;
+    overflow-y: auto;
+    
+    .serial-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: #ffffff;
+      margin-bottom: 12px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid #444;
+    }
+
+    .serial-info {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-bottom: 8px;
+
+      .serial-lead {
+        color: #bbb;
+        font-size: 14px;
+        line-height: 1.5;
+        margin: 0 0 6px 0;
+      }
+
+      .serial-method {
+        display: block;
+        background: rgba(255,255,255,0.02);
+        border: 1px solid rgba(255,255,255,0.03);
+        padding: 10px 12px;
+        border-radius: 6px;
+      }
+
+      .method-header {
+        margin-bottom: 8px;
+      }
+
+      .method-title {
+        font-weight: 700;
+        color: #bbb;
+        font-size: 14px;
+      }
+
+      .method-grid {
+        display: flex;
+        gap: 12px;
+        align-items: flex-start;
+      }
+
+      .method-left {
+        min-width: 180px;
+      }
+
+      .method-right {
+        flex: 1 1 auto;
+      }
+
+      .kv-list {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+      }
+
+      .kv-list li {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        margin-bottom: 4px;
+      }
+
+      .kv-list .k {
+        color: #bbb;
+        min-width: 90px;
+        font-weight: 600;
+      }
+
+      .kv-list .v {
+        color: #bbb;
+        font-weight: 600;
+      }
+
+      .protocol-title {
+        color: #bbb;
+        font-weight: 600;
+        margin-bottom: 6px;
+      }
+
+      .protocol-code {
+        background: rgba(0,0,0,0.28);
+        padding: 8px;
+        border-radius: 4px;
+        color: #ff9100;
+        font-family: Consolas, 'Courier New', monospace;
+        font-size: 14px;
+        white-space: pre-wrap;
+        line-height: 1.4;
+      }
+    }
+  }
+}
+
+// ===================
+// GPIO 触发规则样式 - 响应式表格布局
+// ===================
+.gpio-config {
+  // padding: 24px;
+  flex: 1;
+  display: flex;
+  gap: 16px;
+  overflow: hidden;
+  background-color: #2a2b2e;
+  border-radius: 8px;
+  position: relative;
+  overflow-y: auto;
+
+  .gpio-section {
+    width: 100%;
+    padding: 24px;
+    flex-shrink: 0;
+    overflow-y: auto;
+    
+    .gpio-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: #ffffff;
+      margin-bottom: 12px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid #444;
+    }
+  }
+
+  .connected-info {
+    // height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #ff9100;
+    font-size: 14px;
+    text-align: center;
+  }
+
+  .gpio-description {
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.65);
+    margin-bottom: 20px;
+    line-height: 1.6;
+  }
+
+  .gpio-actions {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 24px;
+
+    button {
+      height: 32px;
+      font-size: 14px;
+      border-radius: 4px;
+    }
+  }
+
+  // 表格容器 - 仅在极端缩小时横向滚动
+  .table-wrapper {
+    overflow-x: auto;
+    overflow-y: visible;
+    min-width: 0; // 允许弹性收缩
+  }
+
+  // 表格容器
+  .action-table {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+    overflow: hidden;
+    min-width: 700px; // 最小宽度，小于此宽度时出现横向滚动
+  }
+
+  // 表头 - 使用弹性布局，列宽自适应
+  .table-header {
+    display: grid;
+    grid-template-columns: minmax(100px, 1.5fr) minmax(70px, 1fr) minmax(80px, 1fr) minmax(85px, 1fr) minmax(90px, 1fr) minmax(90px, 1fr) 50px;
+    gap: 8px;
+    padding: 12px 16px;
+    background: rgba(255, 255, 255, 0.05);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    font-size: 13px;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.85);
+    align-items: center;
+
+    > div {
+      text-align: center;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+  }
+
+  // 表格内容
+  .table-body {
+    .empty-row {
+      padding: 40px 20px;
+      text-align: center;
+      color: rgba(255, 255, 255, 0.45);
+      font-size: 14px;
+    }
+  }
+
+  // 表格行 - 与表头相同的列宽
+  .table-row {
+    display: grid;
+    grid-template-columns: minmax(100px, 1.5fr) minmax(70px, 1fr) minmax(80px, 1fr) minmax(85px, 1fr) minmax(90px, 1fr) minmax(90px, 1fr) 50px;
+    gap: 8px;
+    padding: 10px 16px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    align-items: center;
+    transition: background 0.2s;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    &:last-child {
+      border-bottom: none;
+    }
+
+    > div {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-width: 0; // 允许弹性收缩
+    }
+
+    // 输入框和选择器占满列宽
+    ::ng-deep {
+      nz-input-number,
+      nz-select {
+        width: 100%;
+        max-width: 100%;
+      }
+
+      .ant-input-number,
+      .ant-select {
+        width: 100%;
+      }
+
+      .ant-input-number-input {
+        text-align: center;
+        font-size: 13px;
+      }
+
+      // 下拉选择器样式优化
+      .ant-select-selector {
+        font-size: 13px;
+        padding: 0 8px !important;
+      }
+
+      .ant-select-selection-item {
+        text-align: center;
+        padding-right: 0 !important;
+      }
+
+      .ant-select-arrow {
+        right: 4px;
+      }
+    }
+
+    .delete-btn {
+      color: rgba(255, 77, 79, 0.85);
+      padding: 2px;
+
+      &:hover {
+        color: #ff4d4f;
+      }
+    }
+  }
+
+  // 表尾添加按钮
+  .table-footer {
+    padding: 16px;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+
+    .add-row-btn {
+      width: 100%;
+      height: 36px;
+      border-color: rgba(143, 195, 31, 0.5);
+      color: #8fc31f;
+      font-size: 14px;
+      transition: all 0.2s;
+
+      &:hover {
+        border-color: #8fc31f;
+        color: #a4d937;
+        background: rgba(143, 195, 31, 0.05);
+      }
+
+      span[nz-icon] {
+        margin-right: 6px;
+      }
+    }
+  }
+}
+
+
+// ===================
+// 网络配置样式
+// ===================
+.mqtt-config {
+  // padding: 24px;
+  flex: 1;
+  display: flex;
+  gap: 16px;
+  overflow: hidden;
+  background-color: #2a2b2e;
+  border-radius: 8px;
+  position: relative;
+  overflow-y: auto;
+
+  .mqtt-section {
+    width: 100%;
+    padding: 24px;
+    flex-shrink: 0;
+    overflow-y: auto;
+    
+    .section-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: #ffffff;
+      margin-bottom: 12px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid #444;
+    }
+
+    .mqtt-subtitle {
+      font-size: 14px;
+      font-weight: 600;
+      color: #ffffff;
+      margin-top: 16px;
+      margin-bottom: 12px;
+      padding: 4px 0;
+    }
+
+    .network-section {
+      text-align: center;
+      background-color:#1e1f22;
+      border-radius: 4px;
+      padding: 10px;
+      margin-bottom: 0;
+
+      .network-status {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 8px;
+
+        label {
+          min-width: 88px;
+          color: #bbb;
+          font-weight: 600;
+          text-align: left;
+        }
+
+        span {
+          color: #fff;
+          flex: 1 1 auto;
+          text-align: right;
+        }
+      }
+      
+      .network-actions {
+        margin-top: 12px;
+        text-align: right;
+      }
+    }
+    
+    // 网络配置表单样式
+    .network-config-form {
+      padding: 16px 20px;
+      background: #1e1f22;
+      border-radius: 4px;
+      
+      .form-group {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        margin-bottom: 14px;
+        
+        &:last-of-type {
+          margin-bottom: 0;
+        }
+        
+        .form-label {
+          min-width: 105px;
+          flex-shrink: 0;
+          margin-bottom: 0;
+          color: #cfcfcf;
+          font-size: 13px;
+          font-weight: 500;
+          white-space: nowrap;
+          
+          &.required::before {
+            content: '* ';
+            color: #ff4d4f;
+            margin-right: 2px;
+          }
+        }
+        
+        .form-control {
+          flex: 1;
+          min-width: 0;
+        }
+        
+        input[nz-input],
+        nz-select,
+        nz-input-number {
+          width: 100%;
+        }
+        
+        input[nz-input] {
+          background: #2a2b2e;
+          border-color: #444;
+          color: #fff;
+          
+          &::placeholder {
+            color: #666;
+          }
+          
+          &:hover {
+            border-color: #8fc31f;
+          }
+          
+          &:focus {
+            border-color: #8fc31f;
+            box-shadow: 0 0 0 2px rgba(143, 195, 31, 0.1);
+          }
+        }
+        
+        &.mqtt-toggle {
+          .form-control {
+            flex: 1;
+          }
+          
+          .toggle-container {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            width: 100%;
+            
+            .toggle-text {
+              min-width: 30px;
+              color: #999;
+              font-size: 13px;
+            }
+            
+            .mqtt-link {
+              margin-left: auto;
+              color: #8fc31f;
+              font-size: 12px;
+              text-decoration: none;
+              
+              &:hover {
+                text-decoration: underline;
+              }
+            }
+          }
+        }
+      }
+      
+      .form-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 12px;
+        margin-top: 24px;
+        padding-top: 16px;
+        border-top: 1px solid #333;
+        
+        button {
+          min-width: 88px;
+        }
+      }
+    }
+  }
+
+  .connected-info {
+    // height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #ff9100;
+    font-size: 14px;
+    text-align: center;
+  }
+}

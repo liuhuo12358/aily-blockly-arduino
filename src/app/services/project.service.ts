@@ -350,20 +350,40 @@ export class ProjectService {
     if (!pkg.MACROS) {
       pkg.MACROS = [];
     }
-    
-    // 提取宏名称（等号前的部分）
+
+    // 规范化为字符串数组（如果存储为 [[...], [...]] 则取首元素）
+    const normalized: string[] = (pkg.MACROS || []).map((m: any) => {
+      if (Array.isArray(m)) return String(m[0] || '').trim();
+      return String(m || '').trim();
+    }).filter((s: string) => s.length > 0);
+
+    // 提取宏名称（等号前的部分），并支持无等号的宏定义
     const macroName = macro.split('=')[0];
-    
-    // 检查是否已存在相同名称的宏，如果存在则替换
-    const existingIndex = pkg.MACROS.findIndex(m => m[0].startsWith(macroName + '='));
+
+    // 查找已有的同名项（以名称为准，不区分是否带赋值）
+    const existingIndex = normalized.findIndex((entry) => {
+      const entryName = entry.split('=')[0];
+      return entryName === macroName;
+    });
+
     if (existingIndex !== -1) {
-      pkg.MACROS[existingIndex] = [macro];
+      // 替换同名项
+      normalized[existingIndex] = macro;
     } else {
-      pkg.MACROS.push([macro]);
+      // 追加新宏
+      normalized.push(macro);
     }
-    
-    await this.setPackageJson(pkg);
-    // console.log('✅ 添加宏定义:', macro, '当前宏列表:', pkg.MACROS);
+
+    // 在写入前再次读取最新的 package.json，防止并发写入覆盖
+    const latestPkg = await this.getPackageJson();
+    if (!latestPkg.MACROS) latestPkg.MACROS = [];
+
+    // 规范化并写回到最新 pkg
+    latestPkg.MACROS = normalized.map(s => [s]);
+
+    console.log('addMacro -> normalized macros to write:', latestPkg.MACROS);
+    await this.setPackageJson(latestPkg);
+    console.log('✅ 添加宏定义:', macro, '当前宏列表:', latestPkg.MACROS);
   }
 
   /**
@@ -375,12 +395,27 @@ export class ProjectService {
     if (!pkg.MACROS || pkg.MACROS.length === 0) {
       return;
     }
-    
-    // 过滤掉匹配的宏定义
-    pkg.MACROS = pkg.MACROS.filter(m => !m[0].startsWith(macroName + '='));
-    
-    await this.setPackageJson(pkg);
-    // console.log('🗑️ 删除宏定义:', macroName, '当前宏列表:', pkg.MACROS);
+
+    // 规范化为字符串数组（兼容 ['A'] 或 [['A=1']] 等存储形式）
+    const normalized: string[] = (pkg.MACROS || []).map((m: any) => {
+      if (Array.isArray(m)) return String(m[0] || '').trim();
+      return String(m || '').trim();
+    }).filter((s: string) => s.length > 0);
+
+    // 过滤掉名称匹配的宏（既匹配 "NAME" 又匹配 "NAME=..."）
+    const filtered = normalized.filter(entry => {
+      const name = entry.split('=')[0];
+      return name !== macroName;
+    });
+
+    // 在写入前再次读取最新的 package.json，防止并发写入覆盖
+    const latestPkg = await this.getPackageJson();
+    if (!latestPkg.MACROS) latestPkg.MACROS = [];
+
+    latestPkg.MACROS = filtered.map(s => [s]);
+    console.log('removeMacro -> normalized macros to write:', latestPkg.MACROS);
+    await this.setPackageJson(latestPkg);
+    console.log('🗑️ 删除宏定义:', macroName, '当前宏列表:', latestPkg.MACROS);
   }
 
   /**
@@ -392,7 +427,10 @@ export class ProjectService {
     if (!pkg.MACROS || pkg.MACROS.length === 0) {
       return [];
     }
-    return pkg.MACROS.map(m => m[0]);
+    return (pkg.MACROS || []).map((m: any) => {
+      if (Array.isArray(m)) return String(m[0] || '');
+      return String(m || '');
+    }).filter((s: string) => s.length > 0);
   }
 
   /**

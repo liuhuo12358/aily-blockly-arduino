@@ -43,6 +43,7 @@ function generateSuccessInfo() {
 }
 
 let conutForGetWorkspaceOverview = 0;
+let maxCount = 4;
 
 interface Position {
   x?: number;
@@ -1982,7 +1983,7 @@ export async function smartBlockTool(args: SmartBlockArgs): Promise<SmartBlockRe
     }
     
     // 获取工作区概览信息
-    if (conutForGetWorkspaceOverview++ > 5) {
+    if (conutForGetWorkspaceOverview++ >= maxCount) {
       const { overview: workspaceOverview, cppCode, isError } = await getWorkspaceOverviewInfo();
 
       if (!isError && workspaceOverview) {
@@ -3821,7 +3822,7 @@ export async function connectBlocksTool(args: ConnectBlocksArgs): Promise<Connec
 // ${workspaceOverview}`;
 
     // 获取工作区概览信息
-    if (conutForGetWorkspaceOverview++ > 5) {
+    if (conutForGetWorkspaceOverview++ >= maxCount) {
       const { overview: workspaceOverview, cppCode, isError } = await getWorkspaceOverviewInfo();
 
       if (!isError && workspaceOverview) {
@@ -5672,13 +5673,13 @@ function formatWorkspaceOverviewText(
           lines.push(`  📊 检测模式: ${structure.lintResult.mode}`);
         }
         
-        // 显示警告（即使通过检查也可能有警告）
-        if (structure.lintResult.warnings && structure.lintResult.warnings.length > 0) {
-          lines.push('  ⚠️ 注意事项:');
-          structure.lintResult.warnings.forEach((warning: any, index: number) => {
-            lines.push(`    ${index + 1}. 第${warning.line}行，第${warning.column}列: ${warning.message}`);
-          });
-        }
+        // // 显示警告（即使通过检查也可能有警告）
+        // if (structure.lintResult.warnings && structure.lintResult.warnings.length > 0) {
+        //   lines.push('  ⚠️ 注意事项:');
+        //   structure.lintResult.warnings.forEach((warning: any, index: number) => {
+        //     lines.push(`    ${index + 1}. 第${warning.line}行，第${warning.column}列: ${warning.message}`);
+        //   });
+        // }
         
         // 显示注释信息
         if (structure.lintResult.notes && structure.lintResult.notes.length > 0) {
