@@ -95,7 +95,7 @@ export let HEADER_BTNS: IMenuItem[][] = [
       action: 'tool-open',
       data: { type: 'tool', data: "model-store" },
       icon: 'fa-light fa-microchip-ai',
-      dev: true
+      dev: false
     },
     {
       name: 'MENU.USER_SPACE',
