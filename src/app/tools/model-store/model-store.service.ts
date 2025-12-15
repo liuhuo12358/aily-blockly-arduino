@@ -111,17 +111,18 @@ export class ModelStoreService {
   /**
    * 获取模型列表
    * @param page 页码（从1开始）
+   * @param pageSize 每页数量
    * @param uniformType 开发板类型（可选）
    * @returns Observable<ModelListResult>
    */
-  getModelList(page: number = 1, uniformType?: number): Observable<ModelListResult> {
+  getModelList(page: number = 1, pageSize: number = 12, uniformType?: number): Observable<ModelListResult> {
     const type = uniformType || this.uniformType;
-    const url = `${this.baseUrl}?page=${page}&length=${this.pageSize}&uniform_type=${type}&lang=${this.translateService.currentLang}`;
+    const url = `${this.baseUrl}?page=${page}&length=${pageSize}&uniform_type=${type}&lang=${this.translateService.currentLang}`;
     // console.log('请求模型列表URL:', url);
     return this.http.get<ModelListResponse>(url).pipe(
       map(response => {
         const total = parseInt(response.data.total || '0', 10);
-        const totalPages = Math.ceil(total / this.pageSize);
+        const totalPages = Math.ceil(total / pageSize);
         
         return {
           list: response.data.list || [],

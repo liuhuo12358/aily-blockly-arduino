@@ -41,7 +41,7 @@
             }
         </div>
         <div class="content">
-            <div class="item-list sscroll">
+            <div class="item-list sscroll" #itemListContainer>
                 @if (loading) {
                 <div class="loading-container">
                     <i class="fa-duotone fa-spinner-third fa-spin"></i>
@@ -62,20 +62,21 @@
                     </div>
                 </div>
                 }
-
-                <!-- 分页导航 -->
-                @if (!loading && totalPages > 1 && !showDetail) {
-                <div class="pagination">
-                    <nz-pagination 
-                        [nzPageIndex]="currentPage" 
-                        [nzTotal]="totalCount" 
-                        [nzPageSize]="pageSize"
-                        [nzSize]="'small'"
-                        (nzPageIndexChange)="loadModelList($event)">
-                    </nz-pagination>
-                </div>
-                }
             </div>
+
+            <!-- 分页导航 -->
+            @if (!loading && totalPages > 1 && !showDetail) {
+            <div class="pagination">
+                <nz-pagination 
+                    [nzPageIndex]="currentPage" 
+                    [nzTotal]="totalCount" 
+                    [nzPageSize]="pageSize"
+                    [nzSize]="'small'"
+                    (nzPageIndexChange)="loadModelList($event)">
+                </nz-pagination>
+            </div>
+            }
+
             @if(showDetail) {
             <app-model-detail [id]="modelID" (close)="showDetail = false"></app-model-detail>
             }

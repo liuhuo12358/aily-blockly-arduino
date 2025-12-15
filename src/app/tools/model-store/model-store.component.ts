@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ViewChild, ElementRef, AfterViewInit, HostListener } from '@angular/core';
 import { SubWindowComponent } from '../../components/sub-window/sub-window.component';
 import { ToolContainerComponent } from '../../components/tool-container/tool-container.component';
 import { FormsModule } from '@angular/forms';
@@ -29,7 +29,8 @@ import { NzPaginationModule } from 'ng-zorro-antd/pagination';
   templateUrl: './model-store.component.html',
   styleUrl: './model-store.component.scss'
 })
-export class ModelStoreComponent implements OnInit {
+export class ModelStoreComponent implements OnInit, AfterViewInit {
+  @ViewChild('itemListContainer') itemListContainer!: ElementRef;
   currentUrl;
 
   constructor(
@@ -56,10 +57,44 @@ export class ModelStoreComponent implements OnInit {
     this.loadModelList();
   }
 
+  ngAfterViewInit() {
+    setTimeout(() => {
+      this.calculatePageSize();
+    });
+  }
+
+  @HostListener('window:resize')
+  onResize() {
+    this.calculatePageSize();
+  }
+
+  calculatePageSize() {
+    if (!this.itemListContainer) return;
+    const containerHeight = this.itemListContainer.nativeElement.clientHeight;
+    const containerWidth = this.itemListContainer.nativeElement.clientWidth;
+    
+    const itemHeight = 149;
+    const gap = 10;
+    const padding = 20; 
+    const paginationHeight = 60; 
+    
+    const availableHeight = containerHeight - padding - paginationHeight;
+    const rows = Math.floor((availableHeight + gap) / (itemHeight + gap));
+    
+    const columns = containerWidth >= 600 ? 2 : 1;
+    
+    const newPageSize = Math.max(1, rows * columns);
+    
+    if (this.pageSize !== newPageSize) {
+        this.pageSize = newPageSize;
+        this.loadModelList(1);
+    }
+  }
+
   // 加载模型列表
   loadModelList(page: number = 1) {
     this.loading = true;
-    this.modelStoreService.getModelList(page).subscribe({
+    this.modelStoreService.getModelList(page, this.pageSize).subscribe({
       next: (result) => {
         console.log('加载的模型列表结果:', result);
         this.itemList = result.list;
