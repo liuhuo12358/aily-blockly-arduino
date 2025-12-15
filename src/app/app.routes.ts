@@ -94,7 +94,33 @@ export const routes: Routes = [
     },
     {
         path: "model-deploy",
-        loadComponent: () => import('./windows/model-deploy/model-deploy.component').then(m => m.ModelDeployComponent)
+        children: [
+            {
+                path: '',
+                redirectTo: 'sscma',
+                pathMatch: 'full'
+            },
+            // 独立测试页面（带框架）- 必须放在 :step 路由之前
+            {
+                path: 'sscma/test',
+                loadComponent: () => import('./windows/model-deploy/sscma-config/sscma-config.component').then(m => m.SscmaConfigComponent)
+            },
+            // SSCMA 模型类型路由 - 支持步骤参数
+            {
+                path: 'sscma',
+                loadComponent: () => import('./windows/model-deploy/sscma-deploy/sscma-deploy.component').then(m => m.SscmaDeployComponent)
+            },
+            {
+                path: 'sscma/:step',
+                loadComponent: () => import('./windows/model-deploy/sscma-deploy/sscma-deploy.component').then(m => m.SscmaDeployComponent)
+            }
+            // 未来扩展示例：
+            // {
+            //     path: 'chipintelli',
+            //     loadComponent: () => import('./windows/model-deploy/chipintelli-deploy/chipintelli-deploy.component').then(m => m.ChipintelliDeployComponent),
+            //     children: [...]
+            // }
+        ]
     },
     {
         path: "model-train",

@@ -1,4 +1,6 @@
 <!-- SSCMA 模型部署组件（XIAO ESP32S3） -->
+<app-notification></app-notification>
+
 <app-sub-window [title]="'SenseCraft AI'" [winBtns]="['close']">
   <div class="window-inner">
     <div class="window-content">
@@ -11,7 +13,6 @@
                 <nz-step [nzTitle]="step | translate"></nz-step>
               }
             } @else {
-              <nz-step [nzTitle]="'MODEL_DEPLOY.STEPS.SELECT' | translate"></nz-step>
               <nz-step [nzTitle]="'MODEL_DEPLOY.STEPS.DEPLOY' | translate"></nz-step>
               <nz-step [nzTitle]="'MODEL_DEPLOY.STEPS.CONFIGURE' | translate"></nz-step>
             }
@@ -21,55 +22,7 @@
 
       <!-- 右侧内容区域 -->
       <div class="right sscroll">
-        @if (currentStep == 0 && modelDetail) {
-          <!-- 第一步：显示模型详情 -->
-          <div class="right-inner model-info-view">
-            <h2 class="model-name">{{ modelDetail.name }}</h2>
-            
-            <!-- 模型图片 -->
-            <div class="model-image" *ngIf="modelDetail.pic_url">
-              <img [src]="modelDetail.pic_url" [alt]="modelDetail.name">
-            </div>
-
-            <!-- 描述 -->
-            <div class="section">
-              <div class="section-title">{{ 'MODEL_STORE.DESCRIPTION' | translate }}</div>
-              <div class="description">{{ modelDetail.description }}</div>
-              
-              <!-- 模型信息标签 -->
-              <div class="info-tags">
-                <div class="info-item">
-                  <div class="tag-list">
-                    @for (board of getSupportedBoards(); track board) {
-                      <span class="tag-board">{{ board.board }}</span>
-                    }
-                    <span class="tag-task">{{ getTaskDescription() }}</span>
-                    <span class="tag-model">{{ getModelFormat() }}</span>
-                    <span class="tag-precision">{{ getPrecision() }}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- 模型详情 -->
-            <div class="section">
-              <div class="section-title">{{ 'MODEL_STORE.MODEL_DETAILS' | translate }}</div>
-              <div class="detail-content" [innerHTML]="getSafeHtml(modelDetail.content)"></div>
-            </div>
-
-            <!-- 模型类别 -->
-            <div class="section" *ngIf="modelDetail.labels && modelDetail.labels.length > 0">
-              <div class="section-title">{{ 'MODEL_STORE.MODEL_LABELS' | translate }}</div>
-              <div class="labels-list">
-                @for (label of modelDetail.labels; track label.object_id) {
-                  <div class="label-item">
-                    <span class="label-name">{{ label.object_name }}</span>
-                  </div>
-                }
-              </div>
-            </div>
-          </div>
-        } @else if (currentStep == 1) {
+        @if (currentStep == 0) {
           @if (this.modelDetail?.author_name === 'SenseCraft AI') {
             <!-- 第二步：连接设备（SenseCraft AI） -->
             <div class="right-inner device-connect-view">
@@ -88,22 +41,23 @@
 
               <!-- 连接设备步骤 -->
               <div class="section">
+                <div class="section-title">{{ 'MODEL_DEPLOY.STEPS.DEPLOY' | translate }}: {{ modelDetail.name }}</div>
                 <div class="section-title">{{ 'MODEL_DEPLOY.CONNECT_DEVICE' | translate }}</div>
                 <div class="connect-steps">
                   <div class="connect-step">
-                    <div class="step-text">{{ getDeviceConnectionSteps()[0] | translate }}</div>
-                    <div class="step-image" *ngIf="getDeviceConnectionImage()">
-                      <img [src]="getDeviceConnectionImage()" alt="连接示意图">
+                    <div class="step-text">{{ deviceConnectionSteps[0] | translate }}</div>
+                    <div class="step-image" *ngIf="deviceConnectionImage">
+                      <img [src]="deviceConnectionImage" alt="连接示意图">
                     </div>
                   <!-- </div> -->
                   <!-- <div class="connect-step"> -->
-                    <div class="step-text">{{ getDeviceConnectionSteps()[1] | translate }}</div>
+                    <div class="step-text">{{ deviceConnectionSteps[1] | translate }}</div>
                   <!-- </div> -->
                   <!-- <div class="connect-step"> -->
-                    <div class="step-text">{{ getDeviceConnectionSteps()[2] | translate }}</div>
+                    <div class="step-text">{{ deviceConnectionSteps[2] | translate }}</div>
 
                     <div class="item-inner serial-btn ccenter" (click)="openPortList($event)">
-                      <div class="value">{{currentPort}}</div>
+                      <div class="value">{{currentPort || '请选择串口'}}</div>
                       <div class="arrow-box">
                         <i class="fa-light fa-angle-right arrow" [ngClass]="{'down':showPortList}"></i>
                       </div>
@@ -113,18 +67,19 @@
               </div>
             </div>
           } @else {
-            <!-- 第二步：选择部署配置（其他作者） -->
+            <!-- 第一步：选择部署配置（其他作者） -->
             <div class="right-inner">
               <div class="step-content">
-                <p>步骤 2 内容（选择部署配置）</p>
+                <p>步骤 1 内容（选择部署配置）</p>
               </div>
             </div>
           }
-        } @else if (currentStep == 2) {
-          <!-- 第三步：模型配置 -->
+        } @else if (currentStep == 1) {
+          <!-- 第二步：模型配置 -->
           <div class="right-inner">
             <app-sscma-config
               [portPath]="currentPort!"
+              [showFrame]="false"
               (configComplete)="onConfigComplete()"
               (backToDeploy)="prevStep()">
             </app-sscma-config>
@@ -136,9 +91,9 @@
     <!-- 底部操作按钮 -->
     <div class="window-footer">
       <div class="footer-left">
-        <!-- @if (getAuthorLogo()) {
-          <img [src]="getAuthorLogo()" alt="Author Logo" class="author-logo">
-        } -->
+        @if (authorLogo) {
+          <img [src]="authorLogo" alt="Author Logo" class="author-logo">
+        }
       </div>
       
       <div class="btns">
@@ -150,13 +105,9 @@
               </button>
             }
             
-            @if (currentStep === 1) {
+            @if (currentStep === 0) {
               <button nz-button nzType="primary" (click)="startDeploy()" [disabled]="!currentPort || isDeploying">
                 {{ (isDeploying ? 'MODEL_DEPLOY.BUTTONS.DEPLOYING' : 'MODEL_DEPLOY.BUTTONS.DEPLOY') | translate }}
-              </button>
-            } @else if (currentStep === 0) {
-              <button nz-button nzType="primary" (click)="nextStep()">
-                {{ 'MODEL_DEPLOY.BUTTONS.NEXT' | translate }}
               </button>
             } @else {
               <button nz-button nzType="primary">
@@ -170,13 +121,13 @@
               </button>
             }
             
-            @if (currentStep === 1 || currentStep < (deployStepConfig?.steps.length ?? 3) - 1) {
-              <button nz-button nzType="primary" (click)="nextStep()">
-                {{ 'MODEL_DEPLOY.BUTTONS.NEXT' | translate }}
+            @if (currentStep === 0) {
+              <button nz-button nzType="primary" (click)="startDeploy()" [disabled]="!currentPort || isDeploying">
+                {{ (isDeploying ? 'MODEL_DEPLOY.BUTTONS.DEPLOYING' : 'MODEL_DEPLOY.BUTTONS.DEPLOY') | translate }}
               </button>
             } @else {
               <button nz-button nzType="primary">
-                {{ 'MODEL_DEPLOY.BUTTONS.DEPLOY' | translate }}
+                {{ 'MODEL_DEPLOY.BUTTONS.FINISH' | translate }}
               </button>
             }
           }
@@ -187,13 +138,13 @@
             </button>
           }
           
-          @if (currentStep === 1 || currentStep < (deployStepConfig?.steps.length ?? 3) - 1) {
-            <button nz-button nzType="primary" (click)="nextStep()">
-              {{ 'MODEL_DEPLOY.BUTTONS.NEXT' | translate }}
+          @if (currentStep === 0) {
+            <button nz-button nzType="primary" (click)="startDeploy()" [disabled]="!currentPort || isDeploying">
+              {{ (isDeploying ? 'MODEL_DEPLOY.BUTTONS.DEPLOYING' : 'MODEL_DEPLOY.BUTTONS.DEPLOY') | translate }}
             </button>
           } @else {
             <button nz-button nzType="primary">
-              {{ 'MODEL_DEPLOY.BUTTONS.DEPLOY' | translate }}
+              {{ 'MODEL_DEPLOY.BUTTONS.FINISH' | translate }}
             </button>
           }
         }

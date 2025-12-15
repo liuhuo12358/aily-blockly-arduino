@@ -287,50 +287,47 @@
               flex-shrink: 0;
             }
 
-            .item-inner {
-              height: 24px;
-              width: 90px;
-              background-color: #444444;
+            // 串口选择按钮样式（参考 config 组件）
+            .serial-btn.item-inner {
+              height: 32px;
+              // min-width: 120px;
+              max-width: 300px;
+              width: auto;
+              background-color: #222;
               border-radius: 4px;
               position: relative;
-              display: flex;
-              justify-content: flex-start;
+              display: inline-flex;
+              align-items: center;
+              justify-content: space-between;
               padding-left: 10px;
               padding-right: 20px;
               color: #eee;
               font-size: 14px;
+              cursor: pointer;
+              transition: all 0.2s;
 
-              .btn {
-                width: 20px;
-                height: 24px;
-                position: absolute;
-                right: 0;
-                color: rgb(0, 96, 160);
-
-                &:nth-child(2) {
-                  right: 20px;
-                }
-
-                &:hover {
-                  color: rgb(0, 140, 233);
-                }
+              &:hover {
+                background-color: #2a2a2a;
               }
 
               .value {
-                pointer-events: none;
-                width: 100%;
+                flex: 1;
                 white-space: nowrap;
                 overflow: hidden;
                 text-overflow: ellipsis;
+                pointer-events: none;
               }
 
               .arrow-box {
                 pointer-events: none;
                 position: absolute;
                 right: 8px;
+                display: flex;
+                align-items: center;
 
                 .arrow {
                   transition: transform 0.3s;
+                  color: rgba(255, 255, 255, 0.45);
 
                   &.down {
                     transform: rotate(90deg);
@@ -338,13 +335,17 @@
                 }
               }
 
-              // Hover: 改变箭头颜色以提示可交互
               &:hover {
-                .arrow {
-                  color: #818992;
+                .arrow-box .arrow {
+                  color: rgba(255, 255, 255, 0.65);
                 }
               }
             }
+
+            // // 居中对齐样式
+            // .ccenter {
+            //   margin: 0 auto;
+            // }
           }
         }
       }

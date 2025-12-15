@@ -1,5 +1,6 @@
 import { Component, Input, OnInit, OnDestroy, Output, EventEmitter, ChangeDetectorRef, OnChanges, SimpleChanges, ViewChild, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { NzSliderModule } from 'ng-zorro-antd/slider';
 import { NzButtonModule } from 'ng-zorro-antd/button';
@@ -18,6 +19,7 @@ import { debounceTime } from 'rxjs/operators';
 import { SSCMACommandService, AtResponse, InvokeResultData } from '../../../services/sscma-command.service';
 import { SerialService, PortItem } from '../../../services/serial.service';
 import { MenuComponent } from '../../../components/menu/menu.component';
+import { SubWindowComponent } from '../../../components/sub-window/sub-window.component';
 
 interface TriggerRule {
   id: number;
@@ -50,7 +52,8 @@ interface TriggerRule {
     NzSelectModule,
     NzSpinModule,
     NzIconModule,
-    MenuComponent
+    MenuComponent,
+    SubWindowComponent
   ],
   templateUrl: './sscma-config.component.html',
   styleUrls: ['./sscma-config.component.scss']
@@ -60,6 +63,7 @@ export class SscmaConfigComponent implements OnInit, OnDestroy, OnChanges {
   // 输入输出
   // ===================
   @Input() portPath!: string;
+  @Input() showFrame: boolean = true;  // 是否显示外框
   @Output() configComplete = new EventEmitter<void>();
   @Output() backToDeploy = new EventEmitter<void>();
 
@@ -291,7 +295,8 @@ export class SscmaConfigComponent implements OnInit, OnDestroy, OnChanges {
     private atService: SSCMACommandService,
     private serialService: SerialService,
     private message: NzMessageService,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private router: Router
   ) {}
 
   // ===================
@@ -299,6 +304,17 @@ export class SscmaConfigComponent implements OnInit, OnDestroy, OnChanges {
   // ===================
 
   async ngOnInit(): Promise<void> {
+    // 根据路由判断是否显示框架
+    // /model-deploy/sscma/test -> showFrame = true (独立窗口)
+    // /model-deploy/sscma/config -> showFrame = false (嵌入在容器中)
+    const url = this.router.url;
+    if (url.includes('/test')) {
+      this.showFrame = true;
+    } else if (url.includes('/config')) {
+      this.showFrame = false;
+    }
+    // 如果通过 @Input 显式设置了 showFrame，则不覆盖
+
     this.initializePort();
     this.subscribeToConnectionState();
     this.subscribeToInvokeResults();
@@ -365,11 +381,39 @@ export class SscmaConfigComponent implements OnInit, OnDestroy, OnChanges {
   // 初始化方法
   // ===================
 
-  private initializePort(): void {
+  private async initializePort(): Promise<void> {
+    // 优先级：@Input > serialService > localStorage
+    let portToCheck: string | undefined;
+    
     if (this.portPath) {
-      this.currentPort = this.portPath;
+      portToCheck = this.portPath;
     } else if (this.serialService.currentPort) {
-      this.currentPort = this.serialService.currentPort;
+      portToCheck = this.serialService.currentPort;
+    } else {
+      // 尝试从 localStorage 读取（独立页面模式）
+      const storedPort = localStorage.getItem('current_model_deploy_port');
+      if (storedPort) {
+        portToCheck = storedPort;
+      }
+    }
+
+    // 验证串口是否仍然可用
+    if (portToCheck) {
+      try {
+        const ports = await this.serialService.getSerialPorts();
+        const portExists = ports.some(p => p.name === portToCheck);
+        
+        if (portExists) {
+          this.currentPort = portToCheck;
+        } else {
+          // 存储的串口不再可用，清除它
+          this.currentPort = undefined;
+          console.warn('存储的串口不再可用:', portToCheck);
+        }
+      } catch (error) {
+        console.warn('验证串口时出错:', error);
+        this.currentPort = undefined;
+      }
     }
   }
 

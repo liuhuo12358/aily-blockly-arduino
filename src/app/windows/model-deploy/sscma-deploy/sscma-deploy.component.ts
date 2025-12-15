@@ -1,5 +1,6 @@
 import { ChangeDetectorRef, Component, Input, OnInit, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Router, ActivatedRoute } from '@angular/router';
 import { TranslateModule } from '@ngx-translate/core';
 import { NzStepsModule } from 'ng-zorro-antd/steps';
 import { NzButtonModule } from 'ng-zorro-antd/button';
@@ -30,6 +31,7 @@ import {
 } from '../../../tools/model-store/model-constants';
 import { MenuComponent } from '../../../components/menu/menu.component';
 import { SscmaConfigComponent } from '../sscma-config/sscma-config.component';
+import { NotificationComponent } from '../../../components/notification/notification.component';
 
 /**
  * 模型信息
@@ -60,7 +62,8 @@ export interface ModelInfo {
     NzStepsModule,
     NzButtonModule,
     MenuComponent,
-    SscmaConfigComponent
+    SscmaConfigComponent,
+    NotificationComponent
   ],
   templateUrl: './sscma-deploy.component.html',
   styleUrl: './sscma-deploy.component.scss'
@@ -75,6 +78,9 @@ export class SscmaDeployComponent implements OnInit {
   supportBoardInfo: SupportBoardInfo | null = null;
   currentStep = 0;
   currentPort: string | undefined;
+  authorLogo: string | null = null;
+  deviceConnectionImage: string | null = null;
+  deviceConnectionSteps: string[] = [];
 
   // 固件和部署相关
   firmwareInfo: FirmwareInfo | null = null;
@@ -102,12 +108,43 @@ export class SscmaDeployComponent implements OnInit {
     private esptoolPyService: EsptoolPyService,
     // private atCommandService: AtCommandService,
     private sscmaCommandService: SSCMACommandService,
-    private noticeService: NoticeService
+    private noticeService: NoticeService,
+    private router: Router,
+    private route: ActivatedRoute
   ) { }
 
   ngOnInit(): void {
-    // 设置初始步骤
-    this.currentStep = this.initialStep;
+    // 从 localStorage 读取模型数据（路由模式下需要）
+    const storedData = localStorage.getItem('current_model_deploy');
+    if (storedData) {
+      try {
+        this.modelDetail = JSON.parse(storedData);
+      } catch (error) {
+        console.error('解析模型数据失败:', error);
+      }
+    }
+
+    // 从 localStorage 读取串口信息
+    const storedPort = localStorage.getItem('current_model_deploy_port');
+    if (storedPort) {
+      this.currentPort = storedPort;
+    }
+
+    // 从路由参数获取步骤，如果没有则从 input 获取
+    this.route.paramMap.subscribe(params => {
+      const step = params.get('step');
+      if (step) {
+        // 根据路由参数设置步骤（2步流程）
+        const stepMap: { [key: string]: number } = {
+          'deploy': 0,  // 第一步：部署
+          'config': 1   // 第二步：配置
+        };
+        this.currentStep = stepMap[step] ?? this.initialStep;
+      } else {
+        this.currentStep = this.initialStep;
+      }
+      this.cd.detectChanges();
+    });
     
     // 从 serialService 获取当前串口
     if (this.serialService.currentPort) {
@@ -117,6 +154,14 @@ export class SscmaDeployComponent implements OnInit {
     // 根据作者名称配置部署步骤
     if (this.modelDetail?.author_name) {
       this.deployStepConfig = getDeployStepConfig(this.modelDetail.author_name);
+      // 缓存作者 logo
+      this.authorLogo = getAuthorLogo(this.modelDetail.author_name);
+    }
+
+    // 缓存设备连接相关数据
+    if (this.modelDetail?.uniform_types) {
+      this.deviceConnectionImage = getDeviceConnectionImage(this.modelDetail.uniform_types);
+      this.deviceConnectionSteps = getDeviceConnectionSteps(this.modelDetail.uniform_types) || [];
     }
 
     // 根据任务类型确定 XIAO 设备类型
@@ -202,12 +247,30 @@ export class SscmaDeployComponent implements OnInit {
   private async checkAndSetDefaultPort() {
     try {
       const ports = await this.serialService.getSerialPorts();
-      if (ports && ports.length === 1 && !this.currentPort) {
-        this.currentPort = ports[0].name;
-        this.cd.detectChanges();
+      
+      if (ports && ports.length > 0) {
+        // 如果已经有串口，验证它是否还在可用列表中
+        if (this.currentPort) {
+          const portExists = ports.some(p => p.name === this.currentPort);
+          if (!portExists) {
+            // 存储的串口不再可用，清除它
+            this.currentPort = undefined;
+          }
+        }
+        
+        // 如果没有串口且只有一个可用串口，自动选择
+        if (!this.currentPort && ports.length === 1) {
+          this.currentPort = ports[0].name;
+        }
+      } else {
+        // 没有可用串口，清除当前串口
+        this.currentPort = undefined;
       }
+      
+      this.cd.detectChanges();
     } catch (error) {
       console.warn('获取串口列表失败:', error);
+      this.currentPort = undefined;
     }
   }
 
@@ -697,9 +760,8 @@ export class SscmaDeployComponent implements OnInit {
       // 等待一小段时间让用户看到完成提示
       await this.delay(1000);
       
-      // 自动进入配置页面（第三步）
-      this.currentStep = 2;
-      this.cd.detectChanges();
+      // 自动进入配置页面（步骤1）
+      this.router.navigate(['/model-deploy/sscma', 'config']);
       
       // console.log('[Deploy] 部署完成，已进入配置页面');
 
@@ -751,16 +813,23 @@ export class SscmaDeployComponent implements OnInit {
   
   nextStep() {
     if (this.modelDetail?.author_name === 'SenseCraft AI') {
-      if (this.currentStep === 1) {
+      if (this.currentStep === 0) {
+        // 部署步骤不允许直接下一步，需要点击部署按钮
         return;
       }
     }
-    this.currentStep += 1;
+    const nextStep = this.currentStep + 1;
+    const stepNames = ['deploy', 'config'];
+    if (nextStep < stepNames.length) {
+      this.router.navigate(['/model-deploy/sscma', stepNames[nextStep]]);
+    }
   }
   
   prevStep() {
     if (this.currentStep > 0) {
-      this.currentStep -= 1;
+      const prevStep = this.currentStep - 1;
+      const stepNames = ['deploy', 'config'];
+      this.router.navigate(['/model-deploy/sscma', stepNames[prevStep]]);
     }
   }
 

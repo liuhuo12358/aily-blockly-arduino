@@ -1,11 +1,46 @@
 /**
  * SSCMA 模型配置组件样式
- * 布局：左侧工具栏 + 中间分割线 + 双列主内容（模型/预览 | 设备信息）
+ * 
+ * 两种显示模式：
+ * 1. 独立窗口模式（测试页面）：使用 .window-inner 等容器样式
+ * 2. 嵌入模式（部署页面第3步）：直接使用 .sscma-config 样式
+ * 
+ * 布局结构：
+ * - 顶部工具栏：串口选择 + 连接按钮 + 侧边栏选项卡
+ * - 主内容区：根据选项卡显示不同内容（设备信息/MQTT/GPIO/串口）
  */
 
-// ===================
-// 容器主体
-// ===================
+// ============================================
+// 独立窗口模式容器样式（与 sscma-deploy 保持一致）
+// ============================================
+.window-inner {
+  position: relative;
+  height: calc(100vh - 35px);
+}
+
+.window-content {
+  display: flex;
+  height: 100%;
+  position: relative;
+
+  .right {
+    padding: 15px;
+    flex-grow: 1;
+    overflow-y: auto;
+    width: 100%;
+
+    .right-inner {
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+  }
+}
+
+// ============================================
+// 配置内容主容器（两种模式共用）
+// ============================================
 .sscma-config {
   display: flex;
   flex-direction: column;

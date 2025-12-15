@@ -98,7 +98,7 @@ export interface DeployStepConfig {
 export const DEPLOY_STEP_CONFIGS: Record<string, DeployStepConfig> = {
   'SenseCraft AI': {
     steps: [
-      'MODEL_DEPLOY.STEPS.SELECT',
+      // 'MODEL_DEPLOY.STEPS.SELECT',
       'MODEL_DEPLOY.STEPS.DEPLOY',
       'MODEL_DEPLOY.STEPS.CONFIGURE'
     ],
@@ -106,7 +106,7 @@ export const DEPLOY_STEP_CONFIGS: Record<string, DeployStepConfig> = {
   },
   'ChipIntelli': {
     steps: [
-      'MODEL_DEPLOY.STEPS.SELECT',
+      // 'MODEL_DEPLOY.STEPS.SELECT',
       'MODEL_DEPLOY.STEPS.CONFIGURE',
       'MODEL_DEPLOY.STEPS.DEPLOY'
     ],

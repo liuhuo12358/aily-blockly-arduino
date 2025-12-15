@@ -605,6 +605,52 @@ export class AilyChatComponent implements OnDestroy {
   }
 
   /**
+   * 从给定路径获取对应 Aily 库的 nickname
+   * @param path 文件或目录的完整路径（可能在库目录内的任意位置）
+   * @returns 库的 nickname，如果未找到则返回空字符串
+   */
+  async getLibraryNickname(path: string): Promise<string> {
+    if (!path) return '';
+
+    try {
+      // 标准化路径分隔符（处理Windows和Unix路径）
+      const normalizedPath = path.replace(/\\/g, '/');
+      
+      // 查找 @aily-project 的位置
+      const ailyProjectIndex = normalizedPath.indexOf('/@aily-project/');
+      if (ailyProjectIndex === -1) {
+        return '';
+      }
+
+      // 获取 @aily-project 后的部分
+      const afterAilyProject = normalizedPath.substring(ailyProjectIndex + '/@aily-project/'.length);
+      const pathParts = afterAilyProject.split('/');
+      
+      // 第一个部分应该是库名（如 lib-esp32-time）
+      if (pathParts.length === 0) {
+        return '';
+      }
+
+      const libraryName = pathParts[0];
+      // 构建 package.json 的完整路径
+      const packageJsonPath = normalizedPath.substring(0, ailyProjectIndex) + 
+                             '/@aily-project/' + libraryName + '/package.json';
+      
+      // 使用 Electron 的 fs 模块读取文件
+      if (window['fs'] && window['fs'].existsSync(packageJsonPath)) {
+        const fileContent = window['fs'].readFileSync(packageJsonPath, 'utf-8');
+        const packageData = JSON.parse(fileContent);
+        return packageData.nickname || '';
+      }
+      
+      return '';
+    } catch (error) {
+      console.warn('获取库 nickname 失败:', error);
+      return '';
+    }
+  }
+
+  /**
    * 获取URL中的文件名或有意义的部分
    * @param url 完整的URL地址
    * @returns 简化的URL名称，如果无法解析则返回原URL
@@ -1411,7 +1457,7 @@ ${JSON.stringify(errData)}
             let resultState = "done";
             let resultText = '';
 
-            console.log("工具调用请求: ", data.tool_name, toolArgs);
+            // console.log("工具调用请求: ", data.tool_name, toolArgs);
 
             // 定义 block 工具列表
             const blockTools = [
@@ -1623,6 +1669,10 @@ ${JSON.stringify(errData)}
                   case 'read_file':
                     // console.log('[读取文件工具被调用]', toolArgs);
                     let readFileName = this.getFileName(toolArgs.path);
+                    let libNickName = await this.getLibraryNickname(toolArgs.path);
+                    if (libNickName) {
+                      readFileName = `${libNickName} ${readFileName}`;
+                    }
                     this.startToolCall(toolCallId, data.tool_name, `读取: ${readFileName}`, toolArgs);
                     toolResult = await readFileTool(toolArgs);
                     if (toolResult.is_error) {
@@ -2451,7 +2501,7 @@ Your role is ASK (Advisory & Quick Support) - you provide analysis, recommendati
               this.completeToolCall(data.tool_id, data.tool_name, finalState, resultText);
             }
 
-            console.log(`工具调用结果: `, toolResult, resultText);
+            // console.log(`工具调用结果: `, toolResult, resultText);
 
             this.send("tool", JSON.stringify({
               "type": "tool",
