@@ -12,6 +12,7 @@ import { ModelDetailComponent } from './model-detail/model-detail.component';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { NzPaginationModule } from 'ng-zorro-antd/pagination';
+import { ElectronService } from '../../services/electron.service';
 
 @Component({
   selector: 'app-model-store',
@@ -37,7 +38,8 @@ export class ModelStoreComponent implements OnInit, AfterViewInit {
     private uiService: UiService,
     private router: Router,
     private modelStoreService: ModelStoreService,
-    private message: NzMessageService
+    private message: NzMessageService,
+    private electronService: ElectronService
   ) { }
 
   itemList: ModelItem[] = []
@@ -76,25 +78,25 @@ export class ModelStoreComponent implements OnInit, AfterViewInit {
 
     // 如果容器高度太小，跳过计算
     if (containerHeight < 100) return;
-    
+
     const itemHeight = 149;
     const gap = 10;
-    const padding = 20; 
-    const paginationHeight = 40; 
-    
+    const padding = 20;
+    const paginationHeight = 40;
+
     // 始终预留分页高度，确保计算稳定
     const availableHeight = containerHeight - padding - paginationHeight;
 
     const rows = Math.max(1, Math.floor((availableHeight + gap) / (itemHeight + gap)));
-    
+
     const columns = containerWidth >= 600 ? 2 : 1;
-    
+
     // 最小显示2个item
     const newPageSize = Math.max(2, rows * columns);
-    
+
     if (this.pageSize !== newPageSize) {
-        this.pageSize = newPageSize;
-        this.loadModelList(1);
+      this.pageSize = newPageSize;
+      this.loadModelList(1);
     }
   }
 
@@ -235,7 +237,8 @@ export class ModelStoreComponent implements OnInit, AfterViewInit {
 
 
   onTrain(): void {
-    this.message.warning('当前版本暂不可用，敬请期待');
+    // this.message.warning('当前版本暂不可用，敬请期待');
+    this.electronService.openUrl('https://sensecraft.seeed.cc/ai/training');
     return;
     this.uiService.openWindow({
       path: 'model-train',
