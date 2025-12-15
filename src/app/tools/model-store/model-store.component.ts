@@ -193,8 +193,8 @@ export class ModelStoreComponent implements OnInit {
 
 
   onTrain(): void {
-    // this.message.warning('当前版本暂不可用，敬请期待');
-    // return;
+    this.message.warning('当前版本暂不可用，敬请期待');
+    return;
     this.uiService.openWindow({
       path: 'model-train',
       title: '模型训练',
