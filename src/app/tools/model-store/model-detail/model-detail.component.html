@@ -11,10 +11,10 @@
         <div class="section">
             <div class="section-title">{{ 'MODEL_STORE.DESCRIPTION' | translate }}</div>
             <div class="description">{{ modelDetail.description }}</div>
-        <!-- </div> -->
+            <!-- </div> -->
 
-        <!-- 模型信息标签 -->
-        <!-- <div class="section">
+            <!-- 模型信息标签 -->
+            <!-- <div class="section">
             <div class="section-title">{{ 'MODEL_STORE.MODEL_INFO' | translate }}</div> -->
             <div class="info-tags">
                 <!-- 支持的开发板 -->
@@ -24,37 +24,37 @@
                         @for (board of getSupportedBoards(); track board) {
                         <span class="tag-board">{{ board.board }}</span>
                         }
-                    <!-- </div> -->
-                <!-- </div> -->
+                        <!-- </div> -->
+                        <!-- </div> -->
 
-                <!-- 模型类型 -->
-                <!-- <div class="info-item"> -->
-                    <!-- <span class="label">{{ 'MODEL_STORE.MODEL_TYPE' | translate }}:</span> -->
+                        <!-- 模型类型 -->
+                        <!-- <div class="info-item"> -->
+                        <!-- <span class="label">{{ 'MODEL_STORE.MODEL_TYPE' | translate }}:</span> -->
                         <span class="tag-task">{{ getTaskDescription() }}</span>
-                <!-- </div> -->
+                        <!-- </div> -->
 
-                <!-- 模型格式 -->
-                <!-- <div class="info-item"> -->
-                    <!-- <span class="label">{{ 'MODEL_STORE.MODEL_FORMAT' | translate }}:</span> -->
+                        <!-- 模型格式 -->
+                        <!-- <div class="info-item"> -->
+                        <!-- <span class="label">{{ 'MODEL_STORE.MODEL_FORMAT' | translate }}:</span> -->
                         <span class="tag-model">{{ getModelFormat() }}</span>
-                <!-- </div> -->
+                        <!-- </div> -->
 
-                <!-- 模型精度 -->
-                <!-- <div class="info-item"> -->
-                    <!-- <span class="label">{{ 'MODEL_STORE.MODEL_PRECISION' | translate }}:</span> -->
+                        <!-- 模型精度 -->
+                        <!-- <div class="info-item"> -->
+                        <!-- <span class="label">{{ 'MODEL_STORE.MODEL_PRECISION' | translate }}:</span> -->
                         <span class="tag-precision">{{ getPrecision() }}</span>
-                <!-- </div> -->
+                        <!-- </div> -->
 
-                <!-- 模型大小 -->
-                <!-- <div class="info-item"> -->
-                    <!-- <span class="label">{{ 'MODEL_STORE.MODEL_SIZE' | translate }}:</span> -->
-                    <!-- <span class="tag">{{ getFormattedSize() }}</span> -->
-                <!-- </div> -->
+                        <!-- 模型大小 -->
+                        <!-- <div class="info-item"> -->
+                        <!-- <span class="label">{{ 'MODEL_STORE.MODEL_SIZE' | translate }}:</span> -->
+                        <!-- <span class="tag">{{ getFormattedSize() }}</span> -->
+                        <!-- </div> -->
 
-                <!-- 版本 -->
-                <!-- <div class="info-item"> -->
-                    <!-- <span class="label">{{ 'MODEL_STORE.VERSION' | translate }}:</span> -->
-                    <!-- <span class="tag">{{ modelDetail.version }}</span> -->
+                        <!-- 版本 -->
+                        <!-- <div class="info-item"> -->
+                        <!-- <span class="label">{{ 'MODEL_STORE.VERSION' | translate }}:</span> -->
+                        <!-- <span class="tag">{{ modelDetail.version }}</span> -->
                     </div>
                 </div>
             </div>
@@ -107,8 +107,11 @@
             </div> -->
 
     <div class="actions bottom">
-        <button nz-button nzType="default" (click)="onClose()">
+        <button  class="back-btn" nz-button nzType="default" (click)="onClose()">
             返回
+        </button>
+        <button nz-button nzType="primary" (click)="onDeploy(modelDetail)">
+            测试模型
         </button>
         <button nz-button nzType="primary" (click)="onDeploy(modelDetail)">
             部署模型

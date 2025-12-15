@@ -142,7 +142,8 @@
                     margin-top: 8px;
                 }
 
-                ul, ol {
+                ul,
+                ol {
                     margin-left: 20px;
                     margin-bottom: 12px;
                 }
@@ -234,5 +235,12 @@
         padding-right: 10px;
         gap: 10px;
         background: #444;
+    }
+}
+
+.back-btn {
+    &:hover {
+        color: #fff;
+        border: 1px solid #fff;
     }
 }
