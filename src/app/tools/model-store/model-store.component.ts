@@ -70,20 +70,27 @@ export class ModelStoreComponent implements OnInit, AfterViewInit {
 
   calculatePageSize() {
     if (!this.itemListContainer) return;
-    const containerHeight = this.itemListContainer.nativeElement.clientHeight;
-    const containerWidth = this.itemListContainer.nativeElement.clientWidth;
+    const container = this.itemListContainer.nativeElement;
+    const containerHeight = container.clientHeight;
+    const containerWidth = container.clientWidth;
+
+    // 如果容器高度太小，跳过计算
+    if (containerHeight < 100) return;
     
     const itemHeight = 149;
     const gap = 10;
     const padding = 20; 
-    const paginationHeight = 60; 
+    const paginationHeight = 40; 
     
+    // 始终预留分页高度，确保计算稳定
     const availableHeight = containerHeight - padding - paginationHeight;
-    const rows = Math.floor((availableHeight + gap) / (itemHeight + gap));
+
+    const rows = Math.max(1, Math.floor((availableHeight + gap) / (itemHeight + gap)));
     
     const columns = containerWidth >= 600 ? 2 : 1;
     
-    const newPageSize = Math.max(1, rows * columns);
+    // 最小显示2个item
+    const newPageSize = Math.max(2, rows * columns);
     
     if (this.pageSize !== newPageSize) {
         this.pageSize = newPageSize;

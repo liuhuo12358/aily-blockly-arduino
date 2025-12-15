@@ -352,9 +352,9 @@
     },
     "MODEL_STORE": {
         "TITLE": "模型商店",
-        "DESCRIPTION": "描述",
+        "DESCRIPTION": "模型简介",
         "MODEL_INFO": "模型信息",
-        "SUPPORTED_BOARDS": "支持的开发板",
+        "SUPPORTED_BOARDS": "支持设备",
         "MODEL_TYPE": "模型类型",
         "MODEL_FORMAT": "模型格式",
         "MODEL_PRECISION": "模型精度",

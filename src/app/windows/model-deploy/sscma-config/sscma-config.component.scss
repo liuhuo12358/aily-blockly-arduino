@@ -24,8 +24,7 @@
   position: relative;
 
   .right {
-    padding: 15px;
-    flex-grow: 1;
+    padding: 15px 0;
     overflow-y: auto;
     width: 100%;
 
@@ -57,19 +56,18 @@
   flex-shrink: 0;
   overflow: visible;
   display: flex;
-  flex-direction: row;
+  align-items: center;
   gap: 16px;
 
   // 串口选择器
   .port-selector {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-
-    label {
-      font-size: 14px;
-      color: rgba(255, 255, 255, 0.85);
-      font-weight: 500;
+    .item-inner {
+      // 内部元素穿透点击事件到 item-inner
+      .value,
+      .arrow-box,
+      .arrow-box .arrow {
+        pointer-events: none;
+      }
     }
   }
 
@@ -100,7 +98,7 @@
       overflow: hidden;
       text-overflow: ellipsis;
     }
-    
+
     .status-item {
       display: flex;
       align-items: center;
@@ -129,7 +127,7 @@
 
   // 按钮样式
   button[nz-button] {
-    height: 32px;
+    height: 31px;
     font-size: 14px;
     font-weight: 500;
     border-radius: 4px;
@@ -138,13 +136,13 @@
     // 需要重置以确保完美居中
     ::ng-deep {
       padding: 4px 15px !important;
-      
-      > span {
+
+      >span {
         display: inline-flex;
         align-items: center;
         justify-content: center;
         gap: 6px;
-        margin: 0 !important;  // 移除 ng-zorro 默认的 margin-left: 8px
+        margin: 0 !important; // 移除 ng-zorro 默认的 margin-left: 8px
       }
 
       // 图标居中
@@ -296,7 +294,7 @@
 // ===================
 .config-main-left {
   width: 50%;
-  padding: 12px;
+  padding: 10px;
   flex-shrink: 0;
   overflow-y: auto;
 
@@ -420,13 +418,13 @@
         // 需要重置以确保完美居中
         ::ng-deep {
           padding: 4px 15px !important;
-          
-          > span {
+
+          >span {
             display: inline-flex;
             align-items: center;
             justify-content: center;
             gap: 6px;
-            margin: 0 !important;  // 移除 ng-zorro 默认的 margin-left: 8px
+            margin: 0 !important; // 移除 ng-zorro 默认的 margin-left: 8px
           }
 
           // 图标居中
@@ -633,7 +631,7 @@
 //   padding: 24px;
 //   text-align: center;
 //   color: #999;
-  
+
 //   p {
 //     margin: 0;
 //     font-size: 14px;
@@ -730,6 +728,7 @@
           overflow: hidden;
           text-overflow: ellipsis;
         }
+
         .arrow-box {
           pointer-events: auto;
           position: absolute;
@@ -781,13 +780,13 @@
       // 需要重置以确保完美居中
       ::ng-deep {
         padding: 4px 15px !important;
-        
-        > span {
+
+        >span {
           display: inline-flex;
           align-items: center;
           justify-content: center;
           gap: 6px;
-          margin: 0 !important;  // 移除 ng-zorro 默认的 margin-left: 8px
+          margin: 0 !important; // 移除 ng-zorro 默认的 margin-left: 8px
         }
 
         // 图标居中
@@ -912,7 +911,7 @@
     padding: 24px;
     flex-shrink: 0;
     overflow-y: auto;
-    
+
     .serial-title {
       font-size: 16px;
       font-weight: 600;
@@ -937,8 +936,8 @@
 
       .serial-method {
         display: block;
-        background: rgba(255,255,255,0.02);
-        border: 1px solid rgba(255,255,255,0.03);
+        background: rgba(255, 255, 255, 0.02);
+        border: 1px solid rgba(255, 255, 255, 0.03);
         padding: 10px 12px;
         border-radius: 6px;
       }
@@ -998,7 +997,7 @@
       }
 
       .protocol-code {
-        background: rgba(0,0,0,0.28);
+        background: rgba(0, 0, 0, 0.28);
         padding: 8px;
         border-radius: 4px;
         color: #ff9100;
@@ -1030,7 +1029,7 @@
     padding: 24px;
     flex-shrink: 0;
     overflow-y: auto;
-    
+
     .gpio-title {
       font-size: 16px;
       font-weight: 600;
@@ -1099,7 +1098,7 @@
     color: rgba(255, 255, 255, 0.85);
     align-items: center;
 
-    > div {
+    >div {
       text-align: center;
       white-space: nowrap;
       overflow: hidden;
@@ -1135,7 +1134,7 @@
       border-bottom: none;
     }
 
-    > div {
+    >div {
       display: flex;
       justify-content: center;
       align-items: center;
@@ -1144,6 +1143,7 @@
 
     // 输入框和选择器占满列宽
     ::ng-deep {
+
       nz-input-number,
       nz-select {
         width: 100%;
@@ -1232,7 +1232,7 @@
     padding: 24px;
     flex-shrink: 0;
     overflow-y: auto;
-    
+
     .section-title {
       font-size: 16px;
       font-weight: 600;
@@ -1253,7 +1253,7 @@
 
     .network-section {
       text-align: center;
-      background-color:#1e1f22;
+      background-color: #1e1f22;
       border-radius: 4px;
       padding: 10px;
       margin-bottom: 0;
@@ -1277,29 +1277,29 @@
           text-align: right;
         }
       }
-      
+
       .network-actions {
         margin-top: 12px;
         text-align: right;
       }
     }
-    
+
     // 网络配置表单样式
     .network-config-form {
       padding: 16px 20px;
       background: #1e1f22;
       border-radius: 4px;
-      
+
       .form-group {
         display: flex;
         align-items: center;
         gap: 16px;
         margin-bottom: 14px;
-        
+
         &:last-of-type {
           margin-bottom: 0;
         }
-        
+
         .form-label {
           min-width: 105px;
           flex-shrink: 0;
@@ -1308,67 +1308,67 @@
           font-size: 13px;
           font-weight: 500;
           white-space: nowrap;
-          
+
           &.required::before {
             content: '* ';
             color: #ff4d4f;
             margin-right: 2px;
           }
         }
-        
+
         .form-control {
           flex: 1;
           min-width: 0;
         }
-        
+
         input[nz-input],
         nz-select,
         nz-input-number {
           width: 100%;
         }
-        
+
         input[nz-input] {
           background: #2a2b2e;
           border-color: #444;
           color: #fff;
-          
+
           &::placeholder {
             color: #666;
           }
-          
+
           &:hover {
             border-color: #8fc31f;
           }
-          
+
           &:focus {
             border-color: #8fc31f;
             box-shadow: 0 0 0 2px rgba(143, 195, 31, 0.1);
           }
         }
-        
+
         &.mqtt-toggle {
           .form-control {
             flex: 1;
           }
-          
+
           .toggle-container {
             display: flex;
             align-items: center;
             gap: 12px;
             width: 100%;
-            
+
             .toggle-text {
               min-width: 30px;
               color: #999;
               font-size: 13px;
             }
-            
+
             .mqtt-link {
               margin-left: auto;
               color: #8fc31f;
               font-size: 12px;
               text-decoration: none;
-              
+
               &:hover {
                 text-decoration: underline;
               }
@@ -1376,7 +1376,7 @@
           }
         }
       }
-      
+
       .form-actions {
         display: flex;
         justify-content: flex-end;
@@ -1384,7 +1384,7 @@
         margin-top: 24px;
         padding-top: 16px;
         border-top: 1px solid #333;
-        
+
         button {
           min-width: 88px;
         }

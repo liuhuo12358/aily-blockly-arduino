@@ -2,62 +2,55 @@
     @if(modelDetail) {
     <div class="title">{{ modelDetail.name }}</div>
     <div class="content sscroll">
-        <!-- 模型图片 -->
-        <div class="model-image" *ngIf="modelDetail.pic_url">
-            <img [src]="modelDetail.pic_url" [alt]="modelDetail.name">
+        <!-- 模型概览：左侧图片，右侧信息 -->
+        <div class="model-overview">
+            <!-- 左侧：模型图片 -->
+            <div class="model-image" *ngIf="modelDetail.pic_url">
+                <img [src]="modelDetail.pic_url" [alt]="modelDetail.name">
+            </div>
+            
+            <!-- 右侧：模型信息 -->
+            <div class="model-info-panel">
+                <!-- 适用开发板 -->
+                <div class="info-row">
+                    <span class="info-label">{{ 'MODEL_STORE.SUPPORTED_BOARDS' | translate }}</span>
+                    <div class="info-value">
+                        @for (board of getSupportedBoards(); track board) {
+                        <span class="tag-board">{{ board.board }}</span>
+                        }
+                    </div>
+                </div>
+                
+                <!-- 模型类型 -->
+                <div class="info-row">
+                    <span class="info-label">{{ 'MODEL_STORE.MODEL_TYPE' | translate }}</span>
+                    <div class="info-value">
+                        <span class="tag-task">{{ getTaskDescription() }}</span>
+                    </div>
+                </div>
+                
+                <!-- 模型格式 -->
+                <div class="info-row">
+                    <span class="info-label">{{ 'MODEL_STORE.MODEL_FORMAT' | translate }}</span>
+                    <div class="info-value">
+                        <span class="tag-model">{{ getModelFormat() }}</span>
+                    </div>
+                </div>
+                
+                <!-- 模型精度 -->
+                <div class="info-row">
+                    <span class="info-label">{{ 'MODEL_STORE.MODEL_PRECISION' | translate }}</span>
+                    <div class="info-value">
+                        <span class="tag-precision">{{ getPrecision() }}</span>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <!-- 描述 -->
         <div class="section">
             <div class="section-title">{{ 'MODEL_STORE.DESCRIPTION' | translate }}</div>
             <div class="description">{{ modelDetail.description }}</div>
-            <!-- </div> -->
-
-            <!-- 模型信息标签 -->
-            <!-- <div class="section">
-            <div class="section-title">{{ 'MODEL_STORE.MODEL_INFO' | translate }}</div> -->
-            <div class="info-tags">
-                <!-- 支持的开发板 -->
-                <div class="info-item">
-                    <!-- <span class="label">{{ 'MODEL_STORE.SUPPORTED_BOARDS' | translate }}:</span> -->
-                    <div class="tag-list">
-                        @for (board of getSupportedBoards(); track board) {
-                        <span class="tag-board">{{ board.board }}</span>
-                        }
-                        <!-- </div> -->
-                        <!-- </div> -->
-
-                        <!-- 模型类型 -->
-                        <!-- <div class="info-item"> -->
-                        <!-- <span class="label">{{ 'MODEL_STORE.MODEL_TYPE' | translate }}:</span> -->
-                        <span class="tag-task">{{ getTaskDescription() }}</span>
-                        <!-- </div> -->
-
-                        <!-- 模型格式 -->
-                        <!-- <div class="info-item"> -->
-                        <!-- <span class="label">{{ 'MODEL_STORE.MODEL_FORMAT' | translate }}:</span> -->
-                        <span class="tag-model">{{ getModelFormat() }}</span>
-                        <!-- </div> -->
-
-                        <!-- 模型精度 -->
-                        <!-- <div class="info-item"> -->
-                        <!-- <span class="label">{{ 'MODEL_STORE.MODEL_PRECISION' | translate }}:</span> -->
-                        <span class="tag-precision">{{ getPrecision() }}</span>
-                        <!-- </div> -->
-
-                        <!-- 模型大小 -->
-                        <!-- <div class="info-item"> -->
-                        <!-- <span class="label">{{ 'MODEL_STORE.MODEL_SIZE' | translate }}:</span> -->
-                        <!-- <span class="tag">{{ getFormattedSize() }}</span> -->
-                        <!-- </div> -->
-
-                        <!-- 版本 -->
-                        <!-- <div class="info-item"> -->
-                        <!-- <span class="label">{{ 'MODEL_STORE.VERSION' | translate }}:</span> -->
-                        <!-- <span class="tag">{{ modelDetail.version }}</span> -->
-                    </div>
-                </div>
-            </div>
         </div>
 
         <!-- 模型详情 -->

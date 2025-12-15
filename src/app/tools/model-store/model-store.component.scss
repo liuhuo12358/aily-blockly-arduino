@@ -121,7 +121,8 @@
     flex-wrap: wrap;
     gap: 10px;
     position: relative;
-    // flex: 1;
+    flex: 1;
+    align-content: flex-start;
 }
 
 .item {
