@@ -7,6 +7,7 @@ import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { NzSkeletonModule } from 'ng-zorro-antd/skeleton';
 import { ElectronService } from '../../../services/electron.service';
 import { UiService } from '../../../services/ui.service';
+import { SerialService } from '../../../services/serial.service';
 import { TranslateModule } from '@ngx-translate/core';
 import {
   SupportBoardInfo,
@@ -44,7 +45,8 @@ export class ModelDetailComponent implements OnInit {
 
   constructor(
     private electronService: ElectronService,
-    private uiService: UiService
+    private uiService: UiService,
+    private serialService: SerialService
   ) { }
 
   ngOnInit(): void {
@@ -98,29 +100,75 @@ export class ModelDetailComponent implements OnInit {
     return formatFileSize(this.modelDetail.model_size);
   }
 
-  onDeploy(modelDetail: ModelDetail, page: number = 1): void {
+  /**
+   * 部署或测试模型
+   * @param modelDetail 模型详情数据
+   * @param mode 'deploy' 部署模式 | 'test' 测试模式
+   */
+  onDeploy(modelDetail: ModelDetail, mode: 'deploy' | 'test' = 'deploy'): void {
     if (!modelDetail) {
       console.error('模型数据为空，无法部署');
       return;
     }
     
-    // 将模型数据存储到 localStorage（用于跨窗口传递）
+    // 1. 保存模型数据到 localStorage（跨窗口传递）
     localStorage.setItem('current_model_deploy', JSON.stringify(modelDetail));
-    // 存储要打开的页面（可选）
-    try {
-      localStorage.setItem('current_model_deploy_page', String(page));
-    } catch (e) {
-      // ignore
+    
+    // 2. 保存当前串口信息
+    if (this.serialService.currentPort) {
+      localStorage.setItem('current_model_deploy_port', this.serialService.currentPort);
     }
     
-    // 打开部署窗口
+    // 3. 根据模型作者决定模型类型，生成对应路由
+    const modelType = this.getModelTypeRoute(modelDetail);
+    
+    // 4. 构建路由路径
+    let routePath: string;
+    if (mode === 'test') {
+      // 测试模式：跳转到独立测试页面
+      routePath = `model-deploy/${modelType}/test`;
+    } else {
+      // 部署模式：跳转到部署步骤 - deploy 步骤
+      routePath = `model-deploy/${modelType}/deploy`;
+    }
+    
+    // 5. 打开新窗口，路由到对应页面
+    const title = mode === 'test' 
+      ? `模型测试 - ${modelDetail.name}` 
+      : `模型部署 - ${modelDetail.name}`;
+    
     this.uiService.openWindow({
-      path: 'model-deploy',
-      title: '模型部署 - ' + modelDetail.name,
+      path: routePath, // 动态路由：model-deploy/sscma/deploy 或 model-deploy/sscma/test
+      title,
       alwaysOnTop: true,
       width: 960,
       height: 640
     });
+  }
+
+  /**
+   * 根据模型信息决定路由类型
+   * @param modelDetail 模型详情
+   * @returns 路由类型名称（用于 URL）
+   */
+  private getModelTypeRoute(modelDetail: ModelDetail): string {
+    // 根据 author_name 判断
+    if (modelDetail.author_name === 'SenseCraft AI' || modelDetail.author_name === 'Seeed Studio') {
+      return 'sscma';
+    }
+    
+    // 根据 uniform_types 判断
+    if (modelDetail.uniform_types?.includes('xiao_esp32s3')) {
+      return 'sscma';
+    }
+    
+    // 未来扩展示例：
+    // if (modelDetail.author_name === 'ChipIntelli') {
+    //   return 'chipintelli';
+    // }
+    
+    // 默认返回 sscma
+    return 'sscma';
   }
 
   onClose(): void {

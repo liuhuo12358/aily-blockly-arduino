@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ViewChild, ElementRef, AfterViewInit, HostListener } from '@angular/core';
 import { SubWindowComponent } from '../../components/sub-window/sub-window.component';
 import { ToolContainerComponent } from '../../components/tool-container/tool-container.component';
 import { FormsModule } from '@angular/forms';
@@ -12,6 +12,7 @@ import { ModelDetailComponent } from './model-detail/model-detail.component';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { NzPaginationModule } from 'ng-zorro-antd/pagination';
+import { ElectronService } from '../../services/electron.service';
 
 @Component({
   selector: 'app-model-store',
@@ -29,14 +30,16 @@ import { NzPaginationModule } from 'ng-zorro-antd/pagination';
   templateUrl: './model-store.component.html',
   styleUrl: './model-store.component.scss'
 })
-export class ModelStoreComponent implements OnInit {
+export class ModelStoreComponent implements OnInit, AfterViewInit {
+  @ViewChild('itemListContainer') itemListContainer!: ElementRef;
   currentUrl;
 
   constructor(
     private uiService: UiService,
     private router: Router,
     private modelStoreService: ModelStoreService,
-    private message: NzMessageService
+    private message: NzMessageService,
+    private electronService: ElectronService
   ) { }
 
   itemList: ModelItem[] = []
@@ -56,10 +59,51 @@ export class ModelStoreComponent implements OnInit {
     this.loadModelList();
   }
 
+  ngAfterViewInit() {
+    setTimeout(() => {
+      this.calculatePageSize();
+    });
+  }
+
+  @HostListener('window:resize')
+  onResize() {
+    this.calculatePageSize();
+  }
+
+  calculatePageSize() {
+    if (!this.itemListContainer) return;
+    const container = this.itemListContainer.nativeElement;
+    const containerHeight = container.clientHeight;
+    const containerWidth = container.clientWidth;
+
+    // 如果容器高度太小，跳过计算
+    if (containerHeight < 100) return;
+
+    const itemHeight = 149;
+    const gap = 10;
+    const padding = 20;
+    const paginationHeight = 40;
+
+    // 始终预留分页高度，确保计算稳定
+    const availableHeight = containerHeight - padding - paginationHeight;
+
+    const rows = Math.max(1, Math.floor((availableHeight + gap) / (itemHeight + gap)));
+
+    const columns = containerWidth >= 600 ? 2 : 1;
+
+    // 最小显示2个item
+    const newPageSize = Math.max(2, rows * columns);
+
+    if (this.pageSize !== newPageSize) {
+      this.pageSize = newPageSize;
+      this.loadModelList(1);
+    }
+  }
+
   // 加载模型列表
   loadModelList(page: number = 1) {
     this.loading = true;
-    this.modelStoreService.getModelList(page).subscribe({
+    this.modelStoreService.getModelList(page, this.pageSize).subscribe({
       next: (result) => {
         console.log('加载的模型列表结果:', result);
         this.itemList = result.list;
@@ -194,7 +238,8 @@ export class ModelStoreComponent implements OnInit {
 
   onTrain(): void {
     // this.message.warning('当前版本暂不可用，敬请期待');
-    // return;
+    this.electronService.openUrl('https://sensecraft.seeed.cc/ai/training');
+    return;
     this.uiService.openWindow({
       path: 'model-train',
       title: '模型训练',

@@ -17,7 +17,7 @@
         }
     }
 
-    button{
+    button {
         position: absolute;
         right: 10px;
         margin-top: 2px;
@@ -27,6 +27,8 @@
 .content {
     position: relative;
     height: calc(100% - 85px);
+    display: flex;
+    flex-direction: column;
 }
 
 .section-title {
@@ -67,11 +69,11 @@
             nz-tag {
                 cursor: pointer;
 
-                &:hover{
+                &:hover {
                     background: #505050;
                 }
 
-                &:last-child{
+                &:last-child {
                     margin-right: 0;
                 }
             }
@@ -113,14 +115,14 @@
 
 
 .item-list {
-    padding: 10px 2px 10px 10px;
-    height: 100%;
+    padding: 10px;
     overflow-y: auto;
     display: flex;
     flex-wrap: wrap;
     gap: 10px;
-    container-type: inline-size;
-    container-name: itemlist;
+    position: relative;
+    flex: 1;
+    align-content: flex-start;
 }
 
 .item {
@@ -136,9 +138,6 @@
     transition: all 0.3s;
 
     &:hover {
-        // .content {
-        //     filter: blur(1px);
-        // }
         background: #494949;
 
         .btns {
@@ -249,6 +248,12 @@
 
 // 加载状态
 .loading-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    background: rgba(46, 46, 46, 0.8);
+    z-index: 10;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -257,12 +262,12 @@
     color: #888;
     border-radius: 5px;
     width: 100%;
-    
+
     i {
         font-size: 32px;
         margin-bottom: 10px;
     }
-    
+
     span {
         font-size: 14px;
     }
@@ -271,11 +276,11 @@
 // 分页样式
 .pagination {
     width: 100%;
-    font-size: 12px;
-    padding: 5px 10px;
     display: flex;
-    flex-direction: column;
+    padding: 5px 0;
     align-items: center;
-    gap: 10px;
+    justify-content: center;
     background: #2e2e2e;
+    position: absolute;
+    bottom: 0;
 }

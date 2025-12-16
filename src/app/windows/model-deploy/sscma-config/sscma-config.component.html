@@ -1,3 +1,5 @@
+<!-- 内容模板 -->
+<ng-template #configContent>
 <div class="sscma-config">
   <!-- 顶部工具栏 -->
   <div class="config-sidebar">
@@ -822,3 +824,34 @@
   (closeEvent)="closeTransportList()"
   (itemClickEvent)="selectTransport($event)">
 </app-menu>
+</ng-template>
+
+<!-- ========================================= -->
+<!-- 渲染模式控制：独立窗口 vs 嵌入模式 -->
+<!-- ========================================= -->
+@if (showFrame) {
+  <!-- 
+    独立窗口模式（测试页面）：
+    - 完整的 sub-window 结构
+    - 与 deploy 页面的右侧区域布局一致
+    - 内容显示在 .right > .right-inner 容器中
+  -->
+  <app-sub-window [title]="'模型配置'" [winBtns]="['close']">
+    <div class="window-inner">
+      <div class="window-content">
+        <div class="right sscroll">
+          <div class="right-inner">
+            <ng-container *ngTemplateOutlet="configContent"></ng-container>
+          </div>
+        </div>
+      </div>
+    </div>
+  </app-sub-window>
+} @else {
+  <!-- 
+    嵌入模式（部署页面第3步）：
+    - 无外框结构
+    - 内容直接显示在 deploy 页面的右侧区域
+  -->
+  <ng-container *ngTemplateOutlet="configContent"></ng-container>
+}
