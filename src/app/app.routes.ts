@@ -124,6 +124,32 @@ export const routes: Routes = [
     },
     {
         path: "model-train",
-        loadComponent: () => import('./windows/model-train/model-train.component').then(m => m.ModelTrainComponent)
+        children: [
+            {
+                path: '',
+                loadComponent: () => import('./windows/model-train/model-train.component').then(m => m.ModelTrainComponent)
+            },
+            {
+                path: 'vision',
+                loadComponent: () => import('./windows/model-train/vision-train/vision-train.component').then(m => m.VisionTrainComponent)
+            },
+            {
+                path: 'vision/classification',
+                loadComponent: () => import('./windows/model-train/vision-train/classification-train/classification-train.component').then(m => m.ClassificationTrainComponent)
+            }
+            // 未来扩展：
+            // {
+            //     path: 'vision/detection',
+            //     loadComponent: () => import('./windows/model-train/vision-train/detection-train/detection-train.component').then(m => m.DetectionTrainComponent)
+            // },
+            // {
+            //     path: 'vision/pose',
+            //     loadComponent: () => import('./windows/model-train/vision-train/pose-train/pose-train.component').then(m => m.PoseTrainComponent)
+            // },
+            // {
+            //     path: 'audio',
+            //     loadComponent: () => import('./windows/model-train/audio-train/audio-train.component').then(m => m.AudioTrainComponent)
+            // }
+        ]
     }
 ];

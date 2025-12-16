@@ -3,140 +3,56 @@
   height: calc(100vh - 35px);
 }
 
-.type-selector {
-  display: flex;
-  flex-direction: column;
-  gap: 15px;
-  margin-bottom: 15px;
-  cursor: pointer;
-  width: 100%;
-
-  .text {
-    text-align: center;
-    margin: 30px;
-  }
-
-  .type-list {
-    display: flex;
-    gap: 10px;
-
-    .item {
-      width: 50%;
-      cursor: pointer;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 15px;
-
-      border-right: 1px solid #43494b;
-
-      i {
-        font-size: 80px;
-      }
-
-      &.selected {
-        border: 2px solid #007bff;
-      }
-    }
-  }
-
-  .type-item {
-    padding: 10px 15px;
-    background: #3e4243;
-    border-radius: 5px;
-    cursor: pointer;
-    user-select: none;
-
-  }
-}
-
 .window-content {
   display: flex;
   height: calc(100% - 60px);
-  position: relative;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  padding: 40px;
 
-  .left {
-    width: 25vw;
-    height: 100%;
-    padding: 15px;
-    flex-shrink: 0;
+  .type-selector {
+    width: 100%;
+    max-width: 800px;
+    text-align: center;
 
-    .left-inner {
-      height: 100%;
-      border-right: 1px solid #43494b;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
+    .text {
+      font-size: 18px;
+      font-weight: 500;
+      margin-bottom: 40px;
+      color: #ddd;
     }
-  }
 
-  .right {
-    padding: 15px;
-    flex-grow: 1;
-
-    .right-inner {
-      height: 100%;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      position: relative;
-
-      &.flex-start {
-        justify-content: flex-start;
-      }
+    .type-list {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 24px;
 
       .item {
-        display: flex;
-        align-items: center;
-        margin-bottom: 15px;
-        height: 40px;
         position: relative;
+        padding: 40px 20px;
+        border: 2px solid #3a3d40;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.3s;
+        background: #1e2022;
+        flex-direction: column;
+        min-height: 180px;
 
-        >div:first-child {
-          width: 120px;
-          flex-shrink: 0;
+        i {
+          font-size: 48px;
+          margin-bottom: 16px;
+          color: #1890ff;
+          transition: all 0.3s;
         }
 
-        input {
-          background: #363636;
-          z-index: 1;
-          color: rgba(255, 255, 255, 0.7) !important;
+        &:hover {
+          border-color: #1890ff;
+          box-shadow: 0 4px 12px rgba(24, 144, 255, 0.2);
+          transform: translateY(-2px);
 
-          &.board {
-            border-radius: 2px 0 0 2px;
-          }
-        }
-
-        nz-select {
-          width: 150px;
-          flex-shrink: 0;
-          margin-left: -1px;
-          background: #363636;
-
-          ::ng-deep {
-            nz-select-top-control {
-              border-radius: 0 2px 2px 0;
-            }
-          }
-        }
-
-        .error {
-          color: rgb(255, 80, 80);
-          font-size: 12px;
-          position: absolute;
-          bottom: -15px;
-          left: 130px;
-        }
-      }
-
-      nz-input-group {
-        background: #363636;
-
-        ::ng-deep {
-          .ant-input-group-addon {
-            width: 35px;
-            height: 32px;
-            padding: 0;
+          i {
+            transform: scale(1.1);
           }
         }
       }
@@ -148,6 +64,10 @@
   border-top: 1px solid #222427;
   height: 60px;
   position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 15px;
 
   .btns {
     display: flex;

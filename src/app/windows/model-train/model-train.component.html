@@ -4,13 +4,13 @@
       <div class="type-selector">
         <div class="text">选择你要训练的模型类型</div>
         <div class="type-list">
-          <div class="item ccenter">
+          <div class="item ccenter" (click)="goToVisionTrain()">
             <i class="fa-thin fa-eye"></i>
             视觉模型
           </div>
-          <div class="item ccenter">
+          <div class="item ccenter" (click)="goToAudioTrain()">
             <i class="fa-thin fa-ear"></i>
-            听觉模型
+            音频模型
           </div>
         </div>
       </div>
