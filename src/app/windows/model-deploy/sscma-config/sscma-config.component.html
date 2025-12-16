@@ -14,22 +14,12 @@
         (click)="isConnected ? disconnect() : connectToDevice()"
         [style.background-color]="(!currentPort || isConnecting) ? '' : (isConnected ? '' : '#8fc31f')"
         [style.border-color]="(!currentPort || isConnecting) ? '' : (isConnected ? '' : '#8fc31f')">
-        <!-- <span nz-icon [nzType]="isConnected ? 'disconnect' : 'link'" nzTheme="outline"></span> -->
         {{ isConnected ? '断开连接' : '连接设备' }}
       </button>
-
-      <div class="doc-btn" (click)="openDocumentation()">文档</div>
+      <div class="doc-btn" (click)="openDocumentation()">阅读文档</div>
     </div>
 
-
     <div class="config-container">
-      <!-- tabs -->
-      <nz-tabset [(nzSelectedIndex)]="selectedTabIndex" (nzSelectedIndexChange)="onTabChange($event)" nzSize="small">
-        <nz-tab nzTitle="设备信息"></nz-tab>
-        <nz-tab nzTitle="MQTT"></nz-tab>
-        <nz-tab nzTitle="GPIO"></nz-tab>
-      </nz-tabset>
-      @if (selectedSidebar === 'device') {
       <!-- 主内容区 -->
       <div class="config-main">
         <!-- 左侧：模型与预览 -->
@@ -52,57 +42,41 @@
               }
             </div>
             <!-- 识别结果 -->
-            <div class="recognition-area" *ngIf="modelMeta?.classes && modelMeta.classes.length && classScores.length">
-              <div class="recognition-title">识别信息</div>
-              <div class="recognition-list">
-                <div class="recognition-row" *ngFor="let label of modelMeta.classes; let i = index">
-                  <div class="score-bar">
-                    <div class="bar-fill" [ngStyle]="{
+          </div>
+          @if (modelMeta?.classes && modelMeta.classes.length && classScores.length) {
+          <div class="recognition-area">
+            <div class="recognition-list sscroll">
+              @for (label of modelMeta.classes; track $index; let i = $index) {
+              <div class="recognition-row">
+                <div class="score-bar">
+                  <div class="bar-fill" [ngStyle]="{
                         'width': (classScores[i] || 0) + '%', 
                         'background': getBarBackground(i)
                       }">
-                      <div class="bar-text" [ngClass]="{'narrow': (classScores[i] || 0) < 12}">
-                        {{ (classScores[i] || 0) }}%
-                      </div>
-                    </div>
                   </div>
-                  <div class="class-label">{{ label || '-' }}</div>
+                  <div class="bar-text">
+                    {{ (classScores[i] || 0) }}%
+                  </div>
                 </div>
+                <div class="class-label">{{ label || '-' }}</div>
               </div>
+              }
             </div>
           </div>
-
-
-
-          <!-- 设备与模型信息 -->
-          <div class="section model-section">
-            <div class="section-title">
-              {{ deviceInfo?.device_name || '-' }}
-            </div>
-            <div class="section device-section">
-              <div class="device-row">
-                <label>设备编号:</label>
-                <span>{{ deviceInfo?.device_id || '-' }}</span>
-              </div>
-              <!-- <div class="device-row">
-                <label>设备名称:</label>
-                <span>{{ deviceInfo?.device_name || '-' }}</span>
-              </div> -->
-              <div class="device-row">
-                <label>设备版本:</label>
-                <span>{{ deviceInfo?.device_version || '-' }}</span>
-              </div>
-              <div class="model-row">
-                <label>使用模型:</label>
-                <span>{{ modelMeta.name || '-' }}&#64;{{ modelMeta.version || '-' }}</span>
-              </div>
-            </div>
-          </div>
+          }
         </div>
 
         <!-- 右侧：设备信息 -->
-        <div class="config-main-right">
-          <div class="device-row">
+        <div class="config-main-right sscroll">
+          <!-- tabs -->
+          <nz-tabset [(nzSelectedIndex)]="selectedTabIndex" (nzSelectedIndexChange)="onTabChange($event)"
+            nzSize="small">
+            <nz-tab nzTitle="设备信息"></nz-tab>
+            <nz-tab nzTitle="MQTT"></nz-tab>
+            <nz-tab nzTitle="GPIO"></nz-tab>
+          </nz-tabset>
+          <!-- <div class="device-row">
+            
             <label>默认传输:</label>
             <div class="transport-selector">
               <div class="item-inner" (click)="openTransportList($event)">
@@ -114,391 +88,390 @@
                 </div>
               </div>
             </div>
-          </div>
-          <!-- WIFI&MQTT信息 -->
-          <div class="section mqtt-section">
-            <div class="mqtt-header">
-              <div class="section-title">WIFI & MQTT</div>
-              <button nz-button nzSize="small" [disabled]="!isConnected"
-                [style.background-color]="(!isConnected || isConnecting) ? '' : '#8fc31f'"
-                [style.border-color]="(!isConnected || isConnecting) ? '' : '#8fc31f'" (click)="selectSidebar('mqtt')">
-                {{ '网络配置' }}
-              </button>
-            </div>
-            @if (!isConnected) {
-            <div class="connected-info">
-              <p>未连接设备，请先连接设备</p>
-            </div>
-            } @else {
-            <div class="mqtt-row">
-              <label>IP地址:</label>
-              <span>{{ wifiInfo.ip || '-' }}</span>
-            </div>
-            <div class="mqtt-row">
-              <label>服务状态:</label>
-              <span>{{ mqttInfo.status === 2 ? '已连接' : (mqttInfo.status === 1 ? '已连接/未生效' : (mqttInfo.status === 0 ?
-                '未初始化' : '-')) }}</span>
-            </div>
-            }
-          </div>
-
+          </div> -->
           <!-- 设置区域 -->
-          <div class="section settings-section">
-            <div class="section-title">设置</div>
-            @if (!isConnected) {
-            <div class="connected-info">
-              <p>未连接设备，请先连接设备</p>
+          @if (selectedSidebar === 'device') {
+          <!-- 设备与模型信息 -->
+          <div class="section">
+            <div class="section-title">
+              {{ deviceInfo?.device_name || '-' }}
             </div>
-            } @else {
-            <div class="setting-item">
-              <label>置信度:
-                <span class="setting-tip">模型对识别结果的确定程度,值越高要求越准确但可能遗漏目标</span>
-              </label>
-              <div class="setting-control">
-                <nz-slider [(ngModel)]="confidenceThreshold" [nzMin]="0" [nzMax]="100" [nzStep]="1"
-                  (ngModelChange)="onConfidenceChange($event)">
-                </nz-slider>
-                <nz-input-number [(ngModel)]="confidenceThreshold" [nzMin]="0" [nzMax]="100" [nzStep]="1"
-                  [nzPrecision]="0" (ngModelChange)="onConfidenceChange($event)">
-                </nz-input-number>
+            <div class="section-content">
+              <div class="section-item">
+                <label>设备编号:</label>
+                <span>{{ deviceInfo?.device_id || '-' }}</span>
+              </div>
+              <div class="section-item">
+                <label>设备版本:</label>
+                <span>{{ deviceInfo?.device_version || '-' }}</span>
+              </div>
+              <div class="section-item">
+                <label>使用模型:</label>
+                <span>{{ modelMeta.name || '-' }} &#64; {{ modelMeta.version || '-' }}</span>
               </div>
             </div>
+          </div>
+          <div class="section">
+            <div class="section-title">模型设置</div>
+            <div class="section-content">
+              <div class="section-item">
+                <label>置信度
+                  <span class="section-tip">(模型对识别结果的确定程度,值越高要求越准确但可能遗漏目标)</span>
+                </label>
+                <div class="setting-control">
+                  <nz-slider [(ngModel)]="confidenceThreshold" [nzMin]="0" [nzMax]="100" [nzStep]="1"
+                    (ngModelChange)="onConfidenceChange($event)">
+                  </nz-slider>
+                  <nz-input-number [(ngModel)]="confidenceThreshold" [nzMin]="0" [nzMax]="100" [nzStep]="1"
+                    [nzPrecision]="0" (ngModelChange)="onConfidenceChange($event)">
+                  </nz-input-number>
+                </div>
+              </div>
 
-            <div class="setting-item">
-              <label>IOU阈值:
-                <span class="setting-tip">用于去除重叠检测框,值越高保留的重叠框越多</span>
-              </label>
-              <div class="setting-control">
-                <nz-slider [(ngModel)]="iouThreshold" [nzMin]="0" [nzMax]="100" [nzStep]="1"
-                  (ngModelChange)="onIouChange($event)">
-                </nz-slider>
-                <nz-input-number [(ngModel)]="iouThreshold" [nzMin]="0" [nzMax]="100" [nzStep]="1" [nzPrecision]="0"
-                  (ngModelChange)="onIouChange($event)">
-                </nz-input-number>
+              <div class="section-item">
+                <label>IOU阈值
+                  <span class="section-tip">(用于去除重叠检测框,值越高保留的重叠框越多)</span>
+                </label>
+                <div class="setting-control">
+                  <nz-slider [(ngModel)]="iouThreshold" [nzMin]="0" [nzMax]="100" [nzStep]="1"
+                    (ngModelChange)="onIouChange($event)">
+                  </nz-slider>
+                  <nz-input-number [(ngModel)]="iouThreshold" [nzMin]="0" [nzMax]="100" [nzStep]="1" [nzPrecision]="0"
+                    (ngModelChange)="onIouChange($event)">
+                  </nz-input-number>
+                </div>
               </div>
             </div>
-            }
           </div>
-        </div>
-      </div>
-      } @else if (selectedSidebar === 'mqtt') {
-      <!-- MQTT 设置内容 -->
-      <div class="mqtt-config">
-        <div class="mqtt-section">
-          <div class="section-title">通过MQTT传输数据</div>
-          <div class="mqtt-subtitle">WIFI & MQTT</div>
-          @if (!isConnected) {
-          <div class="connected-info">
-            <p>未连接设备，请先连接设备</p>
-          </div>
-          } @else {
-          <div class="network-section">
-            <div class="network-status">
-              <label>IP地址:</label>
-              <span>{{ wifiInfo.ip || '-' }}</span>
-            </div>
-            <div class="network-status">
-              <label>服务状态:</label>
-              <span>{{ mqttInfo.status === 2 ? '已连接' : (mqttInfo.status === 1 ? '已连接/未生效' : (mqttInfo.status === 0 ?
-                '未初始化' : '-')) }}</span>
-            </div>
-          </div>
-          }
 
-          <div class="mqtt-subtitle">网络配置</div>
-
-          @if (!isConnected) {
-          <div class="connected-info">
-            <p>未连接设备，请先连接设备</p>
-          </div>
-          } @else {
-          <div class="network-config-form">
-            <!-- WiFi 配置 -->
-            <div class="form-group">
-              <label class="form-label required">无线网络名称</label>
-              <div class="form-control">
-                <nz-input-group>
-                  <input nz-input [(ngModel)]="wifiConfigForm.ssid" placeholder="SEEED_Solution" type="text" />
-                </nz-input-group>
+          <div class="section">
+            <div class="section-title">WiFi设置
+              <span class="network-status">
+                <span>{{ mqttInfo.status === 2 ? '已连接' : (mqttInfo.status === 1 ? '已连接/未生效' : (mqttInfo.status === 0 ?
+                  '未初始化' : '-')) }}</span>
+                <span>{{ wifiInfo.ip || '' }}</span>
+              </span>
+            </div>
+            <div class="section-content">
+              <div class="section-item">
+                <label>热点</label>
+                <input [(ngModel)]="wifiConfigForm.ssid">
+              </div>
+              <div class="section-item">
+                <label>密码</label>
+                <input [(ngModel)]="wifiConfigForm.password">
+              </div>
+              <div class="section-item">
+                <label>加密</label>
+                <div class="selector item-inner" (click)="openPortList($event)">
+                  <div class="value">{{ currentPort || '请选择串口' }}</div>
+                  <div class="arrow-box">
+                    <i class="fa-light fa-angle-right arrow" [ngClass]="{'down': showPortList}"></i>
+                  </div>
+                </div>
               </div>
             </div>
+          </div>
 
-            <div class="form-group">
-              <label class="form-label">密码</label>
-              <div class="form-control">
-                <nz-input-group [nzSuffix]="wifiPasswordSuffix">
-                  <input nz-input [(ngModel)]="wifiConfigForm.password" [type]="showWifiPassword ? 'text' : 'password'"
-                    placeholder="········" />
-                </nz-input-group>
-                <ng-template #wifiPasswordSuffix>
-                  <!-- <span 
+          } @else if (selectedSidebar === 'mqtt') {
+          <!-- MQTT 设置内容 -->
+          <div class="mqtt-config">
+            <div class="mqtt-section">
+              <div class="mqtt-subtitle">网络配置</div>
+              <div class="network-config-form">
+                <!-- WiFi 配置 -->
+                <div class="form-group">
+                  <label class="form-label required">无线网络名称</label>
+                  <div class="form-control">
+                    <nz-input-group>
+                      <input nz-input [(ngModel)]="wifiConfigForm.ssid" placeholder="SEEED_Solution" type="text" />
+                    </nz-input-group>
+                  </div>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label">密码</label>
+                  <div class="form-control">
+                    <nz-input-group [nzSuffix]="wifiPasswordSuffix">
+                      <input nz-input [(ngModel)]="wifiConfigForm.password"
+                        [type]="showWifiPassword ? 'text' : 'password'" placeholder="········" />
+                    </nz-input-group>
+                    <ng-template #wifiPasswordSuffix>
+                      <!-- <span 
                     nz-icon 
                     [nzType]="showWifiPassword ? 'eye-invisible' : 'eye'"
                     (click)="showWifiPassword = !showWifiPassword"
                     style="cursor: pointer; color: #999;">
                   </span> -->
-                </ng-template>
-              </div>
-            </div>
-
-            <div class="form-group">
-              <label class="form-label">加密方式</label>
-              <div class="form-control">
-                <nz-select [(ngModel)]="wifiConfigForm.security" nzPlaceHolder="选择加密方式">
-                  @for (opt of wifiSecurityOptions; track opt.value) {
-                  <nz-option [nzValue]="opt.value" [nzLabel]="opt.label">
-                  </nz-option>
-                  }
-                </nz-select>
-              </div>
-            </div>
-
-            <!-- MQTT 开关 -->
-            <div class="form-group mqtt-toggle">
-              <label class="form-label">MQTT</label>
-              <div class="form-control">
-                <div class="toggle-container">
-                  <span class="toggle-text">{{ mqttConfigForm.enabled ? 'Yes' : 'No' }}</span>
-                  <nz-switch [(ngModel)]="mqttConfigForm.enabled" [nzCheckedChildren]="'Yes'"
-                    [nzUnCheckedChildren]="'No'">
-                  </nz-switch>
-                  <!-- <a class="mqtt-link" href="javascript:void(0)">MQTT通信流程</a> -->
+                    </ng-template>
+                  </div>
                 </div>
-              </div>
-            </div>
 
-            <!-- MQTT 配置（当启用时显示） -->
-            @if (mqttConfigForm.enabled) {
-            <div class="form-group">
-              <label class="form-label">模式</label>
-              <div class="form-control">
-                <nz-select [(ngModel)]="mqttConfigForm.mode" nzPlaceHolder="选择模式">
-                  @for (opt of mqttModeOptions; track opt.value) {
-                  <nz-option [nzValue]="opt.value" [nzLabel]="opt.label">
-                  </nz-option>
-                  }
-                </nz-select>
-              </div>
-            </div>
+                <div class="form-group">
+                  <label class="form-label">加密方式</label>
+                  <div class="form-control">
+                    <nz-select [(ngModel)]="wifiConfigForm.security" nzPlaceHolder="选择加密方式">
+                      @for (opt of wifiSecurityOptions; track opt.value) {
+                      <nz-option [nzValue]="opt.value" [nzLabel]="opt.label">
+                      </nz-option>
+                      }
+                    </nz-select>
+                  </div>
+                </div>
 
-            <div class="form-group">
-              <label class="form-label required">主机</label>
-              <div class="form-control">
-                <input nz-input [(ngModel)]="mqttConfigForm.host" placeholder="broker-cn.emqx.io" type="text" />
-              </div>
-            </div>
+                <!-- MQTT 开关 -->
+                <div class="form-group mqtt-toggle">
+                  <label class="form-label">MQTT</label>
+                  <div class="form-control">
+                    <div class="toggle-container">
+                      <span class="toggle-text">{{ mqttConfigForm.enabled ? 'Yes' : 'No' }}</span>
+                      <nz-switch [(ngModel)]="mqttConfigForm.enabled" [nzCheckedChildren]="'Yes'"
+                        [nzUnCheckedChildren]="'No'">
+                      </nz-switch>
+                      <!-- <a class="mqtt-link" href="javascript:void(0)">MQTT通信流程</a> -->
+                    </div>
+                  </div>
+                </div>
 
-            <div class="form-group">
-              <label class="form-label required">端口号</label>
-              <div class="form-control">
-                <nz-input-number [(ngModel)]="mqttConfigForm.port" [nzMin]="1" [nzMax]="65535" [nzStep]="1"
-                  nzPlaceHolder="1883" style="width: 100%;">
-                </nz-input-number>
-              </div>
-            </div>
+                <!-- MQTT 配置（当启用时显示） -->
+                @if (mqttConfigForm.enabled) {
+                <div class="form-group">
+                  <label class="form-label">模式</label>
+                  <div class="form-control">
+                    <nz-select [(ngModel)]="mqttConfigForm.mode" nzPlaceHolder="选择模式">
+                      @for (opt of mqttModeOptions; track opt.value) {
+                      <nz-option [nzValue]="opt.value" [nzLabel]="opt.label">
+                      </nz-option>
+                      }
+                    </nz-select>
+                  </div>
+                </div>
 
-            <div class="form-group">
-              <label class="form-label required">客户端ID</label>
-              <div class="form-control">
-                <input nz-input [(ngModel)]="mqttConfigForm.clientId" placeholder="xiao_esp32_s3_413117919"
-                  type="text" />
-              </div>
-            </div>
+                <div class="form-group">
+                  <label class="form-label required">主机</label>
+                  <div class="form-control">
+                    <input nz-input [(ngModel)]="mqttConfigForm.host" placeholder="broker-cn.emqx.io" type="text" />
+                  </div>
+                </div>
 
-            <div class="form-group">
-              <label class="form-label">用户名</label>
-              <div class="form-control">
-                <input nz-input [(ngModel)]="mqttConfigForm.username" placeholder="用户名" type="text" />
-              </div>
-            </div>
+                <div class="form-group">
+                  <label class="form-label required">端口号</label>
+                  <div class="form-control">
+                    <nz-input-number [(ngModel)]="mqttConfigForm.port" [nzMin]="1" [nzMax]="65535" [nzStep]="1"
+                      nzPlaceHolder="1883" style="width: 100%;">
+                    </nz-input-number>
+                  </div>
+                </div>
 
-            <div class="form-group">
-              <label class="form-label">密码</label>
-              <div class="form-control">
-                <nz-input-group [nzSuffix]="mqttPasswordSuffix">
-                  <input nz-input [(ngModel)]="mqttConfigForm.password" [type]="showMqttPassword ? 'text' : 'password'"
-                    placeholder="请输入密码" />
-                </nz-input-group>
-                <ng-template #mqttPasswordSuffix>
-                  <!-- <span 
+                <div class="form-group">
+                  <label class="form-label required">客户端ID</label>
+                  <div class="form-control">
+                    <input nz-input [(ngModel)]="mqttConfigForm.clientId" placeholder="xiao_esp32_s3_413117919"
+                      type="text" />
+                  </div>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label">用户名</label>
+                  <div class="form-control">
+                    <input nz-input [(ngModel)]="mqttConfigForm.username" placeholder="用户名" type="text" />
+                  </div>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label">密码</label>
+                  <div class="form-control">
+                    <nz-input-group [nzSuffix]="mqttPasswordSuffix">
+                      <input nz-input [(ngModel)]="mqttConfigForm.password"
+                        [type]="showMqttPassword ? 'text' : 'password'" placeholder="请输入密码" />
+                    </nz-input-group>
+                    <ng-template #mqttPasswordSuffix>
+                      <!-- <span 
                       nz-icon 
                       [nzType]="showMqttPassword ? 'eye-invisible' : 'eye'"
                       (click)="showMqttPassword = !showMqttPassword"
                       style="cursor: pointer; color: #999;">
                     </span> -->
-                </ng-template>
-              </div>
-            </div>
-
-            <div class="form-group mqtt-toggle">
-              <label class="form-label">加密连接</label>
-              <div class="form-control">
-                <div class="toggle-container">
-                  <span class="toggle-text">{{ mqttConfigForm.autoConnect ? 'Yes' : 'No' }}</span>
-                  <nz-switch [(ngModel)]="mqttConfigForm.autoConnect" [nzCheckedChildren]="'Yes'"
-                    [nzUnCheckedChildren]="'No'">
-                  </nz-switch>
+                    </ng-template>
+                  </div>
                 </div>
-              </div>
-            </div>
-            }
 
-            <!-- 操作按钮 -->
-            <div class="form-actions">
-              <button nz-button nzType="default" (click)="cancelNetworkConfig()">
-                取消
-              </button>
-              <button nz-button nzType="primary" [style.background-color]="'#8fc31f'" [style.border-color]="'#8fc31f'"
-                (click)="mqttConfigForm.enabled ? applyMqttConfig() : applyWifiConfig()">
-                应用
-              </button>
-            </div>
-          </div>
-          }
-        </div>
-      </div>
-      } @else if (selectedSidebar === 'gpio') {
-      <!-- GPIO 设置内容 -->
-      <div class="gpio-config">
-        <div class="gpio-section">
-          <div class="gpio-title">GPIO 触发配置</div>
-          @if (!isConnected) {
-          <div class="connected-info">
-            <p>未连接设备，请先连接设备</p>
-          </div>
-          } @else {
-          <div class="gpio-description">
-            根据识别结果的置信度自动控制 GPIO 电平，实现硬件触发功能。
-          </div>
-
-          <!-- 操作按钮 -->
-          <div class="gpio-actions">
-            <button nz-button nzType="primary" (click)="applyTriggerRules()"
-              [disabled]="!isConnected || triggerRules.length === 0">
-              应用规则到设备
-            </button>
-            <button nz-button nzType="default" (click)="loadTriggerRules()" [disabled]="!isConnected">
-              查看当前规则
-            </button>
-          </div>
-
-          <!-- 表格容器（带横向滚动） -->
-          <div class="table-wrapper">
-            <div class="action-table">
-              <!-- 表头 -->
-              <div class="table-header">
-                <div class="col-object">对象</div>
-                <div class="col-condition">条件</div>
-                <div class="col-threshold">置信度</div>
-                <div class="col-gpio">GPIO</div>
-                <div class="col-default">默认状态</div>
-                <div class="col-active">激活状态</div>
-                <div class="col-action">操作</div>
-              </div>
-
-              <!-- 表格内容 -->
-              <div class="table-body">
-                @if (triggerRules.length === 0) {
-                <div class="empty-row">
-                  暂无规则，点击下方 + 按钮添加新规则
+                <div class="form-group mqtt-toggle">
+                  <label class="form-label">加密连接</label>
+                  <div class="form-control">
+                    <div class="toggle-container">
+                      <span class="toggle-text">{{ mqttConfigForm.autoConnect ? 'Yes' : 'No' }}</span>
+                      <nz-switch [(ngModel)]="mqttConfigForm.autoConnect" [nzCheckedChildren]="'Yes'"
+                        [nzUnCheckedChildren]="'No'">
+                      </nz-switch>
+                    </div>
+                  </div>
                 </div>
                 }
 
-                @for (rule of triggerRules; track rule.id) {
-                <div class="table-row">
-                  <!-- 对象（目标类别） - 下拉选择 -->
-                  <div class="col-object">
-                    <nz-select [(ngModel)]="rule.classId" nzSize="small" nzPlaceHolder="选择类别">
-                      @for (opt of classOptions; track opt.value) {
-                      <nz-option [nzValue]="opt.value" [nzLabel]="opt.label">
-                      </nz-option>
-                      }
-                    </nz-select>
+                <!-- 操作按钮 -->
+                <div class="form-actions">
+                  <button nz-button nzType="default" (click)="cancelNetworkConfig()">
+                    取消
+                  </button>
+                  <button nz-button nzType="primary" [style.background-color]="'#8fc31f'"
+                    [style.border-color]="'#8fc31f'"
+                    (click)="mqttConfigForm.enabled ? applyMqttConfig() : applyWifiConfig()">
+                    应用
+                  </button>
+                </div>
+              </div>
+
+            </div>
+          </div>
+          } @else if (selectedSidebar === 'gpio') {
+          <!-- GPIO 设置内容 -->
+          <div class="gpio-config">
+            <div class="gpio-section">
+              <div class="gpio-title">GPIO 触发配置</div>
+              @if (!isConnected) {
+              <div class="connected-info">
+                <p>未连接设备，请先连接设备</p>
+              </div>
+              } @else {
+              <div class="gpio-description">
+                根据识别结果的置信度自动控制 GPIO 电平，实现硬件触发功能。
+              </div>
+
+              <!-- 操作按钮 -->
+              <div class="gpio-actions">
+                <button nz-button nzType="primary" (click)="applyTriggerRules()"
+                  [disabled]="!isConnected || triggerRules.length === 0">
+                  应用规则到设备
+                </button>
+                <button nz-button nzType="default" (click)="loadTriggerRules()" [disabled]="!isConnected">
+                  查看当前规则
+                </button>
+              </div>
+
+              <!-- 表格容器（带横向滚动） -->
+              <div class="table-wrapper">
+                <div class="action-table">
+                  <!-- 表头 -->
+                  <div class="table-header">
+                    <div class="col-object">对象</div>
+                    <div class="col-condition">条件</div>
+                    <div class="col-threshold">置信度</div>
+                    <div class="col-gpio">GPIO</div>
+                    <div class="col-default">默认状态</div>
+                    <div class="col-active">激活状态</div>
+                    <div class="col-action">操作</div>
                   </div>
 
-                  <!-- 条件 -->
-                  <div class="col-condition">
-                    <nz-select [(ngModel)]="rule.condition" nzSize="small" nzPlaceHolder="条件">
-                      @for (opt of triggerConditionOptions; track opt.value) {
-                      <nz-option [nzValue]="opt.value" [nzLabel]="opt.label">
-                      </nz-option>
-                      }
-                    </nz-select>
+                  <!-- 表格内容 -->
+                  <div class="table-body">
+                    @if (triggerRules.length === 0) {
+                    <div class="empty-row">
+                      暂无规则，点击下方 + 按钮添加新规则
+                    </div>
+                    }
+
+                    @for (rule of triggerRules; track rule.id) {
+                    <div class="table-row">
+                      <!-- 对象（目标类别） - 下拉选择 -->
+                      <div class="col-object">
+                        <nz-select [(ngModel)]="rule.classId" nzSize="small" nzPlaceHolder="选择类别">
+                          @for (opt of classOptions; track opt.value) {
+                          <nz-option [nzValue]="opt.value" [nzLabel]="opt.label">
+                          </nz-option>
+                          }
+                        </nz-select>
+                      </div>
+
+                      <!-- 条件 -->
+                      <div class="col-condition">
+                        <nz-select [(ngModel)]="rule.condition" nzSize="small" nzPlaceHolder="条件">
+                          @for (opt of triggerConditionOptions; track opt.value) {
+                          <nz-option [nzValue]="opt.value" [nzLabel]="opt.label">
+                          </nz-option>
+                          }
+                        </nz-select>
+                      </div>
+
+                      <!-- 置信度阈值 -->
+                      <div class="col-threshold">
+                        <nz-input-number [(ngModel)]="rule.threshold" [nzMin]="0" [nzMax]="100" [nzSize]="'small'"
+                          nzPlaceHolder="阈值">
+                        </nz-input-number>
+                      </div>
+
+                      <!-- GPIO 引脚 -->
+                      <div class="col-gpio">
+                        <nz-select [(ngModel)]="rule.gpio" nzSize="small" nzPlaceHolder="引脚">
+                          @for (pin of availableGpioPins; track pin) {
+                          <nz-option [nzValue]="pin.value" [nzLabel]="pin.label">
+                          </nz-option>
+                          }
+                        </nz-select>
+                      </div>
+
+                      <!-- 默认状态 -->
+                      <div class="col-default">
+                        <nz-select [(ngModel)]="rule.initLevel" nzSize="small">
+                          @for (opt of getLevelOptionsForGpio(rule.gpio); track opt.value) {
+                          <nz-option [nzValue]="opt.value" [nzLabel]="opt.label">
+                          </nz-option>
+                          }
+                        </nz-select>
+                      </div>
+
+                      <!-- 激活状态 -->
+                      <div class="col-active">
+                        <nz-select [(ngModel)]="rule.triggerLevel" nzSize="small">
+                          @for (opt of getLevelOptionsForGpio(rule.gpio); track opt.value) {
+                          <nz-option [nzValue]="opt.value" [nzLabel]="opt.label">
+                          </nz-option>
+                          }
+                        </nz-select>
+                      </div>
+
+                      <!-- 操作按钮 -->
+                      <div class="col-action">
+                        <button nz-button nzType="text" nzDanger nzSize="small" (click)="deleteTriggerRule(rule.id)"
+                          class="delete-btn">
+                          <!-- <span nz-icon nzType="delete" nzTheme="outline"></span> -->
+                        </button>
+                      </div>
+                    </div>
+                    }
                   </div>
 
-                  <!-- 置信度阈值 -->
-                  <div class="col-threshold">
-                    <nz-input-number [(ngModel)]="rule.threshold" [nzMin]="0" [nzMax]="100" [nzSize]="'small'"
-                      nzPlaceHolder="阈值">
-                    </nz-input-number>
-                  </div>
-
-                  <!-- GPIO 引脚 -->
-                  <div class="col-gpio">
-                    <nz-select [(ngModel)]="rule.gpio" nzSize="small" nzPlaceHolder="引脚">
-                      @for (pin of availableGpioPins; track pin) {
-                      <nz-option [nzValue]="pin.value" [nzLabel]="pin.label">
-                      </nz-option>
-                      }
-                    </nz-select>
-                  </div>
-
-                  <!-- 默认状态 -->
-                  <div class="col-default">
-                    <nz-select [(ngModel)]="rule.initLevel" nzSize="small">
-                      @for (opt of getLevelOptionsForGpio(rule.gpio); track opt.value) {
-                      <nz-option [nzValue]="opt.value" [nzLabel]="opt.label">
-                      </nz-option>
-                      }
-                    </nz-select>
-                  </div>
-
-                  <!-- 激活状态 -->
-                  <div class="col-active">
-                    <nz-select [(ngModel)]="rule.triggerLevel" nzSize="small">
-                      @for (opt of getLevelOptionsForGpio(rule.gpio); track opt.value) {
-                      <nz-option [nzValue]="opt.value" [nzLabel]="opt.label">
-                      </nz-option>
-                      }
-                    </nz-select>
-                  </div>
-
-                  <!-- 操作按钮 -->
-                  <div class="col-action">
-                    <button nz-button nzType="text" nzDanger nzSize="small" (click)="deleteTriggerRule(rule.id)"
-                      class="delete-btn">
-                      <!-- <span nz-icon nzType="delete" nzTheme="outline"></span> -->
+                  <!-- 添加规则按钮 -->
+                  <div class="table-footer">
+                    <button nz-button nzType="dashed" (click)="addTriggerRule()" class="add-row-btn">
+                      <!-- <span nz-icon nzType="plus" nzTheme="outline"></span> -->
+                      满足事件条件时触发操作
                     </button>
                   </div>
                 </div>
-                }
               </div>
-
-              <!-- 添加规则按钮 -->
-              <div class="table-footer">
-                <button nz-button nzType="dashed" (click)="addTriggerRule()" class="add-row-btn">
-                  <!-- <span nz-icon nzType="plus" nzTheme="outline"></span> -->
-                  满足事件条件时触发操作
-                </button>
-              </div>
+              }
             </div>
           </div>
           }
         </div>
       </div>
-      }
     </div>
   </div>
 
   <!-- 串口选择菜单 -->
-  <app-menu *ngIf="showPortList" [position]="position" [width]="260" [menuList]="portList"
-    (closeEvent)="closePortList()" (itemClickEvent)="selectPort($event)">
+  @if (showPortList) {
+  <app-menu [position]="position" [width]="260" [menuList]="portList" (closeEvent)="closePortList()"
+    (itemClickEvent)="selectPort($event)">
   </app-menu>
+  }
 
   <!-- 传输类型选择菜单 -->
-  <app-menu *ngIf="showTransportList" [position]="position" [width]="220" [menuList]="transportMenuList"
-    (closeEvent)="closeTransportList()" (itemClickEvent)="selectTransport($event)">
+  @if (showTransportList) {
+  <app-menu [position]="position" [width]="220" [menuList]="transportMenuList" (closeEvent)="closeTransportList()"
+    (itemClickEvent)="selectTransport($event)">
   </app-menu>
+  }
 </ng-template>
 
 <!-- ========================================= -->

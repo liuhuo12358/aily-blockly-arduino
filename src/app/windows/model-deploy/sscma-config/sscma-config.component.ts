@@ -128,11 +128,11 @@ export class SscmaConfigComponent implements OnInit, OnDestroy, OnChanges {
   // ===================
   infoRaw: string | null = null;
   infoDecoded: string | null = null;
-  modelMeta: { 
-    name?: string; 
-    version?: string; 
-    pic_url?: string; 
-    classes?: string[] 
+  modelMeta: {
+    name?: string;
+    version?: string;
+    pic_url?: string;
+    classes?: string[]
   } = {};
 
   modelInfo: {
@@ -193,7 +193,7 @@ export class SscmaConfigComponent implements OnInit, OnDestroy, OnChanges {
     { label: '灭灯', value: 0 },
     { label: '亮灯', value: 1 }
   ];
-  
+
   // 根据 GPIO 引脚获取电平选项（LED 显示亮灯/灭灯，其他显示高电平/低电平）
   getLevelOptionsForGpio(gpio: number): Array<{ label: string; value: number }> {
     if (gpio === 21) { // LED 对应的引脚值是 21
@@ -208,7 +208,7 @@ export class SscmaConfigComponent implements OnInit, OnDestroy, OnChanges {
       ];
     }
   }
-  
+
   // 获取类别选项（从模型元数据）
   get classOptions(): Array<{ label: string; value: number }> {
     if (this.modelMeta.classes && this.modelMeta.classes.length > 0) {
@@ -260,7 +260,7 @@ export class SscmaConfigComponent implements OnInit, OnDestroy, OnChanges {
     password: '',
     security: 0 // 0=auto, 4=WPA2
   };
-  
+
   mqttConfigForm = {
     enabled: false,
     mode: 'custom', // 'custom' | 'default'
@@ -271,15 +271,15 @@ export class SscmaConfigComponent implements OnInit, OnDestroy, OnChanges {
     password: '',
     autoConnect: false
   };
-  
+
   showWifiPassword = false;
   showMqttPassword = false;
-  
+
   mqttModeOptions = [
     { label: '自定义模式', value: 'custom' },
     { label: '默认模式', value: 'default' }
   ];
-  
+
   wifiSecurityOptions = [
     { label: 'AUTO', value: 0 },
     { label: 'NONE', value: 1 },
@@ -303,7 +303,7 @@ export class SscmaConfigComponent implements OnInit, OnDestroy, OnChanges {
     private cdr: ChangeDetectorRef,
     private router: Router,
     private electronService: ElectronService
-  ) {}
+  ) { }
 
   // ===================
   // 生命周期
@@ -390,7 +390,7 @@ export class SscmaConfigComponent implements OnInit, OnDestroy, OnChanges {
   private async initializePort(): Promise<void> {
     // 优先级：@Input > serialService > localStorage
     let portToCheck: string | undefined;
-    
+
     if (this.portPath) {
       portToCheck = this.portPath;
     } else if (this.serialService.currentPort) {
@@ -408,7 +408,7 @@ export class SscmaConfigComponent implements OnInit, OnDestroy, OnChanges {
       try {
         const ports = await this.serialService.getSerialPorts();
         const portExists = ports.some(p => p.name === portToCheck);
-        
+
         if (portExists) {
           this.currentPort = portToCheck;
         } else {
@@ -468,15 +468,15 @@ export class SscmaConfigComponent implements OnInit, OnDestroy, OnChanges {
 
   private async cleanup(): Promise<void> {
     this.subscriptions.forEach(sub => sub.unsubscribe());
-    
+
     // Complete subjects to prevent memory leaks
     this.confidenceSubject.complete();
     this.iouSubject.complete();
-    
+
     if (this.isPreviewMode) {
       await this.stopPreview().catch(console.error);
     }
-    
+
     if (this.isConnected) {
       await this.disconnect().catch(console.error);
     }
@@ -542,7 +542,7 @@ export class SscmaConfigComponent implements OnInit, OnDestroy, OnChanges {
       this.message.success('设备已连接');
 
       await this.delay(300);
-      
+
       this.startPreview().catch(err => {
         console.warn('自动启动预览失败:', err);
       });
@@ -580,7 +580,7 @@ export class SscmaConfigComponent implements OnInit, OnDestroy, OnChanges {
       this.deviceInfo.id = await this.atService.getDeviceId();
       this.deviceInfo.name = await this.atService.getDeviceName();
       this.deviceInfo.version = await this.atService.getVersion();
-      
+
       // 字段兼容处理
       if (this.deviceInfo.id !== undefined) {
         this.deviceInfo.device_id = this.deviceInfo.id as any;
@@ -624,7 +624,7 @@ export class SscmaConfigComponent implements OnInit, OnDestroy, OnChanges {
 
       const data = resp.data as any;
       let infoVal: string | null = null;
-      
+
       if (data) {
         if (typeof data === 'string') {
           infoVal = data;
@@ -651,9 +651,9 @@ export class SscmaConfigComponent implements OnInit, OnDestroy, OnChanges {
   }
 
   private decodeBase64IfNeeded(input: string): string {
-    const isBase64Like = /^[A-Za-z0-9+/\r\n]+={0,2}$/.test(input.trim()) && 
-                         (input.length % 4 === 0 || input.endsWith('==') || input.endsWith('='));
-    
+    const isBase64Like = /^[A-Za-z0-9+/\r\n]+={0,2}$/.test(input.trim()) &&
+      (input.length % 4 === 0 || input.endsWith('==') || input.endsWith('='));
+
     if (isBase64Like) {
       try {
         return atob(input.replace(/\r|\n/g, ''));
@@ -661,7 +661,7 @@ export class SscmaConfigComponent implements OnInit, OnDestroy, OnChanges {
         return input;
       }
     }
-    
+
     return input;
   }
 
@@ -720,17 +720,17 @@ export class SscmaConfigComponent implements OnInit, OnDestroy, OnChanges {
       this.sensorInfo = await this.atService.getCurrentSensor();
       this.scoreThreshold = await this.atService.getScoreThreshold();
       this.iouThreshold = await this.atService.getIouThreshold();
-      
+
       // 同步到置信度显示值
       this.confidenceThreshold = this.scoreThreshold;
-      
+
       // console.log('当前配置:', {
       //   model: this.modelInfo,
       //   sensor: this.sensorInfo,
       //   score: this.scoreThreshold,
       //   iou: this.iouThreshold
       // });
-      
+
       this.message.success('配置信息加载完成');
     } catch (error) {
       console.error('获取配置失败:', error);
@@ -769,7 +769,7 @@ export class SscmaConfigComponent implements OnInit, OnDestroy, OnChanges {
     } catch (err) {
       this.message.error('设置默认传输类型失败');
       this.currentTransport = old;
-      await this.loadDefaultTransport().catch(() => {});
+      await this.loadDefaultTransport().catch(() => { });
     }
   }
 
@@ -777,7 +777,7 @@ export class SscmaConfigComponent implements OnInit, OnDestroy, OnChanges {
     try {
       const t = await this.atService.getDefaultTransport();
       this.currentTransport = Number(t);
-      const found = this.transportMenuList.find(x => 
+      const found = this.transportMenuList.find(x =>
         Number(x.value) === Number(t) || Number(x.name) === Number(t)
       );
       this.currentTransportName = found ? found.text : String(t);
@@ -803,7 +803,7 @@ export class SscmaConfigComponent implements OnInit, OnDestroy, OnChanges {
       this.previewImageUrl = null;
       this.imageVersion = 0;
       this.resultCount = 0;
-      
+
       await this.atService.startInvoke(-1, 0, 0);
       this.message.success('预览已启动');
     } catch (error) {
@@ -830,14 +830,14 @@ export class SscmaConfigComponent implements OnInit, OnDestroy, OnChanges {
 
   private handleInvokeResult(response: AtResponse): void {
     const result = response.data as InvokeResultData;
-    
+
     // console.log('[预览] 收到推理结果:', {
     //   hasImage: !!result.image,
     //   isPreviewMode: this.isPreviewMode,
     //   responseType: response.type,
     //   responseName: response.name
     // });
-    
+
     if (this.isPreviewMode && result.image) {
       if (result.boxes && Array.isArray(result.boxes)) {
         // 保存 boxes，等待图片更新后绘制
@@ -856,12 +856,12 @@ export class SscmaConfigComponent implements OnInit, OnDestroy, OnChanges {
     } else if (!result.image) {
       console.warn('[预览] 结果中没有图片数据');
     }
-    
+
     this.invokeResults.unshift(result);
     if (this.invokeResults.length > 20) {
       this.invokeResults.pop();
     }
-    
+
     this.resultCount++;
     this.updateClassScoresFromResult(result);
   }
@@ -871,14 +871,14 @@ export class SscmaConfigComponent implements OnInit, OnDestroy, OnChanges {
     this.previewImageUrl = `data:image/jpeg;base64,${result.image}`;
     this.imageVersion++;
     this.lastUpdateTime = new Date().toLocaleTimeString();
-    
+
     // console.log('[预览] 更新图片:', {
     //   frameCount: result.count,
     //   imageLength: result.image?.length,
     //   imageVersion: this.imageVersion,
     //   timestamp: this.lastUpdateTime
     // });
-    
+
     this.cdr.detectChanges();
   }
 
@@ -1098,7 +1098,7 @@ export class SscmaConfigComponent implements OnInit, OnDestroy, OnChanges {
       this.isInvoking = true;
       this.invokeResults = [];
       this.resultCount = 0;
-      
+
       await this.atService.startInvoke(-1, 0, 0);
       this.message.success('推理已启动');
     } catch (error) {
@@ -1139,7 +1139,7 @@ export class SscmaConfigComponent implements OnInit, OnDestroy, OnChanges {
     try {
       await this.atService.reboot();
       this.message.success('设备正在重启...');
-      
+
       setTimeout(async () => {
         await this.connectToDevice();
         if (this.isConnected) {
@@ -1191,7 +1191,7 @@ export class SscmaConfigComponent implements OnInit, OnDestroy, OnChanges {
     if (this.triggerRules.length === 0) {
       return '';
     }
-    
+
     return this.triggerRules.map(rule => this.buildTriggerRuleString(rule)).join('|');
   }
 
@@ -1212,9 +1212,9 @@ export class SscmaConfigComponent implements OnInit, OnDestroy, OnChanges {
     try {
       const rulesString = this.buildCombinedTriggerRules();
       // console.log('发送 AT+TRIGGER 规则:', rulesString);
-      
+
       const response = await this.atService.sendCommand(`AT+TRIGGER="${rulesString}"`);
-      
+
       if (response && response.code === 0) {
         this.message.success('GPIO 触发规则已应用');
       } else {
@@ -1237,12 +1237,12 @@ export class SscmaConfigComponent implements OnInit, OnDestroy, OnChanges {
 
     try {
       const response = await this.atService.sendCommand('AT+TRIGGER?');
-      
+
       if (response && response.code === 0) {
         const data = response.data as any;
         const rulesString = data?.trigger_rules || '';
         // console.log('当前 AT+TRIGGER 规则:', rulesString);
-        
+
         if (rulesString && rulesString.trim()) {
           this.message.info('当前规则: ' + rulesString);
           // TODO: 可以解析规则字符串并填充到 UI
@@ -1319,7 +1319,7 @@ export class SscmaConfigComponent implements OnInit, OnDestroy, OnChanges {
       }
 
       this.cdr.detectChanges();
-      
+
       // 重置滚动位置到顶部
       setTimeout(() => {
         if (this.rightPanelRef?.nativeElement) {
@@ -1350,9 +1350,9 @@ export class SscmaConfigComponent implements OnInit, OnDestroy, OnChanges {
     try {
       const cmd = `AT+WIFI="${this.wifiConfigForm.ssid}",${this.wifiConfigForm.security},"${this.wifiConfigForm.password || ''}"`;
       // console.log('应用 WiFi 配置:', cmd);
-      
+
       const response = await this.atService.sendCommand(cmd);
-      
+
       if (response && response.code === 0) {
         this.message.success('WiFi 配置已应用，设备将尝试连接');
         // 延迟刷新状态
@@ -1386,9 +1386,9 @@ export class SscmaConfigComponent implements OnInit, OnDestroy, OnChanges {
       // 构建 MQTT 服务器配置命令
       const cmd = `AT+MQTTSERVER="${this.mqttConfigForm.host}",${this.mqttConfigForm.port},"${this.mqttConfigForm.clientId}","${this.mqttConfigForm.username || ''}","${this.mqttConfigForm.password || ''}"`;
       // console.log('应用 MQTT 配置:', cmd);
-      
+
       const response = await this.atService.sendCommand(cmd);
-      
+
       if (response && response.code === 0) {
         this.message.success('MQTT 配置已应用');
         // 刷新状态
@@ -1440,7 +1440,7 @@ export class SscmaConfigComponent implements OnInit, OnDestroy, OnChanges {
   }
 
 
-  openDocumentation(){
-    this.electronService.openUrl('');
+  openDocumentation() {
+    this.electronService.openUrl('https://github.com/Seeed-Studio/SSCMA-Micro/blob/main/docs/protocol/at-protocol-en_US.md');
   }
 }

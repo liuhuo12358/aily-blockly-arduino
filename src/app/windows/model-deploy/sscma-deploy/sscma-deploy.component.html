@@ -141,7 +141,7 @@
           {{ (isDeploying ? 'MODEL_DEPLOY.BUTTONS.DEPLOYING' : 'MODEL_DEPLOY.BUTTONS.DEPLOY') | translate }}
         </button>
         } @else {
-        <button nz-button nzType="primary">
+        <button nz-button nzType="primary" (click)="close()">
           {{ 'MODEL_DEPLOY.BUTTONS.FINISH' | translate }}
         </button>
         }

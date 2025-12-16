@@ -26,13 +26,51 @@
 .port-selector {
   display: flex;
   align-items: center;
+  position: relative;
   gap: 10px;
-  padding-left: 10px;
+  padding: 0 10px;
 
   .item-inner {
     width: 100px;
+    height: 32px;
+    background-color: #222;
+    border-radius: 4px;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-left: 10px;
+    padding-right: 20px;
+    color: #eee;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s;
 
-    // 内部元素穿透点击事件到 item-inner
+    &:hover {
+      background-color: #2a2a2a;
+    }
+
+    .value {
+      flex: 1;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .arrow-box {
+      pointer-events: auto;
+      position: absolute;
+      right: 8px;
+
+      .arrow {
+        transition: transform 0.3s;
+
+        &.down {
+          transform: rotate(90deg);
+        }
+      }
+    }
+
     .value,
     .arrow-box,
     .arrow-box .arrow {
@@ -40,95 +78,18 @@
     }
   }
 
-  button[nz-button] {
-    flex-grow: 0;
-    height: 31px;
-    font-size: 14px;
-    font-weight: 500;
-    border-radius: 4px;
-
-    // ng-zorro 按钮默认有 padding: 4px 15px，但内部 span 有额外的 margin
-    // 需要重置以确保完美居中
-    ::ng-deep {
-      padding: 4px 15px !important;
-
-      >span {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        gap: 6px;
-        margin: 0 !important; // 移除 ng-zorro 默认的 margin-left: 8px
-      }
-
-      // 图标居中
-      .anticon {
-        display: inline-flex;
-        align-items: center;
-        margin: 0 !important;
-      }
-    }
-
-    &:not([nzDanger]):not([disabled]) {
-      &[nzType="primary"] {
-        background-color: #8fc31fc7;
-        border-color: #8fc31fc7;
-
-        &:hover {
-          background-color: #8fc31f8e;
-          border-color: #8fc31f8e;
-        }
-      }
-    }
-
-    &[nzDanger] {
-      &:hover {
-        opacity: 0.85;
-      }
-    }
-  }
-}
-
-// 选择器内部样式
-.item-inner {
-  height: 32px;
-  width: 100%;
-  background-color: #222;
-  border-radius: 4px;
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding-left: 10px;
-  padding-right: 20px;
-  color: #eee;
-  font-size: 14px;
-  cursor: pointer;
-  transition: all 0.2s;
-
-  &:hover {
-    background-color: #2a2a2a;
-  }
-
-  .value {
-    flex: 1;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  .arrow-box {
-    pointer-events: auto;
+  .doc-btn {
     position: absolute;
-    right: 8px;
+    right: 10px;
+    cursor: pointer;
+    color: #CCC;
+    transition: all 0.3s;
 
-    .arrow {
-      transition: transform 0.3s;
-
-      &.down {
-        transform: rotate(90deg);
-      }
+    &:hover {
+      color: #FFF;
     }
   }
+
 }
 
 
@@ -138,9 +99,9 @@
   flex-grow: 1;
 
   nz-tabset {
-    position: absolute;
-    top: -30px;
-    right: 0;
+    // position: absolute;
+    // top: -30px;
+    // right: 0;
 
     ::ng-deep {
       nz-tabs-nav {
@@ -149,7 +110,7 @@
       }
 
       .ant-tabs-tab {
-        font-size: 12px !important;
+        font-size: 14px !important;
         margin: 0 !important;
 
         button {
@@ -160,6 +121,7 @@
 
       .ant-tabs-ink-bar {
         height: 1px !important;
+        background: #8fc31f;
       }
 
       .ant-tabs-tab-active {
@@ -184,39 +146,39 @@
 }
 
 /* Slider color overrides for this component (ng-zorro nz-slider) */
-::ng-deep .sscma-config .settings-section nz-slider .ant-slider-track {
+::ng-deep nz-slider .ant-slider-track {
   background-color: #8fc31f !important;
 }
 
-::ng-deep .sscma-config .settings-section nz-slider .ant-slider-rail {
+::ng-deep nz-slider .ant-slider-rail {
   background-color: rgba(143, 195, 31, 0.14) !important;
 }
 
-::ng-deep .sscma-config .settings-section nz-slider .ant-slider-handle {
+::ng-deep nz-slider .ant-slider-handle {
   border-color: #8fc31f !important;
   box-shadow: none !important;
 }
 
-::ng-deep .sscma-config .settings-section nz-slider .ant-slider-handle::before,
-::ng-deep .sscma-config .settings-section nz-slider .ant-slider-handle::after {
+::ng-deep nz-slider .ant-slider-handle::before,
+::ng-deep nz-slider .ant-slider-handle::after {
   background: #8fc31f !important;
 }
 
 /* Make the slider active track use the same gradient as other UI accents */
-::ng-deep .sscma-config .settings-section nz-slider .ant-slider-track {
+::ng-deep nz-slider .ant-slider-track {
   background: linear-gradient(90deg, #8fc31fc7, #8fc31f8e) !important;
 }
 
 /* Ensure the draggable handle remains circular */
-::ng-deep .sscma-config .settings-section nz-slider .ant-slider-handle,
-::ng-deep .sscma-config .settings-section nz-slider .ant-slider-handle::before,
-::ng-deep .sscma-config .settings-section nz-slider .ant-slider-handle::after {
+::ng-deep nz-slider .ant-slider-handle,
+::ng-deep nz-slider .ant-slider-handle::before,
+::ng-deep nz-slider .ant-slider-handle::after {
   border-radius: 50% !important;
-  border: 2px solid !important;
+  border: 1px solid !important;
 }
 
 /* keep handle sizing consistent with ant default while allowing color override */
-::ng-deep .sscma-config .settings-section nz-slider .ant-slider-handle {
+::ng-deep nz-slider .ant-slider-handle {
   width: 10px !important;
   height: 10px !important;
   margin-top: -4px !important;
@@ -230,7 +192,6 @@
 .config-main {
   height: 100%;
   display: flex;
-  gap: 16px;
   overflow: hidden;
   background-color: #2a2b2e;
   border-radius: 4px;
@@ -263,22 +224,88 @@
 
 }
 
-// ===================
-// 左侧：模型与预览
-// ===================
-.config-main-left {
-  padding: 10px;
+.section {
+  padding-top: 15px;
 
   .section-title {
-
-    font-size: 16px;
-    line-height: 16px;
+    font-size: 14px;
+    line-height: 14px;
     font-weight: 800;
     color: #ffffff;
     margin-bottom: 10px;
     padding-bottom: 5px;
     border-bottom: 1px solid #666;
+    position: relative;
   }
+
+  .section-content {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+
+    .section-item {
+      font-size: 12px;
+
+      label {
+        width: 100px;
+        color: #aaa;
+        margin-right: 10px;
+
+        .section-tip {
+          margin-left: 5px;
+          color: #999;
+        }
+      }
+
+      span {
+        color: #fff;
+        flex: 1 1 auto;
+        text-align: left;
+      }
+
+      .setting-control {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+
+        nz-slider {
+          flex: 1;
+        }
+
+        nz-input-number {
+          width: 80px;
+          flex-shrink: 0;
+        }
+      }
+
+      input {
+        height: 30px;
+        background: transparent;
+        outline: none;
+        border: none;
+        border-radius: 2px;
+        background: #222;
+        padding-left: 5px;
+      }
+    }
+  }
+
+  .network-status {
+    font-size: 12px;
+    font-weight: 500;
+    color: #999;
+    position: absolute;
+    right: 0;
+  }
+}
+
+
+
+// ===================
+// 左侧：模型与预览
+// ===================
+.config-main-left {
+  padding: 10px;
 
   .connected-info {
     // height: 100%;
@@ -317,7 +344,7 @@
     position: relative;
     width: 300px;
     height: 300px;
-    margin-bottom: 15px;
+    margin-bottom: 10px;
     background: #808080;
     border-radius: 4px;
     overflow: hidden;
@@ -367,40 +394,35 @@
     margin-top: 12px;
     color: #eaeaea;
 
-    .recognition-title {
-      font-size: 14px;
-      color: #fff;
-      margin-bottom: 8px;
-      font-weight: 600;
-    }
-
     .recognition-list {
       display: flex;
       flex-direction: column;
-      gap: 6px;
+      gap: 5px;
+      max-height: 200px;
     }
 
     .recognition-row {
       display: flex;
       align-items: center;
-      gap: 6px;
+      gap: 5px;
     }
 
     .class-label {
-      min-width: 100px;
-      padding-left: 8px;
+      width: 100px;
       color: #fff;
-      font-size: 14px;
+      font-size: 12px;
       text-align: right;
     }
 
     .score-bar {
       flex: 1 1 auto;
-      height: 28px;
+      height: 22px;
       background: rgba(255, 255, 255, 0.06);
       border-radius: 4px;
       overflow: hidden;
       position: relative;
+      display: flex;
+      align-items: center;
     }
 
     .bar-fill {
@@ -415,19 +437,10 @@
 
     .bar-text {
       position: absolute;
-      left: 0;
-      right: 0;
-      top: 50%;
-      transform: translateY(-50%);
-      text-align: right;
+      left: 5px;
       color: #fff;
       font-size: 12px;
-      font-weight: 600;
       text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
-
-      &.narrow {
-        font-size: 10px;
-      }
     }
 
     .score-text {
@@ -438,92 +451,14 @@
       font-weight: 600;
     }
   }
-
-  .settings-section {
-    padding: 12px;
-
-    // .section-title {
-    //   font-size: 16px;
-    //   font-weight: 600;
-    //   color: #ffffff;
-    //   margin-bottom: 12px;
-    //   padding-bottom: 8px;
-    //   border-bottom: 1px solid #444;
-    // }
-
-    .settings-item {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 12px;
-
-      label {
-        color: #bbb;
-        font-weight: 600;
-      }
-
-      .value {
-        color: #fff;
-        text-align: right;
-      }
-    }
-  }
-
-  // // 设置区域
-  // .settings-section {
-  //   padding: 12px;
-  //   margin-top: 16px;
-
-  //   .setting-item {
-  //     display: flex;
-  //     flex-direction: column;
-  //     gap: 8px;
-  //     margin-bottom: 20px;
-
-  //     label {
-  //       color: #fff;
-  //       font-weight: 600;
-  //       font-size: 14px;
-  //     }
-
-  //     .setting-control {
-  //       display: flex;
-  //       align-items: center;
-  //       gap: 16px;
-
-  //       nz-slider {
-  //         flex: 1;
-  //       }
-
-  //       nz-input-number {
-  //         width: 80px;
-  //         flex-shrink: 0;
-  //       }
-  //     }
-  //   }
-  // }
 }
-
-// ===================
-// 通用样式
-// ===================
-// .connected-info {
-//   padding: 24px;
-//   text-align: center;
-//   color: #999;
-
-//   p {
-//     margin: 0;
-//     font-size: 14px;
-//   }
-// }
 
 // ===================
 // 右侧：设备信息
 // ===================
 .config-main-right {
   flex: 1;
-  padding: 12px;
+  padding: 10px;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
@@ -540,15 +475,6 @@
 
   .device-section {
     padding: 12px 12px 12px 0;
-
-    .section-title {
-      font-size: 16px;
-      font-weight: 600;
-      color: #ffffff;
-      margin-bottom: 12px;
-      padding-bottom: 8px;
-      border-bottom: 1px solid #444;
-    }
 
     .device-row {
       display: flex;
@@ -637,14 +563,6 @@
       margin-bottom: 12px;
       padding-bottom: 8px;
       border-bottom: 1px solid #444;
-
-      .section-title {
-        font-weight: 600;
-        margin-bottom: 0;
-        padding-bottom: 0;
-        border-bottom: none;
-        flex: 1;
-      }
     }
 
     button[nz-button] {
@@ -725,47 +643,6 @@
         color: #fff;
         flex: 1 1 auto;
         text-align: right;
-      }
-    }
-  }
-
-  .settings-section {
-    padding: 12px 12px 12px 0;
-
-    .section-title {
-      font-size: 16px;
-      font-weight: 600;
-      color: #ffffff;
-      margin-bottom: 12px;
-      padding-bottom: 8px;
-      border-bottom: 1px solid #444;
-    }
-
-    .setting-item {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-      margin-bottom: 20px;
-
-      label {
-        color: #fff;
-        font-weight: 600;
-        font-size: 14px;
-      }
-
-      .setting-control {
-        display: flex;
-        align-items: center;
-        gap: 16px;
-
-        nz-slider {
-          flex: 1;
-        }
-
-        nz-input-number {
-          width: 80px;
-          flex-shrink: 0;
-        }
       }
     }
   }
@@ -1109,15 +986,6 @@
     padding: 24px;
     flex-shrink: 0;
     overflow-y: auto;
-
-    .section-title {
-      font-size: 16px;
-      font-weight: 600;
-      color: #ffffff;
-      margin-bottom: 12px;
-      padding-bottom: 8px;
-      border-bottom: 1px solid #444;
-    }
 
     .mqtt-subtitle {
       font-size: 14px;

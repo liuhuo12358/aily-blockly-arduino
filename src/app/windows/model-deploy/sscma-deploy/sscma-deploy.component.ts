@@ -32,6 +32,7 @@ import {
 import { MenuComponent } from '../../../components/menu/menu.component';
 import { SscmaConfigComponent } from '../sscma-config/sscma-config.component';
 import { NotificationComponent } from '../../../components/notification/notification.component';
+import { UiService } from '../../../services/ui.service';
 
 /**
  * 模型信息
@@ -73,7 +74,7 @@ export class SscmaDeployComponent implements OnInit {
   @Input() initialStep: number = 0;
   @Output() deployComplete = new EventEmitter<void>();
   @Output() deployError = new EventEmitter<Error>();
-  
+
   deployStepConfig: DeployStepConfig | null = null;
   supportBoardInfo: SupportBoardInfo | null = null;
   currentStep = 0;
@@ -110,7 +111,8 @@ export class SscmaDeployComponent implements OnInit {
     private sscmaCommandService: SSCMACommandService,
     private noticeService: NoticeService,
     private router: Router,
-    private route: ActivatedRoute
+    private route: ActivatedRoute,
+    private uiService: UiService
   ) { }
 
   ngOnInit(): void {
@@ -145,12 +147,12 @@ export class SscmaDeployComponent implements OnInit {
       }
       this.cd.detectChanges();
     });
-    
+
     // 从 serialService 获取当前串口
     if (this.serialService.currentPort) {
       this.currentPort = this.serialService.currentPort;
     }
-    
+
     // 根据作者名称配置部署步骤
     if (this.modelDetail?.author_name) {
       this.deployStepConfig = getDeployStepConfig(this.modelDetail.author_name);
@@ -171,7 +173,7 @@ export class SscmaDeployComponent implements OnInit {
 
     // 获取固件信息
     this.loadFirmwareInfo();
-    
+
     // 检查并设置默认串口
     this.checkAndSetDefaultPort();
 
@@ -186,7 +188,7 @@ export class SscmaDeployComponent implements OnInit {
     try {
       // console.log('[Deploy] 正在检测 esptool...');
       this.esptoolPackage = await this.esptoolPyService.detectEsptool();
-      
+
       if (this.esptoolPackage) {
         // console.log('[Deploy] esptool 已就绪:', this.esptoolPackage);
       } else {
@@ -247,7 +249,7 @@ export class SscmaDeployComponent implements OnInit {
   private async checkAndSetDefaultPort() {
     try {
       const ports = await this.serialService.getSerialPorts();
-      
+
       if (ports && ports.length > 0) {
         // 如果已经有串口，验证它是否还在可用列表中
         if (this.currentPort) {
@@ -257,7 +259,7 @@ export class SscmaDeployComponent implements OnInit {
             this.currentPort = undefined;
           }
         }
-        
+
         // 如果没有串口且只有一个可用串口，自动选择
         if (!this.currentPort && ports.length === 1) {
           this.currentPort = ports[0].name;
@@ -266,7 +268,7 @@ export class SscmaDeployComponent implements OnInit {
         // 没有可用串口，清除当前串口
         this.currentPort = undefined;
       }
-      
+
       this.cd.detectChanges();
     } catch (error) {
       console.warn('获取串口列表失败:', error);
@@ -275,7 +277,7 @@ export class SscmaDeployComponent implements OnInit {
   }
 
   // ==================== UI 辅助方法 ====================
-  
+
   getSupportedBoards(): SupportBoardInfo[] {
     if (!this.modelDetail?.uniform_types) return [];
     return getSupportedBoards(this.modelDetail.uniform_types);
@@ -325,7 +327,7 @@ export class SscmaDeployComponent implements OnInit {
   }
 
   // ==================== 串口选择 ====================
-  
+
   openPortList(el: any) {
     const rect = el.srcElement.getBoundingClientRect();
     this.position.x = rect.left;
@@ -371,7 +373,7 @@ export class SscmaDeployComponent implements OnInit {
 
     // console.log('[Deploy] 用户请求取消部署');
     this.isCancelling = true;
-    
+
     try {
       // 请求取消烧录（Python esptool 或 ESPLoader）
       if (this.flashStreamId) {
@@ -381,7 +383,7 @@ export class SscmaDeployComponent implements OnInit {
         // 使用 ESPLoader 烧录时
         // this.espLoaderService.requestCancel();
       }
-      
+
       // 更新通知
       this.noticeService.update({
         title: '正在取消',
@@ -389,31 +391,31 @@ export class SscmaDeployComponent implements OnInit {
         state: 'doing',
         showProgress: false
       });
-      
+
       // 等待一小段时间让取消生效
       await this.delay(500);
-      
+
       // // 尝试断开连接
       // try {
       //   await this.espLoaderService.disconnect();
       // } catch (e) {
       //   console.warn('[Deploy] 断开连接时出错:', e);
       // }
-      
+
       // 重置状态
       this.isDeploying = false;
       this.isCancelling = false;
       this.deployStatus = '部署已取消';
       this.deployProgress = 0;
       this.flashStreamId = '';
-      
+
       this.noticeService.update({
         title: '部署已取消',
         text: '烧录操作已停止',
         state: 'warn',
         setTimeout: 3000
       });
-      
+
       this.cd.detectChanges();
     } catch (error) {
       console.error('[Deploy] 取消过程出错:', error);
@@ -422,7 +424,7 @@ export class SscmaDeployComponent implements OnInit {
   }
 
   // ==================== 部署流程 ====================
-  
+
   /**
    * 开始部署模型
    */
@@ -436,7 +438,7 @@ export class SscmaDeployComponent implements OnInit {
     this.isCancelling = false;
     // this.scrollToBottom();
     this.deployStatus = '正在准备部署...';
-    
+
     // 使用 NoticeService 显示进度（带取消按钮）
     this.noticeService.update({
       title: '模型部署',
@@ -446,7 +448,7 @@ export class SscmaDeployComponent implements OnInit {
       progress: 0,
       stop: () => this.cancelDeploy()  // 添加取消回调
     });
-    
+
     this.cd.detectChanges();
 
     try {
@@ -461,7 +463,7 @@ export class SscmaDeployComponent implements OnInit {
         stop: () => this.cancelDeploy()
       });
       const modelFileResult = await this.firmwareService.getModelFile(this.modelDetail.id);
-      
+
       if (!modelFileResult) {
         throw new Error('获取模型文件失败');
       }
@@ -470,7 +472,7 @@ export class SscmaDeployComponent implements OnInit {
 
       // 2. 先下载所有文件（固件 + 模型）
       const flashFiles: FlashFile[] = [];
-      
+
       // 2.1 下载固件文件
       if (this.firmwareInfo) {
         this.deployStatus = '正在下载固件...';
@@ -500,7 +502,7 @@ export class SscmaDeployComponent implements OnInit {
       const modelFile = await this.firmwareService.downloadModelFile(snapshot, this.xiaoType);
       flashFiles.push(modelFile);
       // console.log('[Deploy] 模型文件下载完成');
-      
+
       // 显示下载完成提示
       this.deployStatus = '所有文件下载完成';
       this.noticeService.update({
@@ -511,7 +513,7 @@ export class SscmaDeployComponent implements OnInit {
         progress: 15,
         stop: () => this.cancelDeploy()
       });
-      
+
       // console.log('[Deploy] 所有文件已下载，共 ' + flashFiles.length + ' 个文件');
 
       // 3. 检查并安装 esptool（如果需要）
@@ -525,17 +527,17 @@ export class SscmaDeployComponent implements OnInit {
           progress: 18,
           stop: () => this.cancelDeploy()
         });
-        
+
         const installSuccess = await this.esptoolPyService.installEsptool();
         if (!installSuccess) {
           throw new Error('安装 esptool 失败，请检查网络连接');
         }
-        
+
         this.esptoolPackage = this.esptoolPyService.getEsptoolPackage();
         if (!this.esptoolPackage) {
           // 安装成功但检测失败，可能是文件系统缓存问题
           console.warn('[Deploy] esptool 安装失败，可能是文件系统缓存问题');
-          
+
           // 给用户提示
           this.noticeService.update({
             title: '提示',
@@ -545,14 +547,14 @@ export class SscmaDeployComponent implements OnInit {
             showProgress: false,
             setTimeout: 10000
           });
-          
+
           throw new Error('esptool 工具已安装，但需要重新打开窗口才能使用。这是文件系统缓存导致的，请关闭窗口后重新打开即可。');
         }
       }
 
       // 4. 分步烧录所有文件
       // console.log('[Deploy] 开始烧录流程');
-      
+
       // 4.1 先烧录固件（如果有）
       let firmwareFlashed = false;
       if (flashFiles.length > 1) {
@@ -566,7 +568,7 @@ export class SscmaDeployComponent implements OnInit {
           progress: 25,
           stop: () => this.cancelDeploy()
         });
-        
+
         try {
           const firmwareFile = flashFiles[0]; // 固件总是第一个
           const firmwareResult = await this.esptoolPyService.flashSingleFile(
@@ -579,10 +581,10 @@ export class SscmaDeployComponent implements OnInit {
               afterFlash: 'hard_reset',
               progressCallback: (progress: number, status: string) => {
                 if (this.isCancelling) return;
-                
+
                 this.deployProgress = progress;
                 this.deployStatus = `烧录固件: ${status}`;
-                
+
                 // 固件烧录占 25%-55%
                 const overallProgress = 25 + Math.floor(progress * 0.3);
                 this.noticeService.update({
@@ -593,22 +595,22 @@ export class SscmaDeployComponent implements OnInit {
                   progress: overallProgress,
                   stop: () => this.cancelDeploy()
                 });
-                
+
                 this.cd.detectChanges();
               }
             }
           );
-          
+
           this.flashStreamId = firmwareResult.streamId;
           firmwareFlashed = true;
           // console.log('[Deploy] 固件烧录完成');
-          
+
         } catch (error) {
           console.error('[Deploy] 固件烧录失败:', error);
           throw new Error('固件烧录失败: ' + (error as Error).message);
         }
       }
-      
+
       // 6.2 烧录模型文件
       this.deployStatus = '正在烧录模型文件...';
       this.noticeService.update({
@@ -619,7 +621,7 @@ export class SscmaDeployComponent implements OnInit {
         progress: firmwareFlashed ? 55 : 25,
         stop: () => this.cancelDeploy()
       });
-      
+
       try {
         const modelFile = flashFiles[flashFiles.length - 1]; // 模型文件总是最后一个
         const modelResult = await this.esptoolPyService.flashSingleFile(
@@ -632,10 +634,10 @@ export class SscmaDeployComponent implements OnInit {
             afterFlash: 'hard_reset',
             progressCallback: (progress: number, status: string) => {
               if (this.isCancelling) return;
-              
+
               this.deployProgress = progress;
               this.deployStatus = `烧录模型: ${status}`;
-              
+
               // 模型烧录占 55%-85%（如果有固件）或 25%-85%（仅模型）
               const startProgress = firmwareFlashed ? 55 : 25;
               const overallProgress = startProgress + Math.floor(progress * 0.3);
@@ -647,15 +649,15 @@ export class SscmaDeployComponent implements OnInit {
                 progress: overallProgress,
                 stop: () => this.cancelDeploy()
               });
-              
+
               this.cd.detectChanges();
             }
           }
         );
-        
+
         this.flashStreamId = modelResult.streamId;
         // console.log('[Deploy] 模型烧录完成');
-        
+
       } catch (error) {
         console.error('[Deploy] 模型烧录失败:', error);
         throw new Error('模型烧录失败: ' + (error as Error).message);
@@ -701,16 +703,16 @@ export class SscmaDeployComponent implements OnInit {
         classes: detail.labels.map(l => l.object_name),
         checksum: snapshot.checksum || ''
       };
-      
+
       try {
         // 使用 Native Service 连接串口
         await this.sscmaCommandService.connect(this.currentPort!);
         // console.log('[AT Native] 串口连接成功');
-        
+
         // 等待设备完全准备好（设备可能刚重启）
         // console.log('[AT Native] 等待设备准备就绪...');
         await this.delay(500);
-        
+
         this.deployStatus = '正在设置模型信息...';
         this.noticeService.update({
           title: '模型部署',
@@ -720,22 +722,22 @@ export class SscmaDeployComponent implements OnInit {
           progress: 90,
           stop: () => this.cancelDeploy()
         });
-        
+
         // console.log('[AT Native] 测试连接，发送 AT+STAT?...');
         await this.sscmaCommandService.sendCommand('AT+STAT?');
         // console.log('[AT Native] AT+STAT? 命令已发送，等待响应...');
         await this.delay(500);
-        
+
         // console.log('[AT Native] 发送模型信息...');
         const infoJson = JSON.stringify(modelInfo);
         const encodedInfo = encode(infoJson);
         await this.sscmaCommandService.sendCommand(`AT+INFO="${encodedInfo}"`);
         await this.delay(200);
-        
+
         // console.log('[AT Native] 触发设备更新...');
         await this.sscmaCommandService.sendCommand('AT+TRIGGER=""');
         await this.delay(200);
-        
+
         // await this.sscmaCommandService.disconnect();
         // console.log('[AT Native] AT 命令流程完成');
       } catch (atError) {
@@ -747,7 +749,7 @@ export class SscmaDeployComponent implements OnInit {
       // 9. 完成部署，进入配置页面
       this.deployStatus = '部署完成！';
       this.deployProgress = 100;
-      
+
       this.noticeService.update({
         title: '模型部署',
         text: '部署完成！正在进入配置页面...',
@@ -759,15 +761,15 @@ export class SscmaDeployComponent implements OnInit {
 
       // 等待一小段时间让用户看到完成提示
       await this.delay(1000);
-      
+
       // 自动进入配置页面（步骤1）
       this.router.navigate(['/model-deploy/sscma', 'config']);
-      
+
       // console.log('[Deploy] 部署完成，已进入配置页面');
 
     } catch (error) {
       console.error('部署失败:', error);
-      
+
       // 检查是否是用户取消
       const errorMsg = (error as Error).message || '';
       if (errorMsg.includes('用户取消')) {
@@ -775,9 +777,9 @@ export class SscmaDeployComponent implements OnInit {
         // console.log('[Deploy] 用户取消部署');
         return;
       }
-      
+
       this.deployStatus = '部署失败: ' + errorMsg;
-      
+
       this.noticeService.update({
         title: '模型部署',
         text: '部署失败',
@@ -786,7 +788,7 @@ export class SscmaDeployComponent implements OnInit {
         showProgress: false,
         setTimeout: 5000
       });
-      
+
       this.deployError.emit(error as Error);
     } finally {
       this.isDeploying = false;
@@ -810,7 +812,7 @@ export class SscmaDeployComponent implements OnInit {
   // }
 
   // ==================== 步骤导航 ====================
-  
+
   nextStep() {
     if (this.modelDetail?.author_name === 'SenseCraft AI') {
       if (this.currentStep === 0) {
@@ -824,7 +826,7 @@ export class SscmaDeployComponent implements OnInit {
       this.router.navigate(['/model-deploy/sscma', stepNames[nextStep]]);
     }
   }
-  
+
   prevStep() {
     if (this.currentStep > 0) {
       const prevStep = this.currentStep - 1;
@@ -839,5 +841,9 @@ export class SscmaDeployComponent implements OnInit {
   onConfigComplete(): void {
     // console.log('[Deploy] 配置完成');
     this.deployComplete.emit();
+  }
+
+  close() {
+    this.uiService.closeWindow();
   }
 }
