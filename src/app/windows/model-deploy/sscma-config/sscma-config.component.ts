@@ -20,6 +20,8 @@ import { SSCMACommandService, AtResponse, InvokeResultData } from '../../../serv
 import { SerialService, PortItem } from '../../../services/serial.service';
 import { MenuComponent } from '../../../components/menu/menu.component';
 import { SubWindowComponent } from '../../../components/sub-window/sub-window.component';
+import { NzTabsModule } from 'ng-zorro-antd/tabs';
+import { ElectronService } from '../../../services/electron.service';
 
 interface TriggerRule {
   id: number;
@@ -53,7 +55,8 @@ interface TriggerRule {
     NzSpinModule,
     NzIconModule,
     MenuComponent,
-    SubWindowComponent
+    SubWindowComponent,
+    NzTabsModule
   ],
   templateUrl: './sscma-config.component.html',
   styleUrls: ['./sscma-config.component.scss']
@@ -240,6 +243,8 @@ export class SscmaConfigComponent implements OnInit, OnDestroy, OnChanges {
   // 界面状态
   // ===================
   selectedSidebar: 'device' | 'mqtt' | 'gpio' | 'serial' = 'device';
+  selectedTabIndex = 0;
+  private readonly tabIndexMap: ('device' | 'mqtt' | 'gpio' | 'serial')[] = ['device', 'mqtt', 'gpio', 'serial'];
 
   // ===================
   // 网络/MQTT 信息
@@ -296,7 +301,8 @@ export class SscmaConfigComponent implements OnInit, OnDestroy, OnChanges {
     private serialService: SerialService,
     private message: NzMessageService,
     private cdr: ChangeDetectorRef,
-    private router: Router
+    private router: Router,
+    private electronService: ElectronService
   ) {}
 
   // ===================
@@ -919,7 +925,7 @@ export class SscmaConfigComponent implements OnInit, OnDestroy, OnChanges {
     const displayH = Number(ctx.canvas.style.height.replace('px', '')) || ctx.canvas.height;
 
     const boxLineWidth = Math.max(2, Math.round(Math.max(displayW, displayH) * 0.002));
-    const fontSize = Math.max(14, Math.round(displayW * 0.03));
+    const fontSize = Math.max(12, Math.round(displayW * 0.03));
     ctx.lineWidth = boxLineWidth;
     ctx.font = `bold ${fontSize}px Arial, sans-serif`;
     ctx.textBaseline = 'top';
@@ -1252,6 +1258,7 @@ export class SscmaConfigComponent implements OnInit, OnDestroy, OnChanges {
 
   selectSidebar(name: 'device' | 'mqtt' | 'gpio' | 'serial'): void {
     this.selectedSidebar = name;
+    this.selectedTabIndex = this.tabIndexMap.indexOf(name);
     if (name === 'mqtt' && this.isConnected) {
       // 仅在已连接时才自动加载网络信息
       setTimeout(() => {
@@ -1259,6 +1266,13 @@ export class SscmaConfigComponent implements OnInit, OnDestroy, OnChanges {
           console.warn('加载网络信息失败:', err);
         });
       }, 80);
+    }
+  }
+
+  onTabChange(index: number): void {
+    const name = this.tabIndexMap[index];
+    if (name) {
+      this.selectSidebar(name);
     }
   }
 
@@ -1423,5 +1437,10 @@ export class SscmaConfigComponent implements OnInit, OnDestroy, OnChanges {
 
   private delay(ms: number): Promise<void> {
     return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+
+  openDocumentation(){
+    this.electronService.openUrl('');
   }
 }
