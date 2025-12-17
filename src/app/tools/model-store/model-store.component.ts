@@ -238,8 +238,8 @@ export class ModelStoreComponent implements OnInit, AfterViewInit {
 
   onTrain(): void {
     // this.message.warning('当前版本暂不可用，敬请期待');
-    this.electronService.openUrl('https://sensecraft.seeed.cc/ai/training');
-    return;
+    // this.electronService.openUrl('https://sensecraft.seeed.cc/ai/training');
+    // return;
     this.uiService.openWindow({
       path: 'model-train',
       title: '模型训练',

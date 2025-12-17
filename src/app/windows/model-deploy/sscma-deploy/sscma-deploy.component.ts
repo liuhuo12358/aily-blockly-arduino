@@ -235,7 +235,7 @@ export class SscmaDeployComponent implements OnInit {
     try {
       const firmwareType = this.getFirmwareType();
       this.firmwareInfo = await this.firmwareService.getFirmwareInfo(firmwareType);
-      // console.log('固件信息加载完成:', this.firmwareInfo);
+      console.log('固件信息加载完成:', this.firmwareInfo);
     } catch (error) {
       console.error('加载固件信息失败:', error);
     }
@@ -436,7 +436,56 @@ export class SscmaDeployComponent implements OnInit {
 
       const { snapshot, detail } = modelFileResult;
 
-      // 2. 先下载所有文件（固件 + 模型）
+      // 2. 检测设备固件版本，决定是否需要更新固件
+      let needFirmwareUpdate = true;  // 默认需要更新固件
+      let deviceVersion: string | null = null;
+
+      if (this.firmwareInfo) {
+        this.deployStatus = '正在检测设备固件版本...';
+
+        try {
+          // 尝试连接设备获取版本
+          await this.sscmaCommandService.connect(this.currentPort!);
+          await this.delay(300);
+
+          // 发送 AT+VER? 获取版本
+          const verResponse = await this.sscmaCommandService.sendCommand('AT+VER?');
+          
+          if (verResponse && verResponse.code === 0 && verResponse.data) {
+            const data = verResponse.data as any;
+            // 版本信息在 data.software 字段
+            deviceVersion = data.software || null;
+            
+            const targetVersion = this.firmwareInfo!['version'] as string;
+            if (deviceVersion && targetVersion) {
+              // console.log(`[Deploy] 设备当前固件版本: ${deviceVersion}, 目标版本: ${targetVersion}`);
+              
+              // 比较版本（简单字符串比较）
+              if (deviceVersion === targetVersion) {
+                needFirmwareUpdate = false;
+              } else {
+                // console.log('[Deploy] 固件版本不同，需要更新固件');
+              }
+            }
+          }
+
+          // 断开连接，准备后续操作
+          await this.sscmaCommandService.disconnect();
+        } catch (versionError) {
+          console.warn('[Deploy] 获取设备版本失败，将更新固件:', versionError);
+          // 获取版本失败，默认需要更新固件
+          needFirmwareUpdate = true;
+          
+          // 确保断开连接
+          try {
+            await this.sscmaCommandService.disconnect();
+          } catch (e) {
+            // 忽略断开连接错误
+          }
+        }
+      }
+
+      // 3. 下载所需文件（根据版本检测结果决定是否下载固件）
       const flashFiles: FlashFile[] = [];
 
       // 2.1 下载固件文件
@@ -464,7 +513,7 @@ export class SscmaDeployComponent implements OnInit {
 
       // console.log('[Deploy] 所有文件已下载，共 ' + flashFiles.length + ' 个文件');
 
-      // 3. 检查并安装 esptool（如果需要）
+      // 4. 检查并安装 esptool（如果需要）
       if (!this.esptoolPackage) {
         this.deployProgress = 18;
         this.deployStatus = '正在准备烧录工具...';
@@ -483,12 +532,12 @@ export class SscmaDeployComponent implements OnInit {
         }
       }
 
-      // 4. 分步烧录所有文件
+      // 5. 分步烧录所有文件
       // console.log('[Deploy] 开始烧录流程');
 
-      // 4.1 先烧录固件（如果有）
+      // 5.1 先烧录固件（如果需要更新且有固件文件）
       let firmwareFlashed = false;
-      if (flashFiles.length > 1) {
+      if (needFirmwareUpdate && flashFiles.length > 1) {
         // 有固件需要烧录
         this.deployProgress = 25;
         this.deployStatus = '正在烧录固件...';
@@ -524,6 +573,9 @@ export class SscmaDeployComponent implements OnInit {
           console.error('[Deploy] 固件烧录失败:', error);
           throw new Error('固件烧录失败: ' + (error as Error).message);
         }
+      } else if (!needFirmwareUpdate) {
+        // 固件版本相同，跳过固件烧录
+        // console.log('[Deploy] 固件版本相同，跳过固件烧录');
       }
 
       // 6.2 烧录模型文件
@@ -570,7 +622,7 @@ export class SscmaDeployComponent implements OnInit {
       this.cd.detectChanges();
       await this.delay(1000);
 
-      // 8. 设置模型信息（AT 命令 - 使用 Native Service）
+      // 7. 设置模型信息（AT 命令 - 使用 Native Service）
       if (this.isCancelling) {
         throw new Error('用户取消部署');
       }

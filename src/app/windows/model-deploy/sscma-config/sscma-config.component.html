@@ -43,22 +43,26 @@
             </div>
             <!-- 识别结果 -->
           </div>
-          @if (modelMeta?.classes && modelMeta.classes.length && classScores.length) {
+          @if (modelMeta?.classes && modelMeta.classes.length) {
           <div class="recognition-area">
             <div class="recognition-list sscroll">
               @for (label of modelMeta.classes; track $index; let i = $index) {
               <div class="recognition-row">
-                <div class="score-bar">
-                  <div class="bar-fill" [ngStyle]="{
-                        'width': (classScores[i] || 0) + '%', 
-                        'background': getBarBackground(i)
-                      }">
+                @if (classScores && classScores.length) {
+                  <div class="score-bar">
+                    <div class="bar-fill" [ngStyle]="{
+                          'width': (classScores[i] || 0) + '%', 
+                          'background': getBarBackground(i)
+                        }">
+                    </div>
+                    <div class="bar-text">
+                      {{ (classScores[i] || 0) }}%
+                    </div>
                   </div>
-                  <div class="bar-text">
-                    {{ (classScores[i] || 0) }}%
-                  </div>
-                </div>
-                <div class="class-label">{{ label || '-' }}</div>
+                  <div class="class-label">{{ label || '-' }}</div>
+                } @else {
+                  <div class="object-class-label">{{ label || '-' }}</div>
+                }
               </div>
               }
             </div>
@@ -124,26 +128,28 @@
             </div>
           </div>
           <!-- GPIO 设置内容 -->
-          @if (modelMeta?.classes && modelMeta.classes.length && classScores.length) {
+          <!-- @if (modelMeta?.classes && modelMeta.classes.length && classScores.length) { -->
+          @if (modelMeta?.classes && modelMeta.classes.length) {
           <div>
             <div class="section" style="margin-top: -34px;">
               <div class="section-title">GPIO 触发配置
                 <button class="apply-btn ccenter" (click)="applyTriggerRules()"
-                  [disabled]="!isConnected || triggerRules.length === 0">
+                  [disabled]="!isConnected || classTriggerConfigs.length === 0">
                   应用配置
                 </button>
               </div>
               <div class="section-content">
                 @for (label of modelMeta.classes; track $index; let i = $index) {
                 <div class="section-item" style="height: 24px;">
-                  大于等于 <nz-input-number nzSize="small"></nz-input-number>% 置信度时触发
-                  <nz-select nzSize="small" nzPlaceHolder="引脚" [nzOptionHeightPx]="24" style="width: 110px;">
+                  <!-- <span style="color: #fff; min-width: 80px;">{{ label }}</span> -->
+                  大于等于 <nz-input-number nzSize="small" [(ngModel)]="classTriggerConfigs[i].threshold" [nzMin]="0" [nzMax]="100" [nzStep]="1" [nzPlaceHolder]="'阈值'" style="width: 60px;" [class.not-configured]="classTriggerConfigs[i].gpio === null"></nz-input-number>% 置信度时触发
+                  <nz-select nzSize="small" nzPlaceHolder="选择引脚" [(ngModel)]="classTriggerConfigs[i].gpio" [nzOptionHeightPx]="24" style="width: 110px;" nzAllowClear>
                     @for (pin of availableGpioPins; track pin) {
                     <nz-option [nzValue]="pin.value" [nzLabel]="pin.label">
                     </nz-option>
                     }
                   </nz-select>
-                  <nz-select nzSize="small" nzPlaceHolder="GPIO 电平" [nzOptionHeightPx]="24" style="width: 140px;">
+                  <nz-select nzSize="small" nzPlaceHolder="选择电平" [(ngModel)]="classTriggerConfigs[i].levelMode" [nzOptionHeightPx]="24" style="width: 140px;" nzAllowClear>
                     <nz-option [nzValue]="'high'" nzLabel="默认低，触发高"></nz-option>
                     <nz-option [nzValue]="'low'" nzLabel="默认高，触发低"></nz-option>
                   </nz-select>

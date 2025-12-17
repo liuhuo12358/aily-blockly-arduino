@@ -63,11 +63,11 @@ export class EsptoolPyService {
     
     this.tempDir = window['path'].join(appDataPath, 'model');
     
-    console.log('[EsptoolPy] 模型缓存目录:', this.tempDir);
+    // console.log('[EsptoolPy] 模型缓存目录:', this.tempDir);
     
     if (!window['fs'].existsSync(this.tempDir)) {
       window['fs'].mkdirSync(this.tempDir, { recursive: true });
-      console.log('[EsptoolPy] 创建模型缓存目录');
+      // console.log('[EsptoolPy] 创建模型缓存目录');
     }
   }
 
@@ -83,12 +83,12 @@ export class EsptoolPyService {
       const nodeModulesPath = window['path'].join(appDataPath, 'node_modules');
       const toolsPath = window['path'].join(appDataPath, 'tools');
 
-      console.log('[EsptoolPy] 检查包路径:', nodeModulesPath);
-      console.log('[EsptoolPy] 检查工具路径:', toolsPath);
+      // console.log('[EsptoolPy] 检查包路径:', nodeModulesPath);
+      // console.log('[EsptoolPy] 检查工具路径:', toolsPath);
       
       // 清除文件系统缓存（重要！）
       if (clearCache) {
-        console.log('[EsptoolPy] 清除文件系统缓存...');
+        // console.log('[EsptoolPy] 清除文件系统缓存...');
         try {
           // 清除 stat 缓存
           if (window['fs'].clearCache) {
@@ -110,20 +110,20 @@ export class EsptoolPyService {
       }
 
       if (!window['fs'].existsSync(nodeModulesPath)) {
-        console.log('[EsptoolPy] node_modules 目录不存在');
+        // console.log('[EsptoolPy] node_modules 目录不存在');
         return null;
       }
 
       // 1. 检查 @aily-project scope 目录中的包信息
       const ailyProjectPath = window['path'].join(nodeModulesPath, '@aily-project');
       if (!window['fs'].existsSync(ailyProjectPath)) {
-        console.log('[EsptoolPy] @aily-project 目录不存在');
+        // console.log('[EsptoolPy] @aily-project 目录不存在');
         return null;
       }
 
       // 2. 扫描 @aily-project 下的所有工具包
       const scopedDirs = window['fs'].readDirSync(ailyProjectPath);
-      console.log('[EsptoolPy] @aily-project 下的目录:', scopedDirs.map((d: any) => d.name || d));
+      // console.log('[EsptoolPy] @aily-project 下的目录:', scopedDirs.map((d: any) => d.name || d));
       
       for (const dir of scopedDirs) {
         const dirName = dir.name || dir;  // 兼容不同的返回格式
@@ -132,7 +132,7 @@ export class EsptoolPyService {
         if (dirName === 'tool-esptool_py') {
           const packagePath = window['path'].join(ailyProjectPath, dirName);
           
-          console.log('[EsptoolPy] 找到 esptool_py 包:', packagePath);
+          // console.log('[EsptoolPy] 找到 esptool_py 包:', packagePath);
           
           // 检查是否为目录
           if (!window['path'].isDir(packagePath)) {
@@ -145,17 +145,17 @@ export class EsptoolPyService {
           if (window['fs'].existsSync(packageJsonPath)) {
             const packageJson = JSON.parse(window['fs'].readFileSync(packageJsonPath, 'utf8'));
             
-            console.log('[EsptoolPy] 包信息:', packageJson.name, packageJson.version);
+            // console.log('[EsptoolPy] 包信息:', packageJson.name, packageJson.version);
             
             // 3. 在 tools 目录下查找实际的可执行文件
             // 路径格式: tools/esptool_py@版本号
             const toolDirName = `esptool_py@${packageJson.version}`;
             const actualToolPath = window['path'].join(toolsPath, toolDirName);
             
-            console.log('[EsptoolPy] 查找工具目录:', actualToolPath);
+            // console.log('[EsptoolPy] 查找工具目录:', actualToolPath);
             
             if (window['fs'].existsSync(actualToolPath)) {
-              console.log('[EsptoolPy] 工具目录存在，查找可执行文件...');
+              // console.log('[EsptoolPy] 工具目录存在，查找可执行文件...');
               // 在实际工具目录中查找可执行文件
               const esptoolPath = await this.findEsptoolExecutable(actualToolPath);
               
@@ -167,7 +167,7 @@ export class EsptoolPyService {
                   esptoolPath: esptoolPath
                 };
                 
-                console.log('[EsptoolPy] ✓ 检测到已安装的 esptool 包:', this.esptoolPackage);
+                // console.log('[EsptoolPy] ✓ 检测到已安装的 esptool 包:', this.esptoolPackage);
                 return this.esptoolPackage;
               } else {
                 console.warn('[EsptoolPy] 找到工具目录但未找到可执行文件');
@@ -181,7 +181,7 @@ export class EsptoolPyService {
         }
       }
 
-      console.log('[EsptoolPy] 未检测到 esptool_py 包');
+      // console.log('[EsptoolPy] 未检测到 esptool_py 包');
       return null;
     } catch (error) {
       console.error('[EsptoolPy] 检测 esptool 失败:', error);
@@ -196,13 +196,13 @@ export class EsptoolPyService {
    */
   private async findEsptoolExecutable(packagePath: string): Promise<string | null> {
     try {
-      console.log('[EsptoolPy] 查找可执行文件，包路径:', packagePath);
-      console.log('[EsptoolPy] 当前平台:', window['platform'].isWindows ? 'Windows' : 'macOS/Linux');
+      // console.log('[EsptoolPy] 查找可执行文件，包路径:', packagePath);
+      // console.log('[EsptoolPy] 当前平台:', window['platform'].isWindows ? 'Windows' : 'macOS/Linux');
       
       // 列出包目录内容
       try {
         const files = window['fs'].readDirSync(packagePath);
-        console.log('[EsptoolPy] 包目录内容:', files.map((f: any) => f.name || f));
+        // console.log('[EsptoolPy] 包目录内容:', files.map((f: any) => f.name || f));
       } catch (e) {
         console.warn('[EsptoolPy] 无法列出目录内容:', e);
       }
@@ -211,33 +211,33 @@ export class EsptoolPyService {
       if (window['platform'].isWindows) {
         // 直接在包根目录
         const exePath = window['path'].join(packagePath, 'esptool.exe');
-        console.log('[EsptoolPy] 检查 Windows 可执行文件:', exePath);
+        // console.log('[EsptoolPy] 检查 Windows 可执行文件:', exePath);
         if (window['fs'].existsSync(exePath)) {
-          console.log('[EsptoolPy] ✓ 找到 Windows 可执行文件');
+          // console.log('[EsptoolPy] ✓ 找到 Windows 可执行文件');
           return exePath;
         }
         
         // 在 bin 子目录
         const binExePath = window['path'].join(packagePath, 'bin', 'esptool.exe');
-        console.log('[EsptoolPy] 检查 bin 目录:', binExePath);
+        // console.log('[EsptoolPy] 检查 bin 目录:', binExePath);
         if (window['fs'].existsSync(binExePath)) {
-          console.log('[EsptoolPy] ✓ 找到 bin 目录中的可执行文件');
+          // console.log('[EsptoolPy] ✓ 找到 bin 目录中的可执行文件');
           return binExePath;
         }
       } else {
         // macOS/Linux: 查找 esptool (无后缀)
         const binPath = window['path'].join(packagePath, 'esptool');
-        console.log('[EsptoolPy] 检查 macOS/Linux 可执行文件:', binPath);
+        // console.log('[EsptoolPy] 检查 macOS/Linux 可执行文件:', binPath);
         if (window['fs'].existsSync(binPath)) {
-          console.log('[EsptoolPy] ✓ 找到 macOS/Linux 可执行文件');
+          // console.log('[EsptoolPy] ✓ 找到 macOS/Linux 可执行文件');
           return binPath;
         }
         
         // 在 bin 子目录
         const binBinPath = window['path'].join(packagePath, 'bin', 'esptool');
-        console.log('[EsptoolPy] 检查 bin 目录:', binBinPath);
+        // console.log('[EsptoolPy] 检查 bin 目录:', binBinPath);
         if (window['fs'].existsSync(binBinPath)) {
-          console.log('[EsptoolPy] ✓ 找到 bin 目录中的可执行文件');
+          // console.log('[EsptoolPy] ✓ 找到 bin 目录中的可执行文件');
           return binBinPath;
         }
       }
@@ -256,34 +256,34 @@ export class EsptoolPyService {
    */
   async installEsptool(): Promise<boolean> {
     try {
-      console.log('[EsptoolPy] 开始安装 esptool...');
+      // console.log('[EsptoolPy] 开始安装 esptool...');
       
       // 使用 cmdService.runAsync 执行 npm 安装，等待命令完成
       const appDataPath = window['path'].getAppDataPath();
       const command = 'npm install @aily-project/tool-esptool_py@latest';
       
-      console.log('[EsptoolPy] 执行命令:', command);
-      console.log('[EsptoolPy] 工作目录:', appDataPath);
+      // console.log('[EsptoolPy] 执行命令:', command);
+      // console.log('[EsptoolPy] 工作目录:', appDataPath);
       
       // 使用 runAsync 等待安装完成
       const result = await this.cmdService.runAsync(command, appDataPath, true);
       
-      console.log('[EsptoolPy] 安装命令执行完成');
-      console.log('[EsptoolPy] 退出码:', result.code);
+      // console.log('[EsptoolPy] 安装命令执行完成');
+      // console.log('[EsptoolPy] 退出码:', result.code);
       
       // 检查是否成功（退出码为 0）
       if (result.code === 0) {
-        console.log('[EsptoolPy] esptool 安装成功');
+        // console.log('[EsptoolPy] esptool 安装成功');
         
         // 等待一下文件系统同步
         await new Promise(resolve => setTimeout(resolve, 1000));
         
         // 重新检测（清除缓存）
-        console.log('[EsptoolPy] 开始检测 esptool...');
+        // console.log('[EsptoolPy] 开始检测 esptool...');
         const detected = await this.detectEsptool(true);
         
         if (detected) {
-          console.log('[EsptoolPy] 检测成功');
+          // console.log('[EsptoolPy] 检测成功');
           return true;
         } else {
           console.warn('[EsptoolPy] 安装成功但检测失败，再等待 2 秒重试...');
@@ -291,7 +291,7 @@ export class EsptoolPyService {
           const detected2 = await this.detectEsptool(true);
           
           if (detected2) {
-            console.log('[EsptoolPy] 第二次检测成功');
+            // console.log('[EsptoolPy] 第二次检测成功');
             return true;
           } else {
             console.error('[EsptoolPy] 两次检测均失败');
@@ -365,7 +365,7 @@ export class EsptoolPyService {
         // 写入文件
         window['fs'].writeFileSync(tempFilePath, uint8Array);
         
-        console.log(`[EsptoolPy] 写入文件:`, tempFilePath, `(${length} bytes)`);
+        // console.log(`[EsptoolPy] 写入文件:`, tempFilePath, `(${length} bytes)`);
 
         // 2. 构建 esptool 命令
         const chip = options?.chip || 'esp32s3';
@@ -378,7 +378,7 @@ export class EsptoolPyService {
         // 使用 & 符号调用命令（PowerShell 支持）
         const command = `& "${this.esptoolPackage.esptoolPath}" --chip ${chip} --port ${port} --baud ${baudRate} --before ${beforeFlash} --after ${afterFlash} write_flash -z --flash_mode dio --flash_freq 80m --flash_size detect ${address} "${tempFilePath}"`;
 
-        console.log('[EsptoolPy] 执行烧录命令:', command);
+        // console.log('[EsptoolPy] 执行烧录命令:', command);
 
         let streamId = '';
 
@@ -403,7 +403,7 @@ export class EsptoolPyService {
                 if (progressResult) {
                   if (progressResult.completed) {
                     uploadCompleted = true;
-                    console.log('[EsptoolPy] 烧录成功，数据校验通过');
+                    // console.log('[EsptoolPy] 烧录成功，数据校验通过');
                   }
                   
                   if (options?.progressCallback && !progressResult.completed) {
@@ -431,7 +431,7 @@ export class EsptoolPyService {
             reject(error);
           },
           complete: () => {
-            console.log('[EsptoolPy] 烧录命令执行完成');
+            // console.log('[EsptoolPy] 烧录命令执行完成');
             this.cleanupSingleFile(tempFilePath);
             
             // 如果有真正的错误（不是 PowerShell 的 CommandNotFoundException）
@@ -439,11 +439,11 @@ export class EsptoolPyService {
               reject(new Error('烧录过程中检测到错误'));
             } else if (uploadCompleted) {
               // 检测到完成标志
-              console.log('[EsptoolPy] 烧录成功完成');
+              // console.log('[EsptoolPy] 烧录成功完成');
               resolve({ success: true, streamId });
             } else {
               // 没有明确的完成标志，但也没有错误，视为成功
-              console.log('[EsptoolPy] 烧录命令结束，未检测到错误，视为成功');
+              // console.log('[EsptoolPy] 烧录命令结束，未检测到错误，视为成功');
               resolve({ success: true, streamId });
             }
           }
@@ -503,7 +503,7 @@ export class EsptoolPyService {
     try {
       if (filePath && window['fs'].existsSync(filePath)) {
         window['fs'].unlinkSync(filePath);
-        console.log('[EsptoolPy] 清理临时文件:', filePath);
+        // console.log('[EsptoolPy] 清理临时文件:', filePath);
       }
     } catch (e) {
       console.warn('[EsptoolPy] 清理临时文件失败:', e);
@@ -517,7 +517,7 @@ export class EsptoolPyService {
   cancelFlash(streamId: string): void {
     try {
       this.cmdService.kill(streamId);
-      console.log('[EsptoolPy] 已请求取消烧录');
+      // console.log('[EsptoolPy] 已请求取消烧录');
     } catch (error) {
       console.error('[EsptoolPy] 取消烧录失败:', error);
     }

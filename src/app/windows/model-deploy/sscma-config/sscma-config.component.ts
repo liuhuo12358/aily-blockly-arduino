@@ -33,6 +33,14 @@ interface TriggerRule {
   triggerLevel: number;    // 触发电平: 0=低, 1=高
 }
 
+// 简化的类别触发配置（前端简化版）
+interface ClassTriggerConfig {
+  classId: number;         // 类别ID（对应 modelMeta.classes 索引）
+  threshold: number;       // 置信度阈值 (0-100)
+  gpio: number | null;     // GPIO引脚，null表示未配置
+  levelMode: 'high' | 'low' | null; // high=默认低触发高, low=默认高触发低
+}
+
 /**
  * SSCMA 模型配置组件
  * 负责连接设备、加载设备信息、实时预览、识别结果展示
@@ -172,6 +180,10 @@ export class SscmaConfigComponent implements OnInit, OnDestroy, OnChanges {
   // ===================
   triggerRules: TriggerRule[] = [];
   nextTriggerId = 1;
+  
+  // 简化的类别触发配置（每个类别一个配置）
+  classTriggerConfigs: ClassTriggerConfig[] = [];
+  
   availableGpioPins = [
     // {[1, 2, 3, 21, 41, 42]}; // XIAO ESP32-S3 可用GPIO
     { label: 'LED', value: 21 },
@@ -638,7 +650,7 @@ export class SscmaConfigComponent implements OnInit, OnDestroy, OnChanges {
       if (infoVal) {
         let decoded = this.decodeBase64IfNeeded(infoVal);
         this.infoDecoded = decoded;
-        // console.log('Decoded AT+INFO? info:', decoded);
+        console.log('Decoded AT+INFO? info:', decoded);
 
         this.parseModelMetadata(decoded);
       }
@@ -666,7 +678,15 @@ export class SscmaConfigComponent implements OnInit, OnDestroy, OnChanges {
   }
 
   private parseModelMetadata(decoded: string): void {
-    try {
+    try {   
+
+      // AT+INFO?
+      // {"type":0,"name":"INFO?","code":0,"data":{"info":"eyJtb2RlbF9pZCI6IjYwNzY4IiwidmVyc2lvbiI6IjEuMC4wIiwiYXJndW1lbnRzIjp7InNpemUiOjY3Ny4yOSwidXJsIjoiaHR0cHM6Ly9zZW5zZWNyYWZ0LXN0YXRpY3Muc2VlZWQuY2MvcmVmZXIvbW9kZWwvMTcyNjczNTcyMjEwOF9kcjVJczJfbW9iaWxlbmV0djJfMC4zNXJlcF92d3c2NF9pbnQ4X3NoYTFfYTkzOTQwN2Q1MDdiNDVjZWNhMjkzZTc0Yzg5NjFkNTkzNTdiMzdiMi50ZmxpdGUiLCJpY29uIjoiaHR0cHM6Ly9zZW5zZWNyYWZ0LXN0YXRpY3Muc2VlZWQuY2MvcmVmZXIvcGljLzE3MjY3MzU2MTE0OTFfNlpxeWNoX3BlcnNvbl9jbHMucG5nIiwidGFzayI6ImNsYXNzaWZ5IiwiY3JlYXRlZEF0IjoxNzI2NzM1NzY5LCJ1cGRhdGVkQXQiOjE3NDU4MTk4MTgsImlvdSI6IjAiLCJjb25mIjoiMCJ9LCJtb2RlbF9uYW1lIjoiUGVyc29uIENsYXNzaWZpY2F0aW9uIiwibW9kZWxfZm9ybWF0IjoidGZMaXRlIiwiYWlfZnJhbXdvcmsiOiI0IiwiYXV0aG9yIjoiU2Vuc2VDcmFmdCBBSSIsImNsYXNzZXMiOlsiTm90IGEgcGVyc29uIiwiUGVyc29uIl0sImNoZWNrc3VtIjoiMTc5MWM5NmFjMjk0MDg1YWJkMjMwZDEzYjQwODM4NDIifQ=="}}
+      // base64解码
+      // {"model_id":"60768","version":"1.0.0","arguments":{"size":677.29,"url":"https://sensecraft-statics.seeed.cc/refer/model/1726735722108_dr5Is2_mobilenetv2_0.35rep_vww64_int8_sha1_a939407d507b45ceca293e74c8961d59357b37b2.tflite","icon":"https://sensecraft-statics.seeed.cc/refer/pic/1726735611491_6Zqych_person_cls.png","task":"classify","createdAt":1726735769,"updatedAt":1745819818,"iou":"0","conf":"0"},"model_name":"Person Classification","model_format":"tfLite","ai_framwork":"4","author":"SenseCraft AI","classes":["Not a person","Person"],"checksum":"1791c96ac294085abd230d13b4083842"}
+      // console.log('设备信息:', this.deviceInfo);
+      // modelMeta?.classes
+
       const parsed = JSON.parse(decoded);
       if (parsed && typeof parsed === 'object') {
         // 模型名称和版本
@@ -698,6 +718,8 @@ export class SscmaConfigComponent implements OnInit, OnDestroy, OnChanges {
         // 类别列表
         if (Array.isArray(parsed.classes)) {
           (this.modelMeta as any).classes = parsed.classes;
+          // 初始化类别触发配置
+          this.initClassTriggerConfigs();
         }
 
         // 图片 URL
@@ -723,6 +745,11 @@ export class SscmaConfigComponent implements OnInit, OnDestroy, OnChanges {
 
       // 同步到置信度显示值
       this.confidenceThreshold = this.scoreThreshold;
+
+      // 加载 GPIO 触发规则
+      await this.loadTriggerRules().catch(err => {
+        console.warn('加载触发规则失败:', err);
+      });
 
       // console.log('当前配置:', {
       //   model: this.modelInfo,
@@ -1175,7 +1202,25 @@ export class SscmaConfigComponent implements OnInit, OnDestroy, OnChanges {
   }
 
   /**
-   * 构建 AT+TRIGGER 规则字符串
+   * 初始化类别触发配置（当模型元数据加载后调用）
+   */
+  initClassTriggerConfigs(): void {
+    if (!this.modelMeta.classes || this.modelMeta.classes.length === 0) {
+      this.classTriggerConfigs = [];
+      return;
+    }
+    
+    // 为每个类别创建默认配置
+    this.classTriggerConfigs = this.modelMeta.classes.map((_, index) => ({
+      classId: index,
+      threshold: 50,        // 默认50%置信度
+      gpio: null,           // 默认未选择引脚
+      levelMode: null       // 默认未选择电平模式
+    }));
+  }
+
+  /**
+   * 构建 AT+TRIGGER 规则字符串（从简化配置）
    * 格式: "CLASS_ID,CONDITION,SCORE_THRESHOLD,GPIO_PIN,INITIAL_LEVEL,TRIGGER_LEVEL"
    * 示例: "0,2,50,1,0,1" (类别0, >=, 50分, GPIO1, 初始低, 触发高)
    */
@@ -1184,10 +1229,41 @@ export class SscmaConfigComponent implements OnInit, OnDestroy, OnChanges {
   }
 
   /**
+   * 从简化配置构建单条规则字符串
+   */
+  private buildTriggerRuleFromConfig(config: ClassTriggerConfig): string | null {
+    // 如果未配置GPIO或电平模式，则跳过
+    if (config.gpio === null || config.levelMode === null) {
+      return null;
+    }
+    
+    // condition: 2 = >=（大于等于）
+    const condition = 2;
+    // levelMode: 'high' = 默认低触发高 (initLevel=0, triggerLevel=1)
+    // levelMode: 'low' = 默认高触发低 (initLevel=1, triggerLevel=0)
+    const initLevel = config.levelMode === 'high' ? 0 : 1;
+    const triggerLevel = config.levelMode === 'high' ? 1 : 0;
+    
+    return `${config.classId},${condition},${config.threshold},${config.gpio},${initLevel},${triggerLevel}`;
+  }
+
+  /**
    * 合并所有规则为 AT+TRIGGER 格式字符串
    * 多规则之间用 | 分隔
    */
   private buildCombinedTriggerRules(): string {
+    // 优先使用简化配置
+    if (this.classTriggerConfigs.length > 0) {
+      const rules = this.classTriggerConfigs
+        .map(config => this.buildTriggerRuleFromConfig(config))
+        .filter(rule => rule !== null) as string[];
+      
+      if (rules.length > 0) {
+        return rules.join('|');
+      }
+    }
+    
+    // 回退到旧的 triggerRules（兼容）
     if (this.triggerRules.length === 0) {
       return '';
     }
@@ -1204,14 +1280,25 @@ export class SscmaConfigComponent implements OnInit, OnDestroy, OnChanges {
       return;
     }
 
-    if (this.triggerRules.length === 0) {
-      this.message.warning('请先添加至少一个触发规则');
+    // 检查是否有有效的触发配置
+    const hasValidConfig = this.classTriggerConfigs.some(
+      config => config.gpio !== null && config.levelMode !== null
+    );
+    
+    if (!hasValidConfig && this.triggerRules.length === 0) {
+      this.message.warning('请先配置至少一个类别的 GPIO 触发规则');
       return;
     }
 
     try {
       const rulesString = this.buildCombinedTriggerRules();
-      // console.log('发送 AT+TRIGGER 规则:', rulesString);
+      
+      if (!rulesString) {
+        this.message.warning('没有有效的触发规则');
+        return;
+      }
+      
+      console.log('发送 AT+TRIGGER 规则:', rulesString);
 
       const response = await this.atService.sendCommand(`AT+TRIGGER="${rulesString}"`);
 
@@ -1244,16 +1331,58 @@ export class SscmaConfigComponent implements OnInit, OnDestroy, OnChanges {
         // console.log('当前 AT+TRIGGER 规则:', rulesString);
 
         if (rulesString && rulesString.trim()) {
-          this.message.info('当前规则: ' + rulesString);
-          // TODO: 可以解析规则字符串并填充到 UI
+          // 解析规则字符串并填充到 classTriggerConfigs
+          this.parseTriggerRulesString(rulesString);
         } else {
-          this.message.info('设备未设置 GPIO 触发规则');
+          // 设备未设置规则，保持默认空值状态
+          console.log('设备未设置 GPIO 触发规则');
         }
       }
     } catch (error) {
       console.error('加载 GPIO 触发规则失败:', error);
-      this.message.error('加载规则失败: ' + (error as Error).message);
+      // 静默失败，不显示错误消息
     }
+  }
+
+  /**
+   * 解析 AT+TRIGGER 规则字符串并填充到 classTriggerConfigs
+   * 格式: "CLASS_ID,CONDITION,THRESHOLD,GPIO,INIT_LEVEL,TRIGGER_LEVEL"
+   * 多规则用 | 分隔，例如: "0,2,50,1,0,1|1,2,60,2,0,1"
+   */
+  private parseTriggerRulesString(rulesString: string): void {
+    if (!rulesString || !rulesString.trim()) return;
+
+    const rules = rulesString.split('|');
+    
+    for (const ruleStr of rules) {
+      const parts = ruleStr.split(',').map(p => p.trim());
+      if (parts.length < 6) continue;
+
+      const classId = parseInt(parts[0], 10);
+      // const condition = parseInt(parts[1], 10); // 暂不使用，简化版固定为 >= (2)
+      const threshold = parseInt(parts[2], 10);
+      const gpio = parseInt(parts[3], 10);
+      const initLevel = parseInt(parts[4], 10);
+      const triggerLevel = parseInt(parts[5], 10);
+
+      // 找到对应的 classTriggerConfig 并更新
+      const config = this.classTriggerConfigs.find(c => c.classId === classId);
+      if (config) {
+        config.threshold = threshold;
+        config.gpio = gpio;
+        // 根据电平判断模式: initLevel=0, triggerLevel=1 -> 'high'; initLevel=1, triggerLevel=0 -> 'low'
+        if (initLevel === 0 && triggerLevel === 1) {
+          config.levelMode = 'high';
+        } else if (initLevel === 1 && triggerLevel === 0) {
+          config.levelMode = 'low';
+        } else {
+          // 其他情况默认 high
+          config.levelMode = 'high';
+        }
+      }
+    }
+
+    this.cdr.detectChanges();
   }
 
   selectSidebar(name: 'device' | 'mqtt' | 'gpio' | 'serial'): void {
