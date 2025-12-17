@@ -23,6 +23,7 @@ import { AuthService } from '../../../services/auth.service';
 import { BoardSelectorDialogComponent } from '../board-selector-dialog/board-selector-dialog.component';
 import { LoginDialogComponent } from '../login-dialog/login-dialog.component';
 import { PlatformService } from '../../../services/platform.service';
+import { AppStoreService, AppItem } from '../../../tools/app-store/app-store.service';
 
 @Component({
   selector: 'app-header',
@@ -78,6 +79,11 @@ export class HeaderComponent {
     return isDevMode()
   }
 
+  // 从 AppStoreService 获取要显示在 header 上的 apps
+  get headerApps(): AppItem[] {
+    return this.appStoreService.getHeaderApps();
+  }
+
   constructor(
     private projectService: ProjectService,
     private uiService: UiService,
@@ -93,7 +99,8 @@ export class HeaderComponent {
     private configService: ConfigService,
     private authService: AuthService,
     private translate: TranslateService,
-    private platformService: PlatformService
+    private platformService: PlatformService,
+    private appStoreService: AppStoreService
   ) { }
 
   async ngAfterViewInit() {

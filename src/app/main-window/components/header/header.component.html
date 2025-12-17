@@ -42,7 +42,23 @@
       }
     </div>
     }
-    <div class="btn ccenter" nz-tooltip nzTooltipTitle="更多" (click)="onClick(appStoreBtn,$event)"
+    <!-- 动态 App 列表 -->
+    <div class="zone ccenter">
+      @for (app of headerApps; track app.id) {
+      @if(!app.dev||isDevMode) {
+      @if(showInRouter(app)){
+      <div class="btn ccenter" nz-tooltip nzTooltipTitle="{{ app.name | translate}}" (click)="onClick(app,$event)"
+        [ngStyle]="{ color: app.color ? app.color : '' }" [ngClass]="{ selected: isOpenTool(app) }">
+        <i class="{{ app.icon }}"></i>
+        @if (app.more) {
+        <div class="more ccenter">{{ app.more }}</div>
+        }
+      </div>
+      }
+      }
+      }
+    </div>
+    <div class="btn ccenter" nz-tooltip nzTooltipTitle="{{ 'MENU.APP_STORE' | translate }}" (click)="onClick(appStoreBtn,$event)"
       [ngClass]="{ selected: isOpenTool(appStoreBtn) }">
       <i class="fa-light fa-grid-2-plus"></i>
     </div>

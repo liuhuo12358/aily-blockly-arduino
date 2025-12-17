@@ -48,68 +48,7 @@ export let HEADER_BTNS: IMenuItem[][] = [
     //   color: '#f18800',
     // },
   ],
-  [
-    // {
-    //   name: 'MENU.TERMINAL',
-    //   action: 'terminal',
-    //   data: { type: 'terminal', data: "default" },
-    //   icon: 'fa-light fa-rectangle-terminal',
-    // },
-    {
-      name: 'MENU.CODE',
-      action: 'tool-open',
-      data: { type: 'tool', data: "code-viewer" },
-      icon: 'fa-light fa-rectangle-code',
-      router: ['/main/blockly-editor']
-    },
-    {
-      name: 'MENU.LIB_MANAGER',
-      action: 'tool-open',
-      data: { type: 'tool', data: "lib-manager" },
-      icon: 'fa-light fa-books',
-      router: ['/main/code-editor']
-    },
-    {
-      name: 'MENU.TOOL_SERIAL',
-      action: 'tool-open',
-      data: { type: 'tool', data: "serial-monitor" },
-      icon: 'fa-light fa-monitor-waveform',
-    },
-    // {
-    //   name: 'MENU.SIMULATOR',
-    //   action: 'tool-open',
-    //   data: { type: 'tool', data: "simulator" },
-    //   icon: 'fa-light fa-atom',
-    //   dev: true,
-    //   router: ['/main/blockly-editor']
-    // },
-    {
-      name: 'MENU.AI',
-      action: 'tool-open',
-      data: { type: 'tool', data: "aily-chat" },
-      icon: 'fa-light fa-star-christmas',
-      more: 'AI'
-    },
-    {
-      name: 'MENU.MODEL_STORE',
-      action: 'tool-open',
-      data: { type: 'tool', data: "model-store" },
-      icon: 'fa-light fa-microchip-ai',
-      dev: false
-    },
-    {
-      name: 'MENU.USER_SPACE',
-      action: 'tool-open',
-      data: { type: 'tool', data: "cloud-space" },
-      icon: 'fa-light fa-cloud',
-    },
-    {
-      name: 'MENU.USER_AUTH',
-      action: 'tool-open',
-      data: { type: 'tool', data: "user-center" },
-      icon: 'fa-light fa-user',
-    },
-  ],
+  // 工具按钮已移至 AppStoreService 管理
 ];
 
 
