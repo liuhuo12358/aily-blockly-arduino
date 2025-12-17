@@ -21,7 +21,7 @@
       </div>
 
       <!-- 右侧内容区域 -->
-      <div class="right sscroll">
+      <div class="right sscroll" style="margin-left: -15px;">
         @if (currentStep == 0) {
         @if (this.modelDetail?.author_name === 'SenseCraft AI') {
         <!-- 第二步：连接设备（SenseCraft AI） -->
@@ -77,7 +77,7 @@
         } @else if (currentStep == 1) {
         <!-- 第二步：模型配置 -->
         <div class="right-inner">
-          <app-sscma-config [portPath]="currentPort!" [showFrame]="false" (configComplete)="onConfigComplete()"
+          <app-sscma-config style="height: 100%;" [portPath]="currentPort!" [showFrame]="false" (configComplete)="onConfigComplete()"
             (backToDeploy)="prevStep()">
           </app-sscma-config>
         </div>
