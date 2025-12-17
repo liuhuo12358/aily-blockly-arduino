@@ -237,7 +237,7 @@ export class SscmaDeployComponent implements OnInit {
     try {
       const firmwareType = this.getFirmwareType();
       this.firmwareInfo = await this.firmwareService.getFirmwareInfo(firmwareType);
-      // console.log('固件信息加载完成:', this.firmwareInfo);
+      console.log('固件信息加载完成:', this.firmwareInfo);
     } catch (error) {
       console.error('加载固件信息失败:', error);
     }
@@ -439,6 +439,8 @@ export class SscmaDeployComponent implements OnInit {
     // this.scrollToBottom();
     this.deployStatus = '正在准备部署...';
 
+    // 
+
     // 使用 NoticeService 显示进度（带取消按钮）
     this.noticeService.update({
       title: '模型部署',
@@ -470,18 +472,85 @@ export class SscmaDeployComponent implements OnInit {
 
       const { snapshot, detail } = modelFileResult;
 
-      // 2. 先下载所有文件（固件 + 模型）
+      // 2. 检测设备固件版本，决定是否需要更新固件
+      let needFirmwareUpdate = true;  // 默认需要更新固件
+      let deviceVersion: string | null = null;
+
+      if (this.firmwareInfo) {
+        this.deployStatus = '正在检测设备固件版本...';
+        this.noticeService.update({
+          title: '模型部署',
+          text: '正在检测设备固件版本...',
+          state: 'doing',
+          showProgress: true,
+          progress: 5,
+          stop: () => this.cancelDeploy()
+        });
+
+        try {
+          // 尝试连接设备获取版本
+          await this.sscmaCommandService.connect(this.currentPort!);
+          await this.delay(300);
+
+          // 发送 AT+VER? 获取版本
+          const verResponse = await this.sscmaCommandService.sendCommand('AT+VER?');
+          
+          if (verResponse && verResponse.code === 0 && verResponse.data) {
+            const data = verResponse.data as any;
+            // 版本信息在 data.software 字段
+            deviceVersion = data.software || null;
+            
+            const targetVersion = this.firmwareInfo!['version'] as string;
+            if (deviceVersion && targetVersion) {
+              // console.log(`[Deploy] 设备当前固件版本: ${deviceVersion}, 目标版本: ${targetVersion}`);
+              
+              // 比较版本（简单字符串比较）
+              if (deviceVersion === targetVersion) {
+                needFirmwareUpdate = false;
+                // console.log('[Deploy] 固件版本相同，跳过固件更新');
+                
+                this.noticeService.update({
+                  title: '模型部署',
+                  text: `固件版本相同 (${deviceVersion})，跳过固件更新`,
+                  state: 'doing',
+                  showProgress: true,
+                  progress: 8,
+                  stop: () => this.cancelDeploy()
+                });
+              } else {
+                // console.log('[Deploy] 固件版本不同，需要更新固件');
+              }
+            }
+          }
+
+          // 断开连接，准备后续操作
+          await this.sscmaCommandService.disconnect();
+        } catch (versionError) {
+          console.warn('[Deploy] 获取设备版本失败，将更新固件:', versionError);
+          // 获取版本失败，默认需要更新固件
+          needFirmwareUpdate = true;
+          
+          // 确保断开连接
+          try {
+            await this.sscmaCommandService.disconnect();
+          } catch (e) {
+            // 忽略断开连接错误
+          }
+        }
+      }
+
+      // 3. 下载所需文件（根据版本检测结果决定是否下载固件）
       const flashFiles: FlashFile[] = [];
 
-      // 2.1 下载固件文件
-      if (this.firmwareInfo) {
+      // 3.1 下载固件文件（如果需要更新）
+      if (this.firmwareInfo && needFirmwareUpdate) {
         this.deployStatus = '正在下载固件...';
         this.noticeService.update({
           title: '模型部署',
           text: '正在下载固件...',
           state: 'doing',
           showProgress: true,
-          progress: 5,
+          progress: 10,
           stop: () => this.cancelDeploy()
         });
         const firmwareFiles = await this.firmwareService.downloadFirmware(this.firmwareInfo);
@@ -489,7 +558,7 @@ export class SscmaDeployComponent implements OnInit {
         // console.log('[Deploy] 固件下载完成');
       }
 
-      // 2.2 下载模型文件
+      // 3.2 下载模型文件
       this.deployStatus = '正在下载模型文件...';
       this.noticeService.update({
         title: '模型部署',
@@ -516,7 +585,7 @@ export class SscmaDeployComponent implements OnInit {
 
       // console.log('[Deploy] 所有文件已下载，共 ' + flashFiles.length + ' 个文件');
 
-      // 3. 检查并安装 esptool（如果需要）
+      // 4. 检查并安装 esptool（如果需要）
       if (!this.esptoolPackage) {
         this.deployStatus = '正在准备烧录工具...';
         this.noticeService.update({
@@ -552,12 +621,12 @@ export class SscmaDeployComponent implements OnInit {
         }
       }
 
-      // 4. 分步烧录所有文件
+      // 5. 分步烧录所有文件
       // console.log('[Deploy] 开始烧录流程');
 
-      // 4.1 先烧录固件（如果有）
+      // 5.1 先烧录固件（如果需要更新且有固件文件）
       let firmwareFlashed = false;
-      if (flashFiles.length > 1) {
+      if (needFirmwareUpdate && flashFiles.length > 1) {
         // 有固件需要烧录
         this.deployStatus = '正在烧录固件...';
         this.noticeService.update({
@@ -609,9 +678,12 @@ export class SscmaDeployComponent implements OnInit {
           console.error('[Deploy] 固件烧录失败:', error);
           throw new Error('固件烧录失败: ' + (error as Error).message);
         }
+      } else if (!needFirmwareUpdate) {
+        // 固件版本相同，跳过固件烧录
+        // console.log('[Deploy] 固件版本相同，跳过固件烧录');
       }
 
-      // 6.2 烧录模型文件
+      // 5.2 烧录模型文件
       this.deployStatus = '正在烧录模型文件...';
       this.noticeService.update({
         title: '模型部署',
@@ -665,7 +737,7 @@ export class SscmaDeployComponent implements OnInit {
 
       // console.log('[Deploy] 所有文件烧录完成，准备设置模型信息');
 
-      // 7. 等待设备重启
+      // 6. 等待设备重启
       this.deployStatus = '正在等待设备重启...';
       this.noticeService.update({
         title: '模型部署',
@@ -677,7 +749,7 @@ export class SscmaDeployComponent implements OnInit {
       });
       await this.delay(1000);
 
-      // 8. 设置模型信息（AT 命令 - 使用 Native Service）
+      // 7. 设置模型信息（AT 命令 - 使用 Native Service）
       if (this.isCancelling) {
         throw new Error('用户取消部署');
       }
@@ -746,7 +818,7 @@ export class SscmaDeployComponent implements OnInit {
         throw new Error('设置模型信息失败: ' + (atError as Error).message);
       }
 
-      // 9. 完成部署，进入配置页面
+      // 8. 完成部署，进入配置页面
       this.deployStatus = '部署完成！';
       this.deployProgress = 100;
 
