@@ -110,18 +110,18 @@ export class ModelDetailComponent implements OnInit {
       console.error('模型数据为空，无法部署');
       return;
     }
-    
+
     // 1. 保存模型数据到 localStorage（跨窗口传递）
     localStorage.setItem('current_model_deploy', JSON.stringify(modelDetail));
-    
+
     // 2. 保存当前串口信息
     if (this.serialService.currentPort) {
       localStorage.setItem('current_model_deploy_port', this.serialService.currentPort);
     }
-    
+
     // 3. 根据模型作者决定模型类型，生成对应路由
     const modelType = this.getModelTypeRoute(modelDetail);
-    
+
     // 4. 构建路由路径
     let routePath: string;
     if (mode === 'test') {
@@ -131,17 +131,17 @@ export class ModelDetailComponent implements OnInit {
       // 部署模式：跳转到部署步骤 - deploy 步骤
       routePath = `model-deploy/${modelType}/deploy`;
     }
-    
+
     // 5. 打开新窗口，路由到对应页面
-    const title = mode === 'test' 
-      ? `模型测试 - ${modelDetail.name}` 
+    const title = mode === 'test'
+      ? `模型测试 - ${modelDetail.name}`
       : `模型部署 - ${modelDetail.name}`;
-    
+
     this.uiService.openWindow({
       path: routePath, // 动态路由：model-deploy/sscma/deploy 或 model-deploy/sscma/test
       title,
       alwaysOnTop: true,
-      width: 960,
+      width: mode === 'test' ? 900 : 1020,
       height: 640
     });
   }
@@ -156,17 +156,17 @@ export class ModelDetailComponent implements OnInit {
     if (modelDetail.author_name === 'SenseCraft AI' || modelDetail.author_name === 'Seeed Studio') {
       return 'sscma';
     }
-    
+
     // 根据 uniform_types 判断
     if (modelDetail.uniform_types?.includes('xiao_esp32s3')) {
       return 'sscma';
     }
-    
+
     // 未来扩展示例：
     // if (modelDetail.author_name === 'ChipIntelli') {
     //   return 'chipintelli';
     // }
-    
+
     // 默认返回 sscma
     return 'sscma';
   }

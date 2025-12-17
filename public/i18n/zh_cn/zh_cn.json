@@ -367,14 +367,10 @@
         "VIEW_COUNT": "浏览次数",
         "LIKE_COUNT": "点赞数"
     },
-    "MODEL_DEPLOY_STEP2": {
-        "STEP1": "1. 将摄像头传感器扩展板上的连接器与 XIAO ESP32S3 Sense 上的 B2B 连接器对准，然后按下以安装摄像头传感器。",
-        "STEP2": "2. 通过USB将 XIAO ESP32S3 Sense 连接到电脑",
-        "STEP3": "3. 选择USB串口进行连接"
-    },
     "XIAO_ESP32S3_SENSE_CONNECT": {
-        "STEP1": "1. 将摄像头传感器扩展板上的连接器与 XIAO ESP32S3 Sense 上的 B2B 连接器对准，然后按下以安装摄像头传感器。",
-        "STEP2": "2. 通过USB将 XIAO ESP32S3 Sense 连接到电脑",
-        "STEP3": "3. 选择USB串口进行连接"
+        "STEP1": "1. 将 XIAO ESP32S3 Sense 与 摄像头扩展板 连接",
+        "STEP2": "2. 将 XIAO ESP32S3 Sense 通过USB连接到电脑",
+        "STEP3": "3. 选择设备串口，再点击\"开始部署\"按钮",
+        "STEP4": "4. 等待部署完成，测试模型效果"
     }
 }

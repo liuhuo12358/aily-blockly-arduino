@@ -436,32 +436,15 @@ export class SscmaDeployComponent implements OnInit {
 
     this.isDeploying = true;
     this.isCancelling = false;
-    // this.scrollToBottom();
+    this.deployProgress = 0;
     this.deployStatus = '正在准备部署...';
-
-    // 使用 NoticeService 显示进度（带取消按钮）
-    this.noticeService.update({
-      title: '模型部署',
-      text: '正在准备部署...',
-      state: 'doing',
-      showProgress: true,
-      progress: 0,
-      stop: () => this.cancelDeploy()  // 添加取消回调
-    });
-
     this.cd.detectChanges();
 
     try {
       // 1. 获取模型文件
+      this.deployProgress = 5;
       this.deployStatus = '正在获取模型文件...';
-      this.noticeService.update({
-        title: '模型部署',
-        text: '正在获取模型文件...',
-        state: 'doing',
-        showProgress: true,
-        progress: 5,
-        stop: () => this.cancelDeploy()
-      });
+      this.cd.detectChanges();
       const modelFileResult = await this.firmwareService.getModelFile(this.modelDetail.id);
 
       if (!modelFileResult) {
@@ -475,58 +458,34 @@ export class SscmaDeployComponent implements OnInit {
 
       // 2.1 下载固件文件
       if (this.firmwareInfo) {
+        this.deployProgress = 5;
         this.deployStatus = '正在下载固件...';
-        this.noticeService.update({
-          title: '模型部署',
-          text: '正在下载固件...',
-          state: 'doing',
-          showProgress: true,
-          progress: 5,
-          stop: () => this.cancelDeploy()
-        });
+        this.cd.detectChanges();
         const firmwareFiles = await this.firmwareService.downloadFirmware(this.firmwareInfo);
         flashFiles.push(...firmwareFiles);
         // console.log('[Deploy] 固件下载完成');
       }
 
       // 2.2 下载模型文件
+      this.deployProgress = 10;
       this.deployStatus = '正在下载模型文件...';
-      this.noticeService.update({
-        title: '模型部署',
-        text: '正在下载模型文件...',
-        state: 'doing',
-        showProgress: true,
-        progress: 10,
-        stop: () => this.cancelDeploy()
-      });
+      this.cd.detectChanges();
       const modelFile = await this.firmwareService.downloadModelFile(snapshot, this.xiaoType);
       flashFiles.push(modelFile);
       // console.log('[Deploy] 模型文件下载完成');
 
       // 显示下载完成提示
-      this.deployStatus = '所有文件下载完成';
-      this.noticeService.update({
-        title: '模型部署',
-        text: '所有文件下载完成，准备烧录...',
-        state: 'doing',
-        showProgress: true,
-        progress: 15,
-        stop: () => this.cancelDeploy()
-      });
+      this.deployProgress = 15;
+      this.deployStatus = '所有文件下载完成，准备烧录...';
+      this.cd.detectChanges();
 
       // console.log('[Deploy] 所有文件已下载，共 ' + flashFiles.length + ' 个文件');
 
       // 3. 检查并安装 esptool（如果需要）
       if (!this.esptoolPackage) {
+        this.deployProgress = 18;
         this.deployStatus = '正在准备烧录工具...';
-        this.noticeService.update({
-          title: '模型部署',
-          text: '正在安装 esptool 烧录工具...',
-          state: 'doing',
-          showProgress: true,
-          progress: 18,
-          stop: () => this.cancelDeploy()
-        });
+        this.cd.detectChanges();
 
         const installSuccess = await this.esptoolPyService.installEsptool();
         if (!installSuccess) {
@@ -559,15 +518,9 @@ export class SscmaDeployComponent implements OnInit {
       let firmwareFlashed = false;
       if (flashFiles.length > 1) {
         // 有固件需要烧录
+        this.deployProgress = 25;
         this.deployStatus = '正在烧录固件...';
-        this.noticeService.update({
-          title: '模型部署',
-          text: '正在烧录固件...',
-          state: 'doing',
-          showProgress: true,
-          progress: 25,
-          stop: () => this.cancelDeploy()
-        });
+        this.cd.detectChanges();
 
         try {
           const firmwareFile = flashFiles[0]; // 固件总是第一个
@@ -582,20 +535,10 @@ export class SscmaDeployComponent implements OnInit {
               progressCallback: (progress: number, status: string) => {
                 if (this.isCancelling) return;
 
-                this.deployProgress = progress;
-                this.deployStatus = `烧录固件: ${status}`;
-
                 // 固件烧录占 25%-55%
                 const overallProgress = 25 + Math.floor(progress * 0.3);
-                this.noticeService.update({
-                  title: '模型部署',
-                  text: `烧录固件: ${status}`,
-                  state: 'doing',
-                  showProgress: true,
-                  progress: overallProgress,
-                  stop: () => this.cancelDeploy()
-                });
-
+                this.deployProgress = overallProgress;
+                this.deployStatus = `烧录固件: ${status}`;
                 this.cd.detectChanges();
               }
             }
@@ -612,15 +555,9 @@ export class SscmaDeployComponent implements OnInit {
       }
 
       // 6.2 烧录模型文件
+      this.deployProgress = firmwareFlashed ? 55 : 25;
       this.deployStatus = '正在烧录模型文件...';
-      this.noticeService.update({
-        title: '模型部署',
-        text: '正在烧录模型文件...',
-        state: 'doing',
-        showProgress: true,
-        progress: firmwareFlashed ? 55 : 25,
-        stop: () => this.cancelDeploy()
-      });
+      this.cd.detectChanges();
 
       try {
         const modelFile = flashFiles[flashFiles.length - 1]; // 模型文件总是最后一个
@@ -635,21 +572,11 @@ export class SscmaDeployComponent implements OnInit {
             progressCallback: (progress: number, status: string) => {
               if (this.isCancelling) return;
 
-              this.deployProgress = progress;
-              this.deployStatus = `烧录模型: ${status}`;
-
               // 模型烧录占 55%-85%（如果有固件）或 25%-85%（仅模型）
               const startProgress = firmwareFlashed ? 55 : 25;
               const overallProgress = startProgress + Math.floor(progress * 0.3);
-              this.noticeService.update({
-                title: '模型部署',
-                text: `烧录模型: ${status}`,
-                state: 'doing',
-                showProgress: true,
-                progress: overallProgress,
-                stop: () => this.cancelDeploy()
-              });
-
+              this.deployProgress = overallProgress;
+              this.deployStatus = `烧录模型: ${status}`;
               this.cd.detectChanges();
             }
           }
@@ -666,15 +593,9 @@ export class SscmaDeployComponent implements OnInit {
       // console.log('[Deploy] 所有文件烧录完成，准备设置模型信息');
 
       // 7. 等待设备重启
+      this.deployProgress = 88;
       this.deployStatus = '正在等待设备重启...';
-      this.noticeService.update({
-        title: '模型部署',
-        text: '正在等待设备重启...',
-        state: 'doing',
-        showProgress: true,
-        progress: 88,
-        stop: () => this.cancelDeploy()
-      });
+      this.cd.detectChanges();
       await this.delay(1000);
 
       // 8. 设置模型信息（AT 命令 - 使用 Native Service）
@@ -682,15 +603,9 @@ export class SscmaDeployComponent implements OnInit {
         throw new Error('用户取消部署');
       }
 
+      this.deployProgress = 85;
       this.deployStatus = '正在连接设备...';
-      this.noticeService.update({
-        title: '模型部署',
-        text: '正在连接设备...',
-        state: 'doing',
-        showProgress: true,
-        progress: 85,
-        stop: () => this.cancelDeploy()
-      });
+      this.cd.detectChanges();
 
       const modelInfo: ModelInfo = {
         model_id: snapshot.model_id,
@@ -713,15 +628,9 @@ export class SscmaDeployComponent implements OnInit {
         // console.log('[AT Native] 等待设备准备就绪...');
         await this.delay(500);
 
+        this.deployProgress = 90;
         this.deployStatus = '正在设置模型信息...';
-        this.noticeService.update({
-          title: '模型部署',
-          text: '正在设置模型信息...',
-          state: 'doing',
-          showProgress: true,
-          progress: 90,
-          stop: () => this.cancelDeploy()
-        });
+        this.cd.detectChanges();
 
         // console.log('[AT Native] 测试连接，发送 AT+STAT?...');
         await this.sscmaCommandService.sendCommand('AT+STAT?');
@@ -747,17 +656,9 @@ export class SscmaDeployComponent implements OnInit {
       }
 
       // 9. 完成部署，进入配置页面
-      this.deployStatus = '部署完成！';
       this.deployProgress = 100;
-
-      this.noticeService.update({
-        title: '模型部署',
-        text: '部署完成！正在进入配置页面...',
-        state: 'done',
-        showProgress: true,
-        progress: 100,
-        setTimeout: 2000
-      });
+      this.deployStatus = '部署完成！正在进入配置页面...';
+      this.cd.detectChanges();
 
       // 等待一小段时间让用户看到完成提示
       await this.delay(1000);
@@ -778,16 +679,9 @@ export class SscmaDeployComponent implements OnInit {
         return;
       }
 
+      this.deployProgress = 0;
       this.deployStatus = '部署失败: ' + errorMsg;
-
-      this.noticeService.update({
-        title: '模型部署',
-        text: '部署失败',
-        detail: errorMsg,
-        state: 'error',
-        showProgress: false,
-        setTimeout: 5000
-      });
+      this.cd.detectChanges();
 
       this.deployError.emit(error as Error);
     } finally {

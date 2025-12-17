@@ -102,7 +102,7 @@ export class ESP32ProgressParser {
         this.lastProgress = progress;
         return {
           progress,
-          message: `正在烧录: ${progress}%`,
+          message: ` ${progress}%`,
           completed: false
         };
       }
@@ -117,7 +117,7 @@ export class ESP32ProgressParser {
         this.lastProgress = progress;
         return {
           progress,
-          message: `正在烧录: ${progress}%`,
+          message: ` ${progress}%`,
           completed: false
         };
       }

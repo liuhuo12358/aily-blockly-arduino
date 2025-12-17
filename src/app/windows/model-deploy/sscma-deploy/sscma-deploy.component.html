@@ -42,7 +42,6 @@
           <!-- 连接设备步骤 -->
           <div class="section">
             <div class="section-title">{{ 'MODEL_DEPLOY.STEPS.DEPLOY' | translate }}: {{ modelDetail.name }}</div>
-            <div class="section-title">{{ 'MODEL_DEPLOY.CONNECT_DEVICE' | translate }}</div>
             <div class="connect-steps">
               <div class="connect-step">
                 <div class="step-text">{{ deviceConnectionSteps[0] | translate }}</div>
@@ -62,6 +61,23 @@
                     <i class="fa-light fa-angle-right arrow" [ngClass]="{'down':showPortList}"></i>
                   </div>
                 </div>
+                <div class="step-text">{{ deviceConnectionSteps[3] | translate }}</div>
+                <div class="deploy-status" *ngIf="isDeploying || deployProgress > 0">
+                  <div class="status-text">{{ deployStatus }}</div>
+                  <div class="progress-container">
+                    <div class="progress-bar" [style.width.%]="deployProgress"></div>
+                  </div>
+                  <div class="progress-text">
+                    <div>
+                      {{ deployProgress }}%
+                    </div>
+                    @if(isDeploying && !isCancelling){
+                    <div class="cancel-btn" (click)="cancelDeploy()">
+                      取消
+                    </div>
+                    }
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -77,8 +93,8 @@
         } @else if (currentStep == 1) {
         <!-- 第二步：模型配置 -->
         <div class="right-inner">
-          <app-sscma-config style="height: 100%;" [portPath]="currentPort!" [showFrame]="false" (configComplete)="onConfigComplete()"
-            (backToDeploy)="prevStep()">
+          <app-sscma-config style="height: 100%;" [portPath]="currentPort!" [showFrame]="false"
+            (configComplete)="onConfigComplete()" (backToDeploy)="prevStep()">
           </app-sscma-config>
         </div>
         }
@@ -135,7 +151,6 @@
           {{ 'MODEL_DEPLOY.BUTTONS.PREV' | translate }}
         </button>
         }
-
         @if (currentStep === 0) {
         <button nz-button nzType="primary" (click)="startDeploy()" [disabled]="!currentPort || isDeploying">
           {{ (isDeploying ? 'MODEL_DEPLOY.BUTTONS.DEPLOYING' : 'MODEL_DEPLOY.BUTTONS.DEPLOY') | translate }}
