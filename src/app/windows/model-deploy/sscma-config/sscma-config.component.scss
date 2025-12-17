@@ -261,6 +261,15 @@
         width: 50px;
         font-size: 12px;
         margin-left: 5px;
+
+        // 未配置状态样式
+        &.not-configured {
+          ::ng-deep {
+            .ant-input-number-input {
+              color: #666;
+            }
+          }
+        }
       }
 
       nz-select {
@@ -386,6 +395,7 @@
       display: flex;
       align-items: center;
       gap: 5px;
+      width: 100%;
     }
 
     .class-label {
@@ -393,6 +403,14 @@
       color: #fff;
       font-size: 12px;
       text-align: right;
+    }
+
+    .object-class-label {
+      width: 120px;
+      color: #fff;
+      font-size: 12px;
+      text-align: right;
+      margin-left: auto; /* push to the far right */
     }
 
     .score-bar {
