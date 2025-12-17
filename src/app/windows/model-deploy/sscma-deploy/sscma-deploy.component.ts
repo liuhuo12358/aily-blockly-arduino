@@ -14,7 +14,6 @@ import { FirmwareService, FirmwareType, XiaoType, FirmwareInfo, FlashFile } from
 import { EsptoolPyService, EsptoolPackageInfo } from '../../../services/esptool-py.service';
 // import { AtCommandService } from '../../../services/at-command.service';
 import { SSCMACommandService } from '../../../services/sscma-command.service';
-import { NoticeService } from '../../../services/notice.service';
 import { encode } from 'js-base64';
 import {
   getDeployStepConfig,
@@ -109,7 +108,6 @@ export class SscmaDeployComponent implements OnInit {
     private esptoolPyService: EsptoolPyService,
     // private atCommandService: AtCommandService,
     private sscmaCommandService: SSCMACommandService,
-    private noticeService: NoticeService,
     private router: Router,
     private route: ActivatedRoute,
     private uiService: UiService
@@ -384,14 +382,6 @@ export class SscmaDeployComponent implements OnInit {
         // this.espLoaderService.requestCancel();
       }
 
-      // 更新通知
-      this.noticeService.update({
-        title: '正在取消',
-        text: '正在停止烧录操作...',
-        state: 'doing',
-        showProgress: false
-      });
-
       // 等待一小段时间让取消生效
       await this.delay(500);
 
@@ -408,13 +398,6 @@ export class SscmaDeployComponent implements OnInit {
       this.deployStatus = '部署已取消';
       this.deployProgress = 0;
       this.flashStreamId = '';
-
-      this.noticeService.update({
-        title: '部署已取消',
-        text: '烧录操作已停止',
-        state: 'warn',
-        setTimeout: 3000
-      });
 
       this.cd.detectChanges();
     } catch (error) {
@@ -496,17 +479,6 @@ export class SscmaDeployComponent implements OnInit {
         if (!this.esptoolPackage) {
           // 安装成功但检测失败，可能是文件系统缓存问题
           console.warn('[Deploy] esptool 安装失败，可能是文件系统缓存问题');
-
-          // 给用户提示
-          this.noticeService.update({
-            title: '提示',
-            text: 'esptool 工具已安装，但需要重新打开窗口才能使用',
-            detail: '请关闭此窗口后重新打开，即可正常部署模型',
-            state: 'warn',
-            showProgress: false,
-            setTimeout: 10000
-          });
-
           throw new Error('esptool 工具已安装，但需要重新打开窗口才能使用。这是文件系统缓存导致的，请关闭窗口后重新打开即可。');
         }
       }
