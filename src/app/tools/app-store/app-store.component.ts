@@ -20,7 +20,7 @@ import { Router } from '@angular/router';
 export class AppStoreComponent {
   currentUrl;
 
-  windowInfo = '应用商店';
+  windowInfo = 'APP STORE';
 
   constructor(
     private uiService: UiService,

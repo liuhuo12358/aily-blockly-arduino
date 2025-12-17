@@ -720,6 +720,13 @@ export class HeaderComponent {
     //   }
     // });
   }
+
+  appStoreBtn = {
+    name: 'MENU.APP_STORE',
+    action: 'tool-open',
+    data: { type: 'tool', data: "app-store" },
+    icon: 'fa-light fa-grid-2-plus',
+  }
 }
 
 export interface RunState {
