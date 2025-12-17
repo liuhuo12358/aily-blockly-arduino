@@ -323,9 +323,9 @@ export class EsptoolPyService {
    * @param file 烧录文件
    * @param port 串口路径
    * @param options 烧录选项
-   * @returns Promise<{ success: boolean, streamId: string }>
+   * @returns { promise: Promise<{ success: boolean }>, streamIdPromise: Promise<string> }
    */
-  async flashSingleFile(
+  flashSingleFile(
     file: FlashFileItem,
     port: string,
     options?: {
@@ -335,8 +335,13 @@ export class EsptoolPyService {
       afterFlash?: 'hard_reset' | 'no_reset';
       progressCallback?: (progress: number, status: string) => void;
     }
-  ): Promise<{ success: boolean, streamId: string }> {
-    return new Promise(async (resolve, reject) => {
+  ): { promise: Promise<{ success: boolean }>, streamIdPromise: Promise<string> } {
+    let streamIdResolver: (value: string) => void;
+    const streamIdPromise = new Promise<string>((resolve) => {
+      streamIdResolver = resolve;
+    });
+    
+    const promise = new Promise<{ success: boolean }>(async (resolve, reject) => {
       let tempFilePath = '';
       let uploadCompleted = false;
       let hasError = false;
@@ -380,12 +385,16 @@ export class EsptoolPyService {
 
         // console.log('[EsptoolPy] 执行烧录命令:', command);
 
-        let streamId = '';
-
         // 3. 执行命令
         this.cmdService.run(command, undefined, false).subscribe({
           next: (output: CmdOutput) => {
-            streamId = output.streamId;
+            const sid = output.streamId;
+            
+            // 第一次获取到 streamId 时立即 resolve Promise
+            if (sid && streamIdResolver) {
+              streamIdResolver(sid);
+              streamIdResolver = null as any;  // 防止重复 resolve
+            }
 
             if (output.data) {
               const data = output.data;
@@ -440,11 +449,11 @@ export class EsptoolPyService {
             } else if (uploadCompleted) {
               // 检测到完成标志
               // console.log('[EsptoolPy] 烧录成功完成');
-              resolve({ success: true, streamId });
+              resolve({ success: true });
             } else {
               // 没有明确的完成标志，但也没有错误，视为成功
               // console.log('[EsptoolPy] 烧录命令结束，未检测到错误，视为成功');
-              resolve({ success: true, streamId });
+              resolve({ success: true });
             }
           }
         });
@@ -457,6 +466,11 @@ export class EsptoolPyService {
         reject(error);
       }
     });
+    
+    return {
+      promise,
+      streamIdPromise
+    };
   }
 
   /**
@@ -466,13 +480,20 @@ export class EsptoolPyService {
   async flashWithScript(options: FlashWithScriptOptions): Promise<{ success: boolean, streamId: string }> {
     // 如果只有一个文件，直接调用 flashSingleFile
     if (options.flashFiles.length === 1) {
-      return this.flashSingleFile(options.flashFiles[0], options.port, {
+      const result = this.flashSingleFile(options.flashFiles[0], options.port, {
         chip: options.chip,
         baudRate: options.baudRate,
         beforeFlash: options.beforeFlash,
         afterFlash: options.afterFlash,
         progressCallback: options.progressCallback
       });
+      
+      // 等待烧录完成和 streamId
+      const [promiseResult, streamId] = await Promise.all([result.promise, result.streamIdPromise]);
+      return {
+        success: promiseResult.success,
+        streamId
+      };
     }
     
     // 多个文件时，依次烧录

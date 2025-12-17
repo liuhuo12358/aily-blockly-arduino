@@ -442,18 +442,8 @@ export class SscmaConfigComponent implements OnInit, OnDestroy, OnChanges {
         if (!connected) {
           this.isPreviewMode = false;
           this.previewImage = null;
-        } else {
-          // 连接成功后启动预览
-          this.startPreview().catch(err => {
-            console.warn('自动启动预览失败:', err);
-          });
-          this.loadDeviceInfo().catch(err => {
-            console.warn('加载设备信息失败:', err);
-          });
-          this.loadCurrentConfig().catch(err => {
-            console.warn('加载当前配置失败:', err);
-          });
         }
+        // 连接状态变化时不自动加载配置，由 connectToDevice 统一处理
       })
     );
   }
@@ -555,16 +545,20 @@ export class SscmaConfigComponent implements OnInit, OnDestroy, OnChanges {
 
       await this.delay(300);
 
-      this.startPreview().catch(err => {
-        console.warn('自动启动预览失败:', err);
-      });
-
+      // 先加载设备信息和配置，完成后再启动预览
       this.isLoadingConfig = true;
       try {
+        await this.loadDeviceConfig();
+        await this.startPreview();
         await this.loadDeviceInfo();
+        // 配置加载完成后启动预览
         await this.loadCurrentConfig();
       } catch (err) {
         console.warn('加载配置信息时发生部分错误:', err);
+        // 即使配置加载失败，也尝试启动预览
+        this.startPreview().catch(previewErr => {
+          console.warn('启动预览失败:', previewErr);
+        });
       } finally {
         this.isLoadingConfig = false;
       }
@@ -587,11 +581,32 @@ export class SscmaConfigComponent implements OnInit, OnDestroy, OnChanges {
   // 设备信息加载
   // ===================
 
+  async loadDeviceConfig(): Promise<void> {
+    try {
+      await this.loadInfoFromDevice().catch(err => {
+        console.warn('读取 AT+INFO? 失败:', err);
+      })
+      await this.loadTriggerRules().catch(err => {
+        console.warn('加载触发规则失败:', err);
+      });
+    } catch (error) {
+      console.error('加载设备配置失败:', error);
+      throw error;
+    }
+  }
+
   async loadDeviceInfo(): Promise<void> {
     try {
-      this.deviceInfo.id = await this.atService.getDeviceId();
-      this.deviceInfo.name = await this.atService.getDeviceName();
-      this.deviceInfo.version = await this.atService.getVersion();
+      // 并行执行独立的设备信息查询命令，大幅提升加载速度
+      const [id, name, version] = await Promise.all([
+        this.atService.getDeviceId(),
+        this.atService.getDeviceName(),
+        this.atService.getVersion()
+      ]);
+
+      this.deviceInfo.id = id;
+      this.deviceInfo.name = name;
+      this.deviceInfo.version = version;
 
       // 字段兼容处理
       if (this.deviceInfo.id !== undefined) {
@@ -606,13 +621,15 @@ export class SscmaConfigComponent implements OnInit, OnDestroy, OnChanges {
 
       // console.log('设备信息:', this.deviceInfo);
 
-      await this.loadDefaultTransport().catch(err => {
-        console.warn('读取默认传输类型失败:', err);
-      });
-
-      await this.loadInfoFromDevice().catch(err => {
-        console.warn('读取 AT+INFO? 失败:', err);
-      });
+      // 并行加载传输类型和模型信息
+      // await Promise.all([
+      //   this.loadDefaultTransport().catch(err => {
+      //     console.warn('读取默认传输类型失败:', err);
+      //   }),
+      //   this.loadInfoFromDevice().catch(err => {
+      //     console.warn('读取 AT+INFO? 失败:', err);
+      //   })
+      // ]);
 
       // 重置滚动位置到顶部,避免自动滚动到底部的设置区域
       setTimeout(() => {
@@ -650,7 +667,7 @@ export class SscmaConfigComponent implements OnInit, OnDestroy, OnChanges {
       if (infoVal) {
         let decoded = this.decodeBase64IfNeeded(infoVal);
         this.infoDecoded = decoded;
-        console.log('Decoded AT+INFO? info:', decoded);
+        // console.log('Decoded AT+INFO? info:', decoded);
 
         this.parseModelMetadata(decoded);
       }
@@ -738,15 +755,23 @@ export class SscmaConfigComponent implements OnInit, OnDestroy, OnChanges {
 
   async loadCurrentConfig(): Promise<void> {
     try {
-      this.modelInfo = await this.atService.getCurrentModel();
-      this.sensorInfo = await this.atService.getCurrentSensor();
-      this.scoreThreshold = await this.atService.getScoreThreshold();
-      this.iouThreshold = await this.atService.getIouThreshold();
+      // 并行执行所有配置查询命令，大幅提升加载速度
+      const [modelInfo, sensorInfo, scoreThreshold, iouThreshold] = await Promise.all([
+        this.atService.getCurrentModel(),
+        this.atService.getCurrentSensor(),
+        this.atService.getScoreThreshold(),
+        this.atService.getIouThreshold()
+      ]);
+
+      this.modelInfo = modelInfo;
+      this.sensorInfo = sensorInfo;
+      this.scoreThreshold = scoreThreshold;
+      this.iouThreshold = iouThreshold;
 
       // 同步到置信度显示值
       this.confidenceThreshold = this.scoreThreshold;
 
-      // 加载 GPIO 触发规则
+      // 加载 GPIO 触发规则（可能依赖类别信息，所以不并行）
       await this.loadTriggerRules().catch(err => {
         console.warn('加载触发规则失败:', err);
       });
@@ -759,6 +784,7 @@ export class SscmaConfigComponent implements OnInit, OnDestroy, OnChanges {
       // });
 
       this.message.success('配置信息加载完成');
+      this.cdr.detectChanges();
     } catch (error) {
       console.error('获取配置失败:', error);
       this.message.warning('部分配置信息获取失败');

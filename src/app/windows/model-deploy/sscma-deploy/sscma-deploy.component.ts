@@ -91,6 +91,7 @@ export class SscmaDeployComponent implements OnInit {
   isCancelling = false;  // 正在取消标志
   esptoolPackage: EsptoolPackageInfo | null = null;  // esptool 包信息
   flashStreamId: string = '';  // 烧录流ID，用于取消
+  currentFlashResult: { promise: Promise<{ success: boolean }>, streamIdPromise: Promise<string> } | null = null;  // 当前烧录操作
 
   // 串口选择列表相关 
   showPortList = false;
@@ -235,7 +236,7 @@ export class SscmaDeployComponent implements OnInit {
     try {
       const firmwareType = this.getFirmwareType();
       this.firmwareInfo = await this.firmwareService.getFirmwareInfo(firmwareType);
-      console.log('固件信息加载完成:', this.firmwareInfo);
+      // console.log('固件信息加载完成:', this.firmwareInfo);
     } catch (error) {
       console.error('加载固件信息失败:', error);
     }
@@ -366,44 +367,50 @@ export class SscmaDeployComponent implements OnInit {
    */
   async cancelDeploy() {
     if (!this.isDeploying || this.isCancelling) {
+      // console.log('[Deploy] 取消操作被忽略（不在部署中或已经在取消）');
       return;
     }
 
-    // console.log('[Deploy] 用户请求取消部署');
     this.isCancelling = true;
+    this.cd.detectChanges();
 
     try {
-      // 请求取消烧录（Python esptool 或 ESPLoader）
+      // 请求取消烧录（Python esptool）
+      // 如果 flashStreamId 还没有值，但有正在进行的烧录操作，等待 streamId 就绪
+      if (!this.flashStreamId && this.currentFlashResult) {
+        // console.log('[Deploy] 等待 streamId 就绪...');
+        try {
+          // 设置超时，最多等待 5 秒
+          const timeoutPromise = new Promise<string>((_, reject) => 
+            setTimeout(() => reject(new Error('timeout')), 5000)
+          );
+          this.flashStreamId = await Promise.race([this.currentFlashResult.streamIdPromise, timeoutPromise]);
+          // console.log('[Deploy] streamId 已就绪:', this.flashStreamId);
+        } catch (e) {
+          console.warn('[Deploy] 等待 streamId 超时或失败:', e);
+        }
+      }
+      
       if (this.flashStreamId) {
-        // 使用 Python esptool 烧录时
+        // console.log('[Deploy] 正在取消烧录流程, streamId:', this.flashStreamId);
         this.esptoolPyService.cancelFlash(this.flashStreamId);
       } else {
-        // 使用 ESPLoader 烧录时
-        // this.espLoaderService.requestCancel();
+        // console.log('[Deploy] 没有活跃的烧录流程需要取消');
       }
 
-      // 等待一小段时间让取消生效
-      await this.delay(500);
-
-      // // 尝试断开连接
-      // try {
-      //   await this.espLoaderService.disconnect();
-      // } catch (e) {
-      //   console.warn('[Deploy] 断开连接时出错:', e);
-      // }
-
-      // 重置状态
-      this.isDeploying = false;
-      this.isCancelling = false;
-      this.deployStatus = '部署已取消';
-      this.deployProgress = 0;
-      this.flashStreamId = '';
-
-      this.cd.detectChanges();
+      // 尝试断开 AT 命令连接
+      try {
+        await this.sscmaCommandService.disconnect();
+      } catch (e) {
+        console.warn('[Deploy] 断开 AT 命令连接时出错:', e);
+      }
     } catch (error) {
       console.error('[Deploy] 取消过程出错:', error);
-      this.isCancelling = false;
     }
+    
+    // console.log('[Deploy] cancelDeploy 执行完成，等待主流程检测 isCancelling 标志');
+    // 注意：不要在这里重置状态
+    // 让 startDeploy 的 catch 块和 finally 块处理状态重置
   }
 
   // ==================== 部署流程 ====================
@@ -435,6 +442,11 @@ export class SscmaDeployComponent implements OnInit {
       }
 
       const { snapshot, detail } = modelFileResult;
+
+      // 检查是否取消
+      if (this.isCancelling) {
+        throw new Error('用户取消部署');
+      }
 
       // 2. 检测设备固件版本，决定是否需要更新固件
       let needFirmwareUpdate = true;  // 默认需要更新固件
@@ -472,7 +484,7 @@ export class SscmaDeployComponent implements OnInit {
           // 断开连接，准备后续操作
           await this.sscmaCommandService.disconnect();
         } catch (versionError) {
-          console.warn('[Deploy] 获取设备版本失败，将更新固件:', versionError);
+          // console.warn('[Deploy] 获取设备版本失败，将更新固件:', versionError);
           // 获取版本失败，默认需要更新固件
           needFirmwareUpdate = true;
           
@@ -485,17 +497,27 @@ export class SscmaDeployComponent implements OnInit {
         }
       }
 
+      // 检查是否取消
+      if (this.isCancelling) {
+        throw new Error('用户取消部署');
+      }
+
       // 3. 下载所需文件（根据版本检测结果决定是否下载固件）
       const flashFiles: FlashFile[] = [];
 
       // 2.1 下载固件文件
-      if (this.firmwareInfo) {
+      if (this.firmwareInfo && needFirmwareUpdate) {
         this.deployProgress = 5;
         this.deployStatus = '正在下载固件...';
         this.cd.detectChanges();
         const firmwareFiles = await this.firmwareService.downloadFirmware(this.firmwareInfo);
         flashFiles.push(...firmwareFiles);
         // console.log('[Deploy] 固件下载完成');
+        
+        // 检查是否取消
+        if (this.isCancelling) {
+          throw new Error('用户取消部署');
+        }
       }
 
       // 2.2 下载模型文件
@@ -505,6 +527,11 @@ export class SscmaDeployComponent implements OnInit {
       const modelFile = await this.firmwareService.downloadModelFile(snapshot, this.xiaoType);
       flashFiles.push(modelFile);
       // console.log('[Deploy] 模型文件下载完成');
+
+      // 检查是否取消
+      if (this.isCancelling) {
+        throw new Error('用户取消部署');
+      }
 
       // 显示下载完成提示
       this.deployProgress = 15;
@@ -532,6 +559,11 @@ export class SscmaDeployComponent implements OnInit {
         }
       }
 
+      // 检查是否取消
+      if (this.isCancelling) {
+        throw new Error('用户取消部署');
+      }
+
       // 5. 分步烧录所有文件
       // console.log('[Deploy] 开始烧录流程');
 
@@ -545,7 +577,7 @@ export class SscmaDeployComponent implements OnInit {
 
         try {
           const firmwareFile = flashFiles[0]; // 固件总是第一个
-          const firmwareResult = await this.esptoolPyService.flashSingleFile(
+          const flashResult = this.esptoolPyService.flashSingleFile(
             { data: firmwareFile.data, address: firmwareFile.address },
             this.currentPort,
             {
@@ -564,8 +596,24 @@ export class SscmaDeployComponent implements OnInit {
               }
             }
           );
-
-          this.flashStreamId = firmwareResult.streamId;
+          
+          // 保存当前烧录操作，以便取消时使用
+          this.currentFlashResult = flashResult;
+          
+          // 在后台异步获取 streamId（不阻塞烧录流程）
+          flashResult.streamIdPromise.then(sid => {
+            this.flashStreamId = sid;
+            // console.log('[Deploy] 固件烧录 streamId:', this.flashStreamId);
+          }).catch(err => {
+            console.warn('[Deploy] 获取固件烧录 streamId 失败:', err);
+          });
+          
+          // 等待烧录完成
+          await flashResult.promise;
+          
+          // 烧录完成，清除当前烧录操作
+          this.currentFlashResult = null;
+          this.flashStreamId = '';
           firmwareFlashed = true;
           // console.log('[Deploy] 固件烧录完成');
 
@@ -578,6 +626,11 @@ export class SscmaDeployComponent implements OnInit {
         // console.log('[Deploy] 固件版本相同，跳过固件烧录');
       }
 
+      // 检查是否取消
+      if (this.isCancelling) {
+        throw new Error('用户取消部署');
+      }
+
       // 6.2 烧录模型文件
       this.deployProgress = firmwareFlashed ? 55 : 25;
       this.deployStatus = '正在烧录模型文件...';
@@ -585,7 +638,7 @@ export class SscmaDeployComponent implements OnInit {
 
       try {
         const modelFile = flashFiles[flashFiles.length - 1]; // 模型文件总是最后一个
-        const modelResult = await this.esptoolPyService.flashSingleFile(
+        const flashResult = this.esptoolPyService.flashSingleFile(
           { data: modelFile.data, address: modelFile.address },
           this.currentPort,
           {
@@ -605,8 +658,24 @@ export class SscmaDeployComponent implements OnInit {
             }
           }
         );
-
-        this.flashStreamId = modelResult.streamId;
+        
+        // 保存当前烧录操作，以便取消时使用
+        this.currentFlashResult = flashResult;
+        
+        // 在后台异步获取 streamId（不阻塞烧录流程）
+        flashResult.streamIdPromise.then(sid => {
+          this.flashStreamId = sid;
+          // console.log('[Deploy] 模型烧录 streamId:', this.flashStreamId);
+        }).catch(err => {
+          console.warn('[Deploy] 获取模型烧录 streamId 失败:', err);
+        });
+        
+        // 等待烧录完成
+        await flashResult.promise;
+        
+        // 烧录完成，清除当前烧录操作
+        this.currentFlashResult = null;
+        this.flashStreamId = '';
         // console.log('[Deploy] 模型烧录完成');
 
       } catch (error) {
@@ -616,18 +685,25 @@ export class SscmaDeployComponent implements OnInit {
 
       // console.log('[Deploy] 所有文件烧录完成，准备设置模型信息');
 
+      // 检查是否取消
+      if (this.isCancelling) {
+        throw new Error('用户取消部署');
+      }
+
       // 7. 等待设备重启
       this.deployProgress = 88;
       this.deployStatus = '正在等待设备重启...';
       this.cd.detectChanges();
       await this.delay(1000);
 
-      // 7. 设置模型信息（AT 命令 - 使用 Native Service）
+      // 检查是否取消
       if (this.isCancelling) {
         throw new Error('用户取消部署');
       }
 
-      this.deployProgress = 85;
+      // 7. 设置模型信息（AT 命令 - 使用 Native Service）
+
+      this.deployProgress = 90;
       this.deployStatus = '正在连接设备...';
       this.cd.detectChanges();
 
@@ -652,7 +728,7 @@ export class SscmaDeployComponent implements OnInit {
         // console.log('[AT Native] 等待设备准备就绪...');
         await this.delay(500);
 
-        this.deployProgress = 90;
+        this.deployProgress = 95;
         this.deployStatus = '正在设置模型信息...';
         this.cd.detectChanges();
 
@@ -687,6 +763,8 @@ export class SscmaDeployComponent implements OnInit {
       // 等待一小段时间让用户看到完成提示
       await this.delay(1000);
 
+      this.isDeploying = false;
+
       // 自动进入配置页面（步骤1）
       this.router.navigate(['/model-deploy/sscma', 'config']);
 
@@ -698,19 +776,32 @@ export class SscmaDeployComponent implements OnInit {
       // 检查是否是用户取消
       const errorMsg = (error as Error).message || '';
       if (errorMsg.includes('用户取消')) {
-        // 用户取消，不显示错误，cancelDeploy 方法已经处理了通知
+        // 用户主动取消
+        this.deployStatus = '部署已取消';
+        this.deployProgress = 0;
         // console.log('[Deploy] 用户取消部署');
-        return;
+      } else {
+        // 其他错误
+        this.deployProgress = 0;
+        this.deployStatus = '部署失败: ' + errorMsg;
+        this.deployError.emit(error as Error);
       }
-
-      this.deployProgress = 0;
-      this.deployStatus = '部署失败: ' + errorMsg;
+      
       this.cd.detectChanges();
-
-      this.deployError.emit(error as Error);
     } finally {
+      // 清理状态和连接
       this.isDeploying = false;
       this.isCancelling = false;
+      this.flashStreamId = '';
+      this.currentFlashResult = null;
+      
+      // 确保断开所有连接
+      try {
+        await this.sscmaCommandService.disconnect();
+      } catch (e) {
+        // 忽略断开连接错误
+      }
+      
       this.cd.detectChanges();
     }
   }
