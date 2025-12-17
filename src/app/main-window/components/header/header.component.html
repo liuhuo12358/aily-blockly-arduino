@@ -48,7 +48,11 @@
       <i class="fa-regular fa-minus"></i>
     </div>
     <div class="btn ccenter maximize" (click)="maximize()">
-      <i class="fa-regular fa-square"></i>
+      @if (isWindowFullScreen) {
+      <i class="fa-regular fa-window-restore"></i>
+      } @else {
+      <i class="fa-regular fa-window-maximize"></i>
+      }
     </div>
     <div class="btn ccenter close" (click)="close()">
       <i class="fa-regular fa-xmark"></i>
@@ -57,7 +61,8 @@
 </div>
 <!-- menu -->
 @if (showMenu) {
-<app-menu [menuList]="headerMenu" [width]="250" (closeEvent)="closeMenu()" (itemClickEvent)="onMenuClick($event)"></app-menu>
+<app-menu [menuList]="headerMenu" [width]="250" (closeEvent)="closeMenu()"
+  (itemClickEvent)="onMenuClick($event)"></app-menu>
 }
 <!-- device port list -->
 @if (showPortList) {
