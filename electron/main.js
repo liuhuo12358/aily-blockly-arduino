@@ -798,6 +798,11 @@ function createWindow() {
     },
   });
 
+  mainWindow.setBounds({
+    height: mainWindowState.height,
+    width: mainWindowState.width,
+  });
+
   mainWindowState.manage(mainWindow);
 
   // mainWindow.setMenu(null);
@@ -1105,14 +1110,14 @@ app.on("ready", () => {
 //   contents.session.on('select-serial-port', (event, portList, webContents, callback) => {
 //     event.preventDefault();
 //     console.log('Web Serial API: 可用串口列表', portList);
-    
+
 //     // 如果有可用的串口，选择第一个（或者可以根据 VID/PID 筛选）
 //     if (portList && portList.length > 0) {
 //       // 查找 ESP32S3 设备 (VID: 0x303a, PID: 0x1001)
-//       const esp32Port = portList.find(port => 
+//       const esp32Port = portList.find(port =>
 //         port.vendorId === '303a' && port.productId === '1001'
 //       );
-      
+
 //       if (esp32Port) {
 //         console.log('选择 ESP32S3 串口:', esp32Port.portId);
 //         callback(esp32Port.portId);
