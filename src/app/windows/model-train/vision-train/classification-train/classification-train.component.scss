@@ -33,6 +33,16 @@
       border: 1px solid #3a3d40;
       border-radius: 8px;
       padding: 16px;
+      transition: all 0.2s;
+
+      &.disabled {
+        opacity: 0.5;
+        background: #1a1c1e;
+        
+        .class-body {
+          pointer-events: none;
+        }
+      }
 
       .class-header {
         display: flex;
@@ -46,6 +56,19 @@
           font-size: 16px;
           font-weight: 500;
           color: #fff;
+        }
+
+        .disabled-badge {
+          position: absolute;
+          right: 26px;
+          margin-left: 8px;
+          padding: 2px 8px;
+          font-size: 14px;
+          color: #ff6b6b;
+          background: rgba(255, 107, 107, 0.1);
+          border: 1px solid rgba(255, 107, 107, 0.3);
+          border-radius: 4px;
+          font-weight: 500;
         }
 
         .class-name-input {
@@ -486,8 +509,7 @@
     width: 200px;
     // min-width: 180px;
     flex-shrink: 1;
-    position: sticky;
-    top: 20px;
+    align-self: center;
 
     .panel-card {
       background: #1e2022;
@@ -505,7 +527,7 @@
       .panel-body {
         .train-btn {
           width: 100%;
-          padding: 10px 16px;
+          padding: 6px 16px;
           background: #fff;
           border: 1px solid #d9d9d9;
           border-radius: 4px;
@@ -625,8 +647,7 @@
     width: 220px;
     min-width: 220px;
     flex-shrink: 1;
-    position: sticky;
-    top: 20px;
+    align-self: center;
 
     .panel-card {
       background: #1e2022;

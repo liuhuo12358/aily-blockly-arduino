@@ -13,6 +13,7 @@ import { NzMessageService } from 'ng-zorro-antd/message';
 import { Subscription } from 'rxjs';
 import { SubWindowComponent } from '../../../../components/sub-window/sub-window.component';
 import { ModelTrainService, TrainProgress, ClassData } from '../../../../services/model-train.service';
+import { ProjectService } from '../../../../services/project.service';
 import * as tf from '@tensorflow/tfjs';
 import '@tensorflow/tfjs-backend-webgl';
 import '@tensorflow/tfjs-backend-webgpu';
@@ -108,6 +109,7 @@ export class ClassificationTrainComponent implements OnInit, OnDestroy {
   private trainedModel: tf.LayersModel | null = null;
   private realTimePredictions: { [key: number]: number } = {};
   private isInferencing: boolean = false;
+  private trainedClassLabels: string[] = []; // 训练时的类别标签顺序（来自label.txt）
 
   // 类别颜色配置
   private classColors = [
@@ -124,7 +126,8 @@ export class ClassificationTrainComponent implements OnInit, OnDestroy {
     private router: Router,
     private modal: NzModalService,
     private modelTrainService: ModelTrainService,
-    private message: NzMessageService
+    private message: NzMessageService,
+    private projectService: ProjectService
   ) { }
 
   ngOnInit() {
@@ -551,7 +554,12 @@ export class ClassificationTrainComponent implements OnInit, OnDestroy {
       if (result.success) {
         this.modelTrained = true;
         this.trainedModelPath = result.modelName || null;
-        this.message.success(`模型训练完成！模型已保存到浏览器存储: ${result.modelName}`);
+        
+        // 保存训练时的类别标签顺序（对应模型输出的顺序）
+        this.trainedClassLabels = enabledClasses.map(c => c.name);
+        
+        // this.message.success(`模型训练完成！模型已保存到浏览器存储: ${result.modelName}`);
+        this.message.success(`模型训练完成！`);
         
         // 自动启用预览并加载模型
         this.previewEnabled = true;
@@ -779,11 +787,14 @@ export class ClassificationTrainComponent implements OnInit, OnDestroy {
         const probs = await logits.data();
         logits.dispose();
         
-        // 转换为百分比并映射到类别ID
+        // 转换为百分比并映射到类别ID（使用训练时的标签顺序）
         const predictions: { [key: number]: number } = {};
-        const enabledClasses = this.classList.filter(c => c.enabled);
-        enabledClasses.forEach((classItem, index) => {
-          predictions[classItem.id] = Math.round(probs[index] * 100);
+        this.trainedClassLabels.forEach((labelName, index) => {
+          // 通过标签名称找到对应的类别
+          const classItem = this.classList.find(c => c.name === labelName);
+          if (classItem && probs[index] !== undefined) {
+            predictions[classItem.id] = Math.round(probs[index] * 100);
+          }
         });
         
         // 更新预测结果
@@ -896,11 +907,14 @@ export class ClassificationTrainComponent implements OnInit, OnDestroy {
     const probs = await logits.data();
     logits.dispose();
     
-    // 转换为百分比并映射到类别ID
+    // 转换为百分比并映射到类别ID（使用训练时的标签顺序）
     const predictions: { [key: number]: number } = {};
-    const enabledClasses = this.classList.filter(c => c.enabled);
-    enabledClasses.forEach((classItem, index) => {
-      predictions[classItem.id] = Math.round(probs[index] * 100);
+    this.trainedClassLabels.forEach((labelName, index) => {
+      // 通过标签名称找到对应的类别
+      const classItem = this.classList.find(c => c.name === labelName);
+      if (classItem && probs[index] !== undefined) {
+        predictions[classItem.id] = Math.round(probs[index] * 100);
+      }
     });
     
     return predictions;
@@ -922,8 +936,137 @@ export class ClassificationTrainComponent implements OnInit, OnDestroy {
   }
 
   // 导出模型
-  exportModel() {
-    console.log('导出模型');
+  async exportModel() {
+    if (!this.trainedModelPath || !this.trainedModel) {
+      this.message.error('没有可导出的模型');
+      return;
+    }
+
+    try {
+      // 显示加载消息
+      const loadingMsg = this.message.loading('正在导出模型...', { nzDuration: 0 });
+
+      // 1. 从 IndexedDB 加载模型
+      const model = await tf.loadLayersModel(`indexeddb://${this.trainedModelPath}`);
+      
+      // 2. 创建保存处理器来捕获模型数据
+      let modelTopology: any = null;
+      let weightSpecs: any = null;
+      let weightData: ArrayBuffer | ArrayBuffer[] | null = null;
+
+      await model.save(tf.io.withSaveHandler(async (artifacts) => {
+        modelTopology = artifacts.modelTopology;
+        weightSpecs = artifacts.weightSpecs;
+        weightData = artifacts.weightData;
+        
+        return {
+          modelArtifactsInfo: {
+            dateSaved: new Date(),
+            modelTopologyType: 'JSON'
+          }
+        };
+      }));
+
+      // 3. 获取应用数据路径
+      const electronAPI = (window as any).electronAPI;
+      if (!electronAPI || !electronAPI.path || !electronAPI.fs) {
+        this.message.error('Electron API 不可用');
+        this.message.remove(loadingMsg.messageId);
+        return;
+      }
+
+      // 使用 appDataPath 存储模型文件
+      const appDataPath = (window as any)['path'].getAppDataPath();
+      if (!appDataPath) {
+        this.message.error('无法获取应用数据路径');
+        this.message.remove(loadingMsg.messageId);
+        return;
+      }
+
+      // 4. 创建输出目录
+      const outputDir = electronAPI.path.join(appDataPath, 'models', 'classification');
+      if (!electronAPI.fs.existsSync(outputDir)) {
+        electronAPI.fs.mkdirSync(outputDir, { recursive: true });
+      }
+
+      // 5. 保存 model.json
+      const modelJSON = {
+        modelTopology: modelTopology,
+        weightsManifest: [{
+          paths: ['weights.bin'],
+          weights: weightSpecs
+        }],
+        format: 'tfjs-layers',
+        generatedBy: 'Aily Blockly - Classification Trainer',
+        convertedBy: null
+      };
+
+      const modelJSONPath = electronAPI.path.join(outputDir, 'model.json');
+      electronAPI.fs.writeFileSync(
+        modelJSONPath, 
+        JSON.stringify(modelJSON, null, 2),
+        'utf-8'
+      );
+
+      // 6. 保存权重文件
+      const weightsPath = electronAPI.path.join(outputDir, 'weights.bin');
+      // 处理权重数据（可能是ArrayBuffer或ArrayBuffer[]）
+      let weightsUint8Array: Uint8Array;
+      if (Array.isArray(weightData)) {
+        // 如果是数组，合并所有ArrayBuffer
+        const totalLength = weightData.reduce((sum, buf) => sum + buf.byteLength, 0);
+        weightsUint8Array = new Uint8Array(totalLength);
+        let offset = 0;
+        for (const buf of weightData) {
+          weightsUint8Array.set(new Uint8Array(buf), offset);
+          offset += buf.byteLength;
+        }
+      } else {
+        weightsUint8Array = new Uint8Array(weightData!);
+      }
+      // 使用 Uint8Array 写入文件（Electron fs 支持）
+      electronAPI.fs.writeFileSync(weightsPath, weightsUint8Array);
+
+      // 7. 保存标签文件 (labels.txt)
+      const labelsPath = electronAPI.path.join(outputDir, 'labels.txt');
+      electronAPI.fs.writeFileSync(
+        labelsPath,
+        this.trainedClassLabels.join('\n'),
+        'utf-8'
+      );
+
+      // 8. 保存元数据
+      const metadata = {
+        name: 'Classification Model',
+        type: 'image-classification',
+        createdAt: new Date().toISOString(),
+        classNames: this.trainedClassLabels,
+        numClasses: this.trainedClassLabels.length,
+        inputShape: [224, 224, 3],
+        modelConfig: {
+          mobileNetVersion: 1,
+          mobileNetAlpha: 0.25,
+          denseUnits: 128,
+          epochs: this.trainConfig.epochs,
+          learningRate: this.trainConfig.learningRate,
+          batchSize: this.trainConfig.batchSize
+        }
+      };
+
+      const metadataPath = electronAPI.path.join(outputDir, 'metadata.json');
+      electronAPI.fs.writeFileSync(
+        metadataPath,
+        JSON.stringify(metadata, null, 2),
+        'utf-8'
+      );
+
+      this.message.remove(loadingMsg.messageId);
+      this.message.success(`模型已导出到: ${outputDir}`);
+      
+    } catch (error: any) {
+      console.error('导出模型失败:', error);
+      this.message.error(`导出模型失败: ${error.message}`);
+    }
   }
 
   // 部署模型

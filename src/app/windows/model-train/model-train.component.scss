@@ -46,13 +46,30 @@
           transition: all 0.3s;
         }
 
-        &:hover {
+        .desc {
+          margin-top: 8px;
+          font-size: 12px;
+          color: #999;
+        }
+
+        &:hover:not(.disabled) {
           border-color: #1890ff;
           box-shadow: 0 4px 12px rgba(24, 144, 255, 0.2);
           transform: translateY(-2px);
 
           i {
             transform: scale(1.1);
+          }
+        }
+
+        &.disabled {
+          opacity: 0.4;
+          cursor: not-allowed;
+          background: #16181a;
+          border-color: #2a2c2d;
+
+          i {
+            color: #555;
           }
         }
       }
