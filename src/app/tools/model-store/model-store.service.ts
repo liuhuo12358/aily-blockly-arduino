@@ -76,6 +76,7 @@ export interface ModelDetail {
     iou: string;
     conf: string;
   };
+  is_enabled: boolean;
   version: string;
   created: string;
   deleted: string;
@@ -101,7 +102,7 @@ export class ModelStoreService {
   private detailApiUrl = API.modelDetails;
 
   private readonly pageSize = 12;  // 每页显示数量
-  private readonly uniformType = 32;  // XIAO ESP32S3 Sense
+  // private readonly uniformType = 32;  // XIAO ESP32S3 Sense
 
   constructor(
     private translateService: TranslateService,
@@ -116,9 +117,10 @@ export class ModelStoreService {
    * @returns Observable<ModelListResult>
    */
   getModelList(page: number = 1, pageSize: number = 12, uniformType?: number): Observable<ModelListResult> {
-    const type = uniformType || this.uniformType;
+    // const type = uniformType || this.uniformType;
+    const type = uniformType || '';
     const url = `${this.baseUrl}?page=${page}&length=${pageSize}&uniform_type=${type}&lang=${this.translateService.currentLang}`;
-    // console.log('请求模型列表URL:', url);
+    console.log('请求模型列表URL:', url);
     return this.http.get<ModelListResponse>(url).pipe(
       map(response => {
         const total = parseInt(response.data.total || '0', 10);

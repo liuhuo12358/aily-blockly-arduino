@@ -107,7 +107,7 @@ export class ModelDetailComponent implements OnInit {
    */
   onDeploy(modelDetail: ModelDetail, mode: 'deploy' | 'test' = 'deploy'): void {
     if (!modelDetail) {
-      console.error('模型数据为空，无法部署');
+      console.error('模型数据为空或未启用，无法部署');
       return;
     }
 

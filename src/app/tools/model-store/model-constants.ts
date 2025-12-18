@@ -32,6 +32,10 @@ export const BOARD_INFOS: Record<string, SupportBoardInfo> = {
   '41': {
     board:'SenseCAP A1102',
     url:'https://www.seeedstudio.com/XIAO-ESP32S3-p-5627.html'
+  },
+  '60': {
+    board:'Easy code ASR module',
+    url:''
   }
 };
 
@@ -43,7 +47,8 @@ export const ADAPTEDS_TO_UNIFORM_TYPE: Record<string, string> = {
   '11': '36',
   '12': '37',
   '13': '40',
-  '14': '41'
+  '14': '41',
+  '20': '60'
 };
 
 // 任务类型映射
@@ -52,7 +57,8 @@ export const TASK_TYPES: Record<string, string> = {
   '2': '分类检测',
   '3': '图像分割',
   '4': '姿态检测',
-  '5': '生成式模型'
+  '5': '生成式模型',
+  '6': '音频识别'
 };
 
 // 模型精度映射
