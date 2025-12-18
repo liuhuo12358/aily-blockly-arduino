@@ -1,103 +1,16 @@
 import { Injectable } from '@angular/core';
-import { IMenuItem } from '../../configs/menu.config';
-
-export interface AppItem extends IMenuItem {
-  id: string;
-  description?: string;
-  enabled?: boolean;
-}
-
-// 默认的 App 列表，前6个会显示在 header 上
-export const DEFAULT_APPS: AppItem[] = [
-  {
-    id: 'code-viewer',
-    name: 'MENU.CODE',
-    description: 'APP_STORE.CODE_DESC',
-    action: 'tool-open',
-    data: { type: 'tool', data: 'code-viewer' },
-    icon: 'fa-light fa-rectangle-code',
-    router: ['/main/blockly-editor'],
-    enabled: true
-  },
-  {
-    id: 'lib-manager',
-    name: 'MENU.LIB_MANAGER',
-    description: 'APP_STORE.LIB_MANAGER_DESC',
-    action: 'tool-open',
-    data: { type: 'tool', data: 'lib-manager' },
-    icon: 'fa-light fa-books',
-    router: ['/main/code-editor'],
-    enabled: true
-  },
-  {
-    id: 'serial-monitor',
-    name: 'MENU.TOOL_SERIAL',
-    description: 'APP_STORE.SERIAL_DESC',
-    action: 'tool-open',
-    data: { type: 'tool', data: 'serial-monitor' },
-    icon: 'fa-light fa-monitor-waveform',
-    enabled: true
-  },
-  {
-    id: 'aily-chat',
-    name: 'MENU.AI',
-    description: 'APP_STORE.AI_DESC',
-    action: 'tool-open',
-    data: { type: 'tool', data: 'aily-chat' },
-    icon: 'fa-light fa-star-christmas',
-    more: 'AI',
-    enabled: true
-  },
-  {
-    id: 'model-store',
-    name: 'MENU.MODEL_STORE',
-    description: 'APP_STORE.MODEL_STORE_DESC',
-    action: 'tool-open',
-    data: { type: 'tool', data: 'model-store' },
-    icon: 'fa-light fa-microchip-ai',
-    enabled: true
-  },
-  {
-    id: 'cloud-space',
-    name: 'MENU.USER_SPACE',
-    description: 'APP_STORE.CLOUD_SPACE_DESC',
-    action: 'tool-open',
-    data: { type: 'tool', data: 'cloud-space' },
-    icon: 'fa-light fa-cloud',
-    enabled: true
-  },
-  {
-    id: 'user-center',
-    name: 'MENU.USER_AUTH',
-    description: 'APP_STORE.USER_CENTER_DESC',
-    action: 'tool-open',
-    data: { type: 'tool', data: 'user-center' },
-    icon: 'fa-light fa-user',
-    enabled: true
-  },
-  {
-    id: 'simulator',
-    name: 'MENU.SIMULATOR',
-    description: 'APP_STORE.SIMULATOR_DESC',
-    action: 'tool-open',
-    data: { type: 'tool', data: 'simulator' },
-    icon: 'fa-light fa-atom',
-    router: ['/main/blockly-editor'],
-    dev: true,
-    enabled: false
-  }
-];
+import { AppItem, APP_LIST, HEADER_APP_LIMIT, SIDEBAR_APP_LIMIT } from './app-store.config';
 
 @Injectable({
   providedIn: 'root'
 })
 export class AppStoreService {
-  private apps: AppItem[] = [...DEFAULT_APPS];
+  private apps: AppItem[] = [...APP_LIST];
 
   // Header 上显示的 app 数量上限
-  readonly HEADER_APP_LIMIT = 6;
+  readonly HEADER_APP_LIMIT = HEADER_APP_LIMIT;
   // Sidebar 上显示的 app 数量上限
-  readonly SIDEBAR_APP_LIMIT = 4;
+  readonly SIDEBAR_APP_LIMIT = SIDEBAR_APP_LIMIT;
 
   constructor() {
     this.loadAppsFromStorage();
@@ -105,33 +18,19 @@ export class AppStoreService {
 
   // 从本地存储加载 app 配置
   private loadAppsFromStorage(): void {
-    try {
-      const stored = localStorage.getItem('app-store-config');
-      if (stored) {
-        const storedApps: AppItem[] = JSON.parse(stored);
-        // 合并存储的配置和默认配置
-        this.apps = DEFAULT_APPS.map(defaultApp => {
-          const storedApp = storedApps.find(a => a.id === defaultApp.id);
-          return storedApp ? { ...defaultApp, enabled: storedApp.enabled } : defaultApp;
-        });
-      }
-    } catch (e) {
-      console.error('Failed to load app store config:', e);
-    }
+    // 不再使用旧的 app-store-config，始终使用默认应用列表
+    // 用户的配置现在存储在 app-store-zones-config 中
+    this.apps = [...APP_LIST];
   }
 
-  // 保存 app 配置到本地存储
+  // 保存 app 配置到本地存储（已废弃，配置现在由组件管理）
   private saveAppsToStorage(): void {
-    try {
-      localStorage.setItem('app-store-config', JSON.stringify(this.apps));
-    } catch (e) {
-      console.error('Failed to save app store config:', e);
-    }
+    // 不再需要保存，配置由 app-store.component 管理
   }
 
   // 获取所有 app
   getAllApps(): AppItem[] {
-    return this.apps;
+    return [...APP_LIST]; // 始终返回完整的默认应用列表
   }
 
   // 获取启用的 app
@@ -169,7 +68,7 @@ export class AppStoreService {
 
   // 重置为默认配置
   resetToDefault(): void {
-    this.apps = [...DEFAULT_APPS];
+    this.apps = [...APP_LIST];
     localStorage.removeItem('app-store-config');
   }
 }

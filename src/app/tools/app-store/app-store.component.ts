@@ -1,14 +1,15 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, AfterViewInit, ViewChild, ElementRef } from '@angular/core';
 import { ToolContainerComponent } from '../../components/tool-container/tool-container.component';
 import { SubWindowComponent } from '../../components/sub-window/sub-window.component';
 import { CommonModule } from '@angular/common';
 import { UiService } from '../../services/ui.service';
 import { Router } from '@angular/router';
-import { AppStoreService, AppItem } from './app-store.service';
+import { AppStoreService } from './app-store.service';
+import { AppItem, APP_LIST, HEADER_APP_LIMIT, SIDEBAR_APP_LIMIT } from './app-store.config';
 import { TranslateModule } from '@ngx-translate/core';
 import { FormsModule } from '@angular/forms';
 import { NzToolTipModule } from 'ng-zorro-antd/tooltip';
-import { CdkDragDrop, DragDropModule, moveItemInArray, transferArrayItem } from '@angular/cdk/drag-drop';
+import Sortable from 'sortablejs';
 
 @Component({
   selector: 'app-app-store',
@@ -18,13 +19,12 @@ import { CdkDragDrop, DragDropModule, moveItemInArray, transferArrayItem } from 
     CommonModule,
     TranslateModule,
     FormsModule,
-    NzToolTipModule,
-    DragDropModule
+    NzToolTipModule
   ],
   templateUrl: './app-store.component.html',
   styleUrl: './app-store.component.scss'
 })
-export class AppStoreComponent implements OnInit {
+export class AppStoreComponent implements OnInit, AfterViewInit {
   currentUrl: string;
   windowInfo = 'MENU.APP_STORE';
   
@@ -32,6 +32,10 @@ export class AppStoreComponent implements OnInit {
   headerZoneApps: AppItem[] = [];
   sidebarZoneApps: AppItem[] = [];
   otherZoneApps: AppItem[] = [];
+
+  @ViewChild('headerZone') headerZone!: ElementRef;
+  @ViewChild('sidebarZone') sidebarZone!: ElementRef;
+  @ViewChild('otherZone') otherZone!: ElementRef;
 
   constructor(
     private uiService: UiService,
@@ -44,11 +48,118 @@ export class AppStoreComponent implements OnInit {
     this.loadApps();
   }
 
+  ngAfterViewInit() {
+    this.initSortable();
+  }
+
+  initSortable() {
+    // 初始化 header 区域的 sortable
+    if (this.headerZone) {
+      new Sortable(this.headerZone.nativeElement, {
+        group: {
+          name: 'apps',
+          pull: true,
+          put: ['apps', 'apps-clone']
+        },
+        animation: 150,
+        onSort: (evt) => {
+          this.updateArrayFromDOM(this.headerZone.nativeElement, this.headerZoneApps);
+          this.saveAppsOrder();
+        }
+      });
+    }
+
+    // 初始化 sidebar 区域的 sortable
+    if (this.sidebarZone) {
+      new Sortable(this.sidebarZone.nativeElement, {
+        group: {
+          name: 'apps',
+          pull: true,
+          put: ['apps', 'apps-clone']
+        },
+        animation: 150,
+        onSort: (evt) => {
+          this.updateArrayFromDOM(this.sidebarZone.nativeElement, this.sidebarZoneApps);
+          this.saveAppsOrder();
+        }
+      });
+    }
+
+    // 初始化 other 区域的 sortable（只能拖出复制，不能拖入，不能排序）
+    if (this.otherZone) {
+      new Sortable(this.otherZone.nativeElement, {
+        group: {
+          name: 'apps-clone',
+          pull: 'clone', // 使用克隆模式，拖拽时复制而不是移动
+          put: false // 不允许其他区域拖入
+        },
+        sort: false, // 禁止在 other 区域内部排序
+        animation: 150
+      });
+    }
+  }
+
+  // 从 DOM 更新数组数据
+  private updateArrayFromDOM(element: HTMLElement, targetArray: AppItem[]) {
+    const cards = Array.from(element.querySelectorAll('.app-card'));
+    const newArray: AppItem[] = [];
+    
+    cards.forEach((card) => {
+      const appId = card.getAttribute('data-id');
+      if (appId) {
+        const app = APP_LIST.find(a => a.id === appId);
+        if (app) {
+          newArray.push(app);
+        }
+      }
+    });
+
+    // 更新数组
+    targetArray.length = 0;
+    targetArray.push(...newArray);
+  }
+
   loadApps() {
-    const allApps = this.appStoreService.getAllApps();
-    this.headerZoneApps = allApps.slice(0, this.headerAppLimit);
-    this.sidebarZoneApps = allApps.slice(this.headerAppLimit, this.headerAppLimit + this.sidebarAppLimit);
-    this.otherZoneApps = allApps.slice(this.headerAppLimit + this.sidebarAppLimit);
+    // 直接使用配置文件中的默认应用列表
+    const allApps = [...APP_LIST];
+    console.log('所有应用数据:', allApps);
+    
+    // 从存储中加载用户配置的 header 和 sidebar 应用
+    const storedConfig = this.loadStoredConfig(allApps);
+    
+    if (storedConfig) {
+      this.headerZoneApps = storedConfig.header || [];
+      this.sidebarZoneApps = storedConfig.sidebar || [];
+    } else {
+      // 默认配置：前6个在 header，接下来4个在 sidebar
+      this.headerZoneApps = allApps.slice(0, HEADER_APP_LIMIT);
+      this.sidebarZoneApps = allApps.slice(HEADER_APP_LIMIT, HEADER_APP_LIMIT + SIDEBAR_APP_LIMIT);
+    }
+    
+    // 所有应用区域始终显示所有应用
+    this.otherZoneApps = [...allApps];
+    console.log('otherZoneApps:', this.otherZoneApps);
+    console.log('headerZoneApps:', this.headerZoneApps);
+    console.log('sidebarZoneApps:', this.sidebarZoneApps);
+  }
+
+  // 从本地存储加载用户配置
+  private loadStoredConfig(allApps: AppItem[]): { header: AppItem[], sidebar: AppItem[] } | null {
+    try {
+      const stored = localStorage.getItem('app-store-zones-config');
+      if (stored) {
+        const config = JSON.parse(stored);
+        
+        // 根据存储的 ID 恢复应用对象
+        const header = config.header?.map((id: string) => allApps.find(app => app.id === id)).filter(Boolean) || [];
+        const sidebar = config.sidebar?.map((id: string) => allApps.find(app => app.id === id)).filter(Boolean) || [];
+        
+        return { header, sidebar };
+      }
+    } catch (e) {
+      console.error('Failed to load app store zones config:', e);
+    }
+    return null;
   }
 
   // 打开 app
@@ -56,43 +167,19 @@ export class AppStoreComponent implements OnInit {
     this.uiService.openTool(app.data.data);
   }
 
-  // 拖拽排序
-  drop(event: CdkDragDrop<AppItem[]>) {
-    if (event.previousContainer === event.container) {
-      // 同一区域内移动
-      moveItemInArray(event.container.data, event.previousIndex, event.currentIndex);
-    } else {
-      // 跨区域移动
-      // 如果目标是 header 区域且已满，则需要交换
-      if (event.container.data === this.headerZoneApps && this.headerZoneApps.length >= this.headerAppLimit) {
-        // 将 header 区域最后一个移到 sidebar 区域开头
-        const lastItem = this.headerZoneApps.pop();
-        if (lastItem) {
-          this.sidebarZoneApps.unshift(lastItem);
-        }
-      }
-      // 如果目标是 sidebar 区域且已满，则需要交换
-      if (event.container.data === this.sidebarZoneApps && this.sidebarZoneApps.length >= this.sidebarAppLimit) {
-        // 将 sidebar 区域最后一个移到 other 区域开头
-        const lastItem = this.sidebarZoneApps.pop();
-        if (lastItem) {
-          this.otherZoneApps.unshift(lastItem);
-        }
-      }
-      transferArrayItem(
-        event.previousContainer.data,
-        event.container.data,
-        event.previousIndex,
-        event.currentIndex
-      );
-    }
-    this.saveAppsOrder();
-  }
-
   // 保存排序
   saveAppsOrder() {
-    const allApps = [...this.headerZoneApps, ...this.sidebarZoneApps, ...this.otherZoneApps];
-    this.appStoreService.updateAppsOrder(allApps);
+    // 保存 header 和 sidebar 的应用配置
+    const config = {
+      header: this.headerZoneApps.map(app => app.id),
+      sidebar: this.sidebarZoneApps.map(app => app.id)
+    };
+    
+    try {
+      localStorage.setItem('app-store-zones-config', JSON.stringify(config));
+    } catch (e) {
+      console.error('Failed to save app store zones config:', e);
+    }
   }
 
   // 获取 header 上显示的 app 数量

@@ -23,7 +23,8 @@ import { AuthService } from '../../../services/auth.service';
 import { BoardSelectorDialogComponent } from '../board-selector-dialog/board-selector-dialog.component';
 import { LoginDialogComponent } from '../login-dialog/login-dialog.component';
 import { PlatformService } from '../../../services/platform.service';
-import { AppStoreService, AppItem } from '../../../tools/app-store/app-store.service';
+import { AppStoreService } from '../../../tools/app-store/app-store.service';
+import { AppItem } from '../../../tools/app-store/app-store.config';
 
 @Component({
   selector: 'app-header',
