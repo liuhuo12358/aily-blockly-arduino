@@ -121,6 +121,7 @@
         "SECTIONS": {
             "BASIC": "Basic Settings",
             "THEME": "Theme Settings",
+            "BLOCKLY": "Blockly Settings",
             "COMPILATION": "Compilation",
             "REPOSITORY": "Repository",
             "DEPENDENCIES": "Dependencies",
@@ -133,6 +134,7 @@
             "UI_THEME": "UI Theme",
             "BLOCKLY_THEME": "Blockly Theme",
             "BLOCKLY_MINIMAP": "Blockly Minimap",
+            "FLYOUT_AUTO_CLOSE": "Auto Close Toolbox",
             "COMPILATION_OPTIONS": "Compilation Options",
             "REPOSITORY_URLS": "Repository URLs",
             "BOARD_LIST": "Board List",
