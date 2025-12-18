@@ -99,11 +99,29 @@
         "SPONSORS": "Project Sponsors",
         "SPONSORS_DESC": "This project is sponsored by the following companies/individuals"
     },
+    "APP_STORE": {
+        "HEADER_INFO": "First {{count}} apps will be shown in the toolbar",
+        "RESET": "Reset",
+        "IN_HEADER": "Toolbar",
+        "TOOLBAR_APPS": "Toolbar Apps",
+        "SIDEBAR_APPS": "Sidebar Apps",
+        "OTHER_APPS": "Other Apps",
+        "DRAG_HERE": "Drag here",
+        "CODE_DESC": "View generated code",
+        "LIB_MANAGER_DESC": "Manage project library dependencies",
+        "SERIAL_DESC": "Serial monitor tool",
+        "AI_DESC": "AI Assistant",
+        "MODEL_STORE_DESC": "AI Model Store",
+        "CLOUD_SPACE_DESC": "Cloud storage space",
+        "USER_CENTER_DESC": "User center and settings",
+        "SIMULATOR_DESC": "Simulator (In Development)"
+    },
     "SETTINGS": {
         "TITLE": "Settings",
         "SECTIONS": {
             "BASIC": "Basic Settings",
             "THEME": "Theme Settings",
+            "BLOCKLY": "Blockly Settings",
             "COMPILATION": "Compilation",
             "REPOSITORY": "Repository",
             "DEPENDENCIES": "Dependencies",
@@ -116,6 +134,7 @@
             "UI_THEME": "UI Theme",
             "BLOCKLY_THEME": "Blockly Theme",
             "BLOCKLY_MINIMAP": "Blockly Minimap",
+            "FLYOUT_AUTO_CLOSE": "Auto Close Toolbox",
             "COMPILATION_OPTIONS": "Compilation Options",
             "REPOSITORY_URLS": "Repository URLs",
             "BOARD_LIST": "Board List",

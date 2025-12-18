@@ -98,11 +98,29 @@
         "SPONSORS": "项目赞助者",
         "SPONSORS_DESC": "本项目得到了以下企业/个人的赞助"
     },
+    "APP_STORE": {
+        "HEADER_INFO": "前 {{count}} 个应用会显示在顶部工具栏",
+        "RESET": "重置",
+        "IN_HEADER": "工具栏",
+        "TOOLBAR_APPS": "工具栏",
+        "SIDEBAR_APPS": "侧边栏",
+        "OTHER_APPS": "其他应用",
+        "DRAG_HERE": "拖拽到此处",
+        "CODE_DESC": "查看生成的代码",
+        "LIB_MANAGER_DESC": "管理项目库依赖",
+        "SERIAL_DESC": "串口监视器工具",
+        "AI_DESC": "AI 智能助手",
+        "MODEL_STORE_DESC": "AI 模型商店",
+        "CLOUD_SPACE_DESC": "云端存储空间",
+        "USER_CENTER_DESC": "用户中心与设置",
+        "SIMULATOR_DESC": "仿真器（开发中）"
+    },
     "SETTINGS": {
         "TITLE": "设置",
         "SECTIONS": {
             "BASIC": "基础设置",
             "THEME": "主题设置",
+            "BLOCKLY": "Blockly设置",
             "COMPILATION": "编译设置",
             "REPOSITORY": "仓库设置",
             "DEPENDENCIES": "全局依赖",
@@ -115,6 +133,7 @@
             "UI_THEME": "界面主题",
             "BLOCKLY_THEME": "Blockly主题",
             "BLOCKLY_MINIMAP": "Blockly缩略图",
+            "FLYOUT_AUTO_CLOSE": "自动关闭工具箱",
             "COMPILATION_OPTIONS": "编译选项",
             "REPOSITORY_URLS": "仓库地址",
             "BOARD_LIST": "开发板列表",

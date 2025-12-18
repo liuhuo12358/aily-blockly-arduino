@@ -23,6 +23,9 @@ import { AuthService } from '../../../services/auth.service';
 import { BoardSelectorDialogComponent } from '../board-selector-dialog/board-selector-dialog.component';
 import { LoginDialogComponent } from '../login-dialog/login-dialog.component';
 import { PlatformService } from '../../../services/platform.service';
+// import { AppStoreService } from '../../../tools/app-store/app-store.service';
+import { AppItem } from '../../../tools/app-store/app-store.config';
+import { APP_LIST } from '../../../configs/tool.config';
 
 @Component({
   selector: 'app-header',
@@ -39,6 +42,7 @@ import { PlatformService } from '../../../services/platform.service';
 export class HeaderComponent {
   headerBtns = HEADER_BTNS;
   headerMenu = HEADER_MENU;
+  headerApps = APP_LIST;
 
   get isMac() {
     return this.platformService.isMac();
@@ -78,6 +82,11 @@ export class HeaderComponent {
     return isDevMode()
   }
 
+  // 从 AppStoreService 获取要显示在 header 上的 apps
+  // get headerApps(): AppItem[] {
+  //   return this.appStoreService.getHeaderApps();
+  // }
+
   constructor(
     private projectService: ProjectService,
     private uiService: UiService,
@@ -93,7 +102,8 @@ export class HeaderComponent {
     private configService: ConfigService,
     private authService: AuthService,
     private translate: TranslateService,
-    private platformService: PlatformService
+    private platformService: PlatformService,
+    // private appStoreService: AppStoreService
   ) { }
 
   async ngAfterViewInit() {
@@ -107,11 +117,11 @@ export class HeaderComponent {
         });
 
         // headerBtns中的按钮都置为默认状态
-        this.headerBtns.forEach((btnGroup) => {
-          btnGroup.forEach((btn) => {
-            btn.state = 'default';
-          });
-        });
+        // this.headerBtns.forEach((btnGroup) => {
+        //   btnGroup.forEach((btn) => {
+        //     btn.state = 'default';
+        //   });
+        // });
       } else {
         // 将headerMenu中有disabled的按钮置禁用
         this.headerMenu.forEach((menu) => {
@@ -719,6 +729,13 @@ export class HeaderComponent {
     //     this.cd.detectChanges();
     //   }
     // });
+  }
+
+  appStoreBtn = {
+    name: 'MENU.APP_STORE',
+    action: 'tool-open',
+    data: { type: 'tool', data: "app-store" },
+    icon: 'fa-light fa-grid-2-plus',
   }
 }
 

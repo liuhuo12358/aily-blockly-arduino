@@ -253,25 +253,39 @@ export class ElectronService {
     }
   }
 
-  private _isWindowFullScreen: boolean | null = null;
-
   /**
-   * 窗口全屏状态
+   * 检查窗口是否最大化
    * @returns boolean
    */
-  isWindowFullScreen() {
-    // if (this.isElectron) {
-    //   try {
-    //     window['ipcRenderer'].invoke('window-is-full-screen').then((state: boolean) => {
-    //       this._isWindowFullScreen = state;
-    //     });
-    //     return this._isWindowFullScreen;
-    //   } catch (error) {
-    //     console.warn('获取全屏状态失败:', error);
-    //     return false;
-    //   }
-    // }
-    return false;
+  isWindowMaximized(): boolean {
+    if (!this.isElectron) {
+      return false;
+    }
+
+    try {
+      return window['iWindow'].isMaximized();
+    } catch (error) {
+      console.error('Check window maximized error:', error);
+      return false;
+    }
+  }
+
+  /**
+   * 检查窗口是否最大化（同步方法，用于模板绑定）
+   * 注意：这里实际检测的是窗口最大化状态，而非全屏状态
+   * @returns boolean
+   */
+  isWindowFullScreen(): boolean {
+    if (!this.isElectron) {
+      return false;
+    }
+
+    try {
+      return window['iWindow'].isMaximized();
+    } catch (error) {
+      console.error('Check window maximized error:', error);
+      return false;
+    }
   }
 
 

@@ -54,6 +54,10 @@ export class SettingsComponent {
     //   icon: 'fa-light fa-screwdriver-wrench'
     // },
     {
+      name: 'SETTINGS.SECTIONS.BLOCKLY',
+      icon: 'fa-light fa-puzzle-piece'
+    },
+    {
       name: 'SETTINGS.SECTIONS.REPOSITORY',
       icon: 'fa-light fa-book-bookmark'
     },

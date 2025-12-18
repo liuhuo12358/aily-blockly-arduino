@@ -29,6 +29,7 @@ import './custom-field/field-slider';
 import './custom-field/field-angle180';
 import './custom-field/field-angle';
 import '@blockly/field-colour-hsv-sliders';
+import './plugins/non-closing-flyout/index';
 
 import { Multiselect } from './plugins/workspace-multiselect/index.js';
 import { PromptDialogComponent } from './components/prompt-dialog/prompt-dialog.component.js';
@@ -280,6 +281,12 @@ export class BlocklyComponent implements DoCheck {
       this.setupBlockRegistryInterception();
       // 获取当前blockly渲染器
       this.options.renderer = this.configData.blockly.renderer ? ('aily-' + this.configData.blockly.renderer) : 'thrasos';
+
+      // 根据配置决定是否使用 non-closing-flyout（flyout 拖出 block 后不关闭）
+      // flyoutAutoClose 默认为 true，只有明确设为 false 时才禁用自动关闭
+      if (this.configData.blockly.flyoutAutoClose === false) {
+        this.options.plugins['flyoutsVerticalToolbox'] = 'non-closing-flyout';
+      }
 
       this.workspace = Blockly.inject('blocklyDiv', this.options);
 
