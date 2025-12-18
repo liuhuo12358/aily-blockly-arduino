@@ -29,7 +29,6 @@ import './custom-field/field-slider';
 import './custom-field/field-angle180';
 import './custom-field/field-angle';
 import '@blockly/field-colour-hsv-sliders';
-import './plugins/non-closing-flyout/index';
 
 import { Multiselect } from './plugins/workspace-multiselect/index.js';
 import { PromptDialogComponent } from './components/prompt-dialog/prompt-dialog.component.js';
@@ -42,6 +41,62 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { ConfigService } from '../../../../services/config.service';
 import { NoticeService } from '../../../../services/notice.service';
 import { Minimap } from '@blockly/workspace-minimap';
+
+class OverlayFlyoutMetricsManager extends (Blockly as any).MetricsManager {
+  constructor(workspace: any) {
+    super(workspace);
+  }
+
+  getViewMetrics(getWorkspaceCoordinates: boolean | undefined = undefined) {
+    const workspace = (this as any).workspace_;
+    const scale = getWorkspaceCoordinates ? workspace.scale : 1;
+    const svgMetrics = (this as any).getSvgMetrics();
+    const toolboxMetrics = (this as any).getToolboxMetrics();
+    const toolboxPosition = toolboxMetrics.position;
+
+    if (workspace.getToolbox?.()) {
+      if (
+        toolboxPosition == (Blockly as any).TOOLBOX_AT_TOP ||
+        toolboxPosition == (Blockly as any).TOOLBOX_AT_BOTTOM
+      ) {
+        svgMetrics.height -= toolboxMetrics.height;
+      } else if (
+        toolboxPosition == (Blockly as any).TOOLBOX_AT_LEFT ||
+        toolboxPosition == (Blockly as any).TOOLBOX_AT_RIGHT
+      ) {
+        svgMetrics.width -= toolboxMetrics.width;
+      }
+    }
+
+    return {
+      height: svgMetrics.height / scale,
+      width: svgMetrics.width / scale,
+      top: -workspace.scrollY / scale,
+      left: -workspace.scrollX / scale,
+    };
+  }
+
+  getAbsoluteMetrics() {
+    const workspace = (this as any).workspace_;
+    const toolboxMetrics = (this as any).getToolboxMetrics();
+    const toolboxPosition = toolboxMetrics.position;
+
+    let absoluteLeft = 0;
+    if (workspace.getToolbox?.() && toolboxPosition == (Blockly as any).TOOLBOX_AT_LEFT) {
+      absoluteLeft = toolboxMetrics.width;
+    }
+
+    let absoluteTop = 0;
+    if (workspace.getToolbox?.() && toolboxPosition == (Blockly as any).TOOLBOX_AT_TOP) {
+      absoluteTop = toolboxMetrics.height;
+    }
+
+    return {
+      top: absoluteTop,
+      left: absoluteLeft,
+    };
+  }
+}
 
 @Component({
   selector: 'blockly-main',
@@ -101,6 +156,7 @@ export class BlocklyComponent implements DoCheck {
   }
 
   options = {
+    flyout: 'overlay',
     toolbox: {
       kind: 'categoryToolbox',
       contents: [],
@@ -134,6 +190,7 @@ export class BlocklyComponent implements DoCheck {
     },
     multiSelectKeys: ['Shift'],
     plugins: {
+      metricsManager: OverlayFlyoutMetricsManager,
       connectionPreviewer:
         BlockDynamicConnection.decoratePreviewer(
           Blockly.InsertionMarkerPreviewer,
@@ -282,13 +339,45 @@ export class BlocklyComponent implements DoCheck {
       // 获取当前blockly渲染器
       this.options.renderer = this.configData.blockly.renderer ? ('aily-' + this.configData.blockly.renderer) : 'thrasos';
 
-      // 根据配置决定是否使用 non-closing-flyout（flyout 拖出 block 后不关闭）
-      // flyoutAutoClose 默认为 true，只有明确设为 false 时才禁用自动关闭
-      if (this.configData.blockly.flyoutAutoClose === false) {
-        this.options.plugins['flyoutsVerticalToolbox'] = 'non-closing-flyout';
-      }
-
       this.workspace = Blockly.inject('blocklyDiv', this.options);
+
+      // 根据配置决定 flyout 拖出 block 后是否自动关闭。
+      // 这里直接改 workspace 的 flyout 实例，避免替换 Flyout 类导致布局变化（挤占工作区）。
+      if (this.configData.blockly.flyoutAutoClose === false) {
+        const flyout = this.workspace.getFlyout?.();
+        if (flyout) {
+          (flyout as any).autoClose = false;
+
+          // Flyout 显隐会影响 metrics，但不会触发容器尺寸变化；这里在 show/hide 时补一次 svgResize。
+          // 避免手动关闭 flyout 后工作区仍保持“被挤占”的旧 metrics。
+          if (!(flyout as any).__resizePatched) {
+            (flyout as any).__resizePatched = true;
+
+            const tryResize = () => {
+              // 延迟到下一帧，确保 flyout 的 DOM 已更新。
+              setTimeout(() => Blockly.svgResize(this.workspace), 0);
+            };
+
+            const originalShow = (flyout as any).show?.bind(flyout);
+            if (originalShow) {
+              (flyout as any).show = (...args: any[]) => {
+                const result = originalShow(...args);
+                tryResize();
+                return result;
+              };
+            }
+
+            const originalHide = (flyout as any).hide?.bind(flyout);
+            if (originalHide) {
+              (flyout as any).hide = (...args: any[]) => {
+                const result = originalHide(...args);
+                tryResize();
+                return result;
+              };
+            }
+          }
+        }
+      }
 
       const multiselectPlugin = new Multiselect(this.workspace);
       multiselectPlugin.init(this.options);
