@@ -103,10 +103,12 @@
         <button  class="back-btn" nz-button nzType="default" (click)="onClose()">
             返回
         </button>
-        <button nz-button nzType="primary" (click)="onDeploy(modelDetail, 'test')">
+        <button nz-button nzType="primary" (click)="onDeploy(modelDetail, 'test')"
+                [disabled]="!modelDetail?.is_enabled">
             测试模型
         </button>
-        <button nz-button nzType="primary" (click)="onDeploy(modelDetail, 'deploy')">
+        <button nz-button nzType="primary" (click)="onDeploy(modelDetail, 'deploy')"
+                [disabled]="!modelDetail?.is_enabled">
             部署模型
         </button>
     </div>
