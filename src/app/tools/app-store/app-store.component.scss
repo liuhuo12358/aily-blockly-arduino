@@ -70,6 +70,11 @@
       border: 1px dashed #4a8cca;
     }
 
+    &.sidebar-zone {
+      background: rgba(138, 43, 226, 0.08);
+      border: 1px dashed #8a2be2;
+    }
+
     &.other-zone {
       flex: 1;
       overflow-y: auto;
@@ -169,6 +174,14 @@
         top: 2px;
         right: 2px;
         color: #52c41a;
+        font-size: 10px;
+      }
+
+      .sidebar-indicator {
+        position: absolute;
+        top: 2px;
+        right: 2px;
+        color: #8a2be2;
         font-size: 10px;
       }
     }

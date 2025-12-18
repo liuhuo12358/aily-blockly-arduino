@@ -114,11 +114,11 @@ export class HeaderComponent {
         });
 
         // headerBtns中的按钮都置为默认状态
-        this.headerBtns.forEach((btnGroup) => {
-          btnGroup.forEach((btn) => {
-            btn.state = 'default';
-          });
-        });
+        // this.headerBtns.forEach((btnGroup) => {
+        //   btnGroup.forEach((btn) => {
+        //     btn.state = 'default';
+        //   });
+        // });
       } else {
         // 将headerMenu中有disabled的按钮置禁用
         this.headerMenu.forEach((menu) => {

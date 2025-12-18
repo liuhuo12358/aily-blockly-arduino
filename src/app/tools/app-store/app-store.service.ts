@@ -96,6 +96,8 @@ export class AppStoreService {
 
   // Header 上显示的 app 数量上限
   readonly HEADER_APP_LIMIT = 6;
+  // Sidebar 上显示的 app 数量上限
+  readonly SIDEBAR_APP_LIMIT = 4;
 
   constructor() {
     this.loadAppsFromStorage();

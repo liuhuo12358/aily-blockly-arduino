@@ -28,8 +28,9 @@ export class AppStoreComponent implements OnInit {
   currentUrl: string;
   windowInfo = 'MENU.APP_STORE';
   
-  // 分成两个区域的 apps
+  // 分成三个区域的 apps
   headerZoneApps: AppItem[] = [];
+  sidebarZoneApps: AppItem[] = [];
   otherZoneApps: AppItem[] = [];
 
   constructor(
@@ -46,7 +47,8 @@ export class AppStoreComponent implements OnInit {
   loadApps() {
     const allApps = this.appStoreService.getAllApps();
     this.headerZoneApps = allApps.slice(0, this.headerAppLimit);
-    this.otherZoneApps = allApps.slice(this.headerAppLimit);
+    this.sidebarZoneApps = allApps.slice(this.headerAppLimit, this.headerAppLimit + this.sidebarAppLimit);
+    this.otherZoneApps = allApps.slice(this.headerAppLimit + this.sidebarAppLimit);
   }
 
   // 打开 app
@@ -63,8 +65,16 @@ export class AppStoreComponent implements OnInit {
       // 跨区域移动
       // 如果目标是 header 区域且已满，则需要交换
       if (event.container.data === this.headerZoneApps && this.headerZoneApps.length >= this.headerAppLimit) {
-        // 将 header 区域最后一个移到 other 区域开头
+        // 将 header 区域最后一个移到 sidebar 区域开头
         const lastItem = this.headerZoneApps.pop();
+        if (lastItem) {
+          this.sidebarZoneApps.unshift(lastItem);
+        }
+      }
+      // 如果目标是 sidebar 区域且已满，则需要交换
+      if (event.container.data === this.sidebarZoneApps && this.sidebarZoneApps.length >= this.sidebarAppLimit) {
+        // 将 sidebar 区域最后一个移到 other 区域开头
+        const lastItem = this.sidebarZoneApps.pop();
         if (lastItem) {
           this.otherZoneApps.unshift(lastItem);
         }
@@ -81,7 +91,7 @@ export class AppStoreComponent implements OnInit {
 
   // 保存排序
   saveAppsOrder() {
-    const allApps = [...this.headerZoneApps, ...this.otherZoneApps];
+    const allApps = [...this.headerZoneApps, ...this.sidebarZoneApps, ...this.otherZoneApps];
     this.appStoreService.updateAppsOrder(allApps);
   }
 
@@ -90,9 +100,20 @@ export class AppStoreComponent implements OnInit {
     return this.appStoreService.HEADER_APP_LIMIT;
   }
 
+  // 获取 sidebar 上显示的 app 数量
+  get sidebarAppLimit(): number {
+    return this.appStoreService.SIDEBAR_APP_LIMIT || 4;
+  }
+
   // 计算空槽位
   get emptySlots(): number[] {
     const count = this.headerAppLimit - this.headerZoneApps.length;
+    return count > 0 ? Array(count).fill(0).map((_, i) => i) : [];
+  }
+
+  // 计算侧边栏空槽位
+  get emptySidebarSlots(): number[] {
+    const count = this.sidebarAppLimit - this.sidebarZoneApps.length;
     return count > 0 ? Array(count).fill(0).map((_, i) => i) : [];
   }
 

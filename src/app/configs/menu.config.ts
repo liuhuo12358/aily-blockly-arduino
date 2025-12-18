@@ -18,36 +18,34 @@ export interface IMenuItem {
   key?: string; // 用于标识编译和上传配置
 }
 
-export let HEADER_BTNS: IMenuItem[][] = [
-  [
-    {
-      name: 'MENU.BUILD',
-      action: 'compile',
-      data: { type: 'cmd', data: 'compile' },
-      icon: 'fa-regular fa-check',
-      type: 'act-btn',
-      color: '#006adc',
-      state: 'default',
-      router: ['/main/blockly-editor', '/main/code-editor']
-    },
-    {
-      name: 'MENU.RUN',
-      action: 'upload',
-      data: { type: 'cmd', data: 'upload' },
-      icon: 'fa-regular fa-play',
-      type: 'act-btn',
-      color: '#009600',
-      state: 'default',
-      router: ['/main/blockly-editor', '/main/code-editor']
-    },
-    // {
-    //   name: 'MENU.DEBUG',
-    //   data: { type: 'cmd', data: 'debug' },
-    //   icon: 'fa-regular fa-rocket',
-    //   type: 'act-btn',
-    //   color: '#f18800',
-    // },
-  ],
+export let HEADER_BTNS: IMenuItem[] = [
+  {
+    name: 'MENU.BUILD',
+    action: 'compile',
+    data: { type: 'cmd', data: 'compile' },
+    icon: 'fa-regular fa-check',
+    type: 'act-btn',
+    color: '#006adc',
+    state: 'default',
+    router: ['/main/blockly-editor', '/main/code-editor']
+  },
+  {
+    name: 'MENU.RUN',
+    action: 'upload',
+    data: { type: 'cmd', data: 'upload' },
+    icon: 'fa-regular fa-play',
+    type: 'act-btn',
+    color: '#009600',
+    state: 'default',
+    router: ['/main/blockly-editor', '/main/code-editor']
+  },
+  // {
+  //   name: 'MENU.DEBUG',
+  //   data: { type: 'cmd', data: 'debug' },
+  //   icon: 'fa-regular fa-rocket',
+  //   type: 'act-btn',
+  //   color: '#f18800',
+  // },
   // 工具按钮已移至 AppStoreService 管理
 ];
 
