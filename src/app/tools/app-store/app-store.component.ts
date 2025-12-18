@@ -1,4 +1,4 @@
-import { Component, OnInit, AfterViewInit, ViewChild, ElementRef } from '@angular/core';
+import { Component, OnInit, AfterViewInit, ViewChild, ElementRef, ChangeDetectorRef } from '@angular/core';
 import { ToolContainerComponent } from '../../components/tool-container/tool-container.component';
 import { SubWindowComponent } from '../../components/sub-window/sub-window.component';
 import { CommonModule } from '@angular/common';
@@ -9,7 +9,7 @@ import { AppItem, APP_LIST, HEADER_APP_LIMIT, SIDEBAR_APP_LIMIT } from './app-st
 import { TranslateModule } from '@ngx-translate/core';
 import { FormsModule } from '@angular/forms';
 import { NzToolTipModule } from 'ng-zorro-antd/tooltip';
-import Sortable from 'sortablejs';
+import Sortable, { SortableEvent } from 'sortablejs';
 
 @Component({
   selector: 'app-app-store',
@@ -40,7 +40,8 @@ export class AppStoreComponent implements OnInit, AfterViewInit {
   constructor(
     private uiService: UiService,
     private router: Router,
-    private appStoreService: AppStoreService
+    private appStoreService: AppStoreService,
+    private cdr: ChangeDetectorRef
   ) { }
 
   ngOnInit() {
@@ -49,54 +50,120 @@ export class AppStoreComponent implements OnInit, AfterViewInit {
   }
 
   ngAfterViewInit() {
-    this.initSortable();
+    // 延迟初始化 Sortable，确保 DOM 已完全渲染
+    setTimeout(() => {
+      this.initSortable();
+    }, 0);
   }
 
   initSortable() {
+    // 工具栏和侧边栏共用的配置
+    const zoneConfig = {
+      group: {
+        name: 'apps',
+        pull: true,
+        put: true
+      },
+      animation: 150,
+      ghostClass: 'sortable-ghost',
+      chosenClass: 'sortable-chosen',
+      dragClass: 'sortable-drag',
+      onAdd: (evt: SortableEvent) => {
+        this.handleAdd(evt);
+      },
+      onUpdate: (evt: SortableEvent) => {
+        this.handleUpdate();
+      },
+      onRemove: (evt: SortableEvent) => {
+        this.handleRemove(evt);
+      }
+    };
+
     // 初始化 header 区域的 sortable
-    if (this.headerZone) {
-      new Sortable(this.headerZone.nativeElement, {
-        group: {
-          name: 'apps',
-          pull: true,
-          put: ['apps', 'apps-clone']
-        },
-        animation: 150,
-        onSort: (evt) => {
-          this.updateArrayFromDOM(this.headerZone.nativeElement, this.headerZoneApps);
-          this.saveAppsOrder();
-        }
+    if (this.headerZone?.nativeElement) {
+      console.log('Initializing header zone sortable');
+      Sortable.create(this.headerZone.nativeElement, {
+        ...zoneConfig
       });
+    } else {
+      console.warn('Header zone element not found');
     }
 
     // 初始化 sidebar 区域的 sortable
-    if (this.sidebarZone) {
-      new Sortable(this.sidebarZone.nativeElement, {
-        group: {
-          name: 'apps',
-          pull: true,
-          put: ['apps', 'apps-clone']
-        },
-        animation: 150,
-        onSort: (evt) => {
-          this.updateArrayFromDOM(this.sidebarZone.nativeElement, this.sidebarZoneApps);
-          this.saveAppsOrder();
-        }
+    if (this.sidebarZone?.nativeElement) {
+      console.log('Initializing sidebar zone sortable');
+      Sortable.create(this.sidebarZone.nativeElement, {
+        ...zoneConfig
       });
+    } else {
+      console.warn('Sidebar zone element not found');
     }
 
-    // 初始化 other 区域的 sortable（只能拖出复制，不能拖入，不能排序）
-    if (this.otherZone) {
-      new Sortable(this.otherZone.nativeElement, {
+    // 初始化 other 区域的 sortable（只能拖出复制，接收删除）
+    if (this.otherZone?.nativeElement) {
+      console.log('Initializing other zone sortable');
+      Sortable.create(this.otherZone.nativeElement, {
         group: {
-          name: 'apps-clone',
+          name: 'apps',
           pull: 'clone', // 使用克隆模式，拖拽时复制而不是移动
-          put: false // 不允许其他区域拖入
+          put: true // 允许拖入（用于删除操作）
         },
         sort: false, // 禁止在 other 区域内部排序
-        animation: 150
+        animation: 150,
+        ghostClass: 'sortable-ghost',
+        chosenClass: 'sortable-chosen',
+        dragClass: 'sortable-drag',
+        onAdd: (evt: SortableEvent) => {
+          // 拖入到 other 区域意味着删除，直接移除 DOM 元素
+          evt.item.remove();
+          this.handleUpdate();
+        }
       });
+    } else {
+      console.warn('Other zone element not found');
     }
+  }
+
+  // 处理添加事件（从 other 区域拖入或从其他区域移动过来）
+  private handleAdd(evt: SortableEvent) {
+    const appId = evt.item.getAttribute('data-id');
+    const targetZone = evt.to;
+    
+    // 检查目标区域是否已存在该 app（防止重复）
+    const existingCards = Array.from(targetZone.querySelectorAll('.app-card'));
+    const duplicates = existingCards.filter(card => card.getAttribute('data-id') === appId);
+    
+    // 如果存在重复（超过1个同样id的元素），移除刚添加的元素
+    if (duplicates.length > 1) {
+      evt.item.remove();
+      return;
+    }
+    
+    this.handleUpdate();
+  }
+
+  // 处理移除事件
+  private handleRemove(evt: SortableEvent) {
+    // 如果是从 header 或 sidebar 移动到 other 区域，在 onAdd 中处理删除
+    // 这里只需要更新数据
+    this.handleUpdate();
+  }
+
+  // 更新所有区域数据并保存
+  private handleUpdate() {
+    // 从 DOM 更新各区域数据
+    if (this.headerZone?.nativeElement) {
+      this.updateArrayFromDOM(this.headerZone.nativeElement, this.headerZoneApps);
+    }
+    if (this.sidebarZone?.nativeElement) {
+      this.updateArrayFromDOM(this.sidebarZone.nativeElement, this.sidebarZoneApps);
+    }
+    
+    // 触发变更检测
+    this.cdr.detectChanges();
+    
+    // 保存配置
+    this.saveAppsOrder();
   }
 
   // 从 DOM 更新数组数据

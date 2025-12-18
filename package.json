@@ -176,6 +176,7 @@
     "@angular/compiler-cli": "^19.0.0",
     "@types/jasmine": "~5.1.0",
     "@types/node": "^22.10.7",
+    "@types/sortablejs": "^1.15.9",
     "@types/ua-parser-js": "^0.7.39",
     "concurrently": "^9.1.2",
     "electron": "^35.0.2",

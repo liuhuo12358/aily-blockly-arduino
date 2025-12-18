@@ -23,8 +23,9 @@ import { AuthService } from '../../../services/auth.service';
 import { BoardSelectorDialogComponent } from '../board-selector-dialog/board-selector-dialog.component';
 import { LoginDialogComponent } from '../login-dialog/login-dialog.component';
 import { PlatformService } from '../../../services/platform.service';
-import { AppStoreService } from '../../../tools/app-store/app-store.service';
+// import { AppStoreService } from '../../../tools/app-store/app-store.service';
 import { AppItem } from '../../../tools/app-store/app-store.config';
+import { APP_LIST } from '../../../configs/tool.config';
 
 @Component({
   selector: 'app-header',
@@ -41,6 +42,7 @@ import { AppItem } from '../../../tools/app-store/app-store.config';
 export class HeaderComponent {
   headerBtns = HEADER_BTNS;
   headerMenu = HEADER_MENU;
+  headerApps = APP_LIST;
 
   get isMac() {
     return this.platformService.isMac();
@@ -81,9 +83,9 @@ export class HeaderComponent {
   }
 
   // 从 AppStoreService 获取要显示在 header 上的 apps
-  get headerApps(): AppItem[] {
-    return this.appStoreService.getHeaderApps();
-  }
+  // get headerApps(): AppItem[] {
+  //   return this.appStoreService.getHeaderApps();
+  // }
 
   constructor(
     private projectService: ProjectService,
@@ -101,7 +103,7 @@ export class HeaderComponent {
     private authService: AuthService,
     private translate: TranslateService,
     private platformService: PlatformService,
-    private appStoreService: AppStoreService
+    // private appStoreService: AppStoreService
   ) { }
 
   async ngAfterViewInit() {

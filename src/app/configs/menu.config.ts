@@ -46,7 +46,6 @@ export let HEADER_BTNS: IMenuItem[] = [
   //   type: 'act-btn',
   //   color: '#f18800',
   // },
-  // 工具按钮已移至 AppStoreService 管理
 ];
 
 
