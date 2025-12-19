@@ -63,11 +63,29 @@
         "SPONSORS": "プロジェクトスポンサー",
         "SPONSORS_DESC": "このプロジェクトは以下の企業/個人にスポンサーされています"
     },
+    "APP_STORE": {
+        "HEADER_INFO": "最初の {{count}} 個のアプリがツールバーに表示されます",
+        "RESET": "リセット",
+        "IN_HEADER": "ツールバー",
+        "TOOLBAR_APPS": "ツールバーアプリ",
+        "SIDEBAR_APPS": "サイドバーアプリ",
+        "OTHER_APPS": "その他のアプリ",
+        "DRAG_HERE": "ここにドラッグ",
+        "CODE_DESC": "生成されたコードを表示",
+        "LIB_MANAGER_DESC": "プロジェクトライブラリの依存関係を管理",
+        "SERIAL_DESC": "シリアルモニターツール",
+        "AI_DESC": "AIアシスタント",
+        "MODEL_STORE_DESC": "AIモデルストア",
+        "CLOUD_SPACE_DESC": "クラウドストレージ",
+        "USER_CENTER_DESC": "ユーザーセンターと設定",
+        "SIMULATOR_DESC": "シミュレータ（開発中）"
+    },
     "SETTINGS": {
         "TITLE": "設定",
         "SECTIONS": {
             "BASIC": "基本設定",
             "THEME": "テーマ設定",
+            "BLOCKLY": "Blockly設定",
             "COMPILATION": "コンパイル設定",
             "REPOSITORY": "リポジトリ設定",
             "DEPENDENCIES": "グローバル依存関係",
@@ -94,6 +112,36 @@
     },
     "PROJECT_NEW": {
         "TITLE": "新規プロジェクト",
+        "STEPS": {
+            "SELECT_BOARD": "ボードを選択",
+            "BASIC_SETTINGS": "基本設定",
+            "CREATE_PROJECT": "プロジェクトを作成"
+        },
+        "BOARD": {
+            "SEARCH": "ボードを検索",
+            "READ_DOC": "ドキュメント",
+            "ADD_BOARD": "ボードを追加",
+            "DEV": "開発"
+        },
+        "FORM": {
+            "DEVMODE": "開発フレームワーク",
+            "BOARD": "ボード",
+            "PROJECT_NAME": "プロジェクト名",
+            "SAVE_PATH": "保存パス",
+            "NAME_EXISTS": "プロジェクト名は既に存在します。変更してください"
+        },
+        "BUTTONS": {
+            "USE_THIS": "このボードを使用",
+            "NEXT": "次へ",
+            "PREV": "前へ",
+            "CREATE": "プロジェクトを作成",
+            "CREATING": "作成中"
+        },
+        "WARNINGS": {
+            "BETA_VERSION": "ベータ版、未検証、注意して使用"
+        }
+    },
+    "LIB_MANAGER": {
         "TITLE": "ライブラリマネージャー",
         "BACK": "戻る",
         "SEARCH_LIBRARY": "ライブラリを検索",
@@ -123,7 +171,6 @@
         "AI": "AI",
         "IOT": "IoT",
         "OTHERS": "その他",
-        "ALL": "すべてのライブラリ",
         "LIB_IN_USE": "このライブラリは現在使用中です。このライブラリを削除する前に、ワークスペースから関連するブロックを削除してください"
     },
     "COMPATIBILITY_DIALOG": {
@@ -133,37 +180,6 @@
         "CURRENT_BOARD_CORE": "現在のボードのコア：",
         "CANCEL": "キャンセル",
         "CONTINUE_INSTALL": "インストールを続ける"
-    },
-    "BOARD_SELECTOR": {
-        "TITLE": "新規プロジェクト",
-        "STEPS": {
-            "SELECT_BOARD": "ボードを選択",
-            "BASIC_SETTINGS": "基本設定",
-            "CREATE_PROJECT": "プロジェクトを作成"
-        },
-        "BOARD": {
-            "SEARCH": "ボードを検索",
-            "READ_DOC": "ドキュメントを読む",
-            "ADD_BOARD": "ボードを追加",
-            "DEV": "開発"
-        },
-        "FORM": {
-            "DEVMODE": "開発フレームワーク",
-            "BOARD": "ボード",
-            "PROJECT_NAME": "プロジェクト名",
-            "SAVE_PATH": "保存パス",
-            "NAME_EXISTS": "プロジェクト名は既に存在します。変更してください"
-        },
-        "BUTTONS": {
-            "USE_THIS": "このボードを使用",
-            "NEXT": "次へ",
-            "PREV": "前へ",
-            "CREATE": "プロジェクトを作成",
-            "CREATING": "作成中"
-        },
-        "WARNINGS": {
-            "BETA_VERSION": "ベータ版、未検証、注意して使用"
-        }
     },
     "BOARD_SELECTOR": {
         "TITLE": "ボードを切り替え",
@@ -288,5 +304,56 @@
     },
     "SERIAL": {
         "SELECT_PORT_FIRST": "先にシリアルポートを選択してください"
+    },
+    "MODEL_DEPLOY": {
+        "TITLE": "モデルのデプロイ",
+        "SELECT_MODEL": "モデルを選択",
+        "SELECT_DEVICE": "デバイスを選択",
+        "DEPLOY": "デプロイ",
+        "DEPLOYING": "デプロイ中",
+        "SUCCESS_DEPLOY": "モデルのデプロイが成功しました！",
+        "ERROR_DEPLOY_FAILED": "モデルのデプロイに失敗しました。後でもう一度お試しください",
+        "NO_MODELS": "利用可能なモデルがありません。まずモデルストアからモデルをダウンロードしてください",
+        "DEPLOY_STATUS": "デプロイ状況",
+        "STEPS": {
+            "SELECT": "モデルを選択",
+            "CONTACT": "デバイスを接続",
+            "CONFIGURE": "パラメータを設定",
+            "DEPLOY": "モデルをデプロイ",
+            "TEST": "モデルをテスト"
+        },
+        "BUTTONS": {
+            "NEXT": "次へ",
+            "PREV": "前へ",
+            "FINISH": "完了",
+            "DEPLOY": "デプロイ開始",
+            "DEPLOYING": "デプロイ中..."
+        },
+        "SUPPORTED_DEVICES": "対応デバイス",
+        "DEVICE_INFO": "このモデルは以下のデバイスにデプロイできます。お持ちでない場合は下のリンクから購入できます",
+        "CONNECT_DEVICE": "デバイスを接続"
+    },
+    "MODEL_STORE": {
+        "TITLE": "モデルストア",
+        "DESCRIPTION": "モデル概要",
+        "MODEL_INFO": "モデル情報",
+        "SUPPORTED_BOARDS": "対応デバイス",
+        "MODEL_TYPE": "モデルタイプ",
+        "MODEL_FORMAT": "モデル形式",
+        "MODEL_PRECISION": "モデル精度",
+        "MODEL_SIZE": "モデルサイズ",
+        "VERSION": "バージョン",
+        "MODEL_DETAILS": "モデル詳細",
+        "MODEL_LABELS": "モデルカテゴリ",
+        "AUTHOR": "作者",
+        "DEPLOY_COUNT": "デプロイ回数",
+        "VIEW_COUNT": "閲覧数",
+        "LIKE_COUNT": "いいね"
+    },
+    "XIAO_ESP32S3_SENSE_CONNECT": {
+        "STEP1": "1. XIAO ESP32S3 Sense をカメラ拡張ボードに接続します",
+        "STEP2": "2. XIAO ESP32S3 Sense を USB でパソコンに接続します",
+        "STEP3": "3. デバイスのシリアルポートを選択し、\"デプロイ開始\"ボタンをクリックします",
+        "STEP4": "4. デプロイ完了を待ってモデルをテストします"
     }
 }

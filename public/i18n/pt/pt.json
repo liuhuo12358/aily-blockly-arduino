@@ -15,6 +15,7 @@
         "DEBUG": "Depurar",
         "TERMINAL": "Terminal",
         "TOOL_SERIAL": "Ferramenta serial",
+        "SIMULATOR": "Simulador",
         "AI": "IA",
         "MODEL_STORE": "Loja de Modelos",
         "APP_STORE": "Loja de aplicativos",
@@ -62,14 +63,34 @@
         "SPONSORS": "Patrocinadores do Projeto",
         "SPONSORS_DESC": "Este projeto é patrocinado pelas seguintes empresas/indivíduos"
     },
+    "APP_STORE": {
+        "HEADER_INFO": "Os primeiros {{count}} aplicativos serão mostrados na barra de ferramentas",
+        "RESET": "Redefinir",
+        "IN_HEADER": "Barra de ferramentas",
+        "TOOLBAR_APPS": "Aplicativos da barra de ferramentas",
+        "SIDEBAR_APPS": "Aplicativos da barra lateral",
+        "OTHER_APPS": "Outros aplicativos",
+        "DRAG_HERE": "Arraste aqui",
+        "CODE_DESC": "Ver código gerado",
+        "LIB_MANAGER_DESC": "Gerenciar dependências de biblioteca do projeto",
+        "SERIAL_DESC": "Ferramenta de monitor serial",
+        "AI_DESC": "Assistente de IA",
+        "MODEL_STORE_DESC": "Loja de modelos de IA",
+        "CLOUD_SPACE_DESC": "Espaço de armazenamento em nuvem",
+        "USER_CENTER_DESC": "Centro de usuário e configurações",
+        "SIMULATOR_DESC": "Simulador (Em desenvolvimento)"
+    },
     "SETTINGS": {
         "TITLE": "Configurações",
         "SECTIONS": {
             "BASIC": "Configurações básicas",
             "THEME": "Configurações de tema",
+            "BLOCKLY": "Configurações do Blockly",
             "COMPILATION": "Configurações de compilação",
             "REPOSITORY": "Configurações de repositório",
-            "DEPENDENCIES": "Dependências Globais"
+            "DEPENDENCIES": "Dependências Globais",
+            "MCP": "MCP",
+            "DEVMODE": "Modo Desenvolvedor"
         },
         "FIELDS": {
             "PROJECT_FOLDER": "Pasta do projeto",
@@ -135,6 +156,9 @@
         "INSTALLING": "Instalando",
         "UNINSTALLING": "Desinstalando",
         "UNINSTALLED": "Desinstalado",
+        "IMPORTING": "Importando",
+        "IMPORTED": "Importação bem-sucedida",
+        "IMPORT_FAILED": "Falha na importação",
         "SENSORS": "Sensores",
         "ACTUATORS": "Atuadores",
         "COMMUNICATION": "Comunicação",
@@ -146,7 +170,16 @@
         "IOT": "IoT",
         "OTHERS": "Outros",
         "ALL": "Todas as bibliotecas",
+        "HELP": "Como desenvolver biblioteca",
         "LIB_IN_USE": "Esta biblioteca está atualmente em uso. Por favor, remova os blocos relacionados do espaço de trabalho antes de remover esta biblioteca"
+    },
+    "COMPATIBILITY_DIALOG": {
+        "TITLE": "Aviso de compatibilidade da biblioteca",
+        "WARNING_MESSAGE": "Esta biblioteca pode não funcionar na placa atual. Deseja continuar com a instalação?",
+        "SUPPORTED_CORES": "Núcleos suportados pela biblioteca:",
+        "CURRENT_BOARD_CORE": "Núcleo da placa atual:",
+        "CANCEL": "Cancelar",
+        "CONTINUE_INSTALL": "Continuar instalação"
     },
     "BOARD_SELECTOR": {
         "TITLE": "Trocar Placa",
@@ -172,6 +205,10 @@
     "UNSAVE_DIALOG": {
         "TITLE": "Alterações não salvas",
         "MESSAGE": "Você tem alterações não salvas. Deseja salvá-las?",
+        "MESSAGE_OPEN": "Deseja salvar as alterações do projeto atual antes de abrir um novo?",
+        "MESSAGE_NEW": "Deseja salvar as alterações do projeto atual antes de criar um novo?",
+        "MESSAGE_CLOSE": "Deseja salvar as alterações antes de fechar?",
+        "MESSAGE_DEFAULT": "Deseja salvar o projeto atual?",
         "CANCEL": "Cancelar",
         "SKIP_SAVE": "Pular salvamento",
         "SAVE_AND_CONTINUE": "Salvar e continuar"
@@ -264,6 +301,60 @@
         "FEEDBACK": "Feedback",
         "NO_PINMAP": "Mapa de pinos não disponível para esta placa",
         "NO_DOCUMENTATION": "Documentação não disponível para esta placa"
+    },
+    "SERIAL": {
+        "SELECT_PORT_FIRST": "Selecione uma porta serial primeiro"
+    },
+    "MODEL_DEPLOY": {
+        "TITLE": "Implantação de Modelo",
+        "SELECT_MODEL": "Selecionar modelo",
+        "SELECT_DEVICE": "Selecionar dispositivo",
+        "DEPLOY": "Implantar",
+        "DEPLOYING": "Implantando",
+        "SUCCESS_DEPLOY": "Modelo implantado com sucesso!",
+        "ERROR_DEPLOY_FAILED": "Falha na implantação do modelo, tente novamente mais tarde",
+        "NO_MODELS": "Nenhum modelo disponível, faça o download de modelos na loja primeiro",
+        "DEPLOY_STATUS": "Status da implantação",
+        "STEPS": {
+            "SELECT": "Selecionar modelo",
+            "CONTACT": "Conectar dispositivo",
+            "CONFIGURE": "Configurar parâmetros",
+            "DEPLOY": "Implantar modelo",
+            "TEST": "Testar modelo"
+        },
+        "BUTTONS": {
+            "NEXT": "Próximo",
+            "PREV": "Anterior",
+            "FINISH": "Concluir",
+            "DEPLOY": "Iniciar implantação",
+            "DEPLOYING": "Implantando..."
+        },
+        "SUPPORTED_DEVICES": "Dispositivos suportados",
+        "DEVICE_INFO": "Este modelo pode ser implantado nos seguintes dispositivos. Se você não tiver um, clique no link abaixo para comprar",
+        "CONNECT_DEVICE": "Conectar dispositivo"
+    },
+    "MODEL_STORE": {
+        "TITLE": "Loja de Modelos",
+        "DESCRIPTION": "Descrição do modelo",
+        "MODEL_INFO": "Informações do modelo",
+        "SUPPORTED_BOARDS": "Dispositivos suportados",
+        "MODEL_TYPE": "Tipo de modelo",
+        "MODEL_FORMAT": "Formato do modelo",
+        "MODEL_PRECISION": "Precisão do modelo",
+        "MODEL_SIZE": "Tamanho do modelo",
+        "VERSION": "Versão",
+        "MODEL_DETAILS": "Detalhes do modelo",
+        "MODEL_LABELS": "Categorias do modelo",
+        "AUTHOR": "Autor",
+        "DEPLOY_COUNT": "Implantações",
+        "VIEW_COUNT": "Visualizações",
+        "LIKE_COUNT": "Curtidas"
+    },
+    "XIAO_ESP32S3_SENSE_CONNECT": {
+        "STEP1": "1. Conecte o XIAO ESP32S3 Sense à placa de expansão da câmera",
+        "STEP2": "2. Conecte o XIAO ESP32S3 Sense ao computador via USB",
+        "STEP3": "3. Selecione a porta serial do dispositivo e clique no botão \"Iniciar implantação\"",
+        "STEP4": "4. Aguarde a conclusão da implantação e teste o modelo"
     }
 }
 
