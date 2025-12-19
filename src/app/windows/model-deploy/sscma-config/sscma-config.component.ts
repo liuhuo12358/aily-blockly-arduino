@@ -380,6 +380,16 @@ export class SscmaConfigComponent implements OnInit, OnDestroy, OnChanges {
         }
       })
     );
+
+    // 检查是否从部署页面自动跳转过来，需要自动连接设备
+    const autoConnect = localStorage.getItem('auto_connect_after_deploy');
+    if (autoConnect === 'true') {
+      localStorage.removeItem('auto_connect_after_deploy');
+      // 延迟执行，确保组件完全初始化
+      setTimeout(() => {
+        this.connectToDevice();
+      }, 500);
+    }
   }
 
   ngOnDestroy(): void {

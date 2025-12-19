@@ -109,7 +109,7 @@
                     </nz-input-number>
                   </div>
                 </div>
-                @if (!modelMeta?.classes){
+                @if (!(classScores && classScores.length)){
                 <div class="section-item">
                   <label>IOU阈值
                     <span class="section-tip">(用于去除重叠检测框,值越高保留的重叠框越多)</span>
