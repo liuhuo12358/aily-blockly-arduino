@@ -56,12 +56,12 @@ export class ModelStoreComponent implements OnInit, AfterViewInit {
 
   ngOnInit() {
     this.currentUrl = this.router.url;
-    this.loadModelList();
   }
 
   ngAfterViewInit() {
     setTimeout(() => {
       this.calculatePageSize();
+      this.loadModelList();
     });
   }
 
