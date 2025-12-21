@@ -22,9 +22,9 @@ export class VisionTrainComponent {
     this.router.navigate(['/model-train/vision/classification']);
   }
 
-  // 进入目标检测训练（待实现）
+  // 进入目标检测训练
   goToDetectionTrain() {
-    console.log('目标检测训练功能开发中...');
+    this.router.navigate(['/model-train/vision/detection']);
   }
 
   // 进入骨架识别训练（待实现）
