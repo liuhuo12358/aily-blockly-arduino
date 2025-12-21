@@ -32,13 +32,13 @@
       background: #1e2022;
       border: 1px solid #3a3d40;
       border-radius: 8px;
-      padding: 16px;
+      padding: 10px;
       transition: all 0.2s;
 
       &.disabled {
         opacity: 0.5;
         background: #1a1c1e;
-        
+
         .class-body {
           pointer-events: none;
         }
@@ -47,10 +47,14 @@
       .class-header {
         display: flex;
         align-items: center;
-        margin-bottom: 12px;
+        margin-bottom: 10px;
         position: relative;
-        padding-bottom: 12px;
+        height: 25px;
         border-bottom: 1px solid #3a3d40;
+
+        input {
+          height: 25px;
+        }
 
         .class-name {
           font-size: 16px;
@@ -100,8 +104,8 @@
 
         .more-menu {
           margin-left: auto;
-          width: 24px;
-          height: 24px;
+          width: 25px;
+          height: 25px;
           display: flex;
           align-items: center;
           justify-content: center;
@@ -169,18 +173,14 @@
 
           .sample-actions {
             display: flex;
-            gap: 8px;
-            flex-shrink: 0;
+            gap: 10px;
 
             .action-btn {
-              display: flex;
               flex-direction: column;
-              align-items: center;
-              justify-content: center;
-              width: 70px;
-              height: 60px;
+              width: 50px;
+              height: 50px;
               background: #1890ff;
-              border-radius: 6px;
+              border-radius: 4px;
               cursor: pointer;
               transition: all 0.2s;
 
@@ -190,8 +190,8 @@
                 margin-bottom: 4px;
               }
 
-              span {
-                font-size: 12px;
+              div {
+                font-size: 10px;
                 color: #fff;
               }
 
@@ -260,7 +260,7 @@
 
           .camera-preview-card {
             width: 200px;
-            min-width: 200px;
+            height: 200px;
             background: #232526;
             border: 1px solid #333538;
             border-radius: 8px;
@@ -268,36 +268,21 @@
             display: flex;
             flex-direction: column;
 
-            .camera-header {
-              display: flex;
-              align-items: center;
-              justify-content: space-between;
-              padding: 8px 12px;
+            .close-btn {
+              width: 30px;
+              height: 30px;
+              border-radius: 50%;
+              cursor: pointer;
+              color: #fff;
+              background: rgba(11, 89, 163, 0.6);
+              font-size: 16px;
+              position: absolute;
+              top: 8px;
+              right: 8px;
 
-              span {
-                font-size: 13px;
-                font-weight: 600;
-                color: #e6f7ff;
-              }
-
-              .close-btn {
-                width: 24px;
-                height: 24px;
-                border: none;
-                background: transparent;
-                cursor: pointer;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                color: #bfbfbf;
-                font-size: 16px;
-                padding: 0;
-                border-radius: 4px;
-
-                &:hover {
-                  background: rgba(255, 255, 255, 0.03);
-                  color: #fff;
-                }
+              &:hover {
+                background: rgba(255, 255, 255, 0.03);
+                color: #fff;
               }
             }
 
@@ -321,7 +306,8 @@
                 left: 0;
                 right: 0;
                 bottom: 0;
-                pointer-events: none; /* container doesn't block pointer, icons opt-in below */
+                pointer-events: none;
+                /* container doesn't block pointer, icons opt-in below */
 
                 .top-left,
                 .top-right {
@@ -329,13 +315,19 @@
                   top: 8px;
                   color: rgba(230, 247, 255, 0.9);
                   font-size: 18px;
-                  pointer-events: auto; /* allow clicks on the icon itself */
+                  pointer-events: auto;
+                  /* allow clicks on the icon itself */
                   cursor: pointer;
                   z-index: 2;
                 }
 
-                .top-left { left: 8px; }
-                .top-right { right: 8px; }
+                .top-left {
+                  left: 8px;
+                }
+
+                .top-right {
+                  right: 8px;
+                }
 
                 // 视频镜像样式已移到外层，见下方
               }
@@ -361,9 +353,24 @@
                 text-align: center;
                 background: #232526;
 
-                .error-icon { font-size: 44px; color: #ff6b6b; margin-bottom: 12px; }
-                .error-message { font-size: 14px; font-weight: 600; color: #fff; margin: 0 0 6px 0; }
-                .error-hint { font-size: 12px; color: #bfbfbf; margin: 0; }
+                .error-icon {
+                  font-size: 44px;
+                  color: #ff6b6b;
+                  margin-bottom: 12px;
+                }
+
+                .error-message {
+                  font-size: 14px;
+                  font-weight: 600;
+                  color: #fff;
+                  margin: 0 0 6px 0;
+                }
+
+                .error-hint {
+                  font-size: 12px;
+                  color: #bfbfbf;
+                  margin: 0;
+                }
               }
             }
 
@@ -373,8 +380,12 @@
               align-items: center;
               padding: 10px 12px;
               gap: 8px;
+              position: relative;
 
               .capture-btn {
+                position: absolute;
+                bottom: 12px;
+                left: 50%;
                 flex: 1;
                 height: 36px;
                 background: #1890ff;
@@ -389,17 +400,24 @@
                 gap: 6px;
                 transition: background 0.15s;
 
-                &:hover { background: #106fc3; }
-                &:active { background: #0b5aa3; }
+                &:hover {
+                  background: #106fc3;
+                }
 
-                i { font-size: 14px; }
+                &:active {
+                  background: #0b5aa3;
+                }
+
+                i {
+                  font-size: 14px;
+                }
               }
 
               .settings-btn {
                 width: 36px;
                 height: 36px;
                 background: transparent;
-                border: 1px solid rgba(255,255,255,0.04);
+                border: 1px solid rgba(255, 255, 255, 0.04);
                 border-radius: 6px;
                 cursor: pointer;
                 display: flex;
@@ -408,7 +426,11 @@
                 color: #bfbfbf;
                 font-size: 16px;
 
-                &:hover { background: rgba(255,255,255,0.02); border-color: rgba(255,255,255,0.06); color: #fff; }
+                &:hover {
+                  background: rgba(255, 255, 255, 0.02);
+                  border-color: rgba(255, 255, 255, 0.06);
+                  color: #fff;
+                }
               }
             }
           }
@@ -628,13 +650,16 @@
               margin-left: 8px;
               padding: 6px 10px;
               background: transparent;
-              border: 1px solid rgba(255,255,255,0.04);
+              border: 1px solid rgba(255, 255, 255, 0.04);
               color: #e6e6e6;
               border-radius: 6px;
               cursor: pointer;
               font-size: 13px;
 
-              &:hover { background: rgba(255,255,255,0.02); border-color: rgba(255,255,255,0.06); }
+              &:hover {
+                background: rgba(255, 255, 255, 0.02);
+                border-color: rgba(255, 255, 255, 0.06);
+              }
             }
           }
         }
@@ -755,11 +780,11 @@
                 width: 0;
                 height: 0;
 
-                &:checked + .toggle-slider {
+                &:checked+.toggle-slider {
                   background: #1890ff;
                 }
 
-                &:checked + .toggle-slider::before {
+                &:checked+.toggle-slider::before {
                   transform: translateX(18px);
                 }
               }
@@ -795,7 +820,8 @@
             }
 
             .input-source-select {
-              margin-left: auto; /* push select to right */
+              margin-left: auto;
+              /* push select to right */
               min-width: 120px;
               max-width: 260px;
               flex-shrink: 0;
@@ -906,8 +932,13 @@
                   }
                 }
 
-                .top-left { left: 10px; }
-                .top-right { right: 10px; }
+                .top-left {
+                  left: 10px;
+                }
+
+                .top-right {
+                  right: 10px;
+                }
               }
 
               .preview-disabled-placeholder {

@@ -217,9 +217,13 @@ export class LibManagerComponent {
       return;
     }
     lib.state = 'uninstalling';
-    const separator = this.platformService.getPlatformSeparator();
     this.message.loading(`${lib.nickname} ${this.translate.instant('LIB_MANAGER.UNINSTALLING')}...`);
-    const libPackagePath = this.projectService.currentProjectPath + `${separator}node_modules${separator}` + lib.name;
+    // 使用pathJoin处理路径，正确处理包含'/'的包名（如@aily-project/test）
+    const libPackagePath = this.electronService.pathJoin(
+      this.projectService.currentProjectPath,
+      'node_modules',
+      ...lib.name.split('/')
+    );
     this.blocklyService.removeLibrary(libPackagePath);
     this.output = '';
     await this.cmdService.runAsync(`npm uninstall ${lib.name}`, this.projectService.currentProjectPath);

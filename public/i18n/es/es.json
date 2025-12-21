@@ -63,11 +63,29 @@
         "SPONSORS": "Patrocinadores del Proyecto",
         "SPONSORS_DESC": "Este proyecto está patrocinado por las siguientes empresas/individuos"
     },
+    "APP_STORE": {
+        "HEADER_INFO": "Las primeras {{count}} aplicaciones se mostrarán en la barra de herramientas",
+        "RESET": "Restablecer",
+        "IN_HEADER": "Barra de herramientas",
+        "TOOLBAR_APPS": "Apps de barra de herramientas",
+        "SIDEBAR_APPS": "Apps de barra lateral",
+        "OTHER_APPS": "Otras aplicaciones",
+        "DRAG_HERE": "Arrastre aquí",
+        "CODE_DESC": "Ver código generado",
+        "LIB_MANAGER_DESC": "Gestionar dependencias de biblioteca de proyecto",
+        "SERIAL_DESC": "Herramienta de monitor serial",
+        "AI_DESC": "Asistente de IA",
+        "MODEL_STORE_DESC": "Tienda de modelos de IA",
+        "CLOUD_SPACE_DESC": "Espacio de almacenamiento en la nube",
+        "USER_CENTER_DESC": "Centro de usuario y configuración",
+        "SIMULATOR_DESC": "Simulador (En desarrollo)"
+    },
     "SETTINGS": {
         "TITLE": "Configuración",
         "SECTIONS": {
             "BASIC": "Configuración Básica",
             "THEME": "Configuración de Tema",
+            "BLOCKLY": "Configuración de Blockly",
             "COMPILATION": "Configuración de Compilación",
             "REPOSITORY": "Configuración de Repositorio",
             "DEPENDENCIES": "Dependencias Globales",
@@ -286,5 +304,56 @@
     },
     "SERIAL": {
         "SELECT_PORT_FIRST": "Por favor seleccione un puerto serial primero"
+    },
+    "MODEL_DEPLOY": {
+        "TITLE": "Despliegue de Modelo",
+        "SELECT_MODEL": "Seleccionar modelo",
+        "SELECT_DEVICE": "Seleccionar dispositivo",
+        "DEPLOY": "Desplegar",
+        "DEPLOYING": "Desplegando",
+        "SUCCESS_DEPLOY": "¡Modelo desplegado con éxito!",
+        "ERROR_DEPLOY_FAILED": "El despliegue del modelo falló, por favor intente más tarde",
+        "NO_MODELS": "No hay modelos disponibles, descargue modelos de la tienda primero",
+        "DEPLOY_STATUS": "Estado de despliegue",
+        "STEPS": {
+            "SELECT": "Seleccionar modelo",
+            "CONTACT": "Conectar dispositivo",
+            "CONFIGURE": "Configurar parámetros",
+            "DEPLOY": "Desplegar modelo",
+            "TEST": "Probar modelo"
+        },
+        "BUTTONS": {
+            "NEXT": "Siguiente",
+            "PREV": "Anterior",
+            "FINISH": "Finalizar",
+            "DEPLOY": "Iniciar despliegue",
+            "DEPLOYING": "Desplegando..."
+        },
+        "SUPPORTED_DEVICES": "Dispositivos soportados",
+        "DEVICE_INFO": "Este modelo puede desplegarse en los siguientes dispositivos. Si no tiene uno, puede comprarlo en el enlace abajo",
+        "CONNECT_DEVICE": "Conectar dispositivo"
+    },
+    "MODEL_STORE": {
+        "TITLE": "Tienda de Modelos",
+        "DESCRIPTION": "Descripción del modelo",
+        "MODEL_INFO": "Información del modelo",
+        "SUPPORTED_BOARDS": "Dispositivos soportados",
+        "MODEL_TYPE": "Tipo de modelo",
+        "MODEL_FORMAT": "Formato de modelo",
+        "MODEL_PRECISION": "Precisión del modelo",
+        "MODEL_SIZE": "Tamaño del modelo",
+        "VERSION": "Versión",
+        "MODEL_DETAILS": "Detalles del modelo",
+        "MODEL_LABELS": "Categorías del modelo",
+        "AUTHOR": "Autor",
+        "DEPLOY_COUNT": "Despliegues",
+        "VIEW_COUNT": "Vistas",
+        "LIKE_COUNT": "Me gusta"
+    },
+    "XIAO_ESP32S3_SENSE_CONNECT": {
+        "STEP1": "1. Conecte el XIAO ESP32S3 Sense a la placa de expansión de la cámara",
+        "STEP2": "2. Conecte el XIAO ESP32S3 Sense al ordenador mediante USB",
+        "STEP3": "3. Seleccione el puerto serial del dispositivo y haga clic en el botón \"Iniciar despliegue\"",
+        "STEP4": "4. Espere a que finalice el despliegue y luego pruebe el modelo"
     }
 }

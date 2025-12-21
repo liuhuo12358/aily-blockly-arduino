@@ -73,17 +73,17 @@ export const MODEL_FORMATS: Record<string, string> = {
 
 // 作者 Logo 映射
 export const AUTHOR_LOGOS: Record<string, string> = {
-  'SenseCraft AI': 'http://localhost:4200/sponsor/seeedstudio/logo_l.webp',
-  'ChipIntelli': 'http://localhost:4200/sponsor/seeedstudio/logo_l.webp' // 可以替换为其他 logo 路径
+  'SenseCraft AI': 'sponsor/seeedstudio/logo_l.webp',
+  'ChipIntelli': 'sponsor/seeedstudio/logo_l.webp' // 可以替换为其他 logo 路径
 };
 
 // 设备连接图片映射（根据 uniform_type）
 export const DEVICE_CONNECTION_IMAGES: Record<string, string> = {
-  '32': 'http://localhost:4200/model/xiao.webp', // XIAO ESP32S3 Sense
-  '36': 'http://localhost:4200/model/xiao.webp', // Grove - Vision AI V2
-  '37': 'http://localhost:4200/model/xiao.webp', // SenseCAP Watcher
-  '40': 'http://localhost:4200/model/xiao.webp', // reCamera
-  '41': 'http://localhost:4200/model/xiao.webp'  // SenseCAP A1102
+  '32': 'model/xiao.webp', // XIAO ESP32S3 Sense
+  '36': 'model/xiao.webp', // Grove - Vision AI V2
+  '37': 'model/xiao.webp', // SenseCAP Watcher
+  '40': 'model/xiao.webp', // reCamera
+  '41': 'model/xiao.webp'  // SenseCAP A1102
 };
 
 export const DEVICE_CONNECTION_STEPS: Record<string, string[]> = {

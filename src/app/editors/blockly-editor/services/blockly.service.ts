@@ -139,9 +139,12 @@ export class BlocklyService {
 
   // 卸载库（通过包名和项目路径）
   async unloadLibrary(libPackageName, projectPath) {
-    // 统一路径分隔符，确保在Windows上使用反斜杠
-    const normalizedProjectPath = projectPath.replace(/\//g, '\\');
-    const libPackagePath = normalizedProjectPath + '\\node_modules\\' + libPackageName.replace(/\//g, '\\');
+    // 统一路径分隔符，使用electronService.pathJoin处理跨平台路径
+    const libPackagePath = this.electronService.pathJoin(
+      projectPath,
+      'node_modules',
+      ...libPackageName.split('/')
+    );
     
     // 直接调用 removeLibrary 函数
     this.removeLibrary(libPackagePath);
@@ -242,9 +245,8 @@ export class BlocklyService {
   }
 
   removeLibrary(libPackagePath) {
-    // 统一路径分隔符
-    // libPackagePath = libPackagePath.replace(/\//g, '\\');
-    libPackagePath = this.electronService.pathJoin(...libPackagePath.split('/'));
+    // 路径已经是标准格式，无需再次分割
+    // electronService.pathJoin已经处理了路径分隔符
     
     // 检查是否已加载
     if (!this.loadedLibraries.has(libPackagePath)) {

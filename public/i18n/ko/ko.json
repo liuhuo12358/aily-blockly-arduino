@@ -15,6 +15,7 @@
         "DEBUG": "디버그",
         "TERMINAL": "터미널",
         "TOOL_SERIAL": "시리얼 도구",
+        "SIMULATOR": "시뮬레이터",
         "AI": "AI",
         "MODEL_STORE": "모델 스토어",
         "APP_STORE": "앱 스토어",
@@ -62,14 +63,34 @@
         "SPONSORS": "프로젝트 후원자",
         "SPONSORS_DESC": "이 프로젝트는 다음 회사/개인들의 후원을 받고 있습니다"
     },
+    "APP_STORE": {
+        "HEADER_INFO": "처음 {{count}}개의 앱이 도구 모음에 표시됩니다",
+        "RESET": "초기화",
+        "IN_HEADER": "도구 모음",
+        "TOOLBAR_APPS": "도구 모음 앱",
+        "SIDEBAR_APPS": "사이드바 앱",
+        "OTHER_APPS": "기타 앱",
+        "DRAG_HERE": "여기로 끌어다 놓기",
+        "CODE_DESC": "생성된 코드 보기",
+        "LIB_MANAGER_DESC": "프로젝트 라이브러리 종속성 관리",
+        "SERIAL_DESC": "시리얼 모니터 도구",
+        "AI_DESC": "AI 비서",
+        "MODEL_STORE_DESC": "AI 모델 스토어",
+        "CLOUD_SPACE_DESC": "클라우드 저장 공간",
+        "USER_CENTER_DESC": "사용자 센터 및 설정",
+        "SIMULATOR_DESC": "시뮬레이터 (개발 중)"
+    },
     "SETTINGS": {
         "TITLE": "설정",
         "SECTIONS": {
             "BASIC": "기본 설정",
             "THEME": "테마 설정",
+            "BLOCKLY": "Blockly 설정",
             "COMPILATION": "컴파일 설정",
             "REPOSITORY": "저장소 설정",
-            "DEPENDENCIES": "글로벌 종속성"
+            "DEPENDENCIES": "글로벌 종속성",
+            "MCP": "MCP",
+            "DEVMODE": "개발자 모드"
         },
         "FIELDS": {
             "PROJECT_FOLDER": "프로젝트 폴더",
@@ -131,6 +152,9 @@
         "INSTALLING": "설치 중",
         "UNINSTALLING": "제거 중",
         "UNINSTALLED": "제거됨",
+        "IMPORTING": "가져오는 중",
+        "IMPORTED": "가져오기 성공",
+        "IMPORT_FAILED": "가져오기 실패",
         "SENSORS": "센서",
         "ACTUATORS": "액추에이터",
         "COMMUNICATION": "통신",
@@ -142,7 +166,16 @@
         "IOT": "사물인터넷",
         "OTHERS": "기타",
         "ALL": "모든 라이브러리",
+        "HELP": "라이브러리 개발 방법",
         "LIB_IN_USE": "이 라이브러리는 현재 사용 중입니다. 이 라이브러리를 제거하기 전에 작업 공간에서 관련 블록을 먼저 삭제하세요"
+    },
+    "COMPATIBILITY_DIALOG": {
+        "TITLE": "라이브러리 호환성 안내",
+        "WARNING_MESSAGE": "이 라이브러리는 현재 보드에서 동작하지 않을 수 있습니다. 설치를 계속하시겠습니까?",
+        "SUPPORTED_CORES": "라이브러리가 지원하는 코어:",
+        "CURRENT_BOARD_CORE": "현재 보드 코어:",
+        "CANCEL": "취소",
+        "CONTINUE_INSTALL": "설치 계속"
     },
     "BOARD_SELECTOR": {
         "TITLE": "보드 전환",
@@ -267,5 +300,56 @@
     },
     "SERIAL": {
         "SELECT_PORT_FIRST": "먼저 시리얼 포트를 선택하세요"
+    },
+    "MODEL_DEPLOY": {
+        "TITLE": "모델 배포",
+        "SELECT_MODEL": "모델 선택",
+        "SELECT_DEVICE": "장치 선택",
+        "DEPLOY": "배포",
+        "DEPLOYING": "배포 중",
+        "SUCCESS_DEPLOY": "모델이 성공적으로 배포되었습니다!",
+        "ERROR_DEPLOY_FAILED": "모델 배포에 실패했습니다. 잠시 후 다시 시도하세요",
+        "NO_MODELS": "사용 가능한 모델이 없습니다. 먼저 모델 스토어에서 모델을 다운로드하세요",
+        "DEPLOY_STATUS": "배포 상태",
+        "STEPS": {
+            "SELECT": "모델 선택",
+            "CONTACT": "장치 연결",
+            "CONFIGURE": "매개변수 설정",
+            "DEPLOY": "모델 배포",
+            "TEST": "모델 테스트"
+        },
+        "BUTTONS": {
+            "NEXT": "다음",
+            "PREV": "이전",
+            "FINISH": "완료",
+            "DEPLOY": "배포 시작",
+            "DEPLOYING": "배포 중..."
+        },
+        "SUPPORTED_DEVICES": "지원되는 장치",
+        "DEVICE_INFO": "이 모델은 다음 장치에 배포할 수 있습니다. 장치가 없다면 아래 링크에서 구매할 수 있습니다",
+        "CONNECT_DEVICE": "장치 연결"
+    },
+    "MODEL_STORE": {
+        "TITLE": "모델 스토어",
+        "DESCRIPTION": "모델 소개",
+        "MODEL_INFO": "모델 정보",
+        "SUPPORTED_BOARDS": "지원 장치",
+        "MODEL_TYPE": "모델 유형",
+        "MODEL_FORMAT": "모델 형식",
+        "MODEL_PRECISION": "모델 정밀도",
+        "MODEL_SIZE": "모델 크기",
+        "VERSION": "버전",
+        "MODEL_DETAILS": "모델 세부 정보",
+        "MODEL_LABELS": "모델 분류",
+        "AUTHOR": "작성자",
+        "DEPLOY_COUNT": "배포 횟수",
+        "VIEW_COUNT": "조회수",
+        "LIKE_COUNT": "좋아요"
+    },
+    "XIAO_ESP32S3_SENSE_CONNECT": {
+        "STEP1": "1. XIAO ESP32S3 Sense를 카메라 확장 보드에 연결합니다",
+        "STEP2": "2. XIAO ESP32S3 Sense를 USB로 컴퓨터에 연결합니다",
+        "STEP3": "3. 장치의 시리얼 포트를 선택한 후 \"배포 시작\" 버튼을 클릭합니다",
+        "STEP4": "4. 배포가 완료될 때까지 기다린 후 모델을 테스트합니다"
     }
 }
