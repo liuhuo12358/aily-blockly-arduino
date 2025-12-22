@@ -765,6 +765,9 @@ export class SscmaDeployComponent implements OnInit {
 
       this.isDeploying = false;
 
+      // 设置标志，让配置页面自动连接设备
+      localStorage.setItem('auto_connect_after_deploy', 'true');
+
       // 自动进入配置页面（步骤1）
       this.router.navigate(['/model-deploy/sscma', 'config']);
 

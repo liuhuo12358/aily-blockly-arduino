@@ -136,12 +136,12 @@ export const routes: Routes = [
             {
                 path: 'vision/classification',
                 loadComponent: () => import('./windows/model-train/vision-train/classification-train/classification-train.component').then(m => m.ClassificationTrainComponent)
+            },
+            {
+                path: 'vision/detection',
+                loadComponent: () => import('./windows/model-train/vision-train/detection-train/detection-train.component').then(m => m.DetectionTrainComponent)
             }
             // 未来扩展：
-            // {
-            //     path: 'vision/detection',
-            //     loadComponent: () => import('./windows/model-train/vision-train/detection-train/detection-train.component').then(m => m.DetectionTrainComponent)
-            // },
             // {
             //     path: 'vision/pose',
             //     loadComponent: () => import('./windows/model-train/vision-train/pose-train/pose-train.component').then(m => m.PoseTrainComponent)
