@@ -64,7 +64,7 @@ export class ModelStoreComponent implements OnInit, AfterViewInit {
     setTimeout(() => {
       this.calculatePageSize();
       this.loadModelList();
-    });
+    }, 100);
   }
 
   @HostListener('window:resize')
@@ -214,7 +214,7 @@ export class ModelStoreComponent implements OnInit, AfterViewInit {
 
   // 搜索关键词变化时触发
   onSearchChange() {
-    this.filterProjects();
+    this.loadModelList(1);
   }
 
   // 过滤项目列表

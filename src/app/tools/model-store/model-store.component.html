@@ -12,8 +12,8 @@
         <div class="section-title">
             <div class="search-bar">
                 <div class="tags">
-                    <nz-tag>{{ 'MODEL_STORE.TAG_VISION' | translate }}</nz-tag>
-                    <nz-tag>{{ 'MODEL_STORE.TAG_AUDIO' | translate }}</nz-tag>
+                    <nz-tag (click)="searchKeyword = 'sensecraft'; onSearchChange()">{{ 'MODEL_STORE.TAG_VISION' | translate }}</nz-tag>
+                    <nz-tag (click)="searchKeyword = 'chipintelli'; onSearchChange()">{{ 'MODEL_STORE.TAG_AUDIO' | translate }}</nz-tag>
                 </div>
                 <div class="search-box">
                     <input nz-input [placeholder]="'MODEL_STORE.SEARCH_PLACEHOLDER' | translate" [(ngModel)]="searchKeyword"
