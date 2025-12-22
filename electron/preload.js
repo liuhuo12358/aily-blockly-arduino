@@ -166,8 +166,17 @@ contextBridge.exposeInMainWorld("electronAPI", {
   },
   fs: {
     readFileSync: (path, encoding = "utf8") => require("fs").readFileSync(path, encoding),
+    readFileAsBase64: (path) => {
+      const buffer = require("fs").readFileSync(path);
+      return buffer.toString('base64');
+    },
     readDirSync: (path) => require("fs").readdirSync(path, { withFileTypes: true }),
+    readdirSync: (path) => require("fs").readdirSync(path),
     writeFileSync: (path, data) => require("fs").writeFileSync(path, data),
+    writeBase64File: (path, base64Data) => {
+      const buffer = Buffer.from(base64Data, 'base64');
+      require("fs").writeFileSync(path, buffer);
+    },
     mkdirSync: (path) => require("fs").mkdirSync(path, { recursive: true }),
     copySync: (src, dest) => require("fs-extra").copySync(src, dest),
     existsSync: (path) => require("fs").existsSync(path),
@@ -175,6 +184,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
     isDirectory: (path) => require("fs").statSync(path).isDirectory(),
     unlinkSync: (path, cb) => require("fs").unlinkSync(path, cb),
     rmdirSync: (path) => require("fs").rmdirSync(path, { recursive: true, force: true }),
+    rmSync: (path, options) => require("fs").rmSync(path, options),
     renameSync: (oldPath, newPath) => require("fs").renameSync(oldPath, newPath),
     linkSync: (existingPath, newPath) => require("fs").linkSync(existingPath, newPath),
     chmodSync: (path, mode) => require("fs").chmodSync(path, mode),

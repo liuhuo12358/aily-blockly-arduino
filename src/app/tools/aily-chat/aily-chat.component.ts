@@ -1457,7 +1457,7 @@ ${JSON.stringify(errData)}
             let resultState = "done";
             let resultText = '';
 
-            // console.log("工具调用请求: ", data.tool_name, toolArgs);
+            console.log("工具调用请求: ", data.tool_name, toolArgs);
 
             // 定义 block 工具列表
             const blockTools = [
@@ -1669,9 +1669,19 @@ ${JSON.stringify(errData)}
                   case 'read_file':
                     // console.log('[读取文件工具被调用]', toolArgs);
                     let readFileName = this.getFileName(toolArgs.path);
+                    // let libNickName = '';
+                    // if (this.configService.data.devmode) {
+                    //   libNickName += `[${toolArgs.path}] `;
+                    // }
                     let libNickName = await this.getLibraryNickname(toolArgs.path);
-                    if (libNickName) {
-                      readFileName = `${libNickName} ${readFileName}`;
+                    if (this.configService.data.devmode) {
+                      // 将\\转为/以便显示
+                      const displayPath = toolArgs.path.replace(/\\\\/g, '/').replace(/\\/g, '/');
+                      readFileName = `${displayPath}`;
+                    } else {
+                      if (libNickName) {
+                        readFileName = `${libNickName} ${readFileName}`;
+                      }
                     }
                     this.startToolCall(toolCallId, data.tool_name, `读取: ${readFileName}`, toolArgs);
                     toolResult = await readFileTool(toolArgs);
@@ -2501,7 +2511,7 @@ Your role is ASK (Advisory & Quick Support) - you provide analysis, recommendati
               this.completeToolCall(data.tool_id, data.tool_name, finalState, resultText);
             }
 
-            // console.log(`工具调用结果: `, toolResult, resultText);
+            console.log(`工具调用结果: `, toolResult, resultText);
 
             this.send("tool", JSON.stringify({
               "type": "tool",

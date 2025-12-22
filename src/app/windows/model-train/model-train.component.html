@@ -21,11 +21,43 @@
           </div>
         </div>
       </div>
+      
+      <!-- 最近打开的项目 -->
+      @if(recentProjects.length > 0) {
+      <div class="recent-projects">
+        <div class="section-title">最近打开的项目</div>
+        <div class="project-list">
+          @for(project of recentProjects; track project.path) {
+          <div class="project-item" (click)="openRecentProject(project)">
+            <div class="project-icon ccenter">
+              @if(project.modelType === 'classification') {
+              <i class="fa-thin fa-grid-2"></i>
+              } @else if(project.modelType === 'detection') {
+              <i class="fa-thin fa-vector-square"></i>
+              } @else {
+              <i class="fa-thin fa-brain"></i>
+              }
+            </div>
+            <div class="project-info">
+              <div class="project-name">{{ project.nickname || project.name }}</div>
+              <div class="project-meta">
+                <span class="model-type">{{ getModelTypeName(project.modelType) }}</span>
+                <span class="project-path">{{ project.path }}</span>
+              </div>
+            </div>
+          </div>
+          }
+        </div>
+      </div>
+      }
     </div>
     <div class="window-footer">
       <div class="btns">
         <button nz-button nzType="primary" (click)="close()">
           关闭
+        </button>
+        <button nz-button nzType="primary" (click)="openProject()">
+          打开项目
         </button>
       </div>
     </div>

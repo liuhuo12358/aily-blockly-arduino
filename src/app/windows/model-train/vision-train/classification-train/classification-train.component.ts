@@ -1,5 +1,5 @@
 import { Component, OnInit, OnDestroy, ViewChild, ElementRef } from '@angular/core';
-import { Router } from '@angular/router';
+import { Router, ActivatedRoute } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TranslateModule } from '@ngx-translate/core';
@@ -12,8 +12,10 @@ import { NzProgressModule } from 'ng-zorro-antd/progress';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { Subscription } from 'rxjs';
 import { SubWindowComponent } from '../../../../components/sub-window/sub-window.component';
+import { SaveProjectModalComponent } from '../../../../components/save-project-modal/save-project-modal.component';
 import { ModelTrainService, TrainProgress, ClassData } from '../../../../services/model-train.service';
-import { ProjectService } from '../../../../services/project.service';
+import { ModelProjectService, ClassificationClassData } from '../../../../services/model-project.service';
+import { ElectronService } from '../../../../services/electron.service';
 import * as tf from '@tensorflow/tfjs';
 import '@tensorflow/tfjs-backend-webgl';
 import '@tensorflow/tfjs-backend-webgpu';
@@ -32,6 +34,7 @@ interface ClassItem {
     CommonModule,
     FormsModule,
     SubWindowComponent,
+    SaveProjectModalComponent,
     TranslateModule,
     NzButtonModule,
     NzToolTipModule,
@@ -122,15 +125,33 @@ export class ClassificationTrainComponent implements OnInit, OnDestroy {
 
   private nextClassId = 3;
 
+  // 保存项目相关
+  isSaveProjectModalVisible = false;
+  projectSaveName = '';
+  projectSavePath = '';
+  savedProjectFullPath = ''; // 已保存项目的完整路径
+
   constructor(
     private router: Router,
+    private route: ActivatedRoute,
     private modal: NzModalService,
     private modelTrainService: ModelTrainService,
     private message: NzMessageService,
-    private projectService: ProjectService
+    private modelProjectService: ModelProjectService,
+    private electronService: ElectronService
   ) { }
 
   ngOnInit() {
+    // 初始化默认保存路径
+    this.projectSavePath = this.modelProjectService.getDefaultSavePath();
+    
+    // 检查是否有项目路径参数（从打开项目跳转而来）
+    this.route.queryParams.subscribe(params => {
+      if (params['projectPath']) {
+        this.loadProject(params['projectPath']);
+      }
+    });
+    
     // 订阅训练进度
     this.trainProgressSubscription = this.modelTrainService.progress$.subscribe(
       progress => {
@@ -138,6 +159,65 @@ export class ClassificationTrainComponent implements OnInit, OnDestroy {
         console.log('训练进度:', progress);
       }
     );
+  }
+
+  /**
+   * 加载项目数据
+   */
+  private loadProject(projectPath: string) {
+    const loadingMsg = this.message.loading('正在加载项目...', { nzDuration: 0 });
+    
+    try {
+      const projectData = this.modelProjectService.loadClassificationProject(projectPath);
+      
+      if (!projectData) {
+        this.message.remove(loadingMsg.messageId);
+        this.message.error('无法加载项目数据');
+        return;
+      }
+
+      // 加载类别数据
+      this.classList = projectData.classes.map((classData, index) => ({
+        id: index + 1,
+        name: classData.name,
+        enabled: classData.enabled,
+        samples: classData.samples
+      }));
+      
+      // 更新 nextClassId
+      this.nextClassId = this.classList.length + 1;
+
+      // 加载训练配置
+      if (projectData.meta.trainConfig) {
+        this.trainConfig = {
+          epochs: projectData.meta.trainConfig.epochs || 50,
+          batchSize: projectData.meta.trainConfig.batchSize || 16,
+          learningRate: projectData.meta.trainConfig.learningRate || 0.001
+        };
+      }
+
+      // 设置项目保存信息
+      this.savedProjectFullPath = projectPath;
+      this.projectSaveName = projectData.meta.name;
+      this.modelTrained = projectData.meta.modelTrained || false;
+
+      // 添加到最近打开的项目
+      this.modelProjectService.addRecentProject({
+        name: projectData.meta.name,
+        nickname: projectData.meta.nickname,
+        path: projectPath,
+        modelType: 'classification',
+        updatedAt: new Date().toISOString()
+      });
+
+      this.message.remove(loadingMsg.messageId);
+      this.message.success(`项目 "${projectData.meta.name}" 加载成功`);
+      
+    } catch (error: any) {
+      this.message.remove(loadingMsg.messageId);
+      console.error('加载项目失败:', error);
+      this.message.error(`加载项目失败: ${error.message}`);
+    }
   }
 
   ngOnDestroy() {
@@ -1072,6 +1152,117 @@ export class ClassificationTrainComponent implements OnInit, OnDestroy {
   // 部署模型
   deployModel() {
     this.router.navigate(['/model-deploy/sscma']);
+  }
+
+  // 打开保存项目模态框
+  openSaveProjectModal() {
+    // 如果项目已保存，直接保存到现有路径
+    if (this.savedProjectFullPath) {
+      this.saveToExistingProject();
+      return;
+    }
+    
+    this.isSaveProjectModalVisible = true;
+  }
+
+  // 关闭保存项目模态框
+  closeSaveProjectModal() {
+    this.isSaveProjectModalVisible = false;
+  }
+
+  // 处理保存项目事件
+  async handleSaveProject(data: { name: string; path: string }) {
+    if (!this.electronService.isElectron) {
+      this.message.error('保存功能仅在 Electron 环境下可用');
+      return;
+    }
+
+    const loadingMsg = this.message.loading('正在保存项目...', { nzDuration: 0 });
+
+    try {
+      // 转换 classList 为 ClassificationClassData 格式
+      const classesData = this.classList.map(c => ({
+        name: c.name,
+        enabled: c.enabled,
+        samples: c.samples
+      }));
+
+      const options = {
+        projectName: data.name,
+        projectPath: data.path,
+        modelType: 'classification' as const,
+        trainConfig: {
+          epochs: this.trainConfig.epochs,
+          batchSize: this.trainConfig.batchSize,
+          learningRate: this.trainConfig.learningRate
+        },
+        modelTrained: this.modelTrained
+      };
+
+      const result = await this.modelProjectService.saveClassificationProject(options, classesData);
+
+      if (result.success) {
+        this.savedProjectFullPath = result.projectPath!;
+        this.projectSaveName = data.name;
+        this.projectSavePath = data.path;
+        this.message.remove(loadingMsg.messageId);
+        this.message.success(`项目已保存到: ${result.projectPath}`);
+        this.closeSaveProjectModal();
+      } else {
+        this.message.remove(loadingMsg.messageId);
+        this.message.error(result.error || '保存项目失败');
+      }
+
+    } catch (error: any) {
+      this.message.remove(loadingMsg.messageId);
+      console.error('保存项目失败:', error);
+      this.message.error(`保存项目失败: ${error.message}`);
+    }
+  }
+
+  // 保存到已存在的项目
+  private async saveToExistingProject() {
+    const loadingMsg = this.message.loading('正在更新项目...', { nzDuration: 0 });
+
+    try {
+      // 转换 classList 为 ClassificationClassData 格式
+      const classesData = this.classList.map(c => ({
+        name: c.name,
+        enabled: c.enabled,
+        samples: c.samples
+      }));
+
+      const options = {
+        projectName: this.projectSaveName,
+        projectPath: this.projectSavePath,
+        modelType: 'classification' as const,
+        trainConfig: {
+          epochs: this.trainConfig.epochs,
+          batchSize: this.trainConfig.batchSize,
+          learningRate: this.trainConfig.learningRate
+        },
+        modelTrained: this.modelTrained
+      };
+
+      const result = await this.modelProjectService.updateClassificationProject(
+        this.savedProjectFullPath,
+        options,
+        classesData
+      );
+
+      this.message.remove(loadingMsg.messageId);
+      
+      if (result.success) {
+        this.message.success('项目已更新');
+      } else {
+        this.message.error(result.error || '更新项目失败');
+      }
+
+    } catch (error: any) {
+      this.message.remove(loadingMsg.messageId);
+      console.error('更新项目失败:', error);
+      this.message.error(`更新项目失败: ${error.message}`);
+    }
   }
 
   // 返回

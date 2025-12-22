@@ -332,6 +332,9 @@
         <button nz-button nzType="primary" (click)="deployModel()" [disabled]="!modelTrained">
           部署模型
         </button>
+        <button nz-button nzType="primary" (click)="openSaveProjectModal()">
+          保存项目
+        </button>
       </div>
     </div>
   </div>
@@ -387,5 +390,15 @@
       </div>
     </div>
   </nz-modal>
+
+  <!-- 保存项目弹窗 -->
+  <app-save-project-modal
+    [(visible)]="isSaveProjectModalVisible"
+    [(projectName)]="projectSaveName"
+    [(projectPath)]="projectSavePath"
+    [namePrefix]="'classification_'"
+    (save)="handleSaveProject($event)"
+    (cancel)="closeSaveProjectModal()">
+  </app-save-project-modal>
 
 </app-sub-window>

@@ -5,11 +5,13 @@
 
 .window-content {
   display: flex;
+  flex-direction: column;
   height: calc(100% - 60px);
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   overflow: hidden;
   padding: 40px;
+  gap: 30px;
 
   .type-selector {
     width: 100%;
@@ -70,6 +72,89 @@
 
           i {
             color: #555;
+          }
+        }
+      }
+    }
+  }
+
+  // 最近打开的项目
+  .recent-projects {
+    width: 100%;
+    max-width: 800px;
+
+    .section-title {
+      font-size: 14px;
+      color: #888;
+      margin-bottom: 12px;
+      padding-left: 4px;
+    }
+
+    .project-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+
+      .project-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 12px 16px;
+        background: #1e2022;
+        border: 1px solid #3a3d40;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: all 0.2s;
+
+        &:hover {
+          border-color: #1890ff;
+          background: #252729;
+        }
+
+        .project-icon {
+          width: 40px;
+          height: 40px;
+          background: #2a2c2e;
+          border-radius: 6px;
+          flex-shrink: 0;
+
+          i {
+            font-size: 18px;
+            color: #1890ff;
+          }
+        }
+
+        .project-info {
+          flex: 1;
+          min-width: 0;
+
+          .project-name {
+            font-size: 14px;
+            font-weight: 500;
+            color: #ddd;
+            margin-bottom: 4px;
+          }
+
+          .project-meta {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 12px;
+            color: #888;
+
+            .model-type {
+              padding: 2px 8px;
+              background: #2a2c2e;
+              border-radius: 4px;
+              color: #1890ff;
+            }
+
+            .project-path {
+              flex: 1;
+              white-space: nowrap;
+              overflow: hidden;
+              text-overflow: ellipsis;
+            }
           }
         }
       }
