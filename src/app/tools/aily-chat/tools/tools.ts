@@ -188,47 +188,111 @@ export const TOOLS = [
     },
     {
         name: "edit_file",
-        description: `编辑文件工具。支持多种编辑模式：1) 替换整个文件内容（默认）；2) 在指定行插入内容；3) 替换指定行或行范围；4) 追加到文件末尾。可选择当文件不存在时是否创建新文件。`,
+        description: `编辑文件工具 - 支持多种编辑模式（推荐使用 String Replace 模式以获得最佳安全性）
+
+**编辑模式：**
+1. **String Replace**（推荐）：替换文件中的特定字符串，自动检测多匹配防止意外修改
+2. **Whole File**：替换整个文件内容
+3. **Line-based**：在指定行插入或替换指定行范围
+4. **Append**：追加内容到文件末尾
+
+使用示例：
+
+// 替换文件中的特定字符串（最安全的方式）
+editFileTool({
+  path: "/path/to/file.ts",
+  oldString: "const value = 123;",
+  newString: "const value = 456;",
+  replaceMode: "string"
+});
+
+// 替换整个文件
+editFileTool({
+  path: "/path/to/file.txt",
+  content: 'new file content',
+  replaceMode: "whole"
+});
+
+// 在第5行插入内容
+editFileTool({
+  path: "/path/to/file.txt", 
+  content: 'new line content',
+  insertLine: 5
+});
+
+// 替换第3-5行的内容
+editFileTool({
+  path: "/path/to/file.txt",
+  content: 'multi-line\nreplacement\ncontent',
+  replaceStartLine: 3,
+  replaceEndLine: 5
+});
+
+// 追加到文件末尾
+editFileTool({
+  path: "/path/to/file.txt",
+  content: 'append content'
+});
+
+**String Replace 模式优势：**
+- 自动检测并拒绝多个匹配（防止意外修改错误位置）
+- 支持创建新文件（oldString 为空）
+- 提供精确的行号和修改信息
+- 自动检测文件编码
+
+**重要：**
+- 不支持编辑 .ipynb 文件
+- String Replace 模式要求字符串在文件中唯一匹配
+- 建议在 oldString 中包含 3-5 行上下文以确保唯一性`,
         input_schema: {
             type: 'object',
             properties: {
                 path: {
                     type: 'string',
-                    description: '要编辑的文件路径'
+                    description: '要编辑的文件路径（支持相对路径和绝对路径）'
+                },
+                oldString: {
+                    type: 'string',
+                    description: '要替换的原字符串（String Replace 模式）。为空时创建新文件。必须在文件中唯一匹配，建议包含 3-5 行上下文'
+                },
+                newString: {
+                    type: 'string',
+                    description: '替换后的新字符串（String Replace 模式）。与 oldString 配合使用'
                 },
                 content: {
                     type: 'string',
-                    description: '要写入的内容。替换模式下是新的文件内容；插入/替换模式下可以是任意文本内容'
+                    description: '要写入的内容（其他模式使用）。Whole File 模式下是完整文件内容；Line-based 和 Append 模式下是要插入/追加的内容'
                 },
                 encoding: {
                     type: 'string',
-                    description: '文件编码格式',
+                    description: '文件编码格式。不指定时自动检测（UTF-8 优先）',
                     default: 'utf-8'
                 },
                 createIfNotExists: {
                     type: 'boolean',
-                    description: '如果文件不存在是否创建',
+                    description: '文件不存在时是否创建（仅用于非 String Replace 模式）',
                     default: false
                 },
                 insertLine: {
                     type: 'number',
-                    description: '插入行号（从1开始）。指定此参数时会在该行插入内容'
+                    description: '插入行号（从1开始，Line-based 模式）。在指定行插入 content 的内容'
                 },
                 replaceStartLine: {
                     type: 'number',
-                    description: '替换起始行号（从1开始）。指定此参数时会替换指定行的内容'
+                    description: '替换起始行号（从1开始，Line-based 模式）。替换从此行开始的内容'
                 },
                 replaceEndLine: {
                     type: 'number',
-                    description: '替换结束行号（从1开始）。与replaceStartLine配合使用，可替换多行内容。如不指定则只替换起始行'
+                    description: '替换结束行号（从1开始，Line-based 模式）。与 replaceStartLine 配合可替换多行。不指定则只替换起始行'
                 },
                 replaceMode: {
-                    type: 'boolean',
-                    description: '是否替换整个文件内容。true=替换整个文件（默认），false=执行其他操作（插入、替换行、追加）',
-                    default: true
+                    type: 'string',
+                    enum: ['string', 'whole', 'line', 'append'],
+                    description: '编辑模式：string=字符串替换（推荐，最安全），whole=替换整个文件，line=行级操作（需配合 insertLine/replaceStartLine），append=追加到末尾',
+                    default: 'string'
                 }
             },
-            required: ['path', 'content']
+            required: ['path']
         }
     },
     {

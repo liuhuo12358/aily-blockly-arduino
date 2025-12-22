@@ -1,5 +1,5 @@
-import { Component, ViewChild, ElementRef, OnDestroy, HostListener } from '@angular/core';
-import { Router } from '@angular/router';
+import { Component, ViewChild, ElementRef, OnDestroy, OnInit, HostListener } from '@angular/core';
+import { Router, ActivatedRoute } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TranslateModule } from '@ngx-translate/core';
@@ -7,7 +7,9 @@ import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzSelectModule } from 'ng-zorro-antd/select';
 import { NzModalModule } from 'ng-zorro-antd/modal';
 import { NzInputModule } from 'ng-zorro-antd/input';
+import { NzMessageService } from 'ng-zorro-antd/message';
 import { SubWindowComponent } from '../../../../components/sub-window/sub-window.component';
+import { ModelProjectService } from '../../../../services/model-project.service';
 
 // 标注框接口
 interface BoundingBox {
@@ -42,7 +44,7 @@ interface AnnotationData {
   templateUrl: './detection-train.component.html',
   styleUrl: './detection-train.component.scss'
 })
-export class DetectionTrainComponent implements OnDestroy {
+export class DetectionTrainComponent implements OnInit, OnDestroy {
   @ViewChild('cameraVideo') cameraVideo!: ElementRef<HTMLVideoElement>;
   @ViewChild('cameraCanvas') cameraCanvas!: ElementRef<HTMLCanvasElement>;
   @ViewChild('previewVideo') previewVideo!: ElementRef<HTMLVideoElement>;
@@ -92,6 +94,10 @@ export class DetectionTrainComponent implements OnDestroy {
   
   // 裁剪遮罩偏移（用于计算遮罩位置）
   cropMaskOffset = { left: 0, right: 0, top: 0, bottom: 0 };
+
+  // 项目保存相关
+  savedProjectFullPath = '';
+  projectSaveName = '';
   
   // 获取当前页大小
   get pageSize(): number {
@@ -140,14 +146,112 @@ export class DetectionTrainComponent implements OnDestroy {
   previewEnabled = false;
   previewInputSource: 'webcam' | 'upload' = 'webcam';
 
-  constructor(private router: Router) { }
+  constructor(
+    private router: Router,
+    private route: ActivatedRoute,
+    private message: NzMessageService,
+    private modelProjectService: ModelProjectService
+  ) { }
+
+  ngOnInit() {
+    // 检查是否有项目路径参数（从打开项目跳转而来）
+    this.route.queryParams.subscribe(params => {
+      if (params['projectPath']) {
+        this.loadProject(params['projectPath']);
+      }
+    });
+  }
+
+  /**
+   * 加载项目数据
+   */
+  private loadProject(projectPath: string) {
+    const loadingMsg = this.message.loading('正在加载项目...', { nzDuration: 0 });
+    
+    try {
+      const projectData = this.modelProjectService.loadDetectionProject(projectPath);
+      
+      if (!projectData) {
+        this.message.remove(loadingMsg.messageId);
+        this.message.error('无法加载项目数据');
+        return;
+      }
+
+      // 加载标签列表
+      this.allLabels = projectData.labels || [];
+      
+      // 加载图片
+      this.uploadedImages = projectData.images || [];
+      
+      // 加载标注数据
+      this.imageAnnotations.clear();
+      if (projectData.annotations) {
+        projectData.annotations.forEach((annotationData, index) => {
+          if (annotationData.boxes && annotationData.boxes.length > 0) {
+            // 将标注框转换为内部格式
+            const boxes: BoundingBox[] = annotationData.boxes.map((box: any, boxIndex: number) => ({
+              id: `box_${index}_${boxIndex}`,
+              x: box.x,
+              y: box.y,
+              width: box.width,
+              height: box.height,
+              label: box.label
+            }));
+            this.imageAnnotations.set(index, boxes);
+          }
+        });
+      }
+
+      // 加载训练配置
+      if (projectData.meta.trainConfig) {
+        this.trainConfig = {
+          epochs: projectData.meta.trainConfig.epochs || 50,
+          batchSize: projectData.meta.trainConfig.batchSize || 32,
+          learningRate: projectData.meta.trainConfig.learningRate || 0.001
+        };
+      }
+
+      // 设置项目保存信息
+      this.savedProjectFullPath = projectPath;
+      this.projectSaveName = projectData.meta.name;
+      this.modelTrained = projectData.meta.modelTrained || false;
+
+      // 添加到最近打开的项目
+      this.modelProjectService.addRecentProject({
+        name: projectData.meta.name,
+        nickname: projectData.meta.nickname,
+        path: projectPath,
+        modelType: 'detection',
+        updatedAt: new Date().toISOString()
+      });
+
+      this.message.remove(loadingMsg.messageId);
+      this.message.success(`项目 "${projectData.meta.name}" 加载成功`);
+      
+    } catch (error: any) {
+      this.message.remove(loadingMsg.messageId);
+      console.error('加载项目失败:', error);
+      this.message.error(`加载项目失败: ${error.message}`);
+    }
+  }
 
   // 打开摄像头
   async openCamera() {
+    // 如果在标注模式下打开摄像头，先保存标注并关闭标注窗口
+    if (this.annotationOpened) {
+      this.saveCurrentAnnotation();
+      this.annotationOpened = false;
+      this.currentAnnotation = null;
+      this.selectedBoxId = null;
+      this.isDrawing = false;
+      this.isDragging = false;
+      this.isResizing = false;
+    }
+    
     this.cameraOpened = true;
     this.cameraError = false;
     // 切换模式时重置到第一页
-    this.currentPage = 1;
+    // this.currentPage = 1;
 
     try {
       // 延迟获取video元素，确保DOM已渲染
@@ -189,7 +293,7 @@ export class DetectionTrainComponent implements OnDestroy {
     this.cameraOpened = false;
     this.cameraError = false;
     // 切换模式时重置到第一页
-    this.currentPage = 1;
+    // this.currentPage = 1;
   }
 
   // 切换镜像
@@ -384,18 +488,22 @@ export class DetectionTrainComponent implements OnDestroy {
         nextIndex = this.uploadedImages.length - 1;
       }
       
-      // 清空当前标注状态（不调用closeAnnotation避免重新保存）
-      this.annotationOpened = false;
-      this.currentAnnotation = null;
+      // 直接更新当前标注数据，避免关闭再打开造成闪烁
+      const nextImageUrl = this.uploadedImages[nextIndex];
+      const existingBoxes = this.imageAnnotations.get(nextIndex) || [];
+      
+      this.currentAnnotation = {
+        imageUrl: nextImageUrl,
+        imageIndex: nextIndex,
+        boxes: [...existingBoxes]
+      };
       this.selectedBoxId = null;
       this.isDrawing = false;
       this.isDragging = false;
       this.isResizing = false;
       
-      // 打开新图片
-      setTimeout(() => {
-        this.openAnnotation(nextIndex);
-      }, 50);
+      // 重置裁剪遮罩
+      this.cropMaskOffset = { left: 0, right: 0, top: 0, bottom: 0 };
     } else {
       // 没有图片了，直接关闭
       this.annotationOpened = false;
