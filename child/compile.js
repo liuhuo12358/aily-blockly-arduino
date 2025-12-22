@@ -307,8 +307,14 @@ function mkdirp(dir) {
 }
 
 function rm(pathToRemove) {
-    if (fs.existsSync(pathToRemove)) {
+    try {
+        const stats = fs.lstatSync(pathToRemove);
         fs.rmSync(pathToRemove, { recursive: true, force: true });
+    } catch (e) {
+        // Ignore ENOENT (file not found), rethrow others
+        if (e.code !== 'ENOENT') {
+            logger.warn(`删除失败 ${pathToRemove}:`, e.message);
+        }
     }
 }
 
@@ -357,8 +363,8 @@ async function processLibrary(lib, librariesPath, currentProjectPath, za7Path, d
         // Check cache
         const cached = libraryCache[lib];
         if (cached && isLibraryCacheValid(cached, sourcePathBase)) {
-            // logger.log(`库 ${lib} 使用缓存信息`);
-            return { targetNames: cached.targetNames, success: true };
+                // logger.log(`库 ${lib} 使用缓存信息`);
+                return { targetNames: cached.targetNames, success: true };
         }
 
         // Prepare source
@@ -438,8 +444,21 @@ async function processLibraryWithHeaders(lib, sourcePath, librariesPath, devmode
     const targetName = lib.split('@aily-project/')[1];
     const targetPath = path.join(librariesPath, targetName);
     
-    if (fs.existsSync(targetPath)) {
-        if (devmode) {
+    // Check if target exists (valid or broken symlink)
+    let exists = false;
+    let isBroken = false;
+    try {
+        fs.lstatSync(targetPath);
+        exists = true;
+        try {
+            fs.statSync(targetPath);
+        } catch (e) {
+            isBroken = true;
+        }
+    } catch (e) {}
+
+    if (exists) {
+        if (devmode || isBroken) {
             rm(targetPath);
         } else {
             return { targetNames: [targetName], success: true };
@@ -463,14 +482,29 @@ async function processLibraryDirectories(lib, sourcePath, librariesPath, devmode
         const fullSourcePath = path.join(sourcePath, item);
         if (fs.statSync(fullSourcePath).isDirectory()) {
             const targetPath = path.join(librariesPath, item);
-            if (fs.existsSync(targetPath)) {
-                if (devmode) {
+            
+            // Check if target exists (valid or broken symlink)
+            let exists = false;
+            let isBroken = false;
+            try {
+                fs.lstatSync(targetPath);
+                exists = true;
+                try {
+                    fs.statSync(targetPath);
+                } catch (e) {
+                    isBroken = true;
+                }
+            } catch (e) {}
+
+            if (exists) {
+                if (devmode || isBroken) {
                     rm(targetPath);
                 } else {
                     targetNames.push(item);
                     continue;
                 }
             }
+
             try {
                 linkItem(fullSourcePath, targetPath);
                 targetNames.push(item);
@@ -483,9 +517,26 @@ async function processLibraryDirectories(lib, sourcePath, librariesPath, devmode
 }
 
 function linkItem(src, dest) {
-    // Try symlink (junction for dirs on windows)
-    const type = fs.statSync(src).isDirectory() ? 'junction' : 'file';
-    fs.symlinkSync(src, dest, type);
+    const stat = fs.statSync(src);
+    if (stat.isDirectory()) {
+        if (!fs.existsSync(dest)) {
+            fs.mkdirSync(dest, { recursive: true });
+        }
+        const items = fs.readdirSync(src);
+        for (const item of items) {
+            linkItem(path.join(src, item), path.join(dest, item));
+        }
+    } else {
+        if (fs.existsSync(dest)) {
+            fs.unlinkSync(dest);
+        }
+        try {
+            fs.linkSync(src, dest);
+        } catch (e) {
+            // Fallback to copy if hard link fails (e.g. cross-device)
+            fs.copyFileSync(src, dest);
+        }
+    }
 }
 
 async function syncCompilerToolsToToolsPath(compilerPath, toolsPath) {

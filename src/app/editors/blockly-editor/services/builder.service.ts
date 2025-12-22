@@ -255,7 +255,7 @@ export class _BuilderService {
                     if (progressValue > lastProgress) {
                       lastProgress = progressValue;
                       this.noticeService.update({
-                        title: title,
+                        title: "编译中...",
                         text: lastBuildText,
                         state: 'doing',
                         progress: lastProgress,
