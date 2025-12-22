@@ -116,10 +116,10 @@ export class ModelStoreService {
    * @param uniformType 开发板类型（可选）
    * @returns Observable<ModelListResult>
    */
-  getModelList(page: number = 1, pageSize: number = 12, uniformType?: number): Observable<ModelListResult> {
+  getModelList(page: number = 1, pageSize: number = 12, uniformType?: number, search?: string): Observable<ModelListResult> {
     // const type = uniformType || this.uniformType;
     const type = uniformType || '';
-    const url = `${this.baseUrl}?page=${page}&length=${pageSize}&uniform_type=${type}&lang=${this.translateService.currentLang}`;
+    const url = `${this.baseUrl}?page=${page}&length=${pageSize}&uniform_type=${type}&lang=${this.translateService.currentLang}&search=${search || ''}`;
     console.log('请求模型列表URL:', url);
     return this.http.get<ModelListResponse>(url).pipe(
       map(response => {

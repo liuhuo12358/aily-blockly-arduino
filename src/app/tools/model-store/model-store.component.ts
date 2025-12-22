@@ -105,7 +105,7 @@ export class ModelStoreComponent implements OnInit, AfterViewInit {
   // 加载模型列表
   loadModelList(page: number = 1) {
     this.loading = true;
-    this.modelStoreService.getModelList(page, this.pageSize).subscribe({
+    this.modelStoreService.getModelList(page, this.pageSize, undefined, this.searchKeyword).subscribe({
       next: (result) => {
         console.log('加载的模型列表结果:', result);
         this.itemList = result.list;
@@ -209,7 +209,8 @@ export class ModelStoreComponent implements OnInit, AfterViewInit {
   closeSearch() {
     this.showSearch = false;
     this.searchKeyword = '';
-    this.filterProjects();
+    // this.filterProjects();
+    this.loadModelList(1);
   }
 
   // 搜索关键词变化时触发
