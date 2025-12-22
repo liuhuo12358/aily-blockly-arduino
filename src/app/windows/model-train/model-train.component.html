@@ -29,7 +29,7 @@
         <div class="project-list">
           @for(project of recentProjects; track project.path) {
           <div class="project-item" (click)="openRecentProject(project)">
-            <div class="project-icon ccenter">
+            <!-- <div class="project-icon ccenter">
               @if(project.modelType === 'classification') {
               <i class="fa-thin fa-grid-2"></i>
               } @else if(project.modelType === 'detection') {
@@ -37,7 +37,7 @@
               } @else {
               <i class="fa-thin fa-brain"></i>
               }
-            </div>
+            </div> -->
             <div class="project-info">
               <div class="project-name">{{ project.nickname || project.name }}</div>
               <div class="project-meta">

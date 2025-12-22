@@ -11,7 +11,7 @@ declare const arduinoGenerator: any;
 /**
  * Lint 检测模式
  */
-export type LintMode = 'fast' | 'accurate' | 'auto';
+export type LintMode = 'fast' | 'accurate' | 'auto' | 'ast-grep';
 
 /**
  * Lint 输出格式
@@ -113,7 +113,7 @@ export class ArduinoLintService {
     
     // 设置默认选项
     const {
-      mode = 'auto',
+      mode = 'ast-grep',
       format = 'json',
       timeout = 10000
     } = options;
@@ -208,7 +208,7 @@ export class ArduinoLintService {
           }],
           warnings: [],
           executionTime: 0,
-          mode: options.mode || 'auto'
+          mode: options.mode || 'ast-grep'
         };
       }
 
