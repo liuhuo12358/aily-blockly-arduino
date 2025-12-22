@@ -15,6 +15,7 @@ import { _ProjectService } from './services/project.service';
 import { _UploaderService } from './services/uploader.service';
 import { _BuilderService } from './services/builder.service';
 import { BitmapUploadService } from './services/bitmap-upload.service';
+import { WorkflowService } from './services/workflow.service';
 import { ProjectService } from '../../services/project.service';
 import { DevToolComponent } from './components/dev-tool/dev-tool.component';
 import { HistoryService } from './services/history.service';
@@ -31,7 +32,8 @@ import { HistoryService } from './services/history.service';
   providers: [
     _BuilderService,
     _UploaderService,
-    BitmapUploadService
+    BitmapUploadService,
+    WorkflowService
   ],
   templateUrl: './blockly-editor.component.html',
   styleUrl: './blockly-editor.component.scss'

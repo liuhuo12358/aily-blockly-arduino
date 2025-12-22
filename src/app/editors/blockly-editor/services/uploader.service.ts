@@ -15,6 +15,7 @@ import { ActionService } from "../../../services/action.service";
 import { arduinoGenerator } from "../components/blockly/generators/arduino/arduino";
 import { BlocklyService } from "./blockly.service";
 import { findFile } from '../../../utils/builder.utils';
+import { WorkflowService } from './workflow.service';
 
 @Injectable()
 export class _UploaderService {
@@ -31,7 +32,8 @@ export class _UploaderService {
     private npmService: NpmService,
     private serialMonitorService: SerialMonitorService,
     private actionService: ActionService,
-    private blocklyService: BlocklyService
+    private blocklyService: BlocklyService,
+    private workflowService: WorkflowService
   ) { }
 
   uploadInProgress = false;
@@ -269,12 +271,6 @@ export class _UploaderService {
           return;
         }
 
-        if (this._builderService.buildInProgress) {
-          this.message.warning('正在编译，请稍后再试');
-          reject({ state: 'warn', text: '正在编译，请稍后' });
-          return;
-        }
-
         if (this.npmService.isInstalling) {
           this.message.warning('相关依赖正在安装中，请稍后再试');
           reject({ state: 'warn', text: '依赖安装中，请稍后' });
@@ -343,6 +339,7 @@ export class _UploaderService {
         }
 
         // 辨识上传中
+        this.workflowService.startUpload();
         this._builderService.isUploading = true;
 
         const boardJson = this._builderService.boardJson;
@@ -358,6 +355,7 @@ export class _UploaderService {
         uploadParam = boardJson.uploadParam;
         if (!uploadParam) {
           this.handleUploadError('缺少上传参数，请检查板子配置');
+          this.workflowService.finishUpload(false, '缺少上传参数');
           reject({ state: 'error', text: '缺少上传参数' });
           return;
         }
@@ -473,29 +471,32 @@ export class _UploaderService {
 
         const buildProperties = '';
 
-        let uploadCmd = `${command} ${uploadParamList.slice(1).join(' ')}${buildProperties}`;
-        console.log("Upload cmd: ", uploadCmd);
-
-        // uploadCmd = uploadCmd.replace('${serial}', this.serialService.currentPort || '');
-
+        // 构造参数数组
+        let args = uploadParamList.slice(1);
+        
+        // 处理串口替换
+        let serialPort = this.serialService.currentPort || '';
         // 在 macOS 下，如果当前端口是 /dev/tty 开头，则替换为 /dev/cu
-        if (window['platform'].isMacOS && this.serialService.currentPort && 
-          this.serialService.currentPort.startsWith('/dev/cu.') && uploadCmd.includes('bossac')) {
-          let cuPort = this.serialService.currentPort;
-          cuPort = cuPort.replace('/dev/cu.', 'cu.');
-          console.log(`Converting port from ${this.serialService.currentPort} to ${cuPort}`);
-          uploadCmd = uploadCmd.replace('${serial}', cuPort);
-        } else {
-          uploadCmd = uploadCmd.replace('${serial}', this.serialService.currentPort || '');
+        if (window['platform'].isMacOS && serialPort.startsWith('/dev/cu.') && command.includes('bossac')) {
+             serialPort = serialPort.replace('/dev/cu.', 'cu.');
+             console.log(`Converting port from ${this.serialService.currentPort} to ${serialPort}`);
         }
 
-        console.log("Final upload cmd: ", uploadCmd);
+        args = args.map(arg => arg.replace('${serial}', serialPort));
+
+        console.log("Upload command:", command);
+        console.log("Upload args:", args);
 
         this.uploadInProgress = true;
         this.noticeService.update({ title: title, text: lastUploadText, state: 'doing', progress: 0, setTimeout: 0 });
 
         let bufferData = '';
-        this.cmdService.run(uploadCmd, null, false).subscribe({
+        
+        // 使用 spawn 调用独立脚本
+        const scriptPath = 'electron/upload.js'; 
+        const nodeArgs = [scriptPath, command, ...args];
+
+        this.cmdService.spawn('node', nodeArgs).subscribe({
           next: async (output: CmdOutput) => {
             // console.log('编译命令输出:', output);
             this.streamId = output.streamId;
@@ -670,6 +671,7 @@ export class _UploaderService {
               });
               this.uploadInProgress = false;
               this._builderService.isUploading = false;
+              this.workflowService.finishUpload(true);
               resolve({ state: 'done', text: '上传完成' });
             } else if (this.cancelled) {
               console.warn("上传中断");
@@ -703,6 +705,7 @@ export class _UploaderService {
       } catch (error) {
         // console.error("上传异常:", error);
         this.handleUploadError(error.message || '上传失败');
+        this.workflowService.finishUpload(false, error.message || '上传失败');
         reject({ state: 'error', text: error.message || '上传失败' });
       }
     });

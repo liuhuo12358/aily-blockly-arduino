@@ -691,6 +691,9 @@ function loadEnv() {
     userConf = {}; // 确保userConf是一个对象
   }
 
+  // child Path
+  process.env.AILY_CHILD_PATH = childPath;
+
   // npm registry
   process.env.AILY_NPM_REGISTRY = conf["npm_registry"][0];
   // 7za path

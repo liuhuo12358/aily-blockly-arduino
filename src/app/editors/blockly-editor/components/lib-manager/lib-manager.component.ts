@@ -17,6 +17,7 @@ import { CmdOutput, CmdService } from '../../../../services/cmd.service';
 import { ElectronService } from '../../../../services/electron.service';
 import { BlocklyService } from '../../services/blockly.service';
 import { PlatformService } from '../../../../services/platform.service';
+import { WorkflowService } from '../../services/workflow.service';
 
 @Component({
   selector: 'app-lib-manager',
@@ -58,6 +59,7 @@ export class LibManagerComponent {
     private cmdService: CmdService,
     private electronService: ElectronService,
     private platformService: PlatformService,
+    private workflowService: WorkflowService
   ) {
   }
 
@@ -188,26 +190,35 @@ export class LibManagerComponent {
     }
     // console.log('当前项目路径：', this.projectService.currentProjectPath);
     this.isInstalling = true;
+    this.workflowService.startInstall();
     let packageList_old = await this.npmService.getAllInstalledLibraries(this.projectService.currentProjectPath);
     // console.log('当前已安装的库列表：', packageList_old);
 
     lib.state = 'installing';
     this.message.loading(`${lib.nickname} ${this.translate.instant('LIB_MANAGER.INSTALLING')}...`);
     this.output = '';
-    await this.cmdService.runAsync(`npm install ${lib.name}@${lib.version}`, this.projectService.currentProjectPath)
-    this.libraryList = await this.checkInstalled(this.libraryList);
-    // lib.state = 'default';
-    this.message.success(`${lib.nickname} ${this.translate.instant('LIB_MANAGER.INSTALLED')}`);
+    try {
+      await this.cmdService.runAsync(`npm install ${lib.name}@${lib.version}`, this.projectService.currentProjectPath)
+      this.libraryList = await this.checkInstalled(this.libraryList);
+      // lib.state = 'default';
+      this.message.success(`${lib.nickname} ${this.translate.instant('LIB_MANAGER.INSTALLED')}`);
 
-    let packageList_new = await this.npmService.getAllInstalledLibraries(this.projectService.currentProjectPath);
-    // console.log('新的已安装的库列表：', packageList_new);
-    // 比对相较于旧的已安装库列表，找出新增的库
-    const newPackages = packageList_new.filter(pkg => !packageList_old.some(oldPkg => oldPkg.name === pkg.name && oldPkg.version === pkg.version));
-    // console.log('新增的库：', newPackages);
-    for (const pkg of newPackages) {
-      this.blocklyService.loadLibrary(pkg.name, this.projectService.currentProjectPath);
+      let packageList_new = await this.npmService.getAllInstalledLibraries(this.projectService.currentProjectPath);
+      // console.log('新的已安装的库列表：', packageList_new);
+      // 比对相较于旧的已安装库列表，找出新增的库
+      const newPackages = packageList_new.filter(pkg => !packageList_old.some(oldPkg => oldPkg.name === pkg.name && oldPkg.version === pkg.version));
+      // console.log('新增的库：', newPackages);
+      for (const pkg of newPackages) {
+        this.blocklyService.loadLibrary(pkg.name, this.projectService.currentProjectPath);
+      }
+      this.isInstalling = false;
+      this.workflowService.finishInstall(true);
+    } catch (error) {
+      this.isInstalling = false;
+      lib.state = 'error'; // Or revert to previous state
+      this.message.error(`${lib.nickname} ${this.translate.instant('LIB_MANAGER.INSTALL_FAILED')}`);
+      this.workflowService.finishInstall(false, error.message || 'Install failed');
     }
-    this.isInstalling = false;
   }
 
   async removeLib(lib) {
