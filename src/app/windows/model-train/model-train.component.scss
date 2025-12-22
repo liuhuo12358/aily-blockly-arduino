@@ -99,9 +99,9 @@
         display: flex;
         align-items: center;
         gap: 12px;
-        padding: 12px 16px;
-        background: #1e2022;
-        border: 1px solid #3a3d40;
+        // padding: 12px 16px;
+        // background: #1e2022;
+        // border: 1px solid #3a3d40;
         border-radius: 6px;
         cursor: pointer;
         transition: all 0.2s;
@@ -128,10 +128,10 @@
           flex: 1;
           min-width: 0;
 
-          .project-name {
-            font-size: 14px;
+          .project-path {
+            font-size: 12px;
             font-weight: 500;
-            color: #ddd;
+            color: #888;
             margin-bottom: 4px;
           }
 
@@ -140,7 +140,7 @@
             align-items: center;
             gap: 12px;
             font-size: 12px;
-            color: #888;
+            color: #1890ff;
 
             .model-type {
               padding: 2px 8px;
@@ -149,8 +149,9 @@
               color: #1890ff;
             }
 
-            .project-path {
+            .project-name {
               flex: 1;
+              font-size: 14px;
               white-space: nowrap;
               overflow: hidden;
               text-overflow: ellipsis;
