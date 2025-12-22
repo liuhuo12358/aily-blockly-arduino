@@ -22,6 +22,7 @@ import { MenuComponent } from '../../../components/menu/menu.component';
 import { SubWindowComponent } from '../../../components/sub-window/sub-window.component';
 import { NzTabsModule } from 'ng-zorro-antd/tabs';
 import { ElectronService } from '../../../services/electron.service';
+import { TranslateModule } from '@ngx-translate/core';
 
 interface TriggerRule {
   id: number;
@@ -64,7 +65,8 @@ interface ClassTriggerConfig {
     NzIconModule,
     MenuComponent,
     SubWindowComponent,
-    NzTabsModule
+    NzTabsModule,
+    TranslateModule
   ],
   templateUrl: './sscma-config.component.html',
   styleUrls: ['./sscma-config.component.scss']

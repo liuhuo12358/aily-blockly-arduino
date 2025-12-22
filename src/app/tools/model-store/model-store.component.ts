@@ -13,6 +13,7 @@ import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { NzPaginationModule } from 'ng-zorro-antd/pagination';
 import { ElectronService } from '../../services/electron.service';
+import { TranslateModule } from '@ngx-translate/core';
 
 @Component({
   selector: 'app-model-store',
@@ -25,7 +26,8 @@ import { ElectronService } from '../../services/electron.service';
     NzBreadCrumbModule,
     ModelDetailComponent,
     NzButtonModule,
-    NzPaginationModule
+    NzPaginationModule,
+    TranslateModule
   ],
   templateUrl: './model-store.component.html',
   styleUrl: './model-store.component.scss'

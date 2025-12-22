@@ -8,7 +8,7 @@
             <div class="model-image" *ngIf="modelDetail.pic_url">
                 <img [src]="modelDetail.pic_url" [alt]="modelDetail.name">
             </div>
-            
+
             <!-- 右侧：模型信息 -->
             <div class="model-info-panel">
                 <!-- 适用开发板 -->
@@ -20,7 +20,7 @@
                         }
                     </div>
                 </div>
-                
+
                 <!-- 模型类型 -->
                 <div class="info-row">
                     <span class="info-label">{{ 'MODEL_STORE.MODEL_TYPE' | translate }}</span>
@@ -28,7 +28,7 @@
                         <span class="tag-task">{{ getTaskDescription() }}</span>
                     </div>
                 </div>
-                
+
                 <!-- 模型格式 -->
                 <div class="info-row">
                     <span class="info-label">{{ 'MODEL_STORE.MODEL_FORMAT' | translate }}</span>
@@ -36,7 +36,7 @@
                         <span class="tag-model">{{ getModelFormat() }}</span>
                     </div>
                 </div>
-                
+
                 <!-- 模型精度 -->
                 <div class="info-row">
                     <span class="info-label">{{ 'MODEL_STORE.MODEL_PRECISION' | translate }}</span>
@@ -100,16 +100,16 @@
             </div> -->
 
     <div class="actions bottom">
-        <button  class="back-btn" nz-button nzType="default" (click)="onClose()">
-            返回
+        <button class="back-btn" nz-button nzType="default" (click)="onClose()">
+            {{ 'MODEL_STORE.BACK' | translate }}
         </button>
         <button nz-button nzType="primary" (click)="onDeploy(modelDetail, 'test')"
-                [disabled]="!modelDetail?.is_enabled">
-            测试模型
+            [disabled]="!modelDetail?.is_enabled">
+            {{ 'MODEL_STORE.TEST_MODEL' | translate }}
         </button>
         <button nz-button nzType="primary" (click)="onDeploy(modelDetail, 'deploy')"
-                [disabled]="!modelDetail?.is_enabled">
-            部署模型
+            [disabled]="!modelDetail?.is_enabled">
+            {{ 'MODEL_STORE.DEPLOY_MODEL' | translate }}
         </button>
     </div>
     }@else {

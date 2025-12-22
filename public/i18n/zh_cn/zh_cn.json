@@ -384,12 +384,45 @@
         "AUTHOR": "作者",
         "DEPLOY_COUNT": "部署次数",
         "VIEW_COUNT": "浏览次数",
-        "LIKE_COUNT": "点赞数"
+        "LIKE_COUNT": "点赞数",
+        "TAG_VISION": "视觉",
+        "TAG_AUDIO": "声音",
+        "SEARCH_PLACEHOLDER": "搜索可用模型",
+        "MODEL_LIST": "模型列表",
+        "LOADING": "加载中...",
+        "BACK": "返回",
+        "TEST_MODEL": "测试模型",
+        "DEPLOY_MODEL": "部署模型"
     },
     "XIAO_ESP32S3_SENSE_CONNECT": {
         "STEP1": "1. 将 XIAO ESP32S3 Sense 与 摄像头扩展板 连接",
         "STEP2": "2. 将 XIAO ESP32S3 Sense 通过USB连接到电脑",
         "STEP3": "3. 选择设备串口，再点击\"开始部署\"按钮",
         "STEP4": "4. 等待部署完成，测试模型效果"
+    },
+    "SSCMA_CONFIG": {
+        "TITLE": "模型配置",
+        "SELECT_PORT": "请选择串口",
+        "DISCONNECT": "断开连接",
+        "CONNECT_DEVICE": "连接设备",
+        "READ_DOCS": "阅读文档",
+        "LIVE_PREVIEW": "实时预览",
+        "DEVICE_ID": "设备编号",
+        "DEVICE_VERSION": "设备版本",
+        "CURRENT_MODEL": "使用模型",
+        "MODEL_SETTINGS": "模型设置",
+        "CONFIDENCE": "置信度",
+        "CONFIDENCE_TIP": "模型对识别结果的确定程度,值越高要求越准确但可能遗漏目标",
+        "IOU_THRESHOLD": "IOU阈值",
+        "IOU_TIP": "用于去除重叠检测框,值越高保留的重叠框越多",
+        "GPIO_CONFIG": "GPIO 触发配置",
+        "APPLY_CONFIG": "应用配置",
+        "TRIGGER_WHEN": "大于等于",
+        "CONFIDENCE_TRIGGER": "% 置信度时触发",
+        "SELECT_PIN": "选择引脚",
+        "SELECT_LEVEL": "选择电平",
+        "DEFAULT_LOW_TRIGGER_HIGH": "默认低，触发高",
+        "DEFAULT_HIGH_TRIGGER_LOW": "默认高，触发低",
+        "CANCEL": "取消"
     }
 }

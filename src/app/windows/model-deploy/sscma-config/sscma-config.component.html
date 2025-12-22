@@ -4,7 +4,7 @@
     <!-- 串口选择 -->
     <div class="port-selector">
       <div class="item-inner" (click)="openPortList($event)">
-        <div class="value">{{ currentPort || '请选择串口' }}</div>
+        <div class="value">{{ currentPort || ('SSCMA_CONFIG.SELECT_PORT' | translate) }}</div>
         <div class="arrow-box">
           <i class="fa-light fa-angle-right arrow" [ngClass]="{'down': showPortList}"></i>
         </div>
@@ -14,9 +14,9 @@
         (click)="isConnected ? disconnect() : connectToDevice()"
         [style.background-color]="(!currentPort || isConnecting) ? '' : (isConnected ? '' : '#8fc31f')"
         [style.border-color]="(!currentPort || isConnecting) ? '' : (isConnected ? '' : '#8fc31f')">
-        {{ isConnected ? '断开连接' : '连接设备' }}
+        {{ isConnected ? ('SSCMA_CONFIG.DISCONNECT' | translate) : ('SSCMA_CONFIG.CONNECT_DEVICE' | translate) }}
       </button>
-      <div class="doc-btn" (click)="openDocumentation()">阅读文档</div>
+      <div class="doc-btn" (click)="openDocumentation()">{{ 'SSCMA_CONFIG.READ_DOCS' | translate }}</div>
     </div>
 
     <div class="config-container">
@@ -80,25 +80,25 @@
               </div>
               <div class="section-content">
                 <div class="section-item">
-                  <label>设备编号:</label>
+                  <label>{{ 'SSCMA_CONFIG.DEVICE_ID' | translate }}:</label>
                   <span>{{ deviceInfo?.device_id || '-' }}</span>
                 </div>
                 <div class="section-item">
-                  <label>设备版本:</label>
+                  <label>{{ 'SSCMA_CONFIG.DEVICE_VERSION' | translate }}:</label>
                   <span>{{ deviceInfo?.device_version || '-' }}</span>
                 </div>
                 <div class="section-item">
-                  <label>使用模型:</label>
+                  <label>{{ 'SSCMA_CONFIG.CURRENT_MODEL' | translate }}:</label>
                   <span>{{ modelMeta.name || '-' }} &#64; {{ modelMeta.version || '-' }}</span>
                 </div>
               </div>
             </div>
             <div class="section">
-              <div class="section-title">模型设置</div>
+              <div class="section-title">{{ 'SSCMA_CONFIG.MODEL_SETTINGS' | translate }}</div>
               <div class="section-content">
                 <div class="section-item">
-                  <label>置信度
-                    <span class="section-tip">(模型对识别结果的确定程度,值越高要求越准确但可能遗漏目标)</span>
+                  <label>{{ 'SSCMA_CONFIG.CONFIDENCE' | translate }}
+                    <span class="section-tip">({{ 'SSCMA_CONFIG.CONFIDENCE_TIP' | translate }})</span>
                   </label>
                   <div class="setting-control">
                     <nz-slider [(ngModel)]="confidenceThreshold" [nzMin]="0" [nzMax]="100" [nzStep]="1"
@@ -111,8 +111,8 @@
                 </div>
                 @if (!(classScores && classScores.length)){
                 <div class="section-item">
-                  <label>IOU阈值
-                    <span class="section-tip">(用于去除重叠检测框,值越高保留的重叠框越多)</span>
+                  <label>{{ 'SSCMA_CONFIG.IOU_THRESHOLD' | translate }}
+                    <span class="section-tip">({{ 'SSCMA_CONFIG.IOU_TIP' | translate }})</span>
                   </label>
                   <div class="setting-control">
                     <nz-slider [(ngModel)]="iouThreshold" [nzMin]="0" [nzMax]="100" [nzStep]="1"
@@ -132,26 +132,26 @@
           @if (modelMeta?.classes && modelMeta.classes.length) {
           <div>
             <div class="section" style="margin-top: -34px;">
-              <div class="section-title">GPIO 触发配置
+              <div class="section-title">{{ 'SSCMA_CONFIG.GPIO_CONFIG' | translate }}
                 <button class="apply-btn ccenter" (click)="applyTriggerRules()"
                   [disabled]="!isConnected || classTriggerConfigs.length === 0">
-                  应用配置
+                  {{ 'SSCMA_CONFIG.APPLY_CONFIG' | translate }}
                 </button>
               </div>
               <div class="section-content">
                 @for (label of modelMeta.classes; track $index; let i = $index) {
                 <div class="section-item" style="height: 24px;">
                   <!-- <span style="color: #fff; min-width: 80px;">{{ label }}</span> -->
-                  大于等于 <nz-input-number nzSize="small" [(ngModel)]="classTriggerConfigs[i].threshold" [nzMin]="0" [nzMax]="100" [nzStep]="1" [nzPlaceHolder]="'阈值'" style="width: 60px;" [class.not-configured]="classTriggerConfigs[i].gpio === null"></nz-input-number>% 置信度时触发
-                  <nz-select nzSize="small" nzPlaceHolder="选择引脚" [(ngModel)]="classTriggerConfigs[i].gpio" [nzOptionHeightPx]="24" style="width: 110px;" nzAllowClear>
+                  {{ 'SSCMA_CONFIG.TRIGGER_WHEN' | translate }} <nz-input-number nzSize="small" [(ngModel)]="classTriggerConfigs[i].threshold" [nzMin]="0" [nzMax]="100" [nzStep]="1" [nzPlaceHolder]="'SSCMA_CONFIG.CONFIDENCE' | translate" style="width: 60px;" [class.not-configured]="classTriggerConfigs[i].gpio === null"></nz-input-number>{{ 'SSCMA_CONFIG.CONFIDENCE_TRIGGER' | translate }}
+                  <nz-select nzSize="small" [nzPlaceHolder]="'SSCMA_CONFIG.SELECT_PIN' | translate" [(ngModel)]="classTriggerConfigs[i].gpio" [nzOptionHeightPx]="24" style="width: 110px;" nzAllowClear>
                     @for (pin of availableGpioPins; track pin) {
                     <nz-option [nzValue]="pin.value" [nzLabel]="pin.label">
                     </nz-option>
                     }
                   </nz-select>
-                  <nz-select nzSize="small" nzPlaceHolder="选择电平" [(ngModel)]="classTriggerConfigs[i].levelMode" [nzOptionHeightPx]="24" style="width: 140px;" nzAllowClear>
-                    <nz-option [nzValue]="'high'" nzLabel="默认低，触发高"></nz-option>
-                    <nz-option [nzValue]="'low'" nzLabel="默认高，触发低"></nz-option>
+                  <nz-select nzSize="small" [nzPlaceHolder]="'SSCMA_CONFIG.SELECT_LEVEL' | translate" [(ngModel)]="classTriggerConfigs[i].levelMode" [nzOptionHeightPx]="24" style="width: 140px;" nzAllowClear>
+                    <nz-option [nzValue]="'high'" [nzLabel]="'SSCMA_CONFIG.DEFAULT_LOW_TRIGGER_HIGH' | translate"></nz-option>
+                    <nz-option [nzValue]="'low'" [nzLabel]="'SSCMA_CONFIG.DEFAULT_HIGH_TRIGGER_LOW' | translate"></nz-option>
                   </nz-select>
                 </div>
                 }
@@ -189,7 +189,7 @@
     - 与 deploy 页面的右侧区域布局一致
     - 内容显示在 .right > .right-inner 容器中
   -->
-<app-sub-window [title]="'模型配置'" [winBtns]="['close']">
+<app-sub-window [title]="'SSCMA_CONFIG.TITLE' | translate" [winBtns]="['close']">
   <div class="window-inner">
     <div class="window-content">
       <div class="right sscroll">
