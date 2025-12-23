@@ -1360,6 +1360,7 @@ ${JSON.stringify(errData)}
                   const resultState = result.is_error ? ToolCallState.ERROR : ToolCallState.DONE;
                   const resultText = this.toolCallStates[result.call_id];
                   if (resultText) {
+                    // console.log("完成工具调用: ", result.call_id, result.name, resultState, resultText);
                     this.completeToolCall(result.call_id, result.name || 'unknown', resultState, resultText);
                   }
                 } else {
@@ -1674,16 +1675,32 @@ ${JSON.stringify(errData)}
                     //   libNickName += `[${toolArgs.path}] `;
                     // }
                     let libNickName = await this.getLibraryNickname(toolArgs.path);
-                    if (this.configService.data.devmode) {
+                    // if (this.configService.data.devmode) {
                       // 将\\转为/以便显示
-                      const displayPath = toolArgs.path.replace(/\\\\/g, '/').replace(/\\/g, '/');
-                      readFileName = `${displayPath}`;
-                    } else {
-                      if (libNickName) {
-                        readFileName = `${libNickName} ${readFileName}`;
+                      // const displayPath = toolArgs.path.replace(/\\\\/g, '/').replace(/\\/g, '/');
+                      // readFileName = `${displayPath}`;
+
+                      // 是否包含 lib- 前缀 及 readmd
+                    const hasLibPrefix = toolArgs.path.includes('lib-') && (toolArgs.path.endsWith('README.md') || toolArgs.path.endsWith('readme.md'));
+
+                    if (libNickName || hasLibPrefix) {
+                      // readFileName = `${libNickName}`;
+                      if (hasLibPrefix && !libNickName) {
+                        // 提取库名作为昵称
+                        const pathParts = toolArgs.path.split(/[/\\]/);
+                        for (let part of pathParts) {
+                          if (part.startsWith('lib-')) {
+                            libNickName = part;
+                            break;
+                          }
+                        }
                       }
+
+                      this.startToolCall(toolCallId, data.tool_name, `了解 ${libNickName} 使用方法`, toolArgs);
+                    } else {
+                      this.startToolCall(toolCallId, data.tool_name, `读取: ${readFileName}`, toolArgs);
                     }
-                    this.startToolCall(toolCallId, data.tool_name, `读取: ${readFileName}`, toolArgs);
+
                     toolResult = await readFileTool(toolArgs);
                     if (toolResult.is_error) {
                       resultState = "warn";
@@ -1691,6 +1708,19 @@ ${JSON.stringify(errData)}
                     } else {
                       resultText = `读取${readFileName}文件成功`;
                     }
+                    // } else {
+                    //   if (libNickName) {
+                    //     readFileName = `${libNickName} ${readFileName}`;
+                    //   }
+                    //   this.startToolCall(toolCallId, data.tool_name, `读取: ${readFileName}`, toolArgs);
+                    //   toolResult = await readFileTool(toolArgs);
+                    //   if (toolResult.is_error) {
+                    //     resultState = "warn";
+                    //     resultText = `读取异常, 即将重试`;
+                    //   } else {
+                    //     resultText = `读取${readFileName}文件成功`;
+                    //   }
+                    // }
                     break;
                   case 'create_file':
                     // console.log('[创建文件工具被调用]', toolArgs);

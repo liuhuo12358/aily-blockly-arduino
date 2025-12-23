@@ -18,7 +18,7 @@ import { ModelProjectService } from '../../services/model-project.service';
   ],
   template: `
     <nz-modal [(nzVisible)]="visible" [nzTitle]="'保存项目'" [nzFooter]="modalFooter"
-      [nzWidth]="400" (nzOnCancel)="handleCancel()" nzClassName="image-viewer-modal">
+      [nzWidth]="400" (nzOnCancel)="handleCancel()" nzClassName="save-project-modal">
       <ng-template #modalFooter>
         <button nz-button nzType="default" (click)="handleCancel()">关闭</button>
         <button nz-button nzType="primary" (click)="handleSave()" [nzLoading]="saving">保存</button>
@@ -43,7 +43,53 @@ import { ModelProjectService } from '../../services/model-project.service';
     </nz-modal>
   `,
   styles: [`
-    :host ::ng-deep .save-project-content {
+    ::ng-deep .save-project-modal {
+      .ant-modal-content {
+        background: #161616 !important;
+        opacity: 1 !important;
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.8) !important;
+        border-radius: 8px !important;
+        overflow: hidden;
+      }
+
+      .ant-modal-header {
+        background: transparent;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+        padding: 12px 16px;
+
+        .ant-modal-title {
+          color: #ffffff;
+        }
+      }
+
+      .ant-modal-close {
+        color: #bfbfbf;
+
+        &:hover {
+          color: #ffffff;
+        }
+      }
+
+      .ant-modal-body {
+        padding: 16px;
+        background: transparent !important;
+        color: #e6e6e6;
+      }
+
+      .ant-modal-footer {
+        border-top: 1px solid rgba(255, 255, 255, 0.06);
+        padding: 12px 16px;
+        background: transparent;
+
+        button {
+          &:not(:last-child) {
+            margin-right: 8px;
+          }
+        }
+      }
+    }
+
+    ::ng-deep .save-project-content {
       display: flex;
       flex-direction: column;
       gap: 16px;
