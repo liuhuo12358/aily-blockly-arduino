@@ -39,11 +39,11 @@
               }
             </div> -->
             <div class="project-info">
-              <div class="project-name">{{ project.nickname || project.name }}</div>
               <div class="project-meta">
                 <span class="model-type">{{ getModelTypeName(project.modelType) }}</span>
-                <span class="project-path">{{ project.path }}</span>
+                <span class="project-name">{{ project.nickname || project.name }}</span>
               </div>
+              <div class="project-path">{{ project.path }}</div>
             </div>
           </div>
           }

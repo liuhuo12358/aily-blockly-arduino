@@ -9,7 +9,9 @@ import { NzModalModule } from 'ng-zorro-antd/modal';
 import { NzInputModule } from 'ng-zorro-antd/input';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { SubWindowComponent } from '../../../../components/sub-window/sub-window.component';
+import { SaveProjectModalComponent } from '../../../../components/save-project-modal/save-project-modal.component';
 import { ModelProjectService } from '../../../../services/model-project.service';
+import { ElectronService } from '../../../../services/electron.service';
 
 // 标注框接口
 interface BoundingBox {
@@ -35,6 +37,7 @@ interface AnnotationData {
     CommonModule,
     FormsModule,
     SubWindowComponent,
+    SaveProjectModalComponent,
     TranslateModule,
     NzButtonModule,
     NzSelectModule,
@@ -95,9 +98,11 @@ export class DetectionTrainComponent implements OnInit, OnDestroy {
   // 裁剪遮罩偏移（用于计算遮罩位置）
   cropMaskOffset = { left: 0, right: 0, top: 0, bottom: 0 };
 
-  // 项目保存相关
-  savedProjectFullPath = '';
+  // 保存项目相关
+  isSaveProjectModalVisible = false;
   projectSaveName = '';
+  projectSavePath = '';
+  savedProjectFullPath = ''; // 已保存项目的完整路径
   
   // 获取当前页大小
   get pageSize(): number {
@@ -150,10 +155,14 @@ export class DetectionTrainComponent implements OnInit, OnDestroy {
     private router: Router,
     private route: ActivatedRoute,
     private message: NzMessageService,
-    private modelProjectService: ModelProjectService
+    private modelProjectService: ModelProjectService,
+    private electronService: ElectronService
   ) { }
 
   ngOnInit() {
+    // 初始化默认保存路径
+    this.projectSavePath = this.modelProjectService.getDefaultSavePath();
+    
     // 检查是否有项目路径参数（从打开项目跳转而来）
     this.route.queryParams.subscribe(params => {
       if (params['projectPath']) {
@@ -529,6 +538,12 @@ export class DetectionTrainComponent implements OnInit, OnDestroy {
       this.saveCurrentAnnotation();
       // 切换到上一张
       this.openAnnotation(currentIndex - 1);
+
+      // 计算这张图片所在页，如果不在当前页则切换页码
+      const newPage = Math.ceil((this.currentAnnotation.imageIndex + 1) / this.pageSize);
+      if (newPage !== this.currentPage) {
+        this.currentPage = newPage;
+      }
     }
   }
   
@@ -541,6 +556,11 @@ export class DetectionTrainComponent implements OnInit, OnDestroy {
       this.saveCurrentAnnotation();
       // 切换到下一张
       this.openAnnotation(currentIndex + 1);
+
+      const newPage = Math.ceil((this.currentAnnotation.imageIndex + 1) / this.pageSize);
+      if (newPage !== this.currentPage) {
+        this.currentPage = newPage;
+      }
     }
   }
 
@@ -912,6 +932,115 @@ export class DetectionTrainComponent implements OnInit, OnDestroy {
   deployModel() {
     // TODO: 实现模型部署逻辑
     console.log('部署模型...');
+  }
+
+  // 打开保存项目模态框
+  openSaveProjectModal() {
+    // 如果项目已保存，直接保存到现有路径
+    if (this.savedProjectFullPath) {
+      this.saveToExistingProject();
+      return;
+    }
+    
+    this.isSaveProjectModalVisible = true;
+  }
+
+  // 关闭保存项目模态框
+  closeSaveProjectModal() {
+    this.isSaveProjectModalVisible = false;
+  }
+
+  async handleSaveProject(data: { name: string; path: string }) {
+    if (!this.electronService.isElectron) {
+      this.message.error('保存功能仅在 Electron 环境下可用');
+      return;
+    }
+
+    // 先保存当前标注
+    this.saveCurrentAnnotation();
+
+    const loadingMsg = this.message.loading('正在保存项目...', { nzDuration: 0 });
+
+    try {
+      const options = {
+        projectName: data.name,
+        projectPath: data.path,
+        modelType: 'detection' as const,
+        trainConfig: {
+          epochs: this.trainConfig.epochs,
+          batchSize: this.trainConfig.batchSize,
+          learningRate: this.trainConfig.learningRate
+        },
+        modelTrained: this.modelTrained
+      };
+
+      const result = await this.modelProjectService.saveDetectionProject(
+        options,
+        this.allLabels,
+        this.uploadedImages,
+        this.imageAnnotations
+      );
+
+      if (result.success) {
+        this.savedProjectFullPath = result.projectPath!;
+        this.projectSaveName = data.name;
+        this.projectSavePath = data.path;
+        this.message.remove(loadingMsg.messageId);
+        this.message.success(`项目已保存到: ${result.projectPath}`);
+        this.closeSaveProjectModal();
+      } else {
+        this.message.remove(loadingMsg.messageId);
+        this.message.error(result.error || '保存项目失败');
+      }
+
+    } catch (error: any) {
+      this.message.remove(loadingMsg.messageId);
+      console.error('保存项目失败:', error);
+      this.message.error(`保存项目失败: ${error.message}`);
+    }
+  }
+
+  // 保存到已存在的项目
+  private async saveToExistingProject() {
+    // 先保存当前标注
+    this.saveCurrentAnnotation();
+
+    const loadingMsg = this.message.loading('正在更新项目...', { nzDuration: 0 });
+
+    try {
+      const options = {
+        projectName: this.projectSaveName,
+        projectPath: this.projectSavePath,
+        modelType: 'detection' as const,
+        trainConfig: {
+          epochs: this.trainConfig.epochs,
+          batchSize: this.trainConfig.batchSize,
+          learningRate: this.trainConfig.learningRate
+        },
+        modelTrained: this.modelTrained
+      };
+
+      const result = await this.modelProjectService.updateDetectionProject(
+        this.savedProjectFullPath,
+        options,
+        this.allLabels,
+        this.uploadedImages,
+        this.imageAnnotations
+      );
+
+      this.message.remove(loadingMsg.messageId);
+      
+      if (result.success) {
+        this.message.success('项目已更新');
+      } else {
+        this.message.error(result.error || '更新项目失败');
+      }
+
+    } catch (error: any) {
+      this.message.remove(loadingMsg.messageId);
+      console.error('更新项目失败:', error);
+      this.message.error(`更新项目失败: ${error.message}`);
+    }
   }
 
   close() {

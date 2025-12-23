@@ -471,7 +471,7 @@
         <button nz-button nzType="primary" (click)="deployModel()" [disabled]="!modelTrained">
           部署模型
         </button>
-        <button nz-button nzType="primary">
+        <button nz-button nzType="primary" (click)="openSaveProjectModal()">
           保存项目
         </button>
       </div>
@@ -499,7 +499,16 @@
         <button nz-button nzType="primary" (click)="confirmAddLabel()" [disabled]="!modalLabelName.trim()">确定</button>
       </ng-template>
     </nz-modal>
-
-    <!-- 保存项目弹窗 -->
   </div>
+
+  <!-- 保存项目弹窗 -->
+  <app-save-project-modal
+    [(visible)]="isSaveProjectModalVisible"
+    [(projectName)]="projectSaveName"
+    [(projectPath)]="projectSavePath"
+    [namePrefix]="'detection_'"
+    (save)="handleSaveProject($event)"
+    (cancel)="closeSaveProjectModal()">
+  </app-save-project-modal>
+  
 </app-sub-window>
