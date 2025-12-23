@@ -9,7 +9,9 @@ export enum ProcessState {
   ERROR = 'ERROR'
 }
 
-@Injectable()
+@Injectable({
+  providedIn: 'root'
+})
 export class WorkflowService {
   private _state = new BehaviorSubject<ProcessState>(ProcessState.IDLE);
   public state$ = this._state.asObservable();

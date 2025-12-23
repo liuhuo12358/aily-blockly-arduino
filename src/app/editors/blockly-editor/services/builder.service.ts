@@ -14,7 +14,7 @@ import { BlocklyService as BlocklyService } from './blockly.service';
 
 import { PlatformService } from "../../../services/platform.service";
 import { ElectronService } from '../../../services/electron.service';
-import { WorkflowService, ProcessState } from './workflow.service';
+import { WorkflowService, ProcessState } from '../../../services/workflow.service';
 
 @Injectable()
 export class _BuilderService {
@@ -117,6 +117,10 @@ export class _BuilderService {
       this.message.warning(msg + "，请稍后再试");
       return Promise.reject({ state: 'warn', text: msg + "，请稍后" });
     }
+
+    this.buildCompleted = false;
+    this.isErrored = false;
+    this.cancelled = false;
 
     return new Promise<ActionState>(async (resolve, reject) => {
       try {
@@ -307,6 +311,8 @@ export class _BuilderService {
               reject({ state: 'error', text: error.message });
             },
             complete: () => {
+              console.log("编译完成： ", this.buildCompleted, this.isErrored, this.cancelled);
+
               if (this.buildCompleted) {
                 console.log('编译命令执行完成');
                 const buildEndTime = Date.now();

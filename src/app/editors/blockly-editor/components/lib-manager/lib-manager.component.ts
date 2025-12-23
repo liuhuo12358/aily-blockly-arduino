@@ -17,7 +17,7 @@ import { CmdOutput, CmdService } from '../../../../services/cmd.service';
 import { ElectronService } from '../../../../services/electron.service';
 import { BlocklyService } from '../../services/blockly.service';
 import { PlatformService } from '../../../../services/platform.service';
-import { WorkflowService } from '../../services/workflow.service';
+import { WorkflowService } from '../../../../services/workflow.service';
 
 @Component({
   selector: 'app-lib-manager',

@@ -15,7 +15,7 @@ import { ActionService } from "../../../services/action.service";
 import { arduinoGenerator } from "../components/blockly/generators/arduino/arduino";
 import { BlocklyService } from "./blockly.service";
 import { findFile } from '../../../utils/builder.utils';
-import { WorkflowService } from './workflow.service';
+import { WorkflowService } from '../../../services/workflow.service';
 
 @Injectable()
 export class _UploaderService {
