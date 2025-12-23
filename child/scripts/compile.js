@@ -64,8 +64,8 @@ async function main() {
     const projectPackageJson = JSON.parse(fs.readFileSync(projectPackageJsonPath, 'utf8'));
     const dependencies = projectPackageJson.dependencies || {};
 
-    const macros = projectPackageJson.macros || (projectPackageJson.aily && projectPackageJson.aily.macros) || [];
-    const projectConfig = projectPackageJson.aily || {};
+    const macros = projectPackageJson.macros || projectPackageJson.MACROS || (projectPackageJson.projectConfig && projectPackageJson.projectConfig.macros) || [];
+    const projectConfig = projectPackageJson.projectConfig || {};
 
     // 从.startsWith('@aily-project/board-')中找到板子模块
     // let boardModule = null;

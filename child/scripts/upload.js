@@ -81,6 +81,9 @@ async function main() {
             throw new Error('未找到上传参数(uploadParam)');
         }
 
+        // 去掉末尾的分号
+        uploadParam = uploadParam.trim().replace(/;+$/, '');
+
         logger.log('使用的上传参数:', uploadParam);
 
         // 6. 获取波特率
