@@ -227,6 +227,10 @@ async function main() {
                     }
 
                     if (!partitionFile || !fs.existsSync(partitionFile)) {
+                        partitionFile = path.join(boardModulePath, 'partitions.csv');
+                    }
+
+                    if (!partitionFile || !fs.existsSync(partitionFile)) {
                         throw new Error('选择了自定义分区方案，但未找到 partitions.csv 分区文件');
                     }
 
