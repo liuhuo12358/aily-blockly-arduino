@@ -44,12 +44,7 @@ export class _BuilderService {
   lastCode = "";
   passed = false;
   cancelled = false;
-  boardType = "";
-  sdkPath = "";
-  toolsPath = "";
-  compilerPath = "";
   boardJson: any = null;
-  buildPath = "";
   isUploading = false;
 
   private initialized = false; // 防止重复初始化
@@ -152,20 +147,21 @@ export class _BuilderService {
         this.buildStartTime = Date.now(); // 记录编译开始时间
 
         let compileCommand: string = "";
-        let title: string = "";
         let completeTitle: string = `编译完成`;
 
         try {
-
           // 生成代码
           const code = arduinoGenerator.workspaceToCode(this.blocklyService.workspace);
           this.lastCode = code;
           const tempPath = this.electronService.pathJoin(this.currentProjectPath, '.temp');
           const ailyBuilderPath = window['path'].getAilyBuilderPath();
+          const boardModule = await this.projectService.getBoardModule();
+          const boardName = boardModule.replace('@aily-project/board-', '');
 
           // 构建配置对象
           const buildConfig = {
             currentProjectPath: this.currentProjectPath,
+            boardModule,
             code,
             appDataPath: window['path'].getAppDataPath(),
             za7Path: this.platformService.za7,
@@ -259,7 +255,7 @@ export class _BuilderService {
                     if (progressValue > lastProgress) {
                       lastProgress = progressValue;
                       this.noticeService.update({
-                        title: "编译中...",
+                        title: `正在编译${boardName}`,
                         text: lastBuildText,
                         state: 'doing',
                         progress: lastProgress,

@@ -27,6 +27,7 @@ async function main() {
 
     const {
         currentProjectPath,
+        boardModule,
         code,
         appDataPath,
         za7Path,
@@ -37,6 +38,7 @@ async function main() {
 
     console.log('编译配置:', {
         currentProjectPath,
+        boardModule,
         appDataPath,
         za7Path,
         ailyBuilderPath,
@@ -66,12 +68,12 @@ async function main() {
     const projectConfig = projectPackageJson.aily || {};
 
     // 从.startsWith('@aily-project/board-')中找到板子模块
-    let boardModule = null;
-    Object.keys(dependencies).forEach(dep => {
-        if (dep.startsWith('@aily-project/board-')) {
-            boardModule = dep;
-        }
-    });
+    // let boardModule = null;
+    // Object.keys(dependencies).forEach(dep => {
+    //     if (dep.startsWith('@aily-project/board-')) {
+    //         boardModule = dep;
+    //     }
+    // });
 
     // 3. 读取板子信息
     const boardModulePath = path.join(currentProjectPath, 'node_modules', boardModule);
