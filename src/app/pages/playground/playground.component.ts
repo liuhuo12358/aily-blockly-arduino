@@ -42,11 +42,11 @@ export class PlaygroundComponent {
 
   ngOnInit() {
     // 在组件初始化时加载示例数据
-    this.playgroundService.loadExamplesList().then(() => {
-      console.log('示例数据加载完成');
-    }).catch(error => {
-      console.error('加载示例数据失败:', error);
-    });
+    // this.playgroundService.loadExamplesList().then(() => {
+    //   console.log('示例数据加载完成');
+    // }).catch(error => {
+    //   console.error('加载示例数据失败:', error);
+    // });
 
     // 使用翻译初始化标签列表
     this.tagList = [
