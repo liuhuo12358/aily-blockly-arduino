@@ -120,7 +120,11 @@ export class ClassificationTrainComponent implements OnInit, OnDestroy {
     { text: '#e74c8c', bar: 'linear-gradient(90deg, #f8b4c8 0%, #f5d0dc 100%)' },
     { text: '#3498db', bar: 'linear-gradient(90deg, #3498db 0%, #85c1e9 100%)' },
     { text: '#2ecc71', bar: 'linear-gradient(90deg, #2ecc71 0%, #82e0aa 100%)' },
-    { text: '#9b59b6', bar: 'linear-gradient(90deg, #9b59b6 0%, #c39bd3 100%)' }
+    { text: '#9b59b6', bar: 'linear-gradient(90deg, #9b59b6 0%, #c39bd3 100%)' },
+    { text: '#e67e22', bar: 'linear-gradient(90deg, #e67e22 0%, #f0b27a 100%)' },
+    { text: '#1abc9c', bar: 'linear-gradient(90deg, #1abc9c 0%, #76d7c4 100%)' },
+    { text: '#34495e', bar: 'linear-gradient(90deg, #34495e 0%, #7f8c8d 100%)' },
+    { text: '#f39c12', bar: 'linear-gradient(90deg, #f39c12 0%, #f7dc6f 100%)' },
   ];
 
   private nextClassId = 3;

@@ -547,30 +547,32 @@ export class ProjectService {
         throw new Error('未找到开发板 SDK 模块');
       }
 
+      const sdkVersion = boardPackageJson.boardDependencies[sdkModule];
+      const sdkFileName = sdkModule.replace('@aily-project/sdk-', '') + '_' + sdkVersion;
       const appDataPath = window['path'].getAppDataPath()
-
-      const sdkLibPath = `${appDataPath}/node_modules/${sdkModule}`;
+      const sdkLibPath = this.electronService.pathJoin(appDataPath, 'sdk', `${sdkFileName}`);
       if (!window['fs'].existsSync(sdkLibPath)) {
         throw new Error('SDK 库路径不存在: ' + sdkLibPath);
       }
 
-      // Get all files in the SDK library path
-      const sdkFiles = window['fs'].readDirSync(sdkLibPath);
+      // // Get all files in the SDK library path
+      // const sdkFiles = window['fs'].readDirSync(sdkLibPath);
 
-      // Filter for .7z files
-      const sdkZipFiles = sdkFiles.filter(file => file.name.endsWith('.7z'));
+      // // Filter for .7z files
+      // const sdkZipFiles = sdkFiles.filter(file => file.name.endsWith('.7z'));
 
-      // If there are no .7z files, throw an error
-      if (sdkZipFiles.length === 0) {
-        throw new Error('未找到 SDK 压缩包文件');
-      }
+      // // If there are no .7z files, throw an error
+      // if (sdkZipFiles.length === 0) {
+      //   throw new Error('未找到 SDK 压缩包文件');
+      // }
 
-      // Replace '@' with '_' in the filename
-      const sdkZipFileName = sdkZipFiles[0].name;
-      const formattedSdkZipFileName = sdkZipFileName.replace(/@/g, '_').replace(/\.7z$/i, '');
+      // // Replace '@' with '_' in the filename
+      // const sdkZipFileName = sdkZipFiles[0].name;
+      // const formattedSdkZipFileName = sdkZipFileName.replace(/@/g, '_').replace(/\.7z$/i, '');
 
       // sdk path
-      return `${await window["env"].get('AILY_SDK_PATH')}/${formattedSdkZipFileName}`;
+      // return `${await window["env"].get('AILY_SDK_PATH')}/${formattedSdkZipFileName}`;
+      return `${await window["env"].get('AILY_SDK_PATH')}/${sdkFileName}`;
     } catch (error) {
       console.error('获取 SDK 路径失败:', error);
       return "";

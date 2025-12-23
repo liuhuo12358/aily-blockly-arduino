@@ -336,7 +336,7 @@ export class ModelProjectService {
         totalSamples: classList.reduce((sum, c) => sum + c.samples.length, 0)
       };
 
-      const dataJsonPath = electronAPI.path.join(datasetsPath, 'data.json');
+      const dataJsonPath = electronAPI.path.join(datasetsPath, 'labels.json');
       electronAPI.fs.writeFileSync(
         dataJsonPath,
         JSON.stringify(dataJson, null, 2),
@@ -426,9 +426,9 @@ export class ModelProjectService {
         totalAnnotations: totalAnnotations
       };
 
-      const dataJsonPath = electronAPI.path.join(datasetsPath, 'data.json');
+      const labelJsonPath = electronAPI.path.join(datasetsPath, 'labels.json');
       electronAPI.fs.writeFileSync(
-        dataJsonPath,
+        labelJsonPath,
         JSON.stringify(dataJson, null, 2),
         'utf-8'
       );
@@ -533,9 +533,9 @@ export class ModelProjectService {
         totalAnnotations: totalAnnotations
       };
 
-      const dataJsonPath = electronAPI.path.join(datasetsPath, 'data.json');
+      const labelJsonPath = electronAPI.path.join(datasetsPath, 'labels.json');
       electronAPI.fs.writeFileSync(
-        dataJsonPath,
+        labelJsonPath,
         JSON.stringify(dataJson, null, 2),
         'utf-8'
       );
@@ -640,15 +640,15 @@ export class ModelProjectService {
         return null;
       }
 
-      // 读取 datasets/data.json
+      // 读取 datasets/labels.json
       const datasetsPath = electronAPI.path.join(projectPath, 'datasets');
-      const dataJsonPath = electronAPI.path.join(datasetsPath, 'data.json');
+      const labelJsonPath = electronAPI.path.join(datasetsPath, 'labels.json');
       
-      if (!electronAPI.fs.existsSync(dataJsonPath)) {
+      if (!electronAPI.fs.existsSync(labelJsonPath)) {
         return null;
       }
 
-      const dataContent = electronAPI.fs.readFileSync(dataJsonPath, 'utf-8');
+      const dataContent = electronAPI.fs.readFileSync(labelJsonPath, 'utf-8');
       const dataJson: ClassificationDataset = JSON.parse(dataContent);
 
       // 加载每个类别的图片
@@ -709,15 +709,15 @@ export class ModelProjectService {
         return null;
       }
 
-      // 读取 datasets/data.json
+      // 读取 datasets/labels.json
       const datasetsPath = electronAPI.path.join(projectPath, 'datasets');
-      const dataJsonPath = electronAPI.path.join(datasetsPath, 'data.json');
+      const labelJsonPath = electronAPI.path.join(datasetsPath, 'labels.json');
       
-      if (!electronAPI.fs.existsSync(dataJsonPath)) {
+      if (!electronAPI.fs.existsSync(labelJsonPath)) {
         return null;
       }
 
-      const dataContent = electronAPI.fs.readFileSync(dataJsonPath, 'utf-8');
+      const dataContent = electronAPI.fs.readFileSync(labelJsonPath, 'utf-8');
       const dataJson: DetectionDataset = JSON.parse(dataContent);
 
       // 读取标注文件
