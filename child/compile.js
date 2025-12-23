@@ -36,15 +36,15 @@ async function main() {
         partitionFilePath: customPartitionFilePath
     } = config;
 
-    console.log('编译配置:', {
-        currentProjectPath,
-        boardModule,
-        appDataPath,
-        za7Path,
-        ailyBuilderPath,
-        devmode,
-        customPartitionFilePath
-    });
+    // console.log('编译配置:', {
+    //     currentProjectPath,
+    //     boardModule,
+    //     appDataPath,
+    //     za7Path,
+    //     ailyBuilderPath,
+    //     devmode,
+    //     customPartitionFilePath
+    // });
 
     // 1. 路径准备
     const tempPath = path.join(currentProjectPath, '.temp');

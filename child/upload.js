@@ -34,14 +34,14 @@ async function main() {
         uploadParam: configUploadParam
     } = config;
 
-    console.log('上传配置:', {
-        currentProjectPath,
-        buildPath,
-        boardModule,
-        appDataPath,
-        serialPort: initialSerialPort,
-        uploadParam: configUploadParam
-    });
+    // console.log('上传配置:', {
+    //     currentProjectPath,
+    //     buildPath,
+    //     boardModule,
+    //     appDataPath,
+    //     serialPort: initialSerialPort,
+    //     uploadParam: configUploadParam
+    // });
 
     try {
         // 1. 路径准备
@@ -204,7 +204,7 @@ async function processUploadParams(uploadParam, buildPath, toolsPath, sdkPath, b
     const toolFileName = toolName + (isWindows ? '.exe' : '');
     
     let commandPath = await findFile(toolsPath, toolFileName, toolVersion);
-    console.log("Command Path: ", commandPath);
+    // console.log("Command Path: ", commandPath);
     
     if (!commandPath) {
         throw new Error(`无法找到可执行文件: ${toolFileName}`);
@@ -227,7 +227,7 @@ async function processUploadParams(uploadParam, buildPath, toolsPath, sdkPath, b
                     findRes = await findFile(path.join(sdkPath, 'tools'), fileName);
                 }
             } else {
-                console.log('Searching build path for file:', buildPath, fileName);
+                // console.log('Searching build path for file:', buildPath, fileName);
                 findRes = await findFile(buildPath, fileName);
             }
 
