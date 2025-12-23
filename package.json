@@ -38,6 +38,10 @@
       {
         "from": "electron",
         "to": "app/electron"
+      },
+      {
+        "from": "child/scripts",
+        "to": "app/child/scripts"
       }
     ],
     "win": {

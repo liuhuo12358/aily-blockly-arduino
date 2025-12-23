@@ -178,7 +178,7 @@ export class _BuilderService {
           await window['fs'].writeFileSync(configFilePath, JSON.stringify(buildConfig, null, 2));
 
           // 运行编译脚本
-          const compileScriptPath = this.electronService.pathJoin(window['path'].getAilyChildPath(), 'compile.js');
+          const compileScriptPath = this.electronService.pathJoin(window['path'].getAilyChildPath(), 'scripts', 'compile.js');
           compileCommand = `node "${compileScriptPath}" "${configFilePath}"`;
 
           completeTitle = `编译完成`;

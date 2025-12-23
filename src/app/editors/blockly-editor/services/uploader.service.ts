@@ -252,7 +252,7 @@ export class _UploaderService {
         await window['fs'].writeFileSync(configFilePath, JSON.stringify(uploadConfig, null, 2));
 
         // 运行上传脚本
-        const uploadScriptPath = window['path'].join(window['path'].getAilyChildPath(), 'upload.js');
+        const uploadScriptPath = window['path'].join(window['path'].getAilyChildPath(), 'scripts', 'upload.js');
         const uploadCmd = `node "${uploadScriptPath}" "${configFilePath}"`;
 
         console.log("Final upload cmd: ", uploadCmd);

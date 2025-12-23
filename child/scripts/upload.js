@@ -168,19 +168,19 @@ async function processUploadParams(uploadParam, buildPath, toolsPath, sdkPath, b
 
     // 替换 ${boot_app0}
     if (paramString.includes('${boot_app0}')) {
-        paramString = paramString.replace(/\$\{boot_app0\}/g, path.join(sdkPath, 'tools', 'partitions', 'boot_app0.bin'));
+        paramString = paramString.replace(/\$\{boot_app0\}/g, `"${path.join(sdkPath, 'tools', 'partitions', 'boot_app0.bin')}"`);
     }
 
     // 替换 ${bootloader}
     if (paramString.includes('${bootloader}')) {
         const bootLoaderFile = await findFile(buildPath, '*.bootloader.bin');
-        paramString = paramString.replace(/\$\{bootloader\}/g, bootLoaderFile);
+        paramString = paramString.replace(/\$\{bootloader\}/g, `"${bootLoaderFile}"`);
     }
 
     // 替换 ${partitions}
     if (paramString.includes('${partitions}')) {
         const partitionsFile = await findFile(buildPath, '*.partitions.bin');
-        paramString = paramString.replace(/\$\{partitions\}/g, partitionsFile);
+        paramString = paramString.replace(/\$\{partitions\}/g, `"${partitionsFile}"`);
     }
 
     // 分割参数
@@ -232,7 +232,7 @@ async function processUploadParams(uploadParam, buildPath, toolsPath, sdkPath, b
             }
 
             if (findRes) {
-                paramList[i] = param.replace(`\$\{\'${fileName}\'\}`, findRes);
+                paramList[i] = param.replace(`\$\{\'${fileName}\'\}`, `"${findRes}"`);
             } else {
                 logger.warn(`无法找到文件: ${fileName}`);
             }

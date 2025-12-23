@@ -267,7 +267,7 @@ async function main() {
 
         // 10. 执行编译
         const args = [
-            path.join(ailyBuilderPath, 'index.js'),
+            `"${path.join(ailyBuilderPath, 'index.js')}"`,
             ...parseArgs(compilerParam),
             `"${sketchFilePath}"`,
             '--jobs', '4',
