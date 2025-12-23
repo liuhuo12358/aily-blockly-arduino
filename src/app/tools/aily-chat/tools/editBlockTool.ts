@@ -4993,7 +4993,7 @@ export async function getWorkspaceOverviewTool(args?: any): Promise<ToolUseResul
               
               const lintStartTime = Date.now();
               const lintServiceResult = await arduinoLintService.checkSyntax(generatedCode, {
-                mode: 'auto',
+                mode: 'ast-grep',
                 format: 'json'
               });
               const lintDuration = Date.now() - lintStartTime;
@@ -5015,7 +5015,7 @@ export async function getWorkspaceOverviewTool(args?: any): Promise<ToolUseResul
                 duration: lintDuration,
                 language: 'arduino',
                 toolUsed: 'aily-builder-lint',
-                mode: lintServiceResult.mode || 'auto'
+                mode: lintServiceResult.mode || 'ast-grep'
               };
               
               // // console.log('✅ Arduino语法检测完成 (aily-builder):', {

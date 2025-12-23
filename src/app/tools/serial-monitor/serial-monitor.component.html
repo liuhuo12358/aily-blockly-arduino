@@ -126,7 +126,7 @@
             <app-quick-send-list (openMore)="openQuickSendEditor()"></app-quick-send-list>
           </div>
           <div class="input-box">
-            <textarea #chatTextarea class="sscroll vsfont" spellcheck="false" [(ngModel)]="inputValue"
+            <textarea #chatTextarea class="sscroll vsfont" [(ngModel)]="inputValue"
               (keydown)="onKeyDown($event)">
             </textarea>
             <div class="btns">

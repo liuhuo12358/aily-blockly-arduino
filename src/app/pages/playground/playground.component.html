@@ -5,7 +5,7 @@
         </div>
         <nz-input-group [nzSuffix]="suffixIconSearch" [nzSize]="'small'" (click)="search()">
             <input type="text" nz-input [placeholder]="'搜索示例' | translate" [(ngModel)]="keyword"
-                (ngModelChange)="search()" spellcheck="false" />
+                (ngModelChange)="search()" />
         </nz-input-group>
         <ng-template #suffixIconSearch>
             @if(keyword.length > 0){
