@@ -356,7 +356,8 @@
         "LOADING": "Laden...",
         "BACK": "Zurück",
         "TEST_MODEL": "Modell testen",
-        "DEPLOY_MODEL": "Modell bereitstellen"
+        "DEPLOY_MODEL": "Modell bereitstellen",
+        "SELF_TRAINED_MODEL": "Selbst trainiertes Modell"
     },
     "XIAO_ESP32S3_SENSE_CONNECT": {
         "STEP1": "1. Verbinden Sie das XIAO ESP32S3 Sense mit der Kameraerweiterungsplatine",

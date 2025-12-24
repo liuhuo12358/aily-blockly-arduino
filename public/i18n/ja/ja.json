@@ -356,7 +356,8 @@
         "LOADING": "読み込み中...",
         "BACK": "戻る",
         "TEST_MODEL": "モデルをテスト",
-        "DEPLOY_MODEL": "モデルをデプロイ"
+        "DEPLOY_MODEL": "モデルをデプロイ",
+        "SELF_TRAINED_MODEL": "自己学習モデル"
     },
     "XIAO_ESP32S3_SENSE_CONNECT": {
         "STEP1": "1. XIAO ESP32S3 Sense をカメラ拡張ボードに接続します",

@@ -352,7 +352,8 @@
         "LOADING": "로딩 중...",
         "BACK": "뒤로",
         "TEST_MODEL": "모델 테스트",
-        "DEPLOY_MODEL": "모델 배포"
+        "DEPLOY_MODEL": "모델 배포",
+        "SELF_TRAINED_MODEL": "자체 학습 모델"
     },
     "XIAO_ESP32S3_SENSE_CONNECT": {
         "STEP1": "1. XIAO ESP32S3 Sense를 카메라 확장 보드에 연결합니다",
