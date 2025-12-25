@@ -16,6 +16,7 @@ import { BitmapUploadResponse, GlobalServiceManager } from '../../services/bitma
 import './renderer/aily-icon';
 import './renderer/aily-thrasos/thrasos';
 import './renderer/aily-zelos/zelos';
+import './renderer/extensions/text-single-quotes';
 import './custom-category';
 import './custom-field/field-bitmap';
 import './custom-field/field-bitmap-u8g2';
@@ -407,13 +408,13 @@ export class BlocklyComponent implements DoCheck {
         //  const block = this.workspace.getBlockById(event.newElementId);
         //  console.log('选中的积木：', block);
         // }
-        try {
-          this.codeGeneration();
-        } catch (error) {
-          // 仅在开发环境下打印错误，避免用户看到错误
-          console.debug('代码生成时出现错误，可能是某些块尚未注册：', error);
-          // 错误发生时不更新代码
-        }
+          try {
+            this.codeGeneration();
+          } catch (error) {
+            // 仅在开发环境下打印错误，避免用户看到错误
+            console.debug('代码生成时出现错误，可能是某些块尚未注册：', error);
+            // 错误发生时不更新代码
+                  }
       });
       this.initLanguage();
     }, 100);
