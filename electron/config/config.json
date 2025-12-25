@@ -8,11 +8,17 @@
     "darwin": "~/Library/aily-project"
   },
   "project_path": "%HOMEPATH%\\Documents\\aily-project",
+  "api_server": [
+    "https://api.aily.pro",
+    "https://aapi.diandeng.tech"
+  ],
   "npm_registry": [
-    "https://registry.diandeng.tech"
+    "https://registry.diandeng.tech",
+    "https://registry.aily.pro"
   ],
   "resource": [
-    "https://blockly.diandeng.tech"
+    "https://blockly.diandeng.tech",
+    "https://rs1.aily.pro"
   ],
   "updater": [
     "https://dl.diandeng.tech/blockly"

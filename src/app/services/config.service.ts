@@ -2,6 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { lastValueFrom } from 'rxjs';
 import { ElectronService } from './electron.service';
+import { API, setServerUrl, setRegistryUrl } from '../configs/api.config';
 
 @Injectable({
   providedIn: 'root',
@@ -49,8 +50,56 @@ export class ConfigService {
       userConfData = {};
     }
 
+    // 保存默认配置中的列表
+    const defaultNpmRegistry = this.data.npm_registry || [];
+    const defaultApiServer = this.data.api_server || [];
+
     // 合并用户配置和默认配置
     this.data = { ...this.data, ...userConfData };
+
+    // 确保列表包含默认配置中的所有项（合并并去重）
+    if (this.data.npm_registry) {
+      this.data.npm_registry = Array.from(new Set([...this.data.npm_registry, ...defaultNpmRegistry]));
+    }
+    if (this.data.api_server) {
+      this.data.api_server = Array.from(new Set([...this.data.api_server, ...defaultApiServer]));
+    }
+
+    // 使用Electron检测到的最快节点覆盖配置
+    if (this.electronService.isElectron) {
+      try {
+        const npmRegistry = await this.electronService.electron.ipcRenderer.invoke('env-get', 'AILY_NPM_REGISTRY');
+        if (npmRegistry) {
+          // this.data.npm_registry = [npmRegistry];
+          // 调整顺序，将当前使用的节点放到第一位
+          const index = this.data.npm_registry.indexOf(npmRegistry);
+          if (index > -1) {
+            this.data.npm_registry.splice(index, 1);
+            this.data.npm_registry.unshift(npmRegistry);
+          }
+          // 更新 API 配置模块的缓存，确保渲染进程中的 API 调用使用正确的地址
+          setRegistryUrl(npmRegistry);
+        }
+
+        const resource = await this.electronService.electron.ipcRenderer.invoke('env-get', 'AILY_ZIP_URL');
+        if (resource) this.data.resource = [resource];
+
+        const apiServer = await this.electronService.electron.ipcRenderer.invoke('env-get', 'AILY_API_SERVER');
+        if (apiServer) {
+          // this.data.api_server = [apiServer];
+          // 调整顺序，将当前使用的节点放到第一位
+          const index = this.data.api_server.indexOf(apiServer);
+          if (index > -1) {
+            this.data.api_server.splice(index, 1);
+            this.data.api_server.unshift(apiServer);
+          }
+          // 更新 API 配置模块的缓存，确保渲染进程中的 API 调用使用正确的地址
+          setServerUrl(apiServer);
+        }
+      } catch (e) {
+        console.error('Failed to get env vars', e);
+      }
+    }
 
     // 添加当前系统类型到data中
     this.data["platform"] = window['platform'].type;

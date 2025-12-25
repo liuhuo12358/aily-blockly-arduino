@@ -136,6 +136,7 @@
             "FLYOUT_AUTO_CLOSE": "自动关闭工具箱",
             "COMPILATION_OPTIONS": "编译选项",
             "REPOSITORY_URLS": "仓库地址",
+            "API_SERVER": "API服务器",
             "BOARD_LIST": "开发板列表",
             "LIBRARY_LIST": "库列表",
             "INSTALL": "安装",

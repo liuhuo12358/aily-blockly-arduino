@@ -12,6 +12,8 @@ import { ConfigService } from '../../services/config.service';
 import { SimplebarAngularModule } from 'simplebar-angular';
 import { TranslateModule } from '@ngx-translate/core';
 import { NzSwitchModule } from 'ng-zorro-antd/switch';
+import { NzSelectModule } from 'ng-zorro-antd/select';
+import { setServerUrl, setRegistryUrl } from '../../configs/api.config';
 
 @Component({
   selector: 'app-settings',
@@ -24,7 +26,8 @@ import { NzSwitchModule } from 'ng-zorro-antd/switch';
     NzRadioModule,
     SimplebarAngularModule,
     TranslateModule,
-    NzSwitchModule
+    NzSwitchModule,
+    NzSelectModule
   ],
   templateUrl: './settings.component.html',
   styleUrl: './settings.component.scss',
@@ -101,6 +104,55 @@ export class SettingsComponent {
     );
   }
 
+  get npmRegistryList() {
+    return this.configData.npm_registry;
+  }
+
+  get apiServerList() {
+    return this.configData.api_server;
+  }
+
+  async onNpmRegistryChange(value: string) {
+    const index = this.configData.npm_registry.indexOf(value);
+    if (index > -1) {
+      this.configData.npm_registry.splice(index, 1);
+      this.configData.npm_registry.unshift(value);
+    }
+    // 更新 API 配置模块的缓存，确保渲染进程中立即生效
+    setRegistryUrl(value);
+    // 设置环境变量，确保生效
+    if (window['process']?.env) {
+      window['process'].env['AILY_NPM_REGISTRY'] = value;
+    }
+    // 通过 ipcRenderer 通知主进程更新环境变量
+    if (window['ipcRenderer']) {
+      window['ipcRenderer'].invoke('env-set', { key: 'AILY_NPM_REGISTRY', value: value });
+    }
+    await this.updateBoardList();
+    // 立即保存到config.json，确保下次进入设置时读取到最新值
+    this.configService.save();
+  }
+
+  onApiServerChange(value: string) {
+    const index = this.configData.api_server.indexOf(value);
+    if (index > -1) {
+      this.configData.api_server.splice(index, 1);
+      this.configData.api_server.unshift(value);
+    }
+    // 更新 API 配置模块的缓存，确保渲染进程中立即生效
+    setServerUrl(value);
+    // 设置环境变量，确保生效
+    if (window['process']?.env) {
+      window['process'].env['AILY_API_SERVER'] = value;
+    }
+    // 通过 ipcRenderer 通知主进程更新环境变量
+    if (window['ipcRenderer']) {
+      window['ipcRenderer'].invoke('env-set', { key: 'AILY_API_SERVER', value: value });
+    }
+    // 立即保存到config.json，确保下次进入设置时读取到最新值
+    this.configService.save();
+  }
+
   get langList() {
     return this.translationService.languageList;
   }
@@ -117,6 +169,8 @@ export class SettingsComponent {
 
   mcpServiceList = []
 
+  selectedNpmRegistry: string;
+  selectedApiServer: string;
 
   constructor(
     private uiService: UiService,
@@ -128,6 +182,10 @@ export class SettingsComponent {
 
   async ngOnInit() {
     await this.configService.init();
+    // 从环境变量读取当前选中的地址（main.js中initFastestServers检测后设置的最快地址）
+    // 如果环境变量不存在则使用配置的第一个
+    this.selectedNpmRegistry = window['process']?.env?.['AILY_NPM_REGISTRY'] || this.configData.npm_registry[0];
+    this.selectedApiServer = window['process']?.env?.['AILY_API_SERVER'] || this.configData.api_server[0];
   }
 
   async ngAfterViewInit() {
@@ -138,10 +196,12 @@ export class SettingsComponent {
     const platform = this.configService.data.platform;
     // this.appdata_path = this.configService.data.appdata_path[platform].replace('%HOMEPATH%', window['path'].getUserHome());
     this.appdata_path = window['path'].getAppDataPath();
-    // this.settingsService.getBoardList(this.appdata_path, this.configService.data.npm_registry[0]);
-    this.settingsService.getToolList(this.appdata_path, this.configService.data.npm_registry[0]);
-    this.settingsService.getSdkList(this.appdata_path, this.configService.data.npm_registry[0]);
-    this.settingsService.getCompilerList(this.appdata_path, this.configService.data.npm_registry[0]);
+    // 使用当前选中的仓库地址（已同步到环境变量）
+    const npmRegistry = this.selectedNpmRegistry || window['process']?.env?.['AILY_NPM_REGISTRY'] || this.configService.data.npm_registry[0];
+    // this.settingsService.getBoardList(this.appdata_path, npmRegistry);
+    this.settingsService.getToolList(this.appdata_path, npmRegistry);
+    this.settingsService.getSdkList(this.appdata_path, npmRegistry);
+    this.settingsService.getCompilerList(this.appdata_path, npmRegistry);
   }
 
   selectLang(lang) {

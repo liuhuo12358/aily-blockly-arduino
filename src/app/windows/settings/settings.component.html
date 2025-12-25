@@ -99,14 +99,20 @@
             <div class="right-inner">
               <div class="item">
                 <div>{{ 'SETTINGS.FIELDS.REPOSITORY_URLS' | translate }}:</div>
-                <input nz-input [(ngModel)]="configData.npm_registry[0]" [disabled]="true" />
+                <nz-select [(ngModel)]="selectedNpmRegistry" (ngModelChange)="onNpmRegistryChange($event)">
+                  @for (url of npmRegistryList; track url) {
+                  <nz-option [nzValue]="url" [nzLabel]="url"></nz-option>
+                  }
+                </nz-select>
               </div>
-              <!-- <div class="instructions">{{ 'SETTINGS.FIELDS.REPOSITORY_URLS' | translate }}</div>
-              <textarea class="registry" nz-input [(ngModel)]="npmRegistryListStr"></textarea>
-              <div class="instructions">{{ 'SETTINGS.FIELDS.BOARD_LIST' | translate }}</div>
-              <textarea class="registry" nz-input [(ngModel)]="npmRegistryListStr"></textarea>
-              <div class="instructions">{{ 'SETTINGS.FIELDS.LIBRARY_LIST' | translate }}</div>
-              <textarea class="registry" nz-input [(ngModel)]="npmRegistryListStr"></textarea> -->
+              <div class="item">
+                <div>{{ 'SETTINGS.FIELDS.API_SERVER' | translate }}:</div>
+                <nz-select [(ngModel)]="selectedApiServer" (ngModelChange)="onApiServerChange($event)">
+                  @for (url of apiServerList; track url) {
+                  <nz-option [nzValue]="url" [nzLabel]="url"></nz-option>
+                  }
+                </nz-select>
+              </div>
             </div>
           </div>
 
