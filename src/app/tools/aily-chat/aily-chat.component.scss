@@ -249,7 +249,8 @@ nz-resize-handle {
 .btn {
   margin-left: 1px;
   &.mode {
-    width: 50px !important;
+    width: auto !important;
+    padding: 0 6px !important;
 
     span {
       margin-left: 5px;
