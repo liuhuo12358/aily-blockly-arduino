@@ -248,6 +248,7 @@ nz-resize-handle {
 // 模式切换按钮
 .btn {
   margin-left: 1px;
+  transition: all 0.2s;
   &.mode {
     width: auto !important;
     padding: 0 6px !important;
