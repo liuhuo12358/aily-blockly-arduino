@@ -365,7 +365,8 @@
         "LOADING": "Loading...",
         "BACK": "Back",
         "TEST_MODEL": "Test Model",
-        "DEPLOY_MODEL": "Deploy Model"
+        "DEPLOY_MODEL": "Deploy Model",
+        "SELF_TRAINED_MODEL": "Self-Trained Model"
     },
     "MODEL_DEPLOY": {
         "TITLE": "Model Deploy",

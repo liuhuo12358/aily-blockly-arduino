@@ -328,7 +328,8 @@
         "LOADING": "جاري التحميل...",
         "BACK": "رجوع",
         "TEST_MODEL": "اختبار النموذج",
-        "DEPLOY_MODEL": "نشر النموذج"
+        "DEPLOY_MODEL": "نشر النموذج",
+        "SELF_TRAINED_MODEL": "نموذج مدرب ذاتيًا"
     },
     "MODEL_DEPLOY": {
         "TITLE": "نشر النموذج",
