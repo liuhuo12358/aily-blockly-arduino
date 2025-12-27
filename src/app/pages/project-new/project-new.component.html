@@ -17,8 +17,8 @@
     <!-- 查看模式：-->
     @if(currentStep == 0){
     <div class="tag-list">
-      <nz-tag (click)="changeViewMode('brand')" [nzColor]="listMode === 'brand' ? '#108ee9' : null">按品牌</nz-tag>
-      <nz-tag (click)="changeViewMode('core')" [nzColor]="listMode === 'core' ? '#108ee9' : null">按核心</nz-tag>
+      <nz-tag (click)="changeViewMode('brand')" [nzColor]="listMode === 'brand' ? '#108ee9' : null">{{ 'PROJECT_NEW.BOARD.BY_BRAND' | translate }}</nz-tag>
+      <nz-tag (click)="changeViewMode('core')" [nzColor]="listMode === 'core' ? '#108ee9' : null">{{ 'PROJECT_NEW.BOARD.BY_CORE' | translate }}</nz-tag>
       <!-- <nz-tag (click)="listMode = 'function'">按功能</nz-tag> -->
     </div>
     }

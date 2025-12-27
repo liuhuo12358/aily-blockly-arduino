@@ -121,7 +121,9 @@
             "SEARCH": "Buscar Placa",
             "READ_DOC": "Leer Documentación",
             "ADD_BOARD": "Agregar Placa",
-            "DEV": "dev"
+            "DEV": "dev",
+            "BY_BRAND": "Por Marca",
+            "BY_CORE": "Por Núcleo"
         },
         "FORM": {
             "DEVMODE": "Marco de desarrollo",

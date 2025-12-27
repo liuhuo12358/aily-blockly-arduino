@@ -121,7 +121,9 @@
             "SEARCH": "Pesquisar placas",
             "READ_DOC": "Ler documentação",
             "ADD_BOARD": "Adicionar placa",
-            "DEV": "dev"
+            "DEV": "dev",
+            "BY_BRAND": "Por Marca",
+            "BY_CORE": "Por Núcleo"
         },
         "FORM": {
             "DEVMODE": "Framework de desenvolvimento",

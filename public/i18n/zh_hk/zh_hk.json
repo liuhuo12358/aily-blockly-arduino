@@ -121,7 +121,9 @@
             "SEARCH": "搜尋開發板",
             "READ_DOC": "閱讀文件",
             "ADD_BOARD": "新增開發板",
-            "DEV": "dev"
+            "DEV": "dev",
+            "BY_BRAND": "按品牌",
+            "BY_CORE": "按核心"
         },
         "FORM": {
             "DEVMODE": "開發框架",

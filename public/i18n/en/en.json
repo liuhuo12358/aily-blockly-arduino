@@ -158,7 +158,9 @@
             "SEARCH": "Search Board",
             "READ_DOC": "Documentation",
             "ADD_BOARD": "Add Board",
-            "DEV": "dev"
+            "DEV": "dev",
+            "BY_BRAND": "By Brand",
+            "BY_CORE": "By Core"
         },
         "FORM": {
             "DEVMODE": "Development Framework",

@@ -157,7 +157,9 @@
             "SEARCH": "搜索开发板",
             "READ_DOC": "文档",
             "ADD_BOARD": "添加开发板",
-            "DEV": "dev"
+            "DEV": "dev",
+            "BY_BRAND": "按品牌",
+            "BY_CORE": "按核心"
         },
         "FORM": {
             "DEVMODE": "开发框架",
