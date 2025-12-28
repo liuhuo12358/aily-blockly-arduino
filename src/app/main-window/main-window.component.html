@@ -57,7 +57,6 @@
           <div class="sider-resize-line"></div>
         </nz-resize-handle>
         <div class="right-box">
-          <!-- <app-tool-container (closeEvent)="closeRightBox()"> -->
           @for (tool of openToolList; track tool) {
             <div class="tool-panel" [style.z-index]="tool === topTool ? 100 : 1">
               @switch (tool) {
@@ -88,7 +87,6 @@
               }
             </div>
           }
-          <!-- </app-tool-container> -->
         </div>
       </nz-sider>
       }
