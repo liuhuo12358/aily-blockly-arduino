@@ -5,12 +5,12 @@
   min-width: 1197px;
   background: #2b2d30;
   display: flex;
+  justify-content: flex-start;
 
   .left-box {
     width: 500px;
     display: flex;
     flex-direction: column;
-    // justify-content: space-between;
     padding: 10px 0 10px 100px;
     flex-grow: 1;
     flex-shrink: 1;
@@ -25,6 +25,7 @@
     position: relative;
     display: flex;
     justify-content: flex-end;
+    align-items: flex-start;
     flex-direction: column;
     gap: 15px;
   }
