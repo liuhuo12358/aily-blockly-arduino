@@ -9,15 +9,47 @@ import { ElectronService } from './electron.service';
 export class ConfigService {
 
   data: AppConfig | any = {};
+  
+  // 数据加载状态标识
+  private _isDataReady = false;
+  
+  // 测试用：模拟慢速加载（毫秒），设为0禁用
+  private readonly SIMULATE_SLOW_LOADING = 0; // 改为2000可以看到loading效果
+  
+  /**
+   * 检查boards和libraries数据是否已加载完成
+   */
+  get isDataReady(): boolean {
+    const ready = this._isDataReady && 
+           (this.boardDict && Object.keys(this.boardDict).length > 0) &&
+           (this.libraryDict && Object.keys(this.libraryDict).length > 0);
+    
+    if (!ready) {
+      console.log('[ConfigService] isDataReady=false', {
+        _isDataReady: this._isDataReady,
+        boardDictSize: Object.keys(this.boardDict || {}).length,
+        libraryDictSize: Object.keys(this.libraryDict || {}).length
+      });
+    }
+    
+    return ready;
+  }
 
   constructor(
     private http: HttpClient,
     private electronService: ElectronService
   ) { }
 
-  init() {
-    if (!this.electronService.isElectron) return;
-    this.load();
+  async init() {
+    if (!this.electronService.isElectron) {
+      console.log('[ConfigService] 非Electron环境，跳过数据加载，直接标记就绪');
+      // 非 Electron 环境下，跳过 loading 状态（没有数据源）
+      this._isDataReady = true;
+      return;
+    }
+    console.log('[ConfigService] 开始初始化...');
+    await this.load();
+    console.log('[ConfigService] 初始化完成, isDataReady=', this.isDataReady);
   }
 
   get_lang_filename(lang: string) {
@@ -34,6 +66,7 @@ export class ConfigService {
   }
 
   async load() {
+    console.log('[ConfigService] load() 开始执行...');
     let defaultConfigFilePath = window['path'].getElectronPath();
     let defaultConfigFile = window['fs'].readFileSync(`${defaultConfigFilePath}/config/config.json`);
     this.data = await JSON.parse(defaultConfigFile);
@@ -57,14 +90,26 @@ export class ConfigService {
     this.data["lang"] = this.get_lang_filename(window['platform'].lang);
 
     // 并行加载缓存的boards.json和libraries.json
-    // await Promise.all([
-    this.loadAndCacheBoardList(configFilePath);
-    this.loadAndCacheLibraryList(configFilePath);
-    // ]);
+    await Promise.all([
+      this.loadAndCacheBoardList(configFilePath),
+      this.loadAndCacheLibraryList(configFilePath)
+    ]);
 
     // 加载新格式索引（boards-index.json / libraries-index.json）
-    this.loadAndCacheBoardIndex(configFilePath);
-    this.loadAndCacheLibraryIndex(configFilePath);
+    await Promise.all([
+      this.loadAndCacheBoardIndex(configFilePath),
+      this.loadAndCacheLibraryIndex(configFilePath)
+    ]);
+    
+    // 测试用：模拟慢速加载
+    if (this.SIMULATE_SLOW_LOADING > 0) {
+      console.log(`[ConfigService] 模拟慢速加载，等待 ${this.SIMULATE_SLOW_LOADING}ms...`);
+      await new Promise(resolve => setTimeout(resolve, this.SIMULATE_SLOW_LOADING));
+    }
+    
+    console.log('[ConfigService] 所有数据加载完成');
+    // 标记数据已加载完成
+    this._isDataReady = true;
   }
 
   private async loadAndCacheBoardList(configFilePath: string): Promise<void> {
@@ -84,6 +129,7 @@ export class ConfigService {
     this.boardList.forEach(board => {
       this.boardDict[board.name] = board;
     });
+    console.log(`[ConfigService] boardDict创建完成，共 ${Object.keys(this.boardDict).length} 个开发板`);
   }
 
   private async loadAndCacheLibraryList(configFilePath: string): Promise<void> {
@@ -103,6 +149,7 @@ export class ConfigService {
     this.libraryList.forEach(library => {
       this.libraryDict[library.name] = library;
     });
+    console.log(`[ConfigService] libraryDict创建完成，共 ${Object.keys(this.libraryDict).length} 个库`);
   }
 
   async save() {
@@ -377,13 +424,43 @@ export class ConfigService {
     const candidates = this.libraryList.map(lib => {
       const nameScore = this.calculateSimilarity(queryLower, lib.name?.toLowerCase() || '');
       const nicknameScore = this.calculateSimilarity(queryLower, lib.nickname?.toLowerCase() || '');
-      const keywordScore = (lib.keywords || []).some((kw: string) => 
-        kw.toLowerCase().includes(queryLower) || queryLower.includes(kw.toLowerCase())
-      ) ? 0.3 : 0;
+      
+      // 关键词匹配 - 提高权重
+      let keywordScore = 0;
+      if (lib.keywords && Array.isArray(lib.keywords)) {
+        // 提取查询中的关键词（去除特殊字符、分割、提取有意义的部分）
+        const queryKeywords = this.extractKeywords(queryLower);
+        
+        for (const queryKw of queryKeywords) {
+          for (const libKw of lib.keywords) {
+            const libKwLower = libKw.toLowerCase();
+            // 完全匹配
+            if (libKwLower === queryKw) {
+              keywordScore += 0.8;
+            }
+            // 包含关系
+            else if (libKwLower.includes(queryKw) || queryKw.includes(libKwLower)) {
+              keywordScore += 0.4;
+            }
+          }
+        }
+      }
+      
+      // 描述匹配
+      let descriptionScore = 0;
+      if (lib.description) {
+        const descLower = lib.description.toLowerCase();
+        const queryKeywords = this.extractKeywords(queryLower);
+        for (const queryKw of queryKeywords) {
+          if (descLower.includes(queryKw)) {
+            descriptionScore += 0.3;
+          }
+        }
+      }
       
       return {
         library: lib,
-        score: Math.max(nameScore, nicknameScore) + keywordScore
+        score: Math.max(nameScore, nicknameScore) + keywordScore + descriptionScore
       };
     }).filter(c => c.score > 0.3)  // 相似度阈值
       .sort((a, b) => b.score - a.score);
@@ -435,9 +512,21 @@ export class ConfigService {
       const nicknameScore = this.calculateSimilarity(queryLower, board.nickname?.toLowerCase() || '');
       const displayNameScore = this.calculateSimilarity(queryLower, board.displayName?.toLowerCase() || '');
       
+      // 描述匹配
+      let descriptionScore = 0;
+      if (board.description) {
+        const descLower = board.description.toLowerCase();
+        const queryKeywords = this.extractKeywords(queryLower);
+        for (const queryKw of queryKeywords) {
+          if (descLower.includes(queryKw)) {
+            descriptionScore += 0.3;
+          }
+        }
+      }
+      
       return {
         board: board,
-        score: Math.max(nameScore, nicknameScore, displayNameScore)
+        score: Math.max(nameScore, nicknameScore, displayNameScore) + descriptionScore
       };
     }).filter(c => c.score > 0.3)  // 相似度阈值
       .sort((a, b) => b.score - a.score);
@@ -452,6 +541,28 @@ export class ConfigService {
     }
 
     return { exists: false, board: null, fuzzyMatch: false, originalQuery: boardName };
+  }
+
+  /**
+   * 提取查询字符串中的关键词
+   * 例如: "@aily-project/lib-oled-ssd1306" => ["aily", "project", "lib", "oled", "ssd1306"]
+   */
+  private extractKeywords(query: string): string[] {
+    if (!query) return [];
+    
+    // 移除常见的前缀/后缀
+    let cleaned = query
+      .replace(/@aily-project\//gi, '')  // 移除包前缀
+      .replace(/^lib-/gi, '')             // 移除lib-前缀
+      .replace(/\s+/g, ' ')               // 合并空格
+      .trim();
+    
+    // 按多种分隔符分割：连字符、下划线、空格等
+    const keywords = cleaned.split(/[-_\s\/]+/)
+      .filter(kw => kw.length >= 2)  // 过滤太短的词
+      .map(kw => kw.toLowerCase());
+    
+    return [...new Set(keywords)];  // 去重
   }
 
   /**

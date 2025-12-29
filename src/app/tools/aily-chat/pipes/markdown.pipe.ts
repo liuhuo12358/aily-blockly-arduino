@@ -8,6 +8,38 @@ import { markedHighlight } from 'marked-highlight';
 import { codeToHtml } from 'shiki';
 import { Observable, from, of } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
+import { ConfigService } from '../../../services/config.service';
+
+/**
+ * 库/开发板验证回调事件
+ * 当发现不存在的库或开发板时触发，用于通知大模型正确的名称
+ */
+export interface ValidationCorrectionEvent {
+  type: 'library' | 'board';
+  originalQuery: string;
+  correctedName: string;
+  correctedData: any;
+  isFuzzyMatch: boolean;
+}
+
+// 全局事件存储，用于收集验证校正结果
+let pendingCorrections: ValidationCorrectionEvent[] = [];
+
+/**
+ * 获取并清空待处理的校正事件
+ */
+export function getPendingCorrections(): ValidationCorrectionEvent[] {
+  const corrections = [...pendingCorrections];
+  pendingCorrections = [];
+  return corrections;
+}
+
+/**
+ * 添加校正事件
+ */
+function addCorrectionEvent(event: ValidationCorrectionEvent) {
+  pendingCorrections.push(event);
+}
 
 /**
  * 扩展的 Markdown 管道，支持动态 Angular 组件渲染
@@ -23,7 +55,8 @@ export class MarkdownPipe implements PipeTransform {
   private marked: Marked;
   private static componentCounter = 0;
   constructor(
-    private sanitizer: DomSanitizer
+    private sanitizer: DomSanitizer,
+    private configService: ConfigService
   ) {
     this.marked = new Marked(
       markedHighlight({
@@ -146,6 +179,8 @@ export class MarkdownPipe implements PipeTransform {
     // 清理代码内容 - 移除多余的空白字符和换行
     const cleanedCode = code.trim();
 
+    // console.log(`Parsing Aily content of type ${type}:`, cleanedCode);
+
     // 对于 aily-mermaid 类型，直接返回纯文本内容，不尝试解析 JSON
     if (type === 'aily-mermaid') {
       return {
@@ -244,12 +279,45 @@ export class MarkdownPipe implements PipeTransform {
 
   /**
    * 验证开发板数据
+   * 如果开发板不存在，尝试模糊匹配找到真实存在的开发板
    */
   private validateBoardData(boardData: any): any {
     if (!boardData || typeof boardData !== 'object') {
       throw new Error('Invalid board data: must be an object');
     }
 
+    // 获取查询名称（优先使用 name，其次 nickname/displayName）
+    const queryName = boardData.name || boardData.nickname || boardData.displayName;
+    
+    if (queryName && this.configService) {
+      // 使用 ConfigService 验证开发板是否存在
+      const validation = this.configService.validateBoard(queryName);
+      
+      if (validation.exists && validation.board) {
+        // 找到了真实存在的开发板
+        if (validation.fuzzyMatch) {
+          // 模糊匹配，记录校正事件，通知大模型
+          console.log(`[MarkdownPipe] 开发板模糊匹配: "${queryName}" -> "${validation.board.name}"`);
+          addCorrectionEvent({
+            type: 'board',
+            originalQuery: validation.originalQuery,
+            correctedName: validation.board.name,
+            correctedData: validation.board,
+            isFuzzyMatch: true
+          });
+        }
+        
+        // 使用真实存在的开发板数据
+        return {
+          ...validation.board,
+          _validated: true,
+          _fuzzyMatch: validation.fuzzyMatch,
+          _originalQuery: validation.fuzzyMatch ? queryName : undefined
+        };
+      }
+    }
+
+    // 未找到或 ConfigService 不可用，使用原始数据并添加默认值
     return {
       name: boardData.name || 'Unknown Board',
       nickname: boardData.nickname || boardData.name || 'Unknown Board',
@@ -261,18 +329,52 @@ export class MarkdownPipe implements PipeTransform {
       compatibility: boardData.compatibility || '',
       img: boardData.img || '',
       disabled: Boolean(boardData.disabled),
+      _validated: false,
       ...boardData
     };
   }
 
   /**
    * 验证库数据
+   * 如果库不存在，尝试模糊匹配找到真实存在的库
    */
   private validateLibraryData(libraryData: any): any {
     if (!libraryData || typeof libraryData !== 'object') {
       throw new Error('Invalid library data: must be an object');
     }
 
+    // 获取查询名称（优先使用 name，其次 nickname）
+    const queryName = libraryData.name || libraryData.nickname;
+    
+    if (queryName && this.configService) {
+      // 使用 ConfigService 验证库是否存在
+      const validation = this.configService.validateLibrary(queryName);
+      
+      if (validation.exists && validation.library) {
+        // 找到了真实存在的库
+        if (validation.fuzzyMatch) {
+          // 模糊匹配，记录校正事件，通知大模型
+          console.log(`[MarkdownPipe] 库模糊匹配: "${queryName}" -> "${validation.library.name}"`);
+          addCorrectionEvent({
+            type: 'library',
+            originalQuery: validation.originalQuery,
+            correctedName: validation.library.name,
+            correctedData: validation.library,
+            isFuzzyMatch: true
+          });
+        }
+        
+        // 使用真实存在的库数据
+        return {
+          ...validation.library,
+          _validated: true,
+          _fuzzyMatch: validation.fuzzyMatch,
+          _originalQuery: validation.fuzzyMatch ? queryName : undefined
+        };
+      }
+    }
+
+    // 未找到或 ConfigService 不可用，使用原始数据并添加默认值
     return {
       name: libraryData.name || 'Unknown Library',
       nickname: libraryData.nickname || libraryData.name || 'Unknown Library',
@@ -283,6 +385,7 @@ export class MarkdownPipe implements PipeTransform {
       keywords: Array.isArray(libraryData.keywords) ? libraryData.keywords : [],
       tested: Boolean(libraryData.tested),
       icon: libraryData.icon || 'fa-light fa-cube',
+      _validated: false,
       ...libraryData
     };
   }
