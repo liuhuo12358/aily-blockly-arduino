@@ -60,8 +60,11 @@
         "FEEDBACK_DESC": "경험에 대한 피드백을 보내주세요",
         "WECHAT_GROUP": "WeChat 사용자 그룹",
         "WECHAT_GROUP_DESC": "WeChat 사용자 그룹에 가입하여 다른 사용자들과 소통하세요",
+        "USER_GROUP": "사용자 커뮤니티",
+        "USER_GROUP_DESC": "커뮤니티에 가입하여 다른 사용자들과 소통하세요",
         "SPONSORS": "프로젝트 후원자",
-        "SPONSORS_DESC": "이 프로젝트는 다음 회사/개인들의 후원을 받고 있습니다"
+        "SPONSORS_DESC": "이 프로젝트는 다음 회사/개인들의 후원을 받고 있습니다",
+        "NEWS": "뉴스"
     },
     "APP_STORE": {
         "HEADER_INFO": "처음 {{count}}개의 앱이 도구 모음에 표시됩니다",

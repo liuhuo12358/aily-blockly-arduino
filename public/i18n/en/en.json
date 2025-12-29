@@ -96,8 +96,11 @@
         "FEEDBACK_DESC": "Send feedback about your experience",
         "WECHAT_GROUP": "WeChat User Group",
         "WECHAT_GROUP_DESC": "Join the WeChat user group to communicate with other users",
+        "USER_GROUP": "User Community",
+        "USER_GROUP_DESC": "Join the community to communicate with other users",
         "SPONSORS": "Project Sponsors",
-        "SPONSORS_DESC": "This project is sponsored by the following companies/individuals"
+        "SPONSORS_DESC": "This project is sponsored by the following companies/individuals",
+        "NEWS": "News"
     },
     "APP_STORE": {
         "HEADER_INFO": "First {{count}} apps will be shown in the toolbar",

@@ -22,6 +22,15 @@ export class GuideComponent implements OnInit, AfterViewInit {
   showMenu = true;
   showMore = false;
   sponsors: any[] = [];
+  showImgUrl: string | null = null;
+
+  showImg(url: string) {
+    this.showImgUrl = url;
+  }
+
+  hideImg() {
+    this.showImgUrl = null;
+  }
 
   get recentlyProjects() {
     return this.projectService.recentlyProjects
@@ -148,25 +157,23 @@ export class GuideComponent implements OnInit, AfterViewInit {
   }
 
   // 重新加载微信二维码图片
-  retryLoadImage() {
-    setTimeout(() => {
-      const img = document.querySelector('.qrcode') as HTMLImageElement;
-      if (img) {
-        const originalSrc = 'https://dl.diandeng.tech/blockly/wechat.jpg';
-        img.src = `${originalSrc}?t=${Date.now()}`;
-      }
-    }, 1000);
+  // retryLoadImage() {
+  //   setTimeout(() => {
+  //     const img = document.querySelector('.qrcode') as HTMLImageElement;
+  //     if (img) {
+  //       const originalSrc = 'https://dl.diandeng.tech/blockly/wechat.jpg';
+  //       img.src = `${originalSrc}?t=${Date.now()}`;
+  //     }
+  //   }, 1000);
+  // }
 
-  }
-
-  test() {
-    console.log(this.electronService.isWindowFocused());
-    setTimeout(() => {
-      // if (!this.electronService.isWindowFocused()) {
-      //   this.electronService.notify('测试', '开发阶段刷卡JFK拉萨机');
-      // }
-    }, 12000)
-  }
+  // test() {
+  //   console.log(this.electronService.isWindowFocused());
+  //   setTimeout(() => {
+  //     // if (!this.electronService.isWindowFocused()) {
+  //     // }
+  //   }, 12000)
+  // }
 
   openFeedback() {
     this.uiService.openFeedback();
