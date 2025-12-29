@@ -61,7 +61,7 @@ export class SettingsComponent {
     },
     {
       name: 'SETTINGS.SECTIONS.REPOSITORY',
-      icon: 'fa-light fa-book-bookmark'
+      icon: 'fa-light fa-globe'
     },
     {
       name: 'SETTINGS.SECTIONS.DEPENDENCIES',
@@ -118,7 +118,7 @@ export class SettingsComponent {
     'us': '🇺🇸',
     'jp': '🇯🇵',
     'kr': '🇰🇷',
-    'localhost': '🏠'
+    'localhost': ''
   };
 
   // 获取区域列表（仅启用的区域）
