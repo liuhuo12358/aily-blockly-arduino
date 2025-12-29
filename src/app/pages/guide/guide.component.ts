@@ -2,6 +2,7 @@ import { Component, OnInit, AfterViewInit } from '@angular/core';
 import { GUIDE_MENU } from '../../configs/menu.config';
 import { UiService } from '../../services/ui.service';
 import { ProjectService } from '../../services/project.service';
+import { ConfigService } from '../../services/config.service';
 import { version } from '../../../../package.json';
 import { TranslateModule } from '@ngx-translate/core';
 import { Router } from '@angular/router';
@@ -32,8 +33,17 @@ export class GuideComponent implements OnInit, AfterViewInit {
     private projectService: ProjectService,
     private router: Router,
     private electronService: ElectronService,
-    private http: HttpClient
+    private http: HttpClient,
+    private configService: ConfigService
   ) { }
+
+  /**
+   * 获取微信二维码 URL（根据当前 region 动态生成）
+   */
+  get wechatQrcodeUrl(): string {
+    const resourceUrl = this.configService.getCurrentResourceUrl();
+    return `${resourceUrl}/wechat.jpg`;
+  }
 
   ngOnInit() {
     this.loadSponsors();
@@ -152,11 +162,9 @@ export class GuideComponent implements OnInit, AfterViewInit {
     setTimeout(() => {
       const img = document.querySelector('.qrcode') as HTMLImageElement;
       if (img) {
-        const originalSrc = 'https://dl.diandeng.tech/blockly/wechat.jpg';
-        img.src = `${originalSrc}?t=${Date.now()}`;
+        img.src = `${this.wechatQrcodeUrl}?t=${Date.now()}`;
       }
     }, 1000);
-
   }
 
   test() {

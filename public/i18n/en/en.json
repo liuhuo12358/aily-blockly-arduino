@@ -123,7 +123,7 @@
             "THEME": "Theme Settings",
             "BLOCKLY": "Blockly Settings",
             "COMPILATION": "Compilation",
-            "REPOSITORY": "Repository",
+            "REPOSITORY": "Service Region",
             "DEPENDENCIES": "Dependencies",
             "MCP": "MCP",
             "DEVMODE": "Developer Mode"
@@ -136,6 +136,7 @@
             "BLOCKLY_MINIMAP": "Blockly Minimap",
             "FLYOUT_AUTO_CLOSE": "Auto Close Toolbox",
             "COMPILATION_OPTIONS": "Compilation Options",
+            "REGION": "Service Region",
             "REPOSITORY_URLS": "Repository URLs",
             "BOARD_LIST": "Board List",
             "LIBRARY_LIST": "Library List",

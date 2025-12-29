@@ -707,42 +707,50 @@ async function getFastestUrl(urls, item_key='') {
 }
 
 // 初始化最快服务器配置（非阻塞异步方式，不影响启动速度）
+// 现在改为基于 region 配置，检测各个区域的服务延迟来自动选择最优区域
 function initFastestServersAsync() {
   const configPath = path.join(__dirname, 'config', "config.json");
   if (!fs.existsSync(configPath)) return;
   
   try {
     const conf = JSON.parse(fs.readFileSync(configPath));
-    
-    const checkList = [
-      { key: 'npm_registry', env: 'AILY_NPM_REGISTRY' },
-      { key: 'resource', env: 'AILY_ZIP_URL' },
-      { key: 'api_server', env: 'AILY_API_SERVER' }
-    ];
+    const regions = conf.regions;
+    if (!regions || Object.keys(regions).length === 0) return;
 
-    console.log('[节点检测] 后台开始检测最优服务器节点...');
+    console.log('[节点检测] 后台开始检测最优区域节点...');
     
-    // 并行检测所有类型的服务（不使用await，异步执行不阻塞启动）
-    Promise.all(checkList.map(async (item) => {
-      console.log(`[${item.key}] 开始检测节点...`);
-      if (conf[item.key] && Array.isArray(conf[item.key]) && conf[item.key].length > 1) {
-        const fastest = await getFastestUrl(conf[item.key], item.key);
-        if (fastest) {
-          console.log(`[${item.key}] 最优节点: ${fastest}`);
-          process.env[item.env] = fastest;
+    // 获取所有启用区域的 api_server 进行延迟检测（过滤掉未启用的区域和空URL）
+    const regionKeys = Object.keys(regions).filter(key => 
+      regions[key].enabled && regions[key].api_server
+    );
+    const regionUrls = regionKeys.map(key => regions[key].api_server);
+    
+    getFastestUrl(regionUrls, 'api_server').then(fastestUrl => {
+      if (fastestUrl) {
+        // 找到对应的区域
+        const fastestRegionKey = regionKeys.find(key => regions[key].api_server === fastestUrl);
+        if (fastestRegionKey) {
+          const fastestRegion = regions[fastestRegionKey];
+          console.log(`[节点检测] 检测到最优区域: ${fastestRegion.name} (${fastestRegionKey})`);
           
-          // 通知渲染进程服务器节点已更新
+          // 设置环境变量
+          process.env.AILY_NPM_REGISTRY = fastestRegion.npm_registry;
+          process.env.AILY_ZIP_URL = fastestRegion.resource;
+          process.env.AILY_API_SERVER = fastestRegion.api_server;
+          process.env.AILY_REGION = fastestRegionKey;
+          
+          // 通知渲染进程区域已更新
           if (mainWindow && mainWindow.webContents) {
             mainWindow.webContents.send('server-node-updated', { 
-              key: item.key, 
-              env: item.env, 
-              value: fastest 
+              region: fastestRegionKey,
+              npm_registry: fastestRegion.npm_registry,
+              resource: fastestRegion.resource,
+              api_server: fastestRegion.api_server
             });
           }
+          console.log('[节点检测] 区域节点检测完成');
         }
       }
-    })).then(() => {
-      console.log('[节点检测] 服务器节点检测完成');
     }).catch(e => {
       console.error('[节点检测] 检测过程出错:', e);
     });
@@ -859,8 +867,14 @@ function loadEnv() {
   // child Path
   process.env.AILY_CHILD_PATH = childPath;
 
+  // 从 regions 配置中获取当前区域的服务地址
+  const currentRegion = conf.region || 'cn';
+  const regionConfig = conf.regions && conf.regions[currentRegion] ? conf.regions[currentRegion] : conf.regions['cn'];
+  
+  // 当前区域
+  process.env.AILY_REGION = currentRegion;
   // npm registry
-  process.env.AILY_NPM_REGISTRY = conf["npm_registry"][0];
+  process.env.AILY_NPM_REGISTRY = regionConfig.npm_registry;
   // 7za path
   process.env.AILY_7ZA_PATH = path.join(childPath, isWin32 ? "7za.exe" : "7zz");
   // aily builder path
@@ -874,9 +888,9 @@ function loadEnv() {
   // 默认全局SDK路径
   process.env.AILY_SDK_PATH = path.join(process.env.AILY_APPDATA_PATH, "sdk");
   // zip包下载地址
-  process.env.AILY_ZIP_URL = conf["resource"][0];
+  process.env.AILY_ZIP_URL = regionConfig.resource;
   // API服务器地址
-  process.env.AILY_API_SERVER = conf["api_server"][0];
+  process.env.AILY_API_SERVER = regionConfig.api_server;
 
   process.env.AILY_PROJECT_PATH = conf["project_path"];
 

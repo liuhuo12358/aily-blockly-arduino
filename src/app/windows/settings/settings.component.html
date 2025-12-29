@@ -98,18 +98,12 @@
             <h2 class="section-title">{{ 'SETTINGS.SECTIONS.REPOSITORY' | translate }}</h2>
             <div class="right-inner">
               <div class="item">
-                <div>{{ 'SETTINGS.FIELDS.REPOSITORY_URLS' | translate }}:</div>
-                <nz-select [(ngModel)]="selectedNpmRegistry" (ngModelChange)="onNpmRegistryChange($event)">
-                  @for (url of npmRegistryList; track url) {
-                  <nz-option [nzValue]="url" [nzLabel]="url"></nz-option>
-                  }
-                </nz-select>
-              </div>
-              <div class="item">
-                <div>{{ 'SETTINGS.FIELDS.API_SERVER' | translate }}:</div>
-                <nz-select [(ngModel)]="selectedApiServer" (ngModelChange)="onApiServerChange($event)">
-                  @for (url of apiServerList; track url) {
-                  <nz-option [nzValue]="url" [nzLabel]="url"></nz-option>
+                <div>{{ 'SETTINGS.FIELDS.REGION' | translate }}:</div>
+                <nz-select [(ngModel)]="selectedRegion" (ngModelChange)="onRegionChange($event)" nzCustomContent>
+                  @for (region of regionList; track region.key) {
+                  <nz-option [nzValue]="region.key" [nzLabel]="getRegionFlag(region.key) + ' ' + region.name" nzCustomContent>
+                    <span class="region-flag">{{ getRegionFlag(region.key) }}</span> {{ region.name }}
+                  </nz-option>
                   }
                 </nz-select>
               </div>
