@@ -121,7 +121,9 @@
             "SEARCH": "Board suchen",
             "READ_DOC": "Dokumentation lesen",
             "ADD_BOARD": "Board hinzufügen",
-            "DEV": "Entwicklung"
+            "DEV": "Entwicklung",
+            "BY_BRAND": "Nach Marke",
+            "BY_CORE": "Nach Kern"
         },
         "FORM": {
             "DEVMODE": "Entwicklungs-Framework",

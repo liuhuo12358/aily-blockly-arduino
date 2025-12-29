@@ -121,7 +121,9 @@
             "SEARCH": "Rechercher une Carte",
             "READ_DOC": "Lire la Documentation",
             "ADD_BOARD": "Ajouter une Carte",
-            "DEV": "dev"
+            "DEV": "dev",
+            "BY_BRAND": "Par Marque",
+            "BY_CORE": "Par Cœur"
         },
         "FORM": {
             "DEVMODE": "Cadre de développement",

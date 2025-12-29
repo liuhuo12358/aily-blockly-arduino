@@ -69,6 +69,10 @@ export class MainWindowComponent {
     return this.uiService.topTool;
   }
 
+  get openToolList() {
+    return this.uiService.openToolList;
+  }
+
   options = {
     autoHide: true,
     clickOnTrack: true,

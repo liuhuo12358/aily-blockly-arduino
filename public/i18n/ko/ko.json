@@ -117,7 +117,9 @@
             "SEARCH": "보드 검색",
             "READ_DOC": "문서 읽기",
             "ADD_BOARD": "보드 추가",
-            "DEV": "개발"
+            "DEV": "개발",
+            "BY_BRAND": "브랜드별",
+            "BY_CORE": "코어별"
         },
         "FORM": {
             "DEVMODE": "개발 프레임워크",

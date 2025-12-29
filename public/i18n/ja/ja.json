@@ -121,7 +121,9 @@
             "SEARCH": "ボードを検索",
             "READ_DOC": "ドキュメント",
             "ADD_BOARD": "ボードを追加",
-            "DEV": "開発"
+            "DEV": "開発",
+            "BY_BRAND": "ブランド別",
+            "BY_CORE": "コア別"
         },
         "FORM": {
             "DEVMODE": "開発フレームワーク",
