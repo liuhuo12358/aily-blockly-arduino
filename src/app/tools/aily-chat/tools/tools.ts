@@ -384,49 +384,132 @@ editFileTool({
     // },
     {
         name: "search_boards_libraries",
-        description: `专门用于搜索开发板(boards.json)和库(libraries.json)的高效工具。
+        description: `智能开发板和库搜索工具，支持文本搜索和结构化筛选。
+使用前可使用get_hardware_categories工具获取可用的分类和筛选维度。
+**⭐ 推荐调用方式（统一使用 filters）：**
+\`\`\`json
+// 文本搜索
+{ "type": "boards", "filters": { "keywords": ["wifi", "esp32", "arduino"] } }
+
+// 结构化筛选 + 文本搜索
+{ "type": "boards", "filters": { "keywords": ["esp32"], "connectivity": ["WiFi"], "flash": ">4096" } }
+
+// 纯结构化筛选
+{ "type": "libraries", "filters": { "category": "sensor", "communication": ["I2C"] } }
+\`\`\`
 
 **使用场景：**
 1. 查找特定功能的库（如"温度传感器"、"舵机"、"OLED"）
 2. 查找支持特定芯片的开发板（如"esp32"、"arduino"）
-3. 查找作者或品牌相关的硬件（如"adafruit"、"seeed"）
+3. 按硬件规格筛选开发板（如"Flash >= 4MB"、"支持WiFi和BLE"）
+4. 按类别筛选库（如"sensor类"、"通信类"）
+
+**筛选参数说明：**
+
+*通用参数：*
+- keywords: 文本搜索关键词（字符串或数组），如 "esp32 wifi" 或 ["esp32", "wifi"]
+
+*开发板筛选（filters）：*
+- flash: Flash大小筛选（KB），支持比较运算符（如 ">4096", ">=1024"）
+- sram: SRAM大小筛选（KB）
+- frequency: 主频筛选（MHz）
+- cores: 核心数筛选
+- architecture: 架构筛选（如 "xtensa-lx7", "avr"）
+- connectivity: 连接方式数组（如 ["WiFi", "BLE"]）
+- interfaces: 接口数组（如 ["SPI", "I2C", "camera"]）
+- brand: 品牌筛选
+- voltage: 工作电压筛选
+
+*库筛选（filters）：*
+- category: 类别筛选（如 "sensor", "actuator", "communication"）
+- hardwareType: 硬件类型数组（如 ["temperature", "humidity"]）
+- supportedCores: 支持的核心数组（如 ["esp32:esp32", "arduino:avr"]）
+- communication: 通信方式数组（如 ["I2C", "SPI"]）
 
 **注意：**
 - 返回结果默认限制在前50条最相关匹配
-- 使用此工具而非通用grep工具可以获得更精确、更快速的结果
-- 多关键词搜索时，匹配任一关键词即可返回结果（OR逻辑）
-
-**示例：**
-查找 ESP32 开发板：
-\`\`\`json
-{
-  "query": "esp32",
-  "type": "boards"
-}
-\`\`\`
-
-查找舵机控制库：
-\`\`\`json
-{
-  "query": "servo",
-  "type": "libraries"
-}
-\`\`\``,
+- 数值筛选支持运算符：>, >=, <, <=, =, !=`,
         input_schema: {
             type: 'object',
             properties: {
-                query: {
-                    type: 'array',
-                    items: {
-                        type: 'string'
-                    },
-                    description: '搜索关键词数组。例如：["esp32", "wifi"], ["temperature", "sensor"]'
-                },
                 type: {
                     type: 'string',
                     enum: ['boards', 'libraries'],
                     description: '搜索类型：boards(仅开发板), libraries(仅库)。默认为 boards',
                     default: 'boards'
+                },
+                filters: {
+                    type: 'object',
+                    description: '筛选条件（支持文本搜索和结构化筛选）',
+                    properties: {
+                        // 通用文本搜索
+                        keywords: {
+                            oneOf: [
+                                { type: 'string', description: '搜索关键词，空格分隔多个词' },
+                                { type: 'array', items: { type: 'string' }, description: '搜索关键词数组' }
+                            ],
+                            description: '文本搜索关键词（OR逻辑：匹配任意一个关键词即可返回）。例如: "wifi esp32" 或 ["wifi", "esp32", "arduino"] 会返回包含wifi或esp32或arduino的所有结果，匹配越多分数越高'
+                        },
+                        // 开发板筛选
+                        flash: {
+                            type: 'string',
+                            description: 'Flash大小筛选（KB），支持比较运算符：>=4096, >2048, =16384'
+                        },
+                        sram: {
+                            type: 'string',
+                            description: 'SRAM大小筛选（KB），支持比较运算符'
+                        },
+                        frequency: {
+                            type: 'string',
+                            description: '主频筛选（MHz），支持比较运算符'
+                        },
+                        cores: {
+                            type: 'string',
+                            description: '核心数筛选，支持比较运算符'
+                        },
+                        architecture: {
+                            type: 'string',
+                            description: '架构筛选，如 xtensa-lx7, avr, arm-cortex-m4'
+                        },
+                        connectivity: {
+                            type: 'array',
+                            items: { type: 'string' },
+                            description: '连接方式数组（AND逻辑），如 ["WiFi", "BLE", "Ethernet"]'
+                        },
+                        interfaces: {
+                            type: 'array',
+                            items: { type: 'string' },
+                            description: '接口数组（AND逻辑），如 ["SPI", "I2C", "UART", "camera"]'
+                        },
+                        brand: {
+                            type: 'string',
+                            description: '品牌筛选，如 Espressif, Arduino, Seeed'
+                        },
+                        voltage: {
+                            type: 'string',
+                            description: '工作电压筛选（V）'
+                        },
+                        // 库筛选
+                        category: {
+                            type: 'string',
+                            description: '库类别筛选，如 sensor, actuator, communication, display'
+                        },
+                        hardwareType: {
+                            type: 'array',
+                            items: { type: 'string' },
+                            description: '硬件类型数组，如 ["temperature", "humidity"]'
+                        },
+                        supportedCores: {
+                            type: 'array',
+                            items: { type: 'string' },
+                            description: '支持的核心数组，如 ["esp32:esp32", "arduino:avr"]'
+                        },
+                        communication: {
+                            type: 'array',
+                            items: { type: 'string' },
+                            description: '通信方式数组，如 ["I2C", "SPI", "UART", "OneWire"]'
+                        }
+                    }
                 },
                 maxResults: {
                     type: 'number',
@@ -434,7 +517,83 @@ editFileTool({
                     default: 50
                 }
             },
-            required: ['query']
+            required: ['filters']
+        }
+    },
+    {
+        name: "get_hardware_categories",
+        description: `获取开发板或库的分类信息，用于引导式选型流程。
+
+**⭐ 推荐使用流程：**
+1. 先调用此工具获取分类概览（如传感器有哪些类型？开发板有哪些品牌？）
+2. 根据分类结果，调用 search_boards_libraries 进行精确搜索
+
+**开发板分类维度（dimension）：**
+- architecture: 架构（avr, xtensa-lx6, xtensa-lx7, riscv, arm-cortex-m4...）
+- connectivity: 连接方式（wifi, ble, bluetooth-classic, zigbee...）
+- interfaces: 接口类型（camera, sd-card, display, usb-device, ethernet...）
+- tags: 用途标签（AI, IoT, ARM, 教育, 入门...）
+
+**库分类维度（dimension）：**
+- category: 主分类（sensor, motor, display, communication, audio...）
+- hardwareType: 硬件类型（temperature, humidity, led, oled, touch, stepper...）
+- communication: 通信协议（i2c, spi, uart, gpio, pwm...）
+
+**使用示例：**
+\`\`\`json
+// 获取所有库的主分类
+{ "type": "libraries", "dimension": "category" }
+
+// 获取传感器类库的硬件类型
+{ "type": "libraries", "dimension": "hardwareType", "filterBy": { "category": "sensor" } }
+
+// 获取开发板的接口类型分类（camera, sd-card, display等）
+{ "type": "boards", "dimension": "interfaces" }
+
+// 获取开发板的用途标签（AI, IoT, ARM等）
+{ "type": "boards", "dimension": "tags" }
+
+// 获取支持WiFi的开发板的架构分布
+{ "type": "boards", "dimension": "architecture", "filterBy": { "connectivity": ["wifi"] } }
+\`\`\``,
+        input_schema: {
+            type: 'object',
+            properties: {
+                type: {
+                    type: 'string',
+                    enum: ['boards', 'libraries'],
+                    description: '获取分类的类型：boards(开发板) 或 libraries(库)'
+                },
+                dimension: {
+                    type: 'string',
+                    description: '分类维度：开发板可选 architecture/connectivity/interfaces/tags；库可选 category/hardwareType/communication'
+                },
+                filterBy: {
+                    type: 'object',
+                    description: '可选的预过滤条件，用于获取特定范围内的分类',
+                    properties: {
+                        category: {
+                            type: 'string',
+                            description: '仅限库：先按主分类过滤，再获取子分类'
+                        },
+                        architecture: {
+                            type: 'string',
+                            description: '仅限开发板：先按架构过滤'
+                        },
+                        connectivity: {
+                            type: 'array',
+                            items: { type: 'string' },
+                            description: '仅限开发板：先按连接方式过滤'
+                        },
+                        tags: {
+                            type: 'array',
+                            items: { type: 'string' },
+                            description: '仅限开发板：先按用途标签过滤'
+                        }
+                    }
+                }
+            },
+            required: ['type', 'dimension']
         }
     },
     {

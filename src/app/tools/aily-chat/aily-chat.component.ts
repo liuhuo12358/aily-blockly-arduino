@@ -35,6 +35,7 @@ import { checkExistsTool } from './tools/checkExistsTool';
 import { getDirectoryTreeTool } from './tools/getDirectoryTreeTool';
 import { grepTool } from './tools/grepTool';
 import { searchBoardsLibrariesTool } from './tools/searchBoardsLibrariesTool';
+import { getHardwareCategoriesTool } from './tools/getHardwareCategoriesTools';
 import { getBoardParametersTool } from './tools/getBoardParametersTool';
 import globTool from './tools/globTool';
 import { fetchTool, FetchToolService } from './tools/fetchTool';
@@ -224,6 +225,9 @@ export class AilyChatComponent implements OnDestroy {
    * @param args 工具参数（可选，用于历史记录恢复）
    */
   private startToolCall(toolId: string, toolName: string, text: string, args?: any): void {
+    // 添加JSON校验text字段
+    text = this.makeJsonSafe(text);
+
     const toolCallInfo: ToolCallInfo = {
       id: toolId,
       name: toolName,
@@ -589,6 +593,59 @@ export class AilyChatComponent implements OnDestroy {
   }
 
   /**
+   * 解析正则表达式 pattern，提取关键词并格式化显示
+   * 例如: '\\besp32\\b|\\barduino uno\\b' => 'esp32 | arduino uno'
+   * @param pattern 正则表达式模式
+   * @param maxLength 最大显示长度，超过则截断并添加省略号
+   * @returns 格式化后的显示文本
+   */
+  formatSearchPattern(pattern: string, maxLength: number = 30): string {
+    if (!pattern) return '未知模式';
+    
+    try {
+      // 按 | 分割（处理正则表达式中的 OR 操作）
+      const parts = pattern.split('|');
+      
+      // 提取每个部分的关键词（移除 \b 等正则边界符）
+      const keywords = parts.map(part => {
+        return part
+          .replace(/\\b/g, '')           // 移除单词边界 \b
+          .replace(/\^|\$/g, '')          // 移除行首/行尾锚点
+          .replace(/\\[dDwWsS]/g, '')     // 移除字符类简写
+          .replace(/[\[\]\(\)\{\}\*\+\?\.]/g, '') // 移除常见正则元字符
+          .trim();
+      }).filter(k => k.length > 0);  // 过滤空字符串
+      
+      if (keywords.length === 0) {
+        // 如果提取不到关键词，直接使用原 pattern 截取
+        return pattern.length > maxLength ? pattern.substring(0, maxLength) + '...' : pattern;
+      }
+      
+      // 用 " | " 连接关键词
+      const formatted = keywords.join(' | ');
+      
+      // 检查长度，超过则截断
+      if (formatted.length > maxLength) {
+        // 尝试只显示前几个关键词
+        let result = '';
+        for (let i = 0; i < keywords.length; i++) {
+          const next = result ? result + ' | ' + keywords[i] : keywords[i];
+          if (next.length > maxLength - 3) {  // 留出 "..." 的位置
+            return result + '...';
+          }
+          result = next;
+        }
+        return result + '...';
+      }
+      
+      return formatted;
+    } catch (e) {
+      // 解析失败，返回截取的原 pattern
+      return pattern.length > maxLength ? pattern.substring(0, maxLength) + '...' : pattern;
+    }
+  }
+
+  /**
    * 获取路径中的文件名（不包含路径）
    * @param path 文件的完整路径
    * @returns 文件名，如果路径无效则返回空字符串
@@ -748,6 +805,11 @@ appDataPath(**appDataPath**): ${window['path'].getAppDataPath() || '无'}
 转换库存放路径(**libraryConversionPath**): ${this.getCurrentProjectPath() ? this.getCurrentProjectPath() : (window['path'].join(window['path'].getAppDataPath(), 'libraries') || '无')}
 当前使用的语言(**lang**)： ${this.configService.data.lang || 'zh-cn'}
 操作系统(**os**): ${window['platform'].type || 'unknown'}
+</keyinfo>
+<keyinfo>
+uses get_hardware_categories tool to get hardware categories before searching boards and libraries.
+uses search_boards_libraries tool to search for boards and libraries based on user needs.
+Do not create non-existent boards and libraries.
 </keyinfo>
 `
   }
@@ -1458,7 +1520,7 @@ ${JSON.stringify(errData)}
             let resultState = "done";
             let resultText = '';
 
-            // console.log("工具调用请求: ", data.tool_name, toolArgs);
+            console.log("工具调用请求: ", data.tool_name, toolArgs);
 
             // 定义 block 工具列表
             const blockTools = [
@@ -1816,15 +1878,63 @@ ${JSON.stringify(errData)}
                     break;
                   case 'search_boards_libraries':
                     // console.log('[开发板库搜索工具被调用]', toolArgs);
-                    const searchQuery = toolArgs.query ? toolArgs.query.substring(0, 30) : '未知查询';
-                    const searchType = toolArgs.type || 'both';
+                    // 处理查询显示：filters 可能是字符串或对象
+                    let searchDisplayText = '';
+                    
+                    // 解析 filters（可能是 JSON 字符串）
+                    let parsedFilters: any = null;
+                    if (toolArgs.filters) {
+                      if (typeof toolArgs.filters === 'string') {
+                        try {
+                          const trimmed = toolArgs.filters.trim();
+                          if (trimmed && trimmed !== '{}') {
+                            parsedFilters = JSON.parse(trimmed);
+                          }
+                        } catch (e) {
+                          console.warn('Failed to parse filters:', toolArgs.filters);
+                        }
+                      } else if (typeof toolArgs.filters === 'object') {
+                        parsedFilters = toolArgs.filters;
+                      }
+                    }
+                    
+                    // 优先显示 filters.keywords
+                    if (parsedFilters?.keywords) {
+                      const keywords = Array.isArray(parsedFilters.keywords) 
+                        ? parsedFilters.keywords 
+                        : String(parsedFilters.keywords).split(/\s+/);
+                      if (keywords.length > 0) {
+                        searchDisplayText = keywords.slice(0, 3).join(', ');
+                        if (keywords.length > 3) {
+                          searchDisplayText += ` 等${keywords.length}个关键词`;
+                        }
+                      }
+                    }
+                    
+                    // 显示其他筛选条件（排除 keywords）
+                    if (parsedFilters) {
+                      const otherFilterKeys = Object.keys(parsedFilters).filter(k => k !== 'keywords');
+                      if (otherFilterKeys.length > 0) {
+                        const filterDisplay = otherFilterKeys.slice(0, 3).map(k => {
+                          const val = parsedFilters[k];
+                          if (Array.isArray(val)) return `${k}:[${val.slice(0, 2).join(',')}${val.length > 2 ? '...' : ''}]`;
+                          return `${k}:${val}`;
+                        }).join(', ');
+                        searchDisplayText += searchDisplayText ? ` + ${filterDisplay}` : filterDisplay;
+                      }
+                    }
+                    
+                    if (!searchDisplayText) {
+                      searchDisplayText = '未知查询';
+                    }
+                    const searchType = toolArgs.type || 'boards';
                     const searchTypeDisplay = searchType === 'boards' ? '开发板' : searchType === 'libraries' ? '库' : '开发板和库';
                     this.appendMessage('aily', `
 
 \`\`\`aily-state
 {
   "state": "doing",
-  "text": "正在搜索${searchTypeDisplay}: ${searchQuery}",
+  "text": "正在搜索${searchTypeDisplay}: ${searchDisplayText}",
   "id": "${toolCallId}"
 }
 \`\`\`\n\n
@@ -1832,10 +1942,40 @@ ${JSON.stringify(errData)}
                     toolResult = await searchBoardsLibrariesTool.handler(toolArgs, this.configService);
                     if (toolResult.is_error) {
                       resultState = "error";
-                      resultText = `搜索失败: ` + (toolResult.content || '未知错误');
+                      resultText = `搜索${searchTypeDisplay}失败: ` + (toolResult.content || '未知错误');
                     } else {
                       const totalMatches = toolResult.metadata?.totalMatches || 0;
-                      resultText = `搜索 "${searchQuery}" 成功，找到 ${totalMatches} 个匹配项`;
+                      // 显示搜索内容，截取前20个字符
+                      const searchSummary = searchDisplayText.length > 20 ? searchDisplayText.substring(0, 20) + '...' : searchDisplayText;
+                      resultText = `搜索${searchTypeDisplay}「${searchSummary}」完成，找到 ${totalMatches} 个匹配项`;
+                    }
+                    break;
+                  case 'get_hardware_categories':
+                    // console.log('[硬件分类获取工具被调用]', toolArgs);
+                    const catType = toolArgs.type === 'boards' ? '开发板' : '库';
+                    const dimensionLabels: Record<string, string> = {
+                      brand: '品牌', architecture: '架构', connectivity: '连接方式',
+                      category: '主分类', hardwareType: '硬件类型', communication: '通信协议'
+                    };
+                    const dimensionDisplay = dimensionLabels[toolArgs.dimension] || toolArgs.dimension;
+                    this.appendMessage('aily', `
+
+\`\`\`aily-state
+{
+  "state": "doing",
+  "text": "正在获取${catType}的${dimensionDisplay}分类",
+  "id": "${toolCallId}"
+}
+\`\`\`\n\n
+                    `);
+                    toolResult = await getHardwareCategoriesTool.handler(toolArgs, this.configService);
+                    if (toolResult.is_error) {
+                      resultState = "error";
+                      resultText = `获取${catType}分类失败: ` + (toolResult.content || '未知错误');
+                    } else {
+                      const categoryCount = toolResult.metadata?.categories?.length || 0;
+                      const totalCount = toolResult.metadata?.total || 0;
+                      resultText = `获取${catType}${dimensionDisplay}分类完成，共 ${categoryCount} 个分类，涵盖 ${totalCount} 个${catType}`;
                     }
                     break;
                   case 'get_board_parameters':
@@ -1863,7 +2003,15 @@ ${JSON.stringify(errData)}
                     break;
                   case 'grep_tool':
                     // console.log('[Grep搜索工具被调用]', toolArgs);
-                    const searchPattern = toolArgs.pattern ? toolArgs.pattern.substring(0, 30) : '未知模式';
+                    // 格式化 pattern 用于显示（提取关键词）
+                    let searchPattern = this.formatSearchPattern(toolArgs.pattern, 30);
+                    // 转义 JSON 敏感字符
+                    searchPattern = searchPattern
+                      .replace(/\\/g, '\\\\')
+                      .replace(/"/g, '\\"')
+                      .replace(/\n/g, ' ')
+                      .replace(/\r/g, '')
+                      .replace(/\t/g, ' ');
                     const searchPathDisplay = toolArgs.path ? this.getLastFolderName(toolArgs.path) : '当前项目';
                     this.appendMessage('aily', `
 
@@ -1876,9 +2024,11 @@ ${JSON.stringify(errData)}
 \`\`\`\n\n
                     `);
                     toolResult = await grepTool(toolArgs);
+                    // 用于结果显示的搜索内容（格式化显示关键词）
+                    const searchPatternDisplay = this.formatSearchPattern(toolArgs.pattern, 20);
                     if (toolResult.is_error) {
                       resultState = "error";
-                      resultText = `搜索失败: ` + (toolResult.content || '未知错误');
+                      resultText = `搜索「${searchPatternDisplay}」失败: ` + (toolResult.content || '未知错误');
                     } else {
                       // 优先显示匹配记录数，如果没有则显示文件数
                       const numMatches = toolResult.metadata?.numMatches;
@@ -1887,20 +2037,20 @@ ${JSON.stringify(errData)}
                       if (numMatches !== undefined) {
                         // 新的 JavaScript 展开模式：显示匹配记录数
                         if (numMatches === 0) {
-                          resultText = `搜索完成，未找到匹配内容`;
+                          resultText = `搜索「${searchPatternDisplay}」完成，未找到匹配内容`;
                         } else {
                           const duration = toolResult.metadata?.durationMs || 0;
-                          resultText = `搜索完成，找到 ${numMatches} 个匹配记录`;
-                          if (duration > 0) {
-                            resultText += ` (耗时 ${duration}ms)`;
-                          }
+                          resultText = `搜索「${searchPatternDisplay}」完成，找到 ${numMatches} 个匹配记录`;
+                          // if (duration > 0) {
+                          //   resultText += ` (耗时 ${duration}ms)`;
+                          // }
                         }
                       } else if (numFiles !== undefined) {
                         // 传统文件名模式：显示匹配文件数
-                        resultText = `搜索完成，找到 ${numFiles} 个匹配文件`;
+                        resultText = `搜索「${searchPatternDisplay}」完成，找到 ${numFiles} 个匹配文件`;
                       } else {
                         // 兜底显示
-                        resultText = `搜索完成`;
+                        resultText = `搜索「${searchPatternDisplay}」完成`;
                       }
                     }
                     break;
@@ -2541,7 +2691,7 @@ Your role is ASK (Advisory & Quick Support) - you provide analysis, recommendati
               this.completeToolCall(data.tool_id, data.tool_name, finalState, resultText);
             }
 
-            // console.log(`工具调用结果: `, toolResult, resultText);
+            console.log(`工具调用结果: `, toolResult, resultText);
 
             this.send("tool", JSON.stringify({
               "type": "tool",
