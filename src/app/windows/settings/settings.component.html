@@ -98,15 +98,15 @@
             <h2 class="section-title">{{ 'SETTINGS.SECTIONS.REPOSITORY' | translate }}</h2>
             <div class="right-inner">
               <div class="item">
-                <div>{{ 'SETTINGS.FIELDS.REPOSITORY_URLS' | translate }}:</div>
-                <input nz-input [(ngModel)]="configData.npm_registry[0]" [disabled]="true" />
+                <div>{{ 'SETTINGS.FIELDS.REGION' | translate }}:</div>
+                <nz-select [(ngModel)]="selectedRegion" (ngModelChange)="onRegionChange($event)" nzCustomContent>
+                  @for (region of regionList; track region.key) {
+                  <nz-option [nzValue]="region.key" [nzLabel]="getRegionFlag(region.key) + ' ' + region.name" nzCustomContent>
+                    <span class="region-flag">{{ getRegionFlag(region.key) }}</span> {{ region.name }}
+                  </nz-option>
+                  }
+                </nz-select>
               </div>
-              <!-- <div class="instructions">{{ 'SETTINGS.FIELDS.REPOSITORY_URLS' | translate }}</div>
-              <textarea class="registry" nz-input [(ngModel)]="npmRegistryListStr"></textarea>
-              <div class="instructions">{{ 'SETTINGS.FIELDS.BOARD_LIST' | translate }}</div>
-              <textarea class="registry" nz-input [(ngModel)]="npmRegistryListStr"></textarea>
-              <div class="instructions">{{ 'SETTINGS.FIELDS.LIBRARY_LIST' | translate }}</div>
-              <textarea class="registry" nz-input [(ngModel)]="npmRegistryListStr"></textarea> -->
             </div>
           </div>
 

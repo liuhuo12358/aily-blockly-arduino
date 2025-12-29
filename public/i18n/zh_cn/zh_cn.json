@@ -125,7 +125,7 @@
             "THEME": "主题设置",
             "BLOCKLY": "Blockly设置",
             "COMPILATION": "编译设置",
-            "REPOSITORY": "仓库设置",
+            "REPOSITORY": "服务区域",
             "DEPENDENCIES": "全局依赖",
             "MCP": "MCP",
             "DEVMODE": "开发者模式"
@@ -138,7 +138,9 @@
             "BLOCKLY_MINIMAP": "Blockly缩略图",
             "FLYOUT_AUTO_CLOSE": "自动关闭工具箱",
             "COMPILATION_OPTIONS": "编译选项",
+            "REGION": "服务区域",
             "REPOSITORY_URLS": "仓库地址",
+            "API_SERVER": "API服务器",
             "BOARD_LIST": "开发板列表",
             "LIBRARY_LIST": "库列表",
             "INSTALL": "安装",

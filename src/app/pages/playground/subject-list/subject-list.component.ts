@@ -47,7 +47,7 @@ export class SubjectListComponent implements OnInit {
   }
 
   ngOnInit() {
-    this.resourceUrl = this.configService.data.resource[0] + "/imgs/examples/";
+    this.resourceUrl = this.configService.getCurrentResourceUrl() + "/imgs/examples/";
 
     // 如果数据已经加载，直接使用
     if (this.playgroundService.isLoaded) {

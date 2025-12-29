@@ -3,7 +3,7 @@ const os = require("os");
 const fs = require("fs");
 const _ = require("lodash");
 const windowStateKeeper = require('electron-window-state');
-const { app, BrowserWindow, ipcMain, dialog, screen, shell } = require("electron");
+const { app, BrowserWindow, ipcMain, dialog, screen, shell, net } = require("electron");
 
 const { isWin32, isDarwin, isLinux } = require("./platform");
 
@@ -587,6 +587,179 @@ function escapePath(path) {
   return path.replace(/(\s|[()&|;<>`$\\])/g, '\\$1');
 }
 
+// 检查URL延迟
+function checkLatency(url, resource=false) {
+  return new Promise((resolve) => {
+    const start = Date.now();
+    let pingUrl = url;
+    if (!pingUrl.endsWith('/')) {
+      pingUrl += '/';
+    }
+    if (resource) {
+      pingUrl += 'boards-ai.json';
+    } else {
+      pingUrl += 'ping';
+    }
+    try {
+      console.log('[节点检测] Checking latency for URL:', pingUrl);
+      const request = net.request({ method: 'HEAD', url: pingUrl });
+      request.on('response', (response) => {
+        const end = Date.now();
+        response.on('end', () => {
+          if (response.statusCode >= 200 && response.statusCode < 300) {
+            resolve({ url, latency: end - start });
+          } else {
+            console.warn(`[节点检测] ${pingUrl} 返回状态码: ${response.statusCode}`);
+            resolve({ url, latency: Infinity, error: `Status ${response.statusCode}` });
+          }
+        });
+        response.on('error', (err) => {
+          console.warn(`[节点检测] ${pingUrl} 响应错误:`, err);
+          resolve({ url, latency: Infinity, error: 'Response error' });
+        });
+        response.resume();
+      });
+      request.on('error', (error) => {
+        console.warn(`[节点检测] ${pingUrl} 请求错误:`, error);
+        resolve({ url, latency: Infinity, error: error.message || 'Request error' });
+      });
+      request.end();
+    } catch (e) {
+      console.warn(`[节点检测] ${pingUrl} 异常:`, e);
+      resolve({ url, latency: Infinity, error: e.message || 'Exception' });
+    }
+  });
+}
+
+// 获取最快URL
+async function getFastestUrl(urls, item_key='') {
+
+  console.log('[节点检测] 检测最快URL列表:', urls);
+  if (!urls || urls.length === 0) return null;
+  if (urls.length === 1) return urls[0];
+
+  const isResource = item_key === 'resource';
+  const timeout = isResource ? 8000 : 5000; // resource 检测需要下载文件，给更长超时
+  
+  try {
+    // 使用 Promise.allSettled 确保获取所有结果，不会因为某个失败而中断
+    const promises = urls.map(url => checkLatency(url, isResource));
+    
+    // 创建一个可以提前返回的 Promise
+    // 当有任意一个成功的结果时，等待一小段时间收集更多结果后返回
+    const results = await Promise.race([
+      // 等待所有请求完成
+      Promise.allSettled(promises).then(settled => 
+        settled
+          .filter(r => r.status === 'fulfilled')
+          .map(r => r.value)
+      ),
+      // 超时后返回已完成的结果
+      new Promise(resolve => {
+        setTimeout(async () => {
+          // 超时时，尝试获取已完成的 Promise 结果
+          const settledResults = [];
+          for (let i = 0; i < promises.length; i++) {
+            try {
+              // 使用 Promise.race 检查是否已完成
+              const result = await Promise.race([
+                promises[i],
+                new Promise((_, reject) => setTimeout(() => reject(new Error('still pending')), 10))
+              ]);
+              settledResults.push(result);
+            } catch (e) {
+              // Promise 还未完成，跳过
+            }
+          }
+          console.log(`[节点检测] 超时(${timeout}ms)，已完成 ${settledResults.length}/${urls.length} 个检测`);
+          resolve(settledResults);
+        }, timeout);
+      })
+    ]);
+    
+    console.log('[节点检测] results: ', results);
+    
+    if (!results || results.length === 0) {
+      console.warn(`[节点检测] 超时且无结果，返回第一个节点: ${urls[0]}`);
+      return urls[0];
+    }
+    
+    const validResults = results.filter(r => r && r.latency !== Infinity);
+    if (validResults.length === 0) {
+      // 输出所有失败节点和原因
+      console.warn('[节点检测] 所有已完成的节点检测都失败，详细信息如下:');
+      results.forEach(r => {
+        if (r) {
+          console.warn(`  节点: ${r.url}, 错误: ${r.error || '未知'}, latency: ${r.latency}`);
+        }
+      });
+      console.warn(`[节点检测] 返回第一个节点: ${urls[0]}`);
+      return urls[0];
+    }
+    
+    validResults.sort((a, b) => a.latency - b.latency);
+    console.log(`[节点检测] 成功检测 ${validResults.length} 个节点，最快: ${validResults[0].url} (${validResults[0].latency}ms)`);
+    return validResults[0].url;
+  } catch (e) {
+    console.error('[节点检测] getFastestUrl error:', e);
+    return urls[0];
+  }
+}
+
+// 初始化最快服务器配置（非阻塞异步方式，不影响启动速度）
+// 现在改为基于 region 配置，检测各个区域的服务延迟来自动选择最优区域
+function initFastestServersAsync() {
+  const configPath = path.join(__dirname, 'config', "config.json");
+  if (!fs.existsSync(configPath)) return;
+  
+  try {
+    const conf = JSON.parse(fs.readFileSync(configPath));
+    const regions = conf.regions;
+    if (!regions || Object.keys(regions).length === 0) return;
+
+    console.log('[节点检测] 后台开始检测最优区域节点...');
+    
+    // 获取所有启用区域的 api_server 进行延迟检测（过滤掉未启用的区域和空URL）
+    const regionKeys = Object.keys(regions).filter(key => 
+      regions[key].enabled && regions[key].api_server
+    );
+    const regionUrls = regionKeys.map(key => regions[key].api_server);
+    
+    getFastestUrl(regionUrls, 'api_server').then(fastestUrl => {
+      if (fastestUrl) {
+        // 找到对应的区域
+        const fastestRegionKey = regionKeys.find(key => regions[key].api_server === fastestUrl);
+        if (fastestRegionKey) {
+          const fastestRegion = regions[fastestRegionKey];
+          console.log(`[节点检测] 检测到最优区域: ${fastestRegion.name} (${fastestRegionKey})`);
+          
+          // 设置环境变量
+          process.env.AILY_NPM_REGISTRY = fastestRegion.npm_registry;
+          process.env.AILY_ZIP_URL = fastestRegion.resource;
+          process.env.AILY_API_SERVER = fastestRegion.api_server;
+          process.env.AILY_REGION = fastestRegionKey;
+          
+          // 通知渲染进程区域已更新
+          if (mainWindow && mainWindow.webContents) {
+            mainWindow.webContents.send('server-node-updated', { 
+              region: fastestRegionKey,
+              npm_registry: fastestRegion.npm_registry,
+              resource: fastestRegion.resource,
+              api_server: fastestRegion.api_server
+            });
+          }
+          console.log('[节点检测] 区域节点检测完成');
+        }
+      }
+    }).catch(e => {
+      console.error('[节点检测] 检测过程出错:', e);
+    });
+    
+  } catch (e) {
+    console.error('Error initializing fastest servers:', e);
+  }
+}
+
 // 环境变量加载
 function loadEnv() {
   // 将child目录添加到环境变量PATH中
@@ -698,8 +871,14 @@ function loadEnv() {
   // child Path
   process.env.AILY_CHILD_PATH = childPath;
 
+  // 从 regions 配置中获取当前区域的服务地址
+  const currentRegion = conf.region || 'cn';
+  const regionConfig = conf.regions && conf.regions[currentRegion] ? conf.regions[currentRegion] : conf.regions['cn'];
+  
+  // 当前区域
+  process.env.AILY_REGION = currentRegion;
   // npm registry
-  process.env.AILY_NPM_REGISTRY = conf["npm_registry"][0];
+  process.env.AILY_NPM_REGISTRY = regionConfig.npm_registry;
   // 7za path
   process.env.AILY_7ZA_PATH = path.join(childPath, isWin32 ? "7za.exe" : "7zz");
   // aily builder path
@@ -713,7 +892,9 @@ function loadEnv() {
   // 默认全局SDK路径
   process.env.AILY_SDK_PATH = path.join(process.env.AILY_APPDATA_PATH, "sdk");
   // zip包下载地址
-  process.env.AILY_ZIP_URL = conf["resource"][0];
+  process.env.AILY_ZIP_URL = regionConfig.resource;
+  // API服务器地址
+  process.env.AILY_API_SERVER = regionConfig.api_server;
 
   process.env.AILY_PROJECT_PATH = conf["project_path"];
 
@@ -1091,9 +1272,11 @@ if (shouldUseMultiInstance()) {
   }
 }
 
-app.on("ready", () => {
+app.on("ready", async () => {
   try {
     loadEnv();
+    // 异步检测最优服务器，不阻塞窗口创建
+    initFastestServersAsync();
   } catch (error) {
     console.error("loadEnv error: ", error);
   }
