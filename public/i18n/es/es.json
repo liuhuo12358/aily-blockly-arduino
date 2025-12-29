@@ -121,7 +121,9 @@
             "SEARCH": "Buscar Placa",
             "READ_DOC": "Leer Documentación",
             "ADD_BOARD": "Agregar Placa",
-            "DEV": "dev"
+            "DEV": "dev",
+            "BY_BRAND": "Por Marca",
+            "BY_CORE": "Por Núcleo"
         },
         "FORM": {
             "DEVMODE": "Marco de desarrollo",
@@ -356,7 +358,8 @@
         "LOADING": "Cargando...",
         "BACK": "Volver",
         "TEST_MODEL": "Probar modelo",
-        "DEPLOY_MODEL": "Desplegar modelo"
+        "DEPLOY_MODEL": "Desplegar modelo",
+        "SELF_TRAINED_MODEL": "Modelo Auto-entrenado"
     },
     "XIAO_ESP32S3_SENSE_CONNECT": {
         "STEP1": "1. Conecte el XIAO ESP32S3 Sense a la placa de expansión de la cámara",

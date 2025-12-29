@@ -121,7 +121,9 @@
             "SEARCH": "搜尋開發板",
             "READ_DOC": "閱讀文件",
             "ADD_BOARD": "新增開發板",
-            "DEV": "dev"
+            "DEV": "dev",
+            "BY_BRAND": "按品牌",
+            "BY_CORE": "按核心"
         },
         "FORM": {
             "DEVMODE": "開發框架",
@@ -356,7 +358,8 @@
         "LOADING": "載入中...",
         "BACK": "返回",
         "TEST_MODEL": "測試模型",
-        "DEPLOY_MODEL": "部署模型"
+        "DEPLOY_MODEL": "部署模型",
+        "SELF_TRAINED_MODEL": "自訓練模型"
     },
     "XIAO_ESP32S3_SENSE_CONNECT": {
         "STEP1": "1. 將 XIAO ESP32S3 Sense 與攝像頭擴展板連接",

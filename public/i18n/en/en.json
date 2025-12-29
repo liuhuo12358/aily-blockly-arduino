@@ -159,7 +159,9 @@
             "SEARCH": "Search Board",
             "READ_DOC": "Documentation",
             "ADD_BOARD": "Add Board",
-            "DEV": "dev"
+            "DEV": "dev",
+            "BY_BRAND": "By Brand",
+            "BY_CORE": "By Core"
         },
         "FORM": {
             "DEVMODE": "Development Framework",
@@ -366,7 +368,8 @@
         "LOADING": "Loading...",
         "BACK": "Back",
         "TEST_MODEL": "Test Model",
-        "DEPLOY_MODEL": "Deploy Model"
+        "DEPLOY_MODEL": "Deploy Model",
+        "SELF_TRAINED_MODEL": "Self-Trained Model"
     },
     "MODEL_DEPLOY": {
         "TITLE": "Model Deploy",

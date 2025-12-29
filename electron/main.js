@@ -770,12 +770,16 @@ function loadEnv() {
   let customPath = nodePath + path.delimiter + childPath;
 
   if (isWin32) {
+    // 使用环境变量获取系统路径，支持系统安装在任意盘符
+    const systemRoot = process.env.SystemRoot || process.env.windir || 'C:\\Windows';
+    const programFiles = process.env.ProgramFiles || 'C:\\Program Files';
+    
     // 添加必要的系统路径
     const systemPaths = [
-      'C:\\Windows\\System32',
-      'C:\\Windows\\System32\\WindowsPowerShell\\v1.0',
-      'C:\\Program Files\\PowerShell\\7', // PowerShell 7 (如果存在)
-      'C:\\Windows'
+      path.join(systemRoot, 'System32'),
+      path.join(systemRoot, 'System32', 'WindowsPowerShell', 'v1.0'),
+      path.join(programFiles, 'PowerShell', '7'), // PowerShell 7 (如果存在)
+      systemRoot
     ];
 
     // 检查路径是否存在，只添加存在的路径
@@ -800,7 +804,7 @@ function loadEnv() {
   }
 
   // 完全替换PATH
-  process.env.PATH = customPath;
+  process.env.PATH = customPath;  
 
   // 读取config.json文件
   const configPath = path.join(__dirname, 'config', "config.json");

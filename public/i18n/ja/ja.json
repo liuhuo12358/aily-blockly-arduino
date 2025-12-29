@@ -121,7 +121,9 @@
             "SEARCH": "ボードを検索",
             "READ_DOC": "ドキュメント",
             "ADD_BOARD": "ボードを追加",
-            "DEV": "開発"
+            "DEV": "開発",
+            "BY_BRAND": "ブランド別",
+            "BY_CORE": "コア別"
         },
         "FORM": {
             "DEVMODE": "開発フレームワーク",
@@ -356,7 +358,8 @@
         "LOADING": "読み込み中...",
         "BACK": "戻る",
         "TEST_MODEL": "モデルをテスト",
-        "DEPLOY_MODEL": "モデルをデプロイ"
+        "DEPLOY_MODEL": "モデルをデプロイ",
+        "SELF_TRAINED_MODEL": "自己学習モデル"
     },
     "XIAO_ESP32S3_SENSE_CONNECT": {
         "STEP1": "1. XIAO ESP32S3 Sense をカメラ拡張ボードに接続します",
