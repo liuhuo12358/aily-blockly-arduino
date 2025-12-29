@@ -65,7 +65,9 @@
         "MULTI_CUT": "Cut Selected",
         "MULTI_DELETE": "Delete Selected",
         "MULTI_COMPRESS": "Compress to ZIP",
-        "LIB_MANAGER": "Library Manager"
+        "LIB_MANAGER": "Library Manager",
+        "AI_ASSISTANT": "AI Assistant",
+        "PROJECT_HUB": "Project Hub"
     },
     "ESP32": {
         "UPLOAD_SPEED": "Upload Speed",
