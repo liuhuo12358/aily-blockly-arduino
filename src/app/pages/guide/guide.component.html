@@ -40,20 +40,19 @@
     </div>
   </div>
   <div class="right-box ccenter">
-    <!-- <iframe src="https://ide.clz.me/" frameborder="0" allowpopups="true" class="pp"></iframe> -->
-    <div class="item" (click)="gotoPlayground()">
+    <div class="item" style="height: 120px;flex-grow: 1;padding: 0;overflow: hidden;">
+      <div style="padding: 5px 10px;">{{'GUIDE.NEWS' | translate}}</div>
+      <iframe src="http://aily.pro/news" frameborder="0" style="height: 100%;background: transparent;"></iframe>
+    </div>
+    <!-- <div class="item" (click)="gotoPlayground()">
       <div>{{'GUIDE.TUTORIAL' | translate}}</div>
       <div>{{'GUIDE.TUTORIAL_DESC' | translate}}</div>
-    </div>
-    <!-- <div class="item" (click)="openUrl('https://github.com/ailyProject/aily-blockly/blob/master/VERSION.md')">
-      <div>{{'GUIDE.VERSION_INFO' | translate}}</div>
-      <div>{{'GUIDE.VERSION_INFO_DESC' | translate}}</div>
     </div> -->
-    <div class="item" (click)="openUrl('https://github.com/ailyProject/aily-blockly')">
+    <!-- <div class="item" (click)="openUrl('https://github.com/ailyProject/aily-blockly')">
       <div>{{'GUIDE.GITHUB' | translate}}</div>
       <div>{{'GUIDE.GITHUB_DESC' | translate}}</div>
-    </div>
-    <div class="item" (click)="openFeedback()">
+    </div> -->
+    <!-- <div class="item" (click)="openFeedback()">
       <div>{{'GUIDE.FEEDBACK' | translate}}</div>
       <div>{{'GUIDE.FEEDBACK_DESC' | translate}}</div>
     </div>
@@ -61,6 +60,19 @@
       <div>{{'GUIDE.WECHAT_GROUP' | translate}}</div>
       <div>{{'GUIDE.WECHAT_GROUP_DESC' | translate}}</div>
       <img class="qrcode" [src]="wechatQrcodeUrl" (error)="retryLoadImage()" alt="微信群二维码">
+    </div> -->
+    <div class="item" style="height: 90px;">
+      <div>{{'GUIDE.USER_GROUP' | translate}}</div>
+      <div>{{'GUIDE.USER_GROUP_DESC' | translate}}</div>
+      <div class="group-btn">
+        <div (click)="showImg(wechatQrcodeUrl)"><i class="fa-brands fa-weixin"></i></div>
+        <div (click)="showImg(qqQrcodeUrl)"><i class="fa-brands fa-qq"></i></div>
+        <div (click)="openUrl('https://github.com/orgs/ailyProject/discussions')"><i class="fa-brands fa-github"></i>
+        </div>
+        <!-- <div><i class="fa-brands fa-discord"></i></div> -->
+      </div>
+      <!-- <img class="qrcode" src="https://dl.diandeng.tech/blockly/wechat.jpg" (error)="retryLoadImage()" alt="微信群二维码"
+        srcset=""> -->
     </div>
     <div class="item" style="height: 165px;">
       <div>{{'GUIDE.SPONSORS' | translate}}</div>
@@ -93,3 +105,9 @@
     </div>
   </div>
 </div>
+
+@if (showImgUrl) {
+<div class="img-overlay ccenter" (click)="hideImg()">
+  <img [src]="showImgUrl" alt="预览图片">
+</div>
+}

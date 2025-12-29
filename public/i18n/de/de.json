@@ -60,8 +60,11 @@
         "FEEDBACK_DESC": "Teilen Sie uns Ihre Erfahrungen mit",
         "WECHAT_GROUP": "WeChat-Benutzergruppe",
         "WECHAT_GROUP_DESC": "Treten Sie der WeChat-Benutzergruppe bei, um sich mit anderen Benutzern auszutauschen",
+        "USER_GROUP": "Benutzer-Community",
+        "USER_GROUP_DESC": "Treten Sie der Community bei, um sich mit anderen Benutzern auszutauschen",
         "SPONSORS": "Projekt-Sponsoren",
-        "SPONSORS_DESC": "Dieses Projekt wird von den folgenden Unternehmen/Personen gesponsert"
+        "SPONSORS_DESC": "Dieses Projekt wird von den folgenden Unternehmen/Personen gesponsert",
+        "NEWS": "Neuigkeiten"
     },
     "APP_STORE": {
         "HEADER_INFO": "Die ersten {{count}} Apps werden in der Symbolleiste angezeigt",

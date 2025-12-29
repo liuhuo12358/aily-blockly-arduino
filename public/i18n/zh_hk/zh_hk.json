@@ -60,8 +60,11 @@
         "FEEDBACK_DESC": "可以透過這裡告知使用反饋",
         "WECHAT_GROUP": "用戶微信群",
         "WECHAT_GROUP_DESC": "加入用戶微信群，與其他用戶交流",
+        "USER_GROUP": "用戶社區",
+        "USER_GROUP_DESC": "加入社區，與其他用戶交流",
         "SPONSORS": "專案贊助者",
-        "SPONSORS_DESC": "本專案得到了以下企業/個人的贊助"
+        "SPONSORS_DESC": "本專案得到了以下企業/個人的贊助",
+        "NEWS": "動態"
     },
     "APP_STORE": {
         "HEADER_INFO": "前 {{count}} 個應用會顯示在頂部工具欄",

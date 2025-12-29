@@ -23,6 +23,15 @@ export class GuideComponent implements OnInit, AfterViewInit {
   showMenu = true;
   showMore = false;
   sponsors: any[] = [];
+  showImgUrl: string | null = null;
+
+  showImg(url: string) {
+    this.showImgUrl = url;
+  }
+
+  hideImg() {
+    this.showImgUrl = null;
+  }
 
   get recentlyProjects() {
     return this.projectService.recentlyProjects
@@ -43,6 +52,11 @@ export class GuideComponent implements OnInit, AfterViewInit {
   get wechatQrcodeUrl(): string {
     const resourceUrl = this.configService.getCurrentResourceUrl();
     return `${resourceUrl}/wechat.jpg`;
+  }
+
+  get qqQrcodeUrl(): string {
+    const resourceUrl = this.configService.getCurrentResourceUrl();
+    return `${resourceUrl}/qq.jpg`
   }
 
   ngOnInit() {
@@ -158,6 +172,7 @@ export class GuideComponent implements OnInit, AfterViewInit {
   }
 
   // 重新加载微信二维码图片
+<<<<<<< HEAD
   retryLoadImage() {
     setTimeout(() => {
       const img = document.querySelector('.qrcode') as HTMLImageElement;
@@ -175,6 +190,25 @@ export class GuideComponent implements OnInit, AfterViewInit {
       // }
     }, 12000)
   }
+=======
+  // retryLoadImage() {
+  //   setTimeout(() => {
+  //     const img = document.querySelector('.qrcode') as HTMLImageElement;
+  //     if (img) {
+  //       const originalSrc = 'https://dl.diandeng.tech/blockly/wechat.jpg';
+  //       img.src = `${originalSrc}?t=${Date.now()}`;
+  //     }
+  //   }, 1000);
+  // }
+
+  // test() {
+  //   console.log(this.electronService.isWindowFocused());
+  //   setTimeout(() => {
+  //     // if (!this.electronService.isWindowFocused()) {
+  //     // }
+  //   }, 12000)
+  // }
+>>>>>>> origin/main
 
   openFeedback() {
     this.uiService.openFeedback();
