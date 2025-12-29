@@ -14,6 +14,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
   },
   path: {
     getUserHome: () => require("os").homedir(),
+    getAilyChildPath: () => process.env.AILY_CHILD_PATH,
     getAppDataPath: () => process.env.AILY_APPDATA_PATH,
     getAilyBuilderPath: () => process.env.AILY_BUILDER_PATH,
     getAilyBuilderBuildPath: () => process.env.AILY_BUILDER_BUILD_PATH,

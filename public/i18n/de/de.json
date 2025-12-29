@@ -121,7 +121,9 @@
             "SEARCH": "Board suchen",
             "READ_DOC": "Dokumentation lesen",
             "ADD_BOARD": "Board hinzufügen",
-            "DEV": "Entwicklung"
+            "DEV": "Entwicklung",
+            "BY_BRAND": "Nach Marke",
+            "BY_CORE": "Nach Kern"
         },
         "FORM": {
             "DEVMODE": "Entwicklungs-Framework",
@@ -348,12 +350,46 @@
         "AUTHOR": "Autor",
         "DEPLOY_COUNT": "Bereitstellungen",
         "VIEW_COUNT": "Aufrufe",
-        "LIKE_COUNT": "Gefällt mir"
+        "LIKE_COUNT": "Gefällt mir",
+        "TAG_VISION": "Vision",
+        "TAG_AUDIO": "Audio",
+        "SEARCH_PLACEHOLDER": "Verfügbare Modelle suchen",
+        "MODEL_LIST": "Modellliste",
+        "LOADING": "Laden...",
+        "BACK": "Zurück",
+        "TEST_MODEL": "Modell testen",
+        "DEPLOY_MODEL": "Modell bereitstellen",
+        "SELF_TRAINED_MODEL": "Selbst trainiertes Modell"
     },
     "XIAO_ESP32S3_SENSE_CONNECT": {
         "STEP1": "1. Verbinden Sie das XIAO ESP32S3 Sense mit der Kameraerweiterungsplatine",
         "STEP2": "2. Verbinden Sie das XIAO ESP32S3 Sense per USB mit dem Computer",
         "STEP3": "3. Wählen Sie den Geräte-Serienport und klicken Sie dann auf den Button \"Bereitstellung starten\"",
         "STEP4": "4. Warten Sie, bis die Bereitstellung abgeschlossen ist, und testen Sie dann das Modell"
+    },
+    "SSCMA_CONFIG": {
+        "TITLE": "Modellkonfiguration",
+        "SELECT_PORT": "Seriellen Port auswählen",
+        "DISCONNECT": "Trennen",
+        "CONNECT_DEVICE": "Gerät verbinden",
+        "READ_DOCS": "Dokumentation lesen",
+        "LIVE_PREVIEW": "Live-Vorschau",
+        "DEVICE_ID": "Geräte-ID",
+        "DEVICE_VERSION": "Geräteversion",
+        "CURRENT_MODEL": "Aktuelles Modell",
+        "MODEL_SETTINGS": "Modelleinstellungen",
+        "CONFIDENCE": "Konfidenz",
+        "CONFIDENCE_TIP": "Die Sicherheit des Modells über das Erkennungsergebnis. Höhere Werte erfordern mehr Genauigkeit, können aber Ziele übersehen",
+        "IOU_THRESHOLD": "IOU-Schwellenwert",
+        "IOU_TIP": "Wird verwendet, um überlappende Erkennungsboxen zu entfernen. Höhere Werte behalten mehr überlappende Boxen bei",
+        "GPIO_CONFIG": "GPIO-Trigger-Konfiguration",
+        "APPLY_CONFIG": "Konfiguration anwenden",
+        "TRIGGER_WHEN": "Wenn ≥",
+        "CONFIDENCE_TRIGGER": "% Konfidenz, auslösen",
+        "SELECT_PIN": "Pin auswählen",
+        "SELECT_LEVEL": "Pegel auswählen",
+        "DEFAULT_LOW_TRIGGER_HIGH": "Standard Low, Trigger High",
+        "DEFAULT_HIGH_TRIGGER_LOW": "Standard High, Trigger Low",
+        "CANCEL": "Abbrechen"
     }
 }

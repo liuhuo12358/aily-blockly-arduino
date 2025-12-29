@@ -121,7 +121,9 @@
             "SEARCH": "ボードを検索",
             "READ_DOC": "ドキュメント",
             "ADD_BOARD": "ボードを追加",
-            "DEV": "開発"
+            "DEV": "開発",
+            "BY_BRAND": "ブランド別",
+            "BY_CORE": "コア別"
         },
         "FORM": {
             "DEVMODE": "開発フレームワーク",
@@ -348,12 +350,46 @@
         "AUTHOR": "作者",
         "DEPLOY_COUNT": "デプロイ回数",
         "VIEW_COUNT": "閲覧数",
-        "LIKE_COUNT": "いいね"
+        "LIKE_COUNT": "いいね",
+        "TAG_VISION": "ビジョン",
+        "TAG_AUDIO": "オーディオ",
+        "SEARCH_PLACEHOLDER": "利用可能なモデルを検索",
+        "MODEL_LIST": "モデル一覧",
+        "LOADING": "読み込み中...",
+        "BACK": "戻る",
+        "TEST_MODEL": "モデルをテスト",
+        "DEPLOY_MODEL": "モデルをデプロイ",
+        "SELF_TRAINED_MODEL": "自己学習モデル"
     },
     "XIAO_ESP32S3_SENSE_CONNECT": {
         "STEP1": "1. XIAO ESP32S3 Sense をカメラ拡張ボードに接続します",
         "STEP2": "2. XIAO ESP32S3 Sense を USB でパソコンに接続します",
         "STEP3": "3. デバイスのシリアルポートを選択し、\"デプロイ開始\"ボタンをクリックします",
         "STEP4": "4. デプロイ完了を待ってモデルをテストします"
+    },
+    "SSCMA_CONFIG": {
+        "TITLE": "モデル設定",
+        "SELECT_PORT": "シリアルポートを選択",
+        "DISCONNECT": "切断",
+        "CONNECT_DEVICE": "デバイスを接続",
+        "READ_DOCS": "ドキュメントを読む",
+        "LIVE_PREVIEW": "リアルタイムプレビュー",
+        "DEVICE_ID": "デバイスID",
+        "DEVICE_VERSION": "デバイスバージョン",
+        "CURRENT_MODEL": "使用中のモデル",
+        "MODEL_SETTINGS": "モデル設定",
+        "CONFIDENCE": "信頼度",
+        "CONFIDENCE_TIP": "認識結果に対するモデルの確信度。値が高いほど精度が要求されますが、ターゲットを見逃す可能性があります",
+        "IOU_THRESHOLD": "IOUしきい値",
+        "IOU_TIP": "重なり合った検出ボックスを削除するために使用。値が高いほど重複ボックスが保持されます",
+        "GPIO_CONFIG": "GPIO トリガー設定",
+        "APPLY_CONFIG": "設定を適用",
+        "TRIGGER_WHEN": "以上の場合",
+        "CONFIDENCE_TRIGGER": "% の信頼度でトリガー",
+        "SELECT_PIN": "ピンを選択",
+        "SELECT_LEVEL": "レベルを選択",
+        "DEFAULT_LOW_TRIGGER_HIGH": "デフォルトLow、トリガーHigh",
+        "DEFAULT_HIGH_TRIGGER_LOW": "デフォルトHigh、トリガーLow",
+        "CANCEL": "キャンセル"
     }
 }

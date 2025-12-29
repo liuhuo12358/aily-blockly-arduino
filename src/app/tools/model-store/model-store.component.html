@@ -12,11 +12,11 @@
         <div class="section-title">
             <div class="search-bar">
                 <div class="tags">
-                    <nz-tag>视觉</nz-tag>
-                    <nz-tag>声音</nz-tag>
+                    <nz-tag (click)="searchKeyword = 'sensecraft'; onSearchChange()">{{ 'MODEL_STORE.TAG_VISION' | translate }}</nz-tag>
+                    <nz-tag (click)="searchKeyword = 'chipintelli'; onSearchChange()">{{ 'MODEL_STORE.TAG_AUDIO' | translate }}</nz-tag>
                 </div>
                 <div class="search-box">
-                    <input nz-input placeholder="搜索可用模型" [(ngModel)]="searchKeyword"
+                    <input nz-input [placeholder]="'MODEL_STORE.SEARCH_PLACEHOLDER' | translate" [(ngModel)]="searchKeyword"
                         (ngModelChange)="onSearchChange()" />
                     <div class="close-btn ccenter" (click)="closeSearch()">
                         @if(searchKeyword.length > 0) {
@@ -31,13 +31,13 @@
         </div>
         <div class="breadcrumb">
             <nz-breadcrumb nzSeparator=">">
-                <nz-breadcrumb-item class="home" (click)="closeModelDetail()">模型列表</nz-breadcrumb-item>
+                <nz-breadcrumb-item class="home" (click)="closeModelDetail()">{{ 'MODEL_STORE.MODEL_LIST' | translate }}</nz-breadcrumb-item>
                 @if(showDetail){
                 <nz-breadcrumb-item>{{currentModelName}}</nz-breadcrumb-item>
                 }
             </nz-breadcrumb>
             @if(!showDetail){
-            <button nz-button nzSize="small" nzType="primary" (click)="onTrain()">自训练模型</button>
+            <button nz-button nzSize="small" nzType="primary" (click)="onTrain()">{{ 'MODEL_STORE.SELF_TRAINED_MODEL' | translate }}</button>
             }
         </div>
         <div class="content">
@@ -45,7 +45,7 @@
                 @if (loading) {
                 <div class="loading-container">
                     <i class="fa-duotone fa-spinner-third fa-spin"></i>
-                    <span>loading...</span>
+                    <span>{{ 'MODEL_STORE.LOADING' | translate }}</span>
                 </div>
                 }
                 @for (item of filteredItemList; track item.id) {

@@ -121,7 +121,9 @@
             "SEARCH": "Rechercher une Carte",
             "READ_DOC": "Lire la Documentation",
             "ADD_BOARD": "Ajouter une Carte",
-            "DEV": "dev"
+            "DEV": "dev",
+            "BY_BRAND": "Par Marque",
+            "BY_CORE": "Par Cœur"
         },
         "FORM": {
             "DEVMODE": "Cadre de développement",
@@ -348,12 +350,46 @@
         "AUTHOR": "Auteur",
         "DEPLOY_COUNT": "Déploiements",
         "VIEW_COUNT": "Vues",
-        "LIKE_COUNT": "Mentions J'aime"
+        "LIKE_COUNT": "Mentions J'aime",
+        "TAG_VISION": "Vision",
+        "TAG_AUDIO": "Audio",
+        "SEARCH_PLACEHOLDER": "Rechercher les modèles disponibles",
+        "MODEL_LIST": "Liste des modèles",
+        "LOADING": "Chargement...",
+        "BACK": "Retour",
+        "TEST_MODEL": "Tester le modèle",
+        "DEPLOY_MODEL": "Déployer le modèle",
+        "SELF_TRAINED_MODEL": "Modèle auto-entraîné"
     },
     "XIAO_ESP32S3_SENSE_CONNECT": {
         "STEP1": "1. Connectez le XIAO ESP32S3 Sense à la carte d'extension de caméra",
         "STEP2": "2. Connectez le XIAO ESP32S3 Sense à l'ordinateur via USB",
         "STEP3": "3. Sélectionnez le port série de l'appareil puis cliquez sur le bouton \"Démarrer le déploiement\"",
         "STEP4": "4. Attendez la fin du déploiement puis testez le modèle"
+    },
+    "SSCMA_CONFIG": {
+        "TITLE": "Configuration du modèle",
+        "SELECT_PORT": "Sélectionner le port série",
+        "DISCONNECT": "Déconnecter",
+        "CONNECT_DEVICE": "Connecter l'appareil",
+        "READ_DOCS": "Lire la documentation",
+        "LIVE_PREVIEW": "Aperçu en direct",
+        "DEVICE_ID": "ID de l'appareil",
+        "DEVICE_VERSION": "Version de l'appareil",
+        "CURRENT_MODEL": "Modèle actuel",
+        "MODEL_SETTINGS": "Paramètres du modèle",
+        "CONFIDENCE": "Confiance",
+        "CONFIDENCE_TIP": "La certitude du modèle sur le résultat de reconnaissance. Des valeurs plus élevées exigent plus de précision mais peuvent manquer des cibles",
+        "IOU_THRESHOLD": "Seuil IOU",
+        "IOU_TIP": "Utilisé pour supprimer les boîtes de détection qui se chevauchent. Des valeurs plus élevées conservent plus de boîtes qui se chevauchent",
+        "GPIO_CONFIG": "Configuration du déclencheur GPIO",
+        "APPLY_CONFIG": "Appliquer la configuration",
+        "TRIGGER_WHEN": "Quand ≥",
+        "CONFIDENCE_TRIGGER": "% de confiance, déclencher",
+        "SELECT_PIN": "Sélectionner la broche",
+        "SELECT_LEVEL": "Sélectionner le niveau",
+        "DEFAULT_LOW_TRIGGER_HIGH": "Défaut Bas, Déclencher Haut",
+        "DEFAULT_HIGH_TRIGGER_LOW": "Défaut Haut, Déclencher Bas",
+        "CANCEL": "Annuler"
     }
 }

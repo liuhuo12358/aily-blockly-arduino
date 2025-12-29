@@ -121,7 +121,9 @@
             "SEARCH": "搜尋開發板",
             "READ_DOC": "閱讀文件",
             "ADD_BOARD": "新增開發板",
-            "DEV": "dev"
+            "DEV": "dev",
+            "BY_BRAND": "按品牌",
+            "BY_CORE": "按核心"
         },
         "FORM": {
             "DEVMODE": "開發框架",
@@ -348,12 +350,46 @@
         "AUTHOR": "作者",
         "DEPLOY_COUNT": "部署次數",
         "VIEW_COUNT": "瀏覽次數",
-        "LIKE_COUNT": "點贊數"
+        "LIKE_COUNT": "點贊數",
+        "TAG_VISION": "視覺",
+        "TAG_AUDIO": "聲音",
+        "SEARCH_PLACEHOLDER": "搜索可用模型",
+        "MODEL_LIST": "模型列表",
+        "LOADING": "載入中...",
+        "BACK": "返回",
+        "TEST_MODEL": "測試模型",
+        "DEPLOY_MODEL": "部署模型",
+        "SELF_TRAINED_MODEL": "自訓練模型"
     },
     "XIAO_ESP32S3_SENSE_CONNECT": {
         "STEP1": "1. 將 XIAO ESP32S3 Sense 與攝像頭擴展板連接",
         "STEP2": "2. 將 XIAO ESP32S3 Sense 透過 USB 連接到電腦",
         "STEP3": "3. 選擇設備串口，再點擊\"開始部署\"按鈕",
         "STEP4": "4. 等待部署完成，測試模型效果"
+    },
+    "SSCMA_CONFIG": {
+        "TITLE": "模型配置",
+        "SELECT_PORT": "請選擇串口",
+        "DISCONNECT": "斷開連接",
+        "CONNECT_DEVICE": "連接設備",
+        "READ_DOCS": "閱讀文檔",
+        "LIVE_PREVIEW": "即時預覽",
+        "DEVICE_ID": "設備編號",
+        "DEVICE_VERSION": "設備版本",
+        "CURRENT_MODEL": "使用模型",
+        "MODEL_SETTINGS": "模型設置",
+        "CONFIDENCE": "置信度",
+        "CONFIDENCE_TIP": "模型對識別結果的確定程度，值越高要求越準確但可能遺漏目標",
+        "IOU_THRESHOLD": "IOU閾值",
+        "IOU_TIP": "用於去除重疊檢測框，值越高保留的重疊框越多",
+        "GPIO_CONFIG": "GPIO 觸發配置",
+        "APPLY_CONFIG": "應用配置",
+        "TRIGGER_WHEN": "大於等於",
+        "CONFIDENCE_TRIGGER": "% 置信度時觸發",
+        "SELECT_PIN": "選擇引腳",
+        "SELECT_LEVEL": "選擇電平",
+        "DEFAULT_LOW_TRIGGER_HIGH": "默認低，觸發高",
+        "DEFAULT_HIGH_TRIGGER_LOW": "默認高，觸發低",
+        "CANCEL": "取消"
     }
 }

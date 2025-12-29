@@ -14,6 +14,7 @@ import { STM32_CONFIG_MENU } from '../configs/stm32.config';
 import { ActionService } from './action.service';
 import { PlatformService } from './platform.service';
 import { NewProjectData } from '../pages/project-new/project-new.component';
+import { WorkflowService } from './workflow.service';
 
 const { pt } = (window as any)['electronAPI'].platform;
 
@@ -72,6 +73,7 @@ export class ProjectService {
     private configService: ConfigService,
     private actionService: ActionService,
     private platformService: PlatformService,
+    private workflowService: WorkflowService
   ) {
   }
 
