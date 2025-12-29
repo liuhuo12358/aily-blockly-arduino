@@ -379,16 +379,7 @@ export class AilyChatComponent implements OnDestroy {
       case 'create_project':
         return "创建项目...";
       case 'execute_command':
-        const commandParts = args.command?.split(' ') || [];
-        let displayCommand = args.command || 'unknown';
-        if (commandParts.length > 1) {
-          if (commandParts[0].toLowerCase() === 'npm') {
-            displayCommand = `${commandParts[0]} ${commandParts[1]}`;
-          } else {
-            displayCommand = commandParts[0];
-          }
-        }
-        return `执行: ${displayCommand}`;
+        return this.formatCommandDisplay(args.command || 'unknown');
       case 'get_context':
         return "获取上下文信息...";
       case 'list_directory':
@@ -485,16 +476,8 @@ export class AilyChatComponent implements OnDestroy {
       case 'create_project':
         return "项目创建成功";
       case 'execute_command':
-        const commandParts = args?.command?.split(' ') || [];
-        let displayCommand = args?.command || 'unknown';
-        if (commandParts.length > 1) {
-          if (commandParts[0].toLowerCase() === 'npm') {
-            displayCommand = `${commandParts[0]} ${commandParts[1]}`;
-          } else {
-            displayCommand = commandParts[0];
-          }
-        }
-        return `命令${displayCommand}执行成功`;
+        const cmdDisplay = this.formatCommandDisplay(args?.command || 'unknown');
+        return `${cmdDisplay} ✓`;
       case 'get_context':
         return "上下文信息获取成功";
       case 'list_directory':
@@ -590,6 +573,91 @@ export class AilyChatComponent implements OnDestroy {
     const parts = trimmedPath.split('/').filter(Boolean);
 
     return parts.length > 0 ? parts[parts.length - 1] : '';
+  }
+
+  /**
+   * 格式化命令显示，特别处理路径相关命令
+   * @param command 完整命令字符串
+   * @param maxPathSegments 显示路径的最大段数（默认2）
+   * @returns 格式化后的显示文本
+   */
+  private formatCommandDisplay(command: string, maxPathSegments: number = 2): string {
+    if (!command) return 'unknown';
+
+    const parts = command.trim().split(/\s+/);
+    if (parts.length === 0) return 'unknown';
+
+    const cmd = parts[0].toLowerCase();
+    const args = parts.slice(1);
+
+    // 处理 cd 命令
+    if (cmd === 'cd' && args.length > 0) {
+      const targetPath = args.join(' ').replace(/["']/g, ''); // 移除引号
+      const normalizedPath = targetPath.replace(/\\/g, '/');
+      const pathParts = normalizedPath.split('/').filter(Boolean);
+      
+      if (pathParts.length > maxPathSegments) {
+        const lastSegments = pathParts.slice(-maxPathSegments).join('/');
+        return `切换到: .../${lastSegments}`;
+      } else if (pathParts.length > 0) {
+        return `切换到: ${pathParts.join('/')}`;
+      }
+      return 'cd';
+    }
+
+    // 处理 mkdir 命令
+    if (cmd === 'mkdir' && args.length > 0) {
+      const dirName = args[args.length - 1].replace(/["']/g, '');
+      const normalizedDir = dirName.replace(/\\/g, '/');
+      const dirParts = normalizedDir.split('/').filter(Boolean);
+      
+      if (dirParts.length > 0) {
+        return `创建目录: ${dirParts[dirParts.length - 1]}`;
+      }
+      return 'mkdir';
+    }
+
+    // 处理 rm/del 命令
+    if ((cmd === 'rm' || cmd === 'del') && args.length > 0) {
+      const target = args[args.length - 1].replace(/["']/g, '');
+      const fileName = target.split(/[\\/]/).pop();
+      if (fileName) {
+        return `删除: ${fileName}`;
+      }
+      return cmd;
+    }
+
+    // 处理 npm 命令
+    if (cmd === 'npm' && args.length > 0) {
+      return `npm ${args[0]}`;
+    }
+
+    // 处理 ls/dir 命令
+    if (cmd === 'ls' || cmd === 'dir') {
+      if (args.length > 0) {
+        const targetPath = args[args.length - 1].replace(/["']/g, '');
+        const pathName = targetPath.split(/[\\/]/).pop() || targetPath;
+        return `列出: ${pathName}`;
+      }
+      return '列出目录';
+    }
+
+    // 处理 cp/copy 命令
+    if ((cmd === 'cp' || cmd === 'copy') && args.length >= 2) {
+      const source = args[0].replace(/["']/g, '');
+      const sourceName = source.split(/[\\/]/).pop();
+      return `复制: ${sourceName}`;
+    }
+
+    // 处理 mv/move 命令
+    if ((cmd === 'mv' || cmd === 'move') && args.length >= 2) {
+      const source = args[0].replace(/["']/g, '');
+      const sourceName = source.split(/[\\/]/).pop();
+      return `移动: ${sourceName}`;
+    }
+
+    // 默认返回命令名
+    return cmd;
   }
 
   /**
@@ -2658,6 +2726,7 @@ ${JSON.stringify(errData)}
 - 全局变量请作为独立块创建
 - 独立且无用的块请删除
 7. 重复直至完成
+8. 一次只调用一个工具完成一个小目标，等待工具反馈后再进行下一个操作
 JSON务必保留必要的换行和缩进格式，否则可能导致解析失败。</rules>
 <toolResult>${toolResult.content}</toolResult>\n<info>如果想结束对话，转交给用户，可以使用[to_xxx]，这里的xxx为user</info>`;
               } else if (shouldIncludeKeyInfo) {
