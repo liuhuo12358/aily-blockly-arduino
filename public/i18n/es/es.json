@@ -418,5 +418,31 @@
         "DEFAULT_LOW_TRIGGER_HIGH": "Predeterminado Bajo, Disparar Alto",
         "DEFAULT_HIGH_TRIGGER_LOW": "Predeterminado Alto, Disparar Bajo",
         "CANCEL": "Cancelar"
+    },
+    "LOGIN": {
+        "HEADER": "Inicie sesión para usar nuestros servicios",
+        "PHONE": "Teléfono",
+        "BENEFITS_TITLE": "Después de iniciar sesión, puede:",
+        "BENEFIT_AI": "Probar la función AI Q&A gratis",
+        "BENEFIT_SHARE": "Compartir sus proyectos",
+        "BENEFIT_EXPERIENCE": "Disfrutar de una experiencia de desarrollo personalizada",
+        "NOTICE_LABEL": "Nota: ",
+        "NOTICE_CONTENT": "Usaremos su cuenta de GitHub para dar estrella a nuestros repositorios de código abierto, lo que ayuda al desarrollo del proyecto.",
+        "GITHUB_LOGIN": "Iniciar sesión con Github",
+        "WECHAT_SCAN": "Escanee el código QR para seguir e iniciar sesión",
+        "PHONE_NOT_OPEN": "El registro por teléfono aún no está disponible",
+        "PHONE_BETA_ONLY": "El inicio de sesión por teléfono es solo para probadores beta de AI",
+        "PHONE_PLACEHOLDER": "Ingrese número de teléfono",
+        "PASSWORD_PLACEHOLDER": "Ingrese contraseña",
+        "LOGGING_IN": "Iniciando sesión...",
+        "LOGIN": "Iniciar sesión",
+        "SELECT_METHOD": "Haga clic para seleccionar el método de inicio de sesión",
+        "REDIRECTING_GITHUB": "Redirigiendo a la página de autorización de GitHub...",
+        "GITHUB_LOGIN_FAILED": "Error al iniciar el inicio de sesión de GitHub. Verifique la conexión de red",
+        "GITHUB_ERROR": "Error en el inicio de sesión de GitHub",
+        "ENTER_CREDENTIALS": "Por favor ingrese nombre de usuario y contraseña",
+        "LOGIN_SUCCESS": "Inicio de sesión exitoso",
+        "LOGIN_FAILED": "Error en el inicio de sesión",
+        "LOGIN_NETWORK_ERROR": "Error en el inicio de sesión, verifique la conexión de red"
     }
 }

@@ -418,5 +418,31 @@
         "DEFAULT_LOW_TRIGGER_HIGH": "デフォルトLow、トリガーHigh",
         "DEFAULT_HIGH_TRIGGER_LOW": "デフォルトHigh、トリガーLow",
         "CANCEL": "キャンセル"
+    },
+    "LOGIN": {
+        "HEADER": "ログイン後、当社のサービスをご利用いただけます",
+        "PHONE": "電話番号",
+        "BENEFITS_TITLE": "ログイン後、以下が可能になります：",
+        "BENEFIT_AI": "AI Q&A機能を無料でお試しいただけます",
+        "BENEFIT_SHARE": "プロジェクトを共有できます",
+        "BENEFIT_EXPERIENCE": "パーソナライズされた開発体験をお楽しみいただけます",
+        "NOTICE_LABEL": "注意：",
+        "NOTICE_CONTENT": "当社はあなたのGitHubアカウントを使用して、当社のオープンソースリポジトリにスターを付けます。これはプロジェクトの発展をサポートするためです。",
+        "GITHUB_LOGIN": "Githubでログイン",
+        "WECHAT_SCAN": "QRコードをスキャンしてフォローしてログイン",
+        "PHONE_NOT_OPEN": "電話番号登録はまだ利用できません",
+        "PHONE_BETA_ONLY": "電話番号ログインはAIベータテスター専用です",
+        "PHONE_PLACEHOLDER": "電話番号を入力",
+        "PASSWORD_PLACEHOLDER": "パスワードを入力",
+        "LOGGING_IN": "ログイン中...",
+        "LOGIN": "ログイン",
+        "SELECT_METHOD": "ログイン方法を選択してください",
+        "REDIRECTING_GITHUB": "GitHub認証ページにリダイレクト中...",
+        "GITHUB_LOGIN_FAILED": "GitHubログインの開始に失敗しました。ネットワーク接続を確認してください",
+        "GITHUB_ERROR": "GitHubログインに失敗しました",
+        "ENTER_CREDENTIALS": "ユーザー名とパスワードを入力してください",
+        "LOGIN_SUCCESS": "ログイン成功",
+        "LOGIN_FAILED": "ログイン失敗",
+        "LOGIN_NETWORK_ERROR": "ログインに失敗しました。ネットワーク接続を確認してください"
     }
 }

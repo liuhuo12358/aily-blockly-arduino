@@ -418,5 +418,31 @@
         "DEFAULT_LOW_TRIGGER_HIGH": "افتراضي منخفض، تشغيل عالي",
         "DEFAULT_HIGH_TRIGGER_LOW": "افتراضي عالي، تشغيل منخفض",
         "CANCEL": "إلغاء"
+    },
+    "LOGIN": {
+        "HEADER": "سجل الدخول لاستخدام خدماتنا",
+        "PHONE": "الهاتف",
+        "BENEFITS_TITLE": "بعد تسجيل الدخول، يمكنك:",
+        "BENEFIT_AI": "تجربة ميزة AI Q&A مجانًا",
+        "BENEFIT_SHARE": "مشاركة مشاريعك",
+        "BENEFIT_EXPERIENCE": "الاستمتاع بتجربة تطوير مخصصة",
+        "NOTICE_LABEL": "ملاحظة: ",
+        "NOTICE_CONTENT": "سنستخدم حساب GitHub الخاص بك لوضع نجمة على مستودعاتنا مفتوحة المصدر، مما يساعد في تطوير المشروع.",
+        "GITHUB_LOGIN": "تسجيل الدخول بـ Github",
+        "WECHAT_SCAN": "امسح رمز QR للمتابعة وتسجيل الدخول",
+        "PHONE_NOT_OPEN": "التسجيل برقم الهاتف غير متاح بعد",
+        "PHONE_BETA_ONLY": "تسجيل الدخول بالهاتف مخصص لمختبري AI بيتا فقط",
+        "PHONE_PLACEHOLDER": "أدخل رقم الهاتف",
+        "PASSWORD_PLACEHOLDER": "أدخل كلمة المرور",
+        "LOGGING_IN": "جاري تسجيل الدخول...",
+        "LOGIN": "تسجيل الدخول",
+        "SELECT_METHOD": "انقر لاختيار طريقة تسجيل الدخول",
+        "REDIRECTING_GITHUB": "جاري التحويل إلى صفحة تفويض GitHub...",
+        "GITHUB_LOGIN_FAILED": "فشل بدء تسجيل الدخول إلى GitHub. يرجى التحقق من الاتصال بالشبكة",
+        "GITHUB_ERROR": "فشل تسجيل الدخول إلى GitHub",
+        "ENTER_CREDENTIALS": "يرجى إدخال اسم المستخدم وكلمة المرور",
+        "LOGIN_SUCCESS": "تم تسجيل الدخول بنجاح",
+        "LOGIN_FAILED": "فشل تسجيل الدخول",
+        "LOGIN_NETWORK_ERROR": "فشل تسجيل الدخول، يرجى التحقق من الاتصال بالشبكة"
     }
 }

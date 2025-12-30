@@ -111,7 +111,7 @@ export class GuideComponent implements OnInit, AfterViewInit {
 
   // 检查是否是第一次启动
   private checkFirstLaunch() {
-    const hasSeenOnboarding = localStorage.getItem('aily_onboarding_completed');
+    const hasSeenOnboarding = this.configService.data.onboardingCompleted;
     if (!hasSeenOnboarding) {
       // 延迟显示引导，确保页面已渲染
       setTimeout(() => {
@@ -200,7 +200,8 @@ export class GuideComponent implements OnInit, AfterViewInit {
   // 完成引导
   private finishOnboarding() {
     this.showOnboarding = false;
-    localStorage.setItem('aily_onboarding_completed', 'true');
+    this.configService.data.onboardingCompleted = true;
+    this.configService.save();
   }
 
   ngAfterViewInit() {

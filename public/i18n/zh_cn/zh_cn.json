@@ -456,5 +456,31 @@
         "DEFAULT_LOW_TRIGGER_HIGH": "默认低，触发高",
         "DEFAULT_HIGH_TRIGGER_LOW": "默认高，触发低",
         "CANCEL": "取消"
+    },
+    "LOGIN": {
+        "HEADER": "登陆后即可使用我们的服务",
+        "PHONE": "手机号",
+        "BENEFITS_TITLE": "登录后您可以：",
+        "BENEFIT_AI": "免费试用 AI 问答功能",
+        "BENEFIT_SHARE": "分享你的项目",
+        "BENEFIT_EXPERIENCE": "享受个性化的开发体验",
+        "NOTICE_LABEL": "注意：",
+        "NOTICE_CONTENT": "我们会使用您的 GitHub 账号为我们的几个开源仓库点 star，这有助于支持我们的项目发展。",
+        "GITHUB_LOGIN": "Github登录",
+        "WECHAT_SCAN": "扫描二维码关注公众号并登录",
+        "PHONE_NOT_OPEN": "暂未开放手机号注册",
+        "PHONE_BETA_ONLY": "手机号登录仅限AI功能内测用户使用",
+        "PHONE_PLACEHOLDER": "请输入手机号",
+        "PASSWORD_PLACEHOLDER": "请输入密码",
+        "LOGGING_IN": "登录中...",
+        "LOGIN": "登录",
+        "SELECT_METHOD": "点击选择登录方式",
+        "REDIRECTING_GITHUB": "正在跳转到 GitHub 授权页面...",
+        "GITHUB_LOGIN_FAILED": "启动 GitHub 登录失败，请检查网络连接",
+        "GITHUB_ERROR": "GitHub 登录失败",
+        "ENTER_CREDENTIALS": "请输入用户名和密码",
+        "LOGIN_SUCCESS": "登录成功",
+        "LOGIN_FAILED": "登录失败",
+        "LOGIN_NETWORK_ERROR": "登录失败，请检查网络连接"
     }
 }

@@ -418,5 +418,31 @@
         "DEFAULT_LOW_TRIGGER_HIGH": "Standard Low, Trigger High",
         "DEFAULT_HIGH_TRIGGER_LOW": "Standard High, Trigger Low",
         "CANCEL": "Abbrechen"
+    },
+    "LOGIN": {
+        "HEADER": "Melden Sie sich an, um unsere Dienste zu nutzen",
+        "PHONE": "Telefon",
+        "BENEFITS_TITLE": "Nach der Anmeldung können Sie:",
+        "BENEFIT_AI": "AI Q&A-Funktion kostenlos ausprobieren",
+        "BENEFIT_SHARE": "Ihre Projekte teilen",
+        "BENEFIT_EXPERIENCE": "Personalisierte Entwicklungserfahrung genießen",
+        "NOTICE_LABEL": "Hinweis: ",
+        "NOTICE_CONTENT": "Wir werden Ihr GitHub-Konto verwenden, um unsere Open-Source-Repositories zu markieren, was die Projektentwicklung unterstützt.",
+        "GITHUB_LOGIN": "Mit Github anmelden",
+        "WECHAT_SCAN": "QR-Code scannen, um zu folgen und anzumelden",
+        "PHONE_NOT_OPEN": "Telefonregistrierung ist noch nicht verfügbar",
+        "PHONE_BETA_ONLY": "Telefonanmeldung ist nur für AI-Beta-Tester",
+        "PHONE_PLACEHOLDER": "Telefonnummer eingeben",
+        "PASSWORD_PLACEHOLDER": "Passwort eingeben",
+        "LOGGING_IN": "Anmeldung...",
+        "LOGIN": "Anmelden",
+        "SELECT_METHOD": "Klicken Sie, um eine Anmeldemethode auszuwählen",
+        "REDIRECTING_GITHUB": "Weiterleitung zur GitHub-Autorisierungsseite...",
+        "GITHUB_LOGIN_FAILED": "GitHub-Anmeldung konnte nicht gestartet werden. Bitte überprüfen Sie die Netzwerkverbindung",
+        "GITHUB_ERROR": "GitHub-Anmeldung fehlgeschlagen",
+        "ENTER_CREDENTIALS": "Bitte geben Sie Benutzername und Passwort ein",
+        "LOGIN_SUCCESS": "Anmeldung erfolgreich",
+        "LOGIN_FAILED": "Anmeldung fehlgeschlagen",
+        "LOGIN_NETWORK_ERROR": "Anmeldung fehlgeschlagen, bitte überprüfen Sie die Netzwerkverbindung"
     }
 }

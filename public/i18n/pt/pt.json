@@ -418,5 +418,31 @@
         "DEFAULT_LOW_TRIGGER_HIGH": "Padrão Baixo, Gatilho Alto",
         "DEFAULT_HIGH_TRIGGER_LOW": "Padrão Alto, Gatilho Baixo",
         "CANCEL": "Cancelar"
+    },
+    "LOGIN": {
+        "HEADER": "Faça login para usar nossos serviços",
+        "PHONE": "Telefone",
+        "BENEFITS_TITLE": "Após o login, você pode:",
+        "BENEFIT_AI": "Experimentar a função AI Q&A gratuitamente",
+        "BENEFIT_SHARE": "Compartilhar seus projetos",
+        "BENEFIT_EXPERIENCE": "Desfrutar de uma experiência de desenvolvimento personalizada",
+        "NOTICE_LABEL": "Nota: ",
+        "NOTICE_CONTENT": "Usaremos sua conta do GitHub para dar estrela aos nossos repositórios de código aberto, o que ajuda no desenvolvimento do projeto.",
+        "GITHUB_LOGIN": "Login com Github",
+        "WECHAT_SCAN": "Escaneie o código QR para seguir e fazer login",
+        "PHONE_NOT_OPEN": "Registro por telefone ainda não está disponível",
+        "PHONE_BETA_ONLY": "Login por telefone é apenas para testadores beta de AI",
+        "PHONE_PLACEHOLDER": "Digite o número de telefone",
+        "PASSWORD_PLACEHOLDER": "Digite a senha",
+        "LOGGING_IN": "Entrando...",
+        "LOGIN": "Entrar",
+        "SELECT_METHOD": "Clique para selecionar o método de login",
+        "REDIRECTING_GITHUB": "Redirecionando para a página de autorização do GitHub...",
+        "GITHUB_LOGIN_FAILED": "Falha ao iniciar o login do GitHub. Verifique a conexão de rede",
+        "GITHUB_ERROR": "Falha no login do GitHub",
+        "ENTER_CREDENTIALS": "Por favor, digite nome de usuário e senha",
+        "LOGIN_SUCCESS": "Login bem-sucedido",
+        "LOGIN_FAILED": "Falha no login",
+        "LOGIN_NETWORK_ERROR": "Falha no login, verifique a conexão de rede"
     }
 }

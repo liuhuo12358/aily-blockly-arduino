@@ -418,5 +418,31 @@
         "DEFAULT_LOW_TRIGGER_HIGH": "默認低，觸發高",
         "DEFAULT_HIGH_TRIGGER_LOW": "默認高，觸發低",
         "CANCEL": "取消"
+    },
+    "LOGIN": {
+        "HEADER": "登錄後即可使用我們的服務",
+        "PHONE": "手機號碼",
+        "BENEFITS_TITLE": "登錄後您可以：",
+        "BENEFIT_AI": "免費試用 AI 問答功能",
+        "BENEFIT_SHARE": "分享您的專案",
+        "BENEFIT_EXPERIENCE": "享受個性化的開發體驗",
+        "NOTICE_LABEL": "注意：",
+        "NOTICE_CONTENT": "我們會使用您的 GitHub 帳號為我們的幾個開源倉庫點 star，這有助於支持我們的專案發展。",
+        "GITHUB_LOGIN": "Github登錄",
+        "WECHAT_SCAN": "掃描二維碼關注公眾號並登錄",
+        "PHONE_NOT_OPEN": "暫未開放手機號註冊",
+        "PHONE_BETA_ONLY": "手機號登錄僅限AI功能內測用戶使用",
+        "PHONE_PLACEHOLDER": "請輸入手機號",
+        "PASSWORD_PLACEHOLDER": "請輸入密碼",
+        "LOGGING_IN": "登錄中...",
+        "LOGIN": "登錄",
+        "SELECT_METHOD": "點擊選擇登錄方式",
+        "REDIRECTING_GITHUB": "正在跳轉到 GitHub 授權頁面...",
+        "GITHUB_LOGIN_FAILED": "啟動 GitHub 登錄失敗，請檢查網絡連接",
+        "GITHUB_ERROR": "GitHub 登錄失敗",
+        "ENTER_CREDENTIALS": "請輸入用戶名和密碼",
+        "LOGIN_SUCCESS": "登錄成功",
+        "LOGIN_FAILED": "登錄失敗",
+        "LOGIN_NETWORK_ERROR": "登錄失敗，請檢查網絡連接"
     }
 }

@@ -418,5 +418,31 @@
         "DEFAULT_LOW_TRIGGER_HIGH": "Défaut Bas, Déclencher Haut",
         "DEFAULT_HIGH_TRIGGER_LOW": "Défaut Haut, Déclencher Bas",
         "CANCEL": "Annuler"
+    },
+    "LOGIN": {
+        "HEADER": "Connectez-vous pour utiliser nos services",
+        "PHONE": "Téléphone",
+        "BENEFITS_TITLE": "Après connexion, vous pouvez :",
+        "BENEFIT_AI": "Essayer gratuitement la fonction AI Q&A",
+        "BENEFIT_SHARE": "Partager vos projets",
+        "BENEFIT_EXPERIENCE": "Profiter d'une expérience de développement personnalisée",
+        "NOTICE_LABEL": "Remarque : ",
+        "NOTICE_CONTENT": "Nous utiliserons votre compte GitHub pour mettre une étoile sur nos dépôts open source, ce qui aide au développement du projet.",
+        "GITHUB_LOGIN": "Se connecter avec Github",
+        "WECHAT_SCAN": "Scannez le code QR pour suivre et vous connecter",
+        "PHONE_NOT_OPEN": "L'inscription par téléphone n'est pas encore disponible",
+        "PHONE_BETA_ONLY": "La connexion par téléphone est réservée aux testeurs bêta AI",
+        "PHONE_PLACEHOLDER": "Entrez le numéro de téléphone",
+        "PASSWORD_PLACEHOLDER": "Entrez le mot de passe",
+        "LOGGING_IN": "Connexion en cours...",
+        "LOGIN": "Connexion",
+        "SELECT_METHOD": "Cliquez pour sélectionner la méthode de connexion",
+        "REDIRECTING_GITHUB": "Redirection vers la page d'autorisation GitHub...",
+        "GITHUB_LOGIN_FAILED": "Échec du démarrage de la connexion GitHub. Veuillez vérifier la connexion réseau",
+        "GITHUB_ERROR": "Échec de la connexion GitHub",
+        "ENTER_CREDENTIALS": "Veuillez entrer le nom d'utilisateur et le mot de passe",
+        "LOGIN_SUCCESS": "Connexion réussie",
+        "LOGIN_FAILED": "Échec de la connexion",
+        "LOGIN_NETWORK_ERROR": "Échec de la connexion, veuillez vérifier la connexion réseau"
     }
 }
