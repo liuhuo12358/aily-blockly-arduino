@@ -177,13 +177,14 @@ interface VariableConfig {
 
 interface DeleteBlockResult extends ToolUseResult {
   metadata?: {
-    deletedBlockId: string;
-    deletedBlockType: string;
+    deletedBlockId?: string;
+    deletedBlockType?: string;
     totalDeleted?: number;
     cascadeDeleted?: string[];
     reconnectedBlocks?: number;
-    workspaceOverview?: string;  // 新增：工作区概览
-    cppCode?: string;            // 新增：生成的C++代码
+    deletedBlockIds?: string[];  // 新增：批量删除时的块ID列表
+    workspaceOverview?: string;  // 工作区概览
+    cppCode?: string;            // 生成的C++代码
   };
 }
 
@@ -4269,347 +4270,321 @@ function getAllConnectedBlocks(block: any): any[] {
  */
 export async function deleteBlockTool(args: { 
   block?: BlockReference;
-  blockId?: string; 
+  blockId?: string;
+  blockIds?: string | string[];
   cascade?: boolean;
-  preview?: boolean;
 }): Promise<DeleteBlockResult> {
   // console.log('🗑️ 删除块工具');
   // console.log('📥 输入参数:', JSON.stringify(args, null, 2));
   
   try {
     const workspace = getActiveWorkspace();
-    const { block, blockId: inputBlockId, cascade = false, preview = false } = args;
+    const { block, blockId: inputBlockId, blockIds: inputBlockIds } = args;
     
-    let blockToDelete: any = null;
-    let actualBlockId = '';
+    // 解析 blockIds 参数，支持字符串或数组
+    let blockIdsToDelete: string[] = [];
     
-    // 支持两种方式查找块：blockId 或 block 对象
-    if (inputBlockId) {
-      // console.log(`🔍 通过 blockId 智能查找块: ${inputBlockId}`);
-      // 使用智能查找函数（支持精确匹配和模糊匹配）
-      blockToDelete = getBlockByIdSmart(workspace, inputBlockId, {
-        enableFuzzyMatch: true,
-        minScore: 60,
-        logDetails: true
-      });
-      actualBlockId = inputBlockId;
-    } else if (block) {
-      // console.log('🔍 通过 block 对象查找块:', block);
-      blockToDelete = findBlock(workspace, block);
-      actualBlockId = blockToDelete?.id || '';
-    } else {
-      throw new Error('必须提供 blockId 或 block 参数');
-    }
-    
-    if (!blockToDelete) {
-      const searchInfo = inputBlockId ? `blockId: ${inputBlockId}` : `block: ${JSON.stringify(block)}`;
-      throw new Error(`未找到要删除的块 (${searchInfo})`);
-    }
-
-    const blockId = blockToDelete.id;
-    const blockType = blockToDelete.type;
-    const deletedBlockType = blockToDelete.type;
-    
-    // console.log(`✅ 找到目标块: ${blockType} (ID: ${blockId})`);
-
-    // 如果是预览模式，返回分析结果
-    if (preview) {
-      let previewInfo = [`🔍 删除预览: ${blockType} (${blockId})`];
+    if (inputBlockIds !== undefined) {
+      // 处理 blockIds 参数
+      let parsedBlockIds = inputBlockIds;
       
-      if (cascade) {
-        // 分析级联删除影响
-        const cascadeBlocks = [];
-        const collectCascadeBlocks = (block: any) => {
-          const inputs = block.inputList || [];
-          for (const input of inputs) {
-            if (input.connection && input.connection.targetBlock()) {
-              const connectedBlock = input.connection.targetBlock();
-              cascadeBlocks.push(`${connectedBlock.type}(${connectedBlock.id})`);
-              collectCascadeBlocks(connectedBlock);
-            }
-          }
-          if (block.nextConnection && block.nextConnection.targetBlock()) {
-            const nextBlock = block.nextConnection.targetBlock();
-            cascadeBlocks.push(`${nextBlock.type}(${nextBlock.id})`);
-            collectCascadeBlocks(nextBlock);
-          }
-        };
-        collectCascadeBlocks(blockToDelete);
-        
-        previewInfo.push('🔗 级联删除模式');
-        previewInfo.push(`📊 将删除 ${cascadeBlocks.length + 1} 个块`);
-        previewInfo.push('📋 连接的块:');
-        cascadeBlocks.forEach(info => previewInfo.push(`   • ${info}`));
-      } else {
-        // 分析智能删除影响
-        const previousBlock = blockToDelete.getPreviousBlock ? blockToDelete.getPreviousBlock() : null;
-        const nextBlock = blockToDelete.getNextBlock ? blockToDelete.getNextBlock() : null;
-        
-        previewInfo.push('🎯 智能删除模式');
-        previewInfo.push(`前一个块: ${previousBlock ? `${previousBlock.type}(${previousBlock.id})` : '无'}`);
-        previewInfo.push(`后一个块: ${nextBlock ? `${nextBlock.type}(${nextBlock.id})` : '无'}`);
-        
-        if (previousBlock && nextBlock) {
-          previewInfo.push('🔄 将尝试智能重连前后块');
-        }
-      }
-      
-      return {
-        is_error: false,
-        content: previewInfo.join('\n'),
-        details: JSON.stringify({ preview: true, blockId, blockType })
-      };
-    }
-
-    // 执行删除
-    // console.log('🗑️ 开始删除块...');
-    
-    if (cascade) {
-      // console.log('🔗 启用级联删除，收集连接的块...');
-      
-      // 收集所有需要删除的块
-      const cascadeDeleted: string[] = [];
-      const collectAllBlocksToDelete = (block: any, collected: Set<any>) => {
-        if (!block || collected.has(block)) return;
-        
-        collected.add(block);
-        // console.log(`🎯 收集到块: ${block.type}(${block.id})`);
-        
-        // 收集所有输入中的连接块
-        const inputs = block.inputList || [];
-        for (const input of inputs) {
-          if (input.connection && input.connection.targetBlock()) {
-            collectAllBlocksToDelete(input.connection.targetBlock(), collected);
-          }
-        }
-        
-        // 收集下一个块
-        if (block.nextConnection && block.nextConnection.targetBlock()) {
-          collectAllBlocksToDelete(block.nextConnection.targetBlock(), collected);
-        }
-      };
-
-      const allBlocksToDelete = new Set<any>();
-      collectAllBlocksToDelete(blockToDelete, allBlocksToDelete);
-      
-      // 将块对象ID存储到cascadeDeleted数组
-      for (const block of allBlocksToDelete) {
-        if (block.id !== blockToDelete.id) {
-          cascadeDeleted.push(block.id);
-        }
-      }
-      
-      // console.log(`📊 发现 ${cascadeDeleted.length} 个连接的块需要级联删除`);
-      
-      // 执行级联删除
-      const deletedIds: string[] = [];
-      
-      // 先断开主块的连接关系
-      if (blockToDelete.previousConnection && blockToDelete.previousConnection.targetConnection) {
-        // console.log('🔗 断开主块的previous连接');
-        blockToDelete.previousConnection.disconnect();
-      }
-      if (blockToDelete.outputConnection && blockToDelete.outputConnection.targetConnection) {
-        // console.log('🔗 断开主块的output连接');
-        blockToDelete.outputConnection.disconnect();
-      }
-      
-      // 删除所有连接的块
-      for (const blockIdToDel of cascadeDeleted) {
-        const blockToDeleteCascade = workspace.getBlockById(blockIdToDel);
-        if (blockToDeleteCascade) {
-          // console.log(`🗑️ 删除连接块: ${blockToDeleteCascade.type}(${blockToDeleteCascade.id})`);
-          blockToDeleteCascade.dispose(false);
-          deletedIds.push(blockIdToDel);
-        }
-      }
-      
-      // 最后删除主块
-      // console.log(`🗑️ 删除主块: ${blockToDelete.type}(${blockToDelete.id})`);
-      blockToDelete.dispose(false);
-      deletedIds.push(blockToDelete.id);
-      
-      const resultMessage = `成功级联删除块 "${deletedBlockType}" 及其 ${deletedIds.length - 1} 个连接块（共删除 ${deletedIds.length} 个块）`;
-      // console.log(`✅ ${resultMessage}`);
-      
-      // // 获取删除后的工作区概览
-      // // console.log('📊 获取删除后的工作区概览...');
-      // const overviewResult = await getWorkspaceOverviewTool({
-      //   includeCode: true,
-      //   includeTree: true,
-      //   format: 'text',
-      //   groupBy: 'structure'
-      // });
-      
-      // let workspaceOverview = '';
-      // let cppCode = '';
-      
-      // if (!overviewResult.is_error) {
-      //   workspaceOverview = overviewResult.content;
-      //   // 尝试提取C++代码部分
-      //   const codeMatch = workspaceOverview.match(/```cpp([\s\S]*?)```/);
-      //   if (codeMatch) {
-      //     cppCode = codeMatch[1].trim();
-      //   }
-      // } else {
-      //   console.warn('⚠️ 获取工作区概览失败:', overviewResult.content);
-      //   workspaceOverview = '⚠️ 工作区概览获取失败，但删除操作成功';
-      // }
-
-      // 生成增强的结果消息
-      const enhancedMessage = `${resultMessage}`;
-
-// 📊 删除操作完成后的工作区状态:
-// ${workspaceOverview}`;
-      
-      return {
-        is_error: false,
-        content: enhancedMessage,
-        details: JSON.stringify({
-          deletedBlockId: blockId,
-          deletedBlockType: deletedBlockType,
-          cascadeDeleted: cascadeDeleted,
-          totalDeleted: deletedIds.length
-        }),
-        metadata: {
-          deletedBlockId: blockId,
-          deletedBlockType: deletedBlockType,
-          totalDeleted: deletedIds.length,
-          cascadeDeleted: cascadeDeleted
-        }
-      };
-      
-    } else {
-      // console.log('🎯 执行智能单块删除...');
-      
-      // 检查是否是 hat 块
-      const isHatBlock = !blockToDelete.previousConnection || 
-                         blockToDelete.type.includes('setup') || 
-                         blockToDelete.type.includes('loop') ||
-                         blockToDelete.type.includes('hat') ||
-                         blockToDelete.type.includes('event');
-      
-      let reconnectedBlocks = 0;
-      let nextBlockPreserved = false;
-      let resultMessage = '';
-      
-      if (isHatBlock) {
-        // console.log(`📋 检测到 Hat 块 ${blockToDelete.type}，直接删除`);
-        blockToDelete.dispose(false);
-        resultMessage = `成功删除 Hat 块 "${deletedBlockType}"`;
-      } else {
-        // console.log(`📋 检测到普通块 ${blockToDelete.type}，执行智能删除和重连...`);
-        
-        // 获取前一个块和后一个块
-        const previousBlock = blockToDelete.getPreviousBlock ? blockToDelete.getPreviousBlock() : null;
-        const nextBlock = blockToDelete.getNextBlock ? blockToDelete.getNextBlock() : null;
-        
-        // console.log(`🔍 连接状态分析:`);
-        // console.log(`   前一个块: ${previousBlock ? `${previousBlock.type}(${previousBlock.id})` : '无'}`);
-        // console.log(`   后一个块: ${nextBlock ? `${nextBlock.type}(${nextBlock.id})` : '无'}`);
-        
-        // 先断开所有连接
-        if (blockToDelete.previousConnection && blockToDelete.previousConnection.targetConnection) {
-          // console.log('🔗 断开与前一个块的连接');
-          blockToDelete.previousConnection.disconnect();
-        }
-        if (blockToDelete.nextConnection && blockToDelete.nextConnection.targetConnection) {
-          // console.log('🔗 断开与后一个块的连接');
-          blockToDelete.nextConnection.disconnect();
-        }
-        
-        // 删除目标块
-        // console.log(`🗑️ 删除目标块: ${blockToDelete.type}(${blockToDelete.id})`);
-        blockToDelete.dispose(false);
-        
-        // 智能重连
-        if (previousBlock && nextBlock) {
-          // console.log('🔄 智能重连模式：尝试将前后块重新连接...');
+      // 如果是字符串，尝试解析为 JSON 数组
+      if (typeof parsedBlockIds === 'string') {
+        const trimmed = parsedBlockIds.trim();
+        // 检查是否是 JSON 数组格式
+        if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
           try {
-            if (previousBlock.nextConnection && nextBlock.previousConnection) {
-              // 简化的连接兼容性检查
-              const isCompatible = true; // 简化处理
-              if (isCompatible) {
-                previousBlock.nextConnection.connect(nextBlock.previousConnection);
-                reconnectedBlocks = 2;
-                nextBlockPreserved = true;
-                // console.log(`✅ 智能重连成功: ${previousBlock.type} → ${nextBlock.type}`);
-              } else {
-                // console.log('⚠️ 前后块类型不兼容，无法重连，但块已保留');
-                nextBlockPreserved = true;
-              }
-            } else {
-              // console.log('⚠️ 连接点不匹配，无法重连，但块已保留');
-              nextBlockPreserved = true;
-            }
-          } catch (reconnectError) {
-            console.warn('⚠️ 重连过程中出现错误，但块已保留:', reconnectError);
-            nextBlockPreserved = true;
+            parsedBlockIds = JSON.parse(trimmed);
+          } catch {
+            // 解析失败，当作单个 ID 处理
+            parsedBlockIds = [trimmed];
           }
-        } else if (nextBlock) {
-          // console.log('✅ 后续块已保留（无前一个块需要重连）');
-          nextBlockPreserved = true;
-        }
-        
-        // 生成结果消息
-        if (reconnectedBlocks > 0) {
-          resultMessage = `成功删除块 "${deletedBlockType}"，并智能重连了前后块`;
-        } else if (nextBlockPreserved) {
-          resultMessage = `成功删除块 "${deletedBlockType}"，后续块已保留`;
         } else {
-          resultMessage = `成功删除块 "${deletedBlockType}"`;
+          // 单个字符串 ID
+          parsedBlockIds = [trimmed];
         }
       }
       
-      // console.log(`✅ ${resultMessage}`);
-      
-      // // 获取删除后的工作区概览
-      // // console.log('📊 获取删除后的工作区概览...');
-      // const overviewResult = await getWorkspaceOverviewTool({
-      //   includeCode: true,
-      //   includeTree: true,
-      //   format: 'text',
-      //   groupBy: 'structure'
-      // });
-      
-      // let workspaceOverview = '';
-      // let cppCode = '';
-      
-      // if (!overviewResult.is_error) {
-      //   workspaceOverview = overviewResult.content;
-      //   // 尝试提取C++代码部分
-      //   const codeMatch = workspaceOverview.match(/```cpp([\s\S]*?)```/);
-      //   if (codeMatch) {
-      //     cppCode = codeMatch[1].trim();
-      //   }
-      // } else {
-      //   console.warn('⚠️ 获取工作区概览失败:', overviewResult.content);
-      //   workspaceOverview = '⚠️ 工作区概览获取失败，但删除操作成功';
-      // }
-
-      // 生成增强的结果消息
-      const enhancedMessage = `${resultMessage}`;
-
-// 📊 删除操作完成后的工作区状态:
-// ${workspaceOverview}`;
-      
-      return {
-        is_error: false,
-        content: enhancedMessage,
-        details: JSON.stringify({
-          deletedBlockId: blockId,
-          deletedBlockType: deletedBlockType,
-          isHatBlock: isHatBlock,
-          reconnectedBlocks: reconnectedBlocks,
-          nextBlockPreserved: nextBlockPreserved
-        }),
-        metadata: {
-          deletedBlockId: blockId,
-          deletedBlockType: deletedBlockType,
-          reconnectedBlocks: reconnectedBlocks
-        }
-      };
+      // 确保是数组
+      if (Array.isArray(parsedBlockIds)) {
+        blockIdsToDelete = parsedBlockIds.filter(id => typeof id === 'string' && id.trim());
+      } else if (typeof parsedBlockIds === 'string') {
+        blockIdsToDelete = [parsedBlockIds];
+      }
+    } else if (inputBlockId) {
+      // 兼容旧的 blockId 参数
+      blockIdsToDelete = [inputBlockId];
+    } else if (block) {
+      // 通过 block 对象查找
+      const blockToDelete = findBlock(workspace, block);
+      if (blockToDelete) {
+        blockIdsToDelete = [blockToDelete.id];
+      }
     }
+    
+    if (blockIdsToDelete.length === 0) {
+      throw new Error('必须提供有效的 blockIds、blockId 或 block 参数');
+    }
+    
+    // 先收集所有要删除的块及其前后关系
+    // 用于多块删除时正确处理重连（如 A-B-C-D-E 删除 B,C 后 A 应连接到 D）
+    const blocksInfo: Array<{
+      blockId: string;
+      blockObj: any;
+      blockType: string;
+      previousBlock: any;
+      nextBlock: any;
+      isHatBlock: boolean;
+      parentConnection: any; // 父容器的连接点（如 ARDUINO_SETUP 的语句输入）
+      isContainerInput: boolean; // 是否是容器的语句输入（type===3）而不是块的 nextConnection
+    }> = [];
+    
+    const blockIdsSet = new Set(blockIdsToDelete);
+    
+    for (const bid of blockIdsToDelete) {
+      const blockObj = getBlockByIdSmart(workspace, bid, { enableFuzzyMatch: true, minScore: 60 });
+      if (blockObj) {
+        const isHatBlock = !blockObj.previousConnection || 
+                           blockObj.type.includes('setup') || 
+                           blockObj.type.includes('loop') ||
+                           blockObj.type.includes('hat') ||
+                           blockObj.type.includes('event');
+        
+        // 获取父连接点（可能是容器的语句输入或前一个块的 nextConnection）
+        const parentConnection = blockObj.previousConnection?.targetConnection || null;
+        
+        // 判断父连接点是否是容器的语句输入（type === 3）还是块的 nextConnection（type === 4）
+        // type 3: NEXT_STATEMENT（语句输入端口）
+        // type 4: PREVIOUS_STATEMENT（块的前连接）
+        // 如果 parentConnection.type === 3，说明是容器的语句输入
+        const isContainerInput = parentConnection?.type === 3;
+        
+        console.log('📦 收集块信息:', {
+          blockId: bid,
+          blockType: blockObj.type,
+          isHatBlock,
+          hasPreviousBlock: !!blockObj.getPreviousBlock?.(),
+          hasNextBlock: !!blockObj.getNextBlock?.(),
+          hasParentConnection: !!parentConnection,
+          parentConnectionType: parentConnection?.type,
+          isContainerInput,
+          parentBlockType: parentConnection?.getSourceBlock?.()?.type
+        });
+        
+        blocksInfo.push({
+          blockId: bid,
+          blockObj,
+          blockType: blockObj.type,
+          previousBlock: blockObj.getPreviousBlock?.() || null,
+          nextBlock: blockObj.getNextBlock?.() || null,
+          isHatBlock,
+          parentConnection,
+          isContainerInput
+        });
+      }
+    }
+    
+    // 找出需要重连的边界：
+    // 情况1：链中块删除（A-B-C-D-E 删除 B,C），找到 A -> D 的重连
+    // 情况2：容器第一个块删除（SETUP 中 A-B-C 删除 A），B 应连接到 SETUP 的语句输入
+    const reconnectPairs: Array<{ 
+      from: any;       // 可能是块（用 nextConnection）或容器连接点
+      to: any;         // 要连接的块
+      isContainer: boolean;  // from 是否是容器连接点
+    }> = [];
+    
+    // 找所有删除链的起点
+    for (const info of blocksInfo) {
+      console.log('🔍 检查块是否需要重连:', {
+        blockId: info.blockId,
+        blockType: info.blockType,
+        isHatBlock: info.isHatBlock,
+        isContainerInput: info.isContainerInput
+      });
+      
+      if (info.isHatBlock) {
+        console.log('⏭️ 跳过 hat block');
+        continue;
+      }
+      
+      const prevBlock = info.previousBlock;
+      const parentConnection = info.parentConnection;
+      const isContainerInput = info.isContainerInput;
+      
+      // 找删除链的终点：沿着 next 一直找，直到找到一个不在删除列表中的块
+      let current = info.blockObj;
+      let nextBlock = info.nextBlock;
+      
+      while (nextBlock && blockIdsSet.has(nextBlock.id)) {
+        // 继续往后找
+        current = nextBlock;
+        nextBlock = current.getNextBlock?.() || null;
+      }
+      
+      console.log('🔍 找到的后续块:', {
+        hasNextBlock: !!nextBlock,
+        nextBlockType: nextBlock?.type,
+        nextBlockId: nextBlock?.id
+      });
+      
+      // 如果没有后续块需要重连，跳过
+      if (!nextBlock) {
+        console.log('⏭️ 没有后续块，跳过');
+        continue;
+      }
+      
+      // 情况1：容器第一个块删除（parentConnection 是语句输入 type===3）
+      // 参考 atomicBlockTools 中 sourceParentConnection.connect(block.previousConnection) 的实现
+      if (isContainerInput && parentConnection) {
+        console.log('✅ 识别为容器第一个块删除场景');
+        // 检查是否已经有从这个父连接点的重连配置
+        const alreadyHasReconnect = reconnectPairs.some(
+          p => p.isContainer && p.from === parentConnection
+        );
+        if (!alreadyHasReconnect) {
+          reconnectPairs.push({ from: parentConnection, to: nextBlock, isContainer: true });
+          console.log('📝 添加容器重连对');
+        }
+      }
+      // 情况2：链中块删除（前一个块存在且不在删除列表中）
+      else if (prevBlock && !blockIdsSet.has(prevBlock.id)) {
+        console.log('✅ 识别为链中块删除场景');
+        reconnectPairs.push({ from: prevBlock, to: nextBlock, isContainer: false });
+        console.log('📝 添加链重连对');
+      }
+    }
+    
+    // 执行批量删除
+    const deleteResults: Array<{
+      blockId: string;
+      blockType?: string;
+      success: boolean;
+      message: string;
+    }> = [];
+    
+    // 先断开所有要删除的块的连接
+    for (const info of blocksInfo) {
+      try {
+        const blockObj = info.blockObj;
+        
+        // 断开连接
+        if (blockObj.previousConnection?.targetConnection) {
+          blockObj.previousConnection.disconnect();
+        }
+        if (blockObj.nextConnection?.targetConnection) {
+          blockObj.nextConnection.disconnect();
+        }
+      } catch (err) {
+        // 忽略断开连接的错误
+      }
+    }
+    
+    // 执行重连（在删除之前）
+    let reconnectCount = 0;
+    for (const pair of reconnectPairs) {
+      try {
+        if (pair.isContainer) {
+          // 容器重连：将块连接到容器的语句输入
+          // 参考 atomicBlockTools: sourceParentConnection.connect(firstBetween.previousConnection)
+          console.log('🔗 容器重连:', {
+            fromType: pair.from?.type,
+            fromConnected: pair.from?.isConnected?.(),
+            toType: pair.to?.type,
+            toId: pair.to?.id,
+            toPrevConnection: !!pair.to?.previousConnection
+          });
+          if (pair.from && pair.to.previousConnection) {
+            pair.from.connect(pair.to.previousConnection);
+            reconnectCount++;
+            console.log('✅ 容器重连成功');
+          }
+        } else {
+          // 链重连：将块连接到前一个块的 nextConnection
+          console.log('🔗 链重连:', {
+            fromType: pair.from?.type,
+            fromId: pair.from?.id,
+            toType: pair.to?.type,
+            toId: pair.to?.id
+          });
+          if (pair.from.nextConnection && pair.to.previousConnection) {
+            pair.from.nextConnection.connect(pair.to.previousConnection);
+            reconnectCount++;
+            console.log('✅ 链重连成功');
+          }
+        }
+      } catch (e) {
+        // 重连失败，记录错误
+        console.warn('❌ 重连失败:', e);
+      }
+    }
+    
+    // 删除所有块
+    for (const info of blocksInfo) {
+      try {
+        info.blockObj.dispose(false);
+        deleteResults.push({
+          blockId: info.blockId,
+          blockType: info.blockType,
+          success: true,
+          message: '已删除'
+        });
+      } catch (err) {
+        deleteResults.push({
+          blockId: info.blockId,
+          blockType: info.blockType,
+          success: false,
+          message: err instanceof Error ? err.message : String(err)
+        });
+      }
+    }
+    
+    // 处理未找到的块
+    for (const bid of blockIdsToDelete) {
+      if (!blocksInfo.find(info => info.blockId === bid)) {
+        deleteResults.push({
+          blockId: bid,
+          success: false,
+          message: '未找到该块'
+        });
+      }
+    }
+    
+    // 生成结果摘要
+    const successCount = deleteResults.filter(r => r.success).length;
+    const failCount = deleteResults.filter(r => !r.success).length;
+    
+    let resultMessage = `✅ 删除完成：成功 ${successCount}/${blockIdsToDelete.length} 个块`;
+    if (reconnectCount > 0) {
+      resultMessage += `，智能重连 ${reconnectCount} 处`;
+    }
+    if (failCount > 0) {
+      resultMessage += `\n❌ 失败 ${failCount} 个：`;
+      deleteResults.filter(r => !r.success).forEach(r => {
+        resultMessage += `\n  • ${r.blockId}: ${r.message}`;
+      });
+    }
+    
+    // 详细信息
+    const details = deleteResults.map(r => 
+      `${r.success ? '✅' : '❌'} ${r.blockType || r.blockId}: ${r.message}`
+    ).join('\n');
+    
+    return {
+      is_error: failCount === blockIdsToDelete.length, // 全部失败才算错误
+      content: resultMessage + '\n\n' + details,
+      details: JSON.stringify({
+        totalRequested: blockIdsToDelete.length,
+        successCount,
+        failCount,
+        reconnectCount,
+        results: deleteResults
+      }),
+      metadata: {
+        totalDeleted: successCount,
+        reconnectedBlocks: reconnectCount,
+        deletedBlockIds: deleteResults.filter(r => r.success).map(r => r.blockId)
+      }
+    };
 
   } catch (error) {
     console.warn('❌ 删除块失败:', error);
@@ -5593,7 +5568,7 @@ function formatWorkspaceOverviewText(
   const lines: string[] = [];
   
   // console.log('==========================🌍 工作区完整概览==========================');
-
+  lines.push('<keyInfon>请确保生成的内容符合用户需求，并且结构清晰易懂。</keyInfon>');
   lines.push('🌍 工作区完整概览');
   lines.push('='.repeat(50));
   lines.push('');

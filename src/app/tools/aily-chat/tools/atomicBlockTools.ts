@@ -15,13 +15,95 @@
  */
 
 import { ToolUseResult } from "./tools";
-import { getActiveWorkspace, getBlockByIdSmart, fixJsonString } from "./editBlockTool";
+import { getActiveWorkspace, getBlockByIdSmart, fixJsonString, getWorkspaceOverviewTool } from "./editBlockTool";
 import { injectTodoReminder } from './todoWriteTool';
 
 // 重新导出 fixJsonString 供外部使用
 export { fixJsonString };
 
 declare const Blockly: any;
+
+// =============================================================================
+// 工作区概览计数器（控制返回频率，避免过多输出）
+// =============================================================================
+let countForGetWorkspaceOverview = 0;
+const maxCountForOverview = 4;
+
+/**
+ * 获取工作区概览信息
+ * @param includeCode 是否包含生成的代码
+ * @param includeTree 是否包含树状结构
+ * @returns 工作区概览信息
+ */
+async function getWorkspaceOverviewInfo(includeCode = true, includeTree = true): Promise<{
+  overview: string;
+  cppCode: string;
+  isError: boolean;
+}> {
+  try {
+    const overviewResult = await getWorkspaceOverviewTool({
+      includeCode,
+      includeTree,
+      format: 'text',
+      groupBy: 'structure'
+    });
+    
+    let overview = '';
+    let cppCode = '';
+    
+    if (!overviewResult.is_error) {
+      overview = overviewResult.content;
+      // 尝试提取C++代码部分
+      const codeMatch = overview.match(/```cpp([\s\S]*?)```/);
+      if (codeMatch) {
+        cppCode = codeMatch[1].trim();
+      }
+      countForGetWorkspaceOverview = 0; // 重置计数器
+      return { overview, cppCode, isError: false };
+    } else {
+      overview = '⚠️ 工作区概览获取失败，但操作成功';
+      return { overview, cppCode: '', isError: true };
+    }
+  } catch (error) {
+    console.warn('❌ 获取工作区概览出错:', error);
+    return { 
+      overview: '❌ 工作区概览获取出错', 
+      cppCode: '', 
+      isError: true 
+    };
+  }
+}
+
+/**
+ * 根据计数器决定是否附加工作区概览
+ * @param result 原始工具返回结果
+ * @param forceOverview 是否强制获取概览（忽略计数器）
+ * @returns 可能附加了概览的结果
+ */
+async function maybeAppendWorkspaceOverview(
+  result: ToolUseResult, 
+  forceOverview: boolean = false
+): Promise<ToolUseResult> {
+  // 如果是错误结果，不附加概览
+  if (result.is_error) {
+    return result;
+  }
+
+  console.log(`[workspaceOverview] count=${countForGetWorkspaceOverview}, forceOverview=${forceOverview}`);
+  
+  // 检查计数器
+  if (forceOverview || countForGetWorkspaceOverview++ >= maxCountForOverview) {
+    const { overview, isError } = await getWorkspaceOverviewInfo();
+    if (!isError && overview) {
+      return {
+        ...result,
+        content: result.content + `\n\n${overview}`
+      };
+    }
+  }
+  
+  return result;
+}
 
 // =============================================================================
 // 全局块 ID 映射缓存（支持跨调用引用）
@@ -563,44 +645,74 @@ function validateAndSetFieldValue(
       }
       
       // 解析变量值
-      let varName: string;
+      let varName: string = '';
+      let varId: string = '';
       let varType: string = '';
       
       if (typeof value === 'object' && value !== null) {
-        varName = value.name || value.id || String(value);
+        varName = value.name || '';
+        varId = value.id || '';
         varType = value.type || '';
       } else {
         varName = String(value);
       }
       
-      // 首先检查这个值是否已经是一个有效的变量ID
       const variableMap = ws.getVariableMap?.();
-      if (variableMap) {
+      
+      // 优先级1: 如果提供了 id，检查该 id 是否是有效的变量 ID
+      if (varId && variableMap) {
+        const existingVarById = variableMap.getVariableById?.(varId);
+        if (existingVarById) {
+          field.setValue(varId);
+          return { success: true };
+        }
+      }
+      
+      // 优先级2: 检查 varName 是否已经是变量 ID
+      if (varName && variableMap) {
         const existingVarById = variableMap.getVariableById?.(varName);
         if (existingVarById) {
-          // 值已经是变量ID，直接使用
           field.setValue(varName);
           return { success: true };
         }
       }
       
-      // 查找或创建变量
-      let variable = ws.getVariable(varName, varType || null);
-      if (!variable && varType) {
-        // 按类型查找
-        variable = ws.getVariable(varName, varType);
-      }
-      if (!variable) {
-        // 创建新变量
-        variable = ws.createVariable(varName, varType || null);
+      // 优先级3: 按名称查找现有变量（不创建新变量）
+      if (varName && variableMap) {
+        let variable = null;
+        
+        // 方式1: 直接按名称查找
+        variable = variableMap.getVariable(varName);
+        
+        // 方式2: 带类型查找
+        if (!variable && varType) {
+          variable = variableMap.getVariable(varName, varType);
+        }
+        
+        // 方式3: 遍历所有变量精确匹配
+        if (!variable) {
+          const allVariables = variableMap.getAllVariables?.() || [];
+          variable = allVariables.find((v: any) => v.name === varName);
+          
+          // 大小写不敏感匹配
+          if (!variable) {
+            variable = allVariables.find((v: any) => 
+              v.name.toLowerCase() === varName.toLowerCase()
+            );
+          }
+        }
+        
+        if (variable) {
+          field.setValue(variable.getId());
+          return { success: true };
+        }
       }
       
-      if (variable) {
-        field.setValue(variable.getId());
-        return { success: true };
-      } else {
-        return { success: false, message: `无法创建或找到变量 "${varName}"` };
-      }
+      // 变量不存在，返回错误（不创建新变量）
+      return { 
+        success: false, 
+        message: `变量 "${varName || varId}" 不存在。请先创建变量或检查变量名是否正确。` 
+      };
     } catch (e) {
       return { success: false, message: `变量字段处理失败: ${(e as Error).message}` };
     }
@@ -867,7 +979,8 @@ export async function createSingleBlockTool(args: CreateSingleBlockArgs): Promis
       content += `\n✅ 已连接输入: ${inputResults.filter(i => i.success).map(i => i.name).join(', ')}`;
     }
     
-    return injectTodoReminder({
+    // 8. 构造基础结果并可能附加工作区概览
+    const baseResult: ToolUseResult = {
       is_error: false,
       content,
       metadata: {
@@ -879,7 +992,10 @@ export async function createSingleBlockTool(args: CreateSingleBlockArgs): Promis
         connectionInfo: blockInfo.connections,
         nextSteps: generateNextStepSuggestions(block)
       }
-    }, 'createSingleBlockTool');
+    };
+    
+    const resultWithOverview = await maybeAppendWorkspaceOverview(baseResult);
+    return injectTodoReminder(resultWithOverview, 'createSingleBlockTool');
     
   } catch (error) {
     return injectTodoReminder({
@@ -1135,7 +1251,7 @@ async function connectPutInto(sourceBlock: any, targetBlock: any, inputName?: st
     }, 'connectBlocksSimpleTool');
   }
   
-  // 检查是否已有连接，如果有则链接到末尾
+  // 检查是否已有连接，如果有则插入到最前面（原有块接到源块链末尾）
   const existingBlock = targetInput.connection.targetBlock();
   
   // 在实际连接前，先提取源块并尝试重连其原来的前后块
@@ -1147,58 +1263,73 @@ async function connectPutInto(sourceBlock: any, targetBlock: any, inputName?: st
     : '';
   
   if (existingBlock) {
-    // 找到链的末尾
-    let lastBlock = existingBlock;
-    while (lastBlock.nextConnection?.targetBlock()) {
-      lastBlock = lastBlock.nextConnection.targetBlock();
-    }
-    
-    if (lastBlock.nextConnection) {
-      try {
-        // 先检查连接是否兼容
-        const checkResult = safeCheckConnection(lastBlock.nextConnection, sourceBlock.previousConnection);
-        if (!checkResult.allowed) {
-          return injectTodoReminder({
-            is_error: true,
-            content: `❌ 连接不兼容: ${sourceBlock.type} 不能连接到 ${lastBlock.type} 之后`,
-            metadata: {
-              errorType: 'TYPE_MISMATCH',
-              hint: checkResult.reason || '块类型不兼容'
-            }
-          }, 'connectBlocksSimpleTool');
-        }
-        
-        lastBlock.nextConnection.connect(sourceBlock.previousConnection);
-        
-        // 验证连接是否成功
-        if (lastBlock.nextConnection.targetBlock() !== sourceBlock) {
-          return injectTodoReminder({
-            is_error: true,
-            content: `❌ 追加连接失败: 连接操作执行但未生效`,
-            metadata: {
-              hint: '可能存在类型不兼容或其他约束'
-            }
-          }, 'connectBlocksSimpleTool');
-        }
-        
-        return injectTodoReminder({
-          is_error: false,
-          content: `✅ 已将 ${sourceBlock.type}(${sourceBlock.id})${chainInfo} 追加到 ${targetBlock.type}.${finalInputName} 的末尾（在 ${lastBlock.type} 之后）${extractResult.reconnected ? `，${extractResult.message}` : ''}`,
-          metadata: {
-            connectionType: 'statement_append',
-            inputName: finalInputName,
-            appendedAfter: lastBlock.id,
-            reconnected: extractResult.reconnected,
-            reconnectMessage: extractResult.message,
-            movedChain: extractResult.movedChain?.map(b => b.type)
-          }
-        }, 'connectBlocksSimpleTool');
-      } catch (e) {
+    // 容器中已有块，将源块插入到最前面，原有块接到源块（链）后面
+    try {
+      // 先检查连接是否兼容
+      const checkResult = safeCheckConnection(targetInput.connection, sourceBlock.previousConnection);
+      if (!checkResult.allowed) {
         return injectTodoReminder({
           is_error: true,
-          content: `❌ 追加连接失败: ${(e as Error).message}`
+          content: `❌ 连接不兼容: ${sourceBlock.type} 不能放入 ${targetBlock.type}.${finalInputName}`,
+          metadata: {
+            errorType: 'TYPE_MISMATCH',
+            hint: checkResult.reason || '块类型不兼容'
+          }
         }, 'connectBlocksSimpleTool');
       }
+      
+      // 断开原有块与容器的连接
+      targetInput.connection.disconnect();
+      
+      // 将源块连接到容器
+      targetInput.connection.connect(sourceBlock.previousConnection);
+      
+      // 验证连接是否成功
+      if (targetInput.connection.targetBlock() !== sourceBlock) {
+        // 尝试恢复原有连接
+        try {
+          targetInput.connection.connect(existingBlock.previousConnection);
+        } catch (e) {
+          // 忽略恢复错误
+        }
+        return injectTodoReminder({
+          is_error: true,
+          content: `❌ 连接失败: 连接操作执行但未生效`,
+          metadata: {
+            hint: '可能存在类型不兼容或其他约束'
+          }
+        }, 'connectBlocksSimpleTool');
+      }
+      
+      // 找到源块链的末尾块
+      const blockChain = moveWithChain ? getBlockChain(sourceBlock) : [sourceBlock];
+      const lastBlockInChain = blockChain[blockChain.length - 1];
+      
+      // 将原有块连接到源块链末尾
+      if (lastBlockInChain.nextConnection && existingBlock.previousConnection) {
+        lastBlockInChain.nextConnection.connect(existingBlock.previousConnection);
+      }
+      
+      const baseResult: ToolUseResult = {
+        is_error: false,
+        content: `✅ 已将 ${sourceBlock.type}(${sourceBlock.id})${chainInfo} 放入 ${targetBlock.type}.${finalInputName} 的最前面（原有块 ${existingBlock.type} 已移至其后）${extractResult.reconnected ? `，${extractResult.message}` : ''}`,
+        metadata: {
+          connectionType: 'statement_insert',
+          inputName: finalInputName,
+          pushedBack: existingBlock.id,
+          reconnected: extractResult.reconnected,
+          reconnectMessage: extractResult.message,
+          movedChain: extractResult.movedChain?.map(b => b.type)
+        }
+      };
+      
+      const resultWithOverview = await maybeAppendWorkspaceOverview(baseResult);
+      return injectTodoReminder(resultWithOverview, 'connectBlocksSimpleTool');
+    } catch (e) {
+      return injectTodoReminder({
+        is_error: true,
+        content: `❌ 插入连接失败: ${(e as Error).message}`
+      }, 'connectBlocksSimpleTool');
     }
   }
   
@@ -1230,7 +1361,7 @@ async function connectPutInto(sourceBlock: any, targetBlock: any, inputName?: st
       }, 'connectBlocksSimpleTool');
     }
     
-    return injectTodoReminder({
+    const baseResult: ToolUseResult = {
       is_error: false,
       content: `✅ 已将 ${sourceBlock.type}(${sourceBlock.id})${chainInfo} 放入 ${targetBlock.type}(${targetBlock.id}).${finalInputName}${extractResult.reconnected ? `，${extractResult.message}` : ''}`,
       metadata: {
@@ -1240,7 +1371,10 @@ async function connectPutInto(sourceBlock: any, targetBlock: any, inputName?: st
         reconnectMessage: extractResult.message,
         movedChain: extractResult.movedChain?.map(b => b.type)
       }
-    }, 'connectBlocksSimpleTool');
+    };
+    
+    const resultWithOverview = await maybeAppendWorkspaceOverview(baseResult);
+    return injectTodoReminder(resultWithOverview, 'connectBlocksSimpleTool');
   } catch (e) {
     return injectTodoReminder({
       is_error: true,
@@ -1253,7 +1387,7 @@ async function connectPutInto(sourceBlock: any, targetBlock: any, inputName?: st
  * 链接到块后面
  * @param moveWithChain 是否将块后面连接的块一起移动（默认 true）
  */
-async function connectChainAfter(sourceBlock: any, targetBlock: any, moveWithChain: boolean = true): Promise<ToolUseResult> {
+async function connectChainAfter(sourceBlock: any, targetBlock: any, moveWithChain: boolean = false): Promise<ToolUseResult> {
   // 检查源块是否有 previousConnection
   if (!sourceBlock.previousConnection) {
     return injectTodoReminder({
@@ -1287,21 +1421,142 @@ async function connectChainAfter(sourceBlock: any, targetBlock: any, moveWithCha
     }, 'connectBlocksSimpleTool');
   }
   
-  // 检查目标块是否在源块的块链中（会形成循环）
+  // 获取源块的后续链（用于检测链内重排）
   const sourceChain = getBlockChain(sourceBlock);
-  if (sourceChain.some(b => b.id === targetBlock.id)) {
-    return injectTodoReminder({
-      is_error: true,
-      content: `❌ 不能将块连接到其块链中的块（会形成循环）`,
-      metadata: { errorType: 'CIRCULAR_CONNECTION' }
-    }, 'connectBlocksSimpleTool');
+  
+  // 检查目标块是否在源块的后续链中（链内重排场景）
+  const targetIndexInChain = sourceChain.findIndex(b => b.id === targetBlock.id);
+  const isChainReorder = targetIndexInChain > 0; // > 0 因为 index 0 是源块自己
+  
+  // 记录源块的前一个块和源块所在的容器输入（用于后续可能的重连）
+  const sourcePreviousBlock = sourceBlock.getPreviousBlock?.();
+  const sourceParentConnection = sourceBlock.previousConnection?.targetConnection;
+  
+  // 🔄 链内重排场景：需要特殊处理
+  // 例如：A 中有 B-C-D，要把 B 移到 D 后面变成 C-D-B（在 A 中）
+  // 或者：B-C-D 要把 C 移到 D 后面变成 B-D-C
+  if (isChainReorder) {
+    try {
+      // 找出源块和目标块之间的块（不包括源块和目标块）
+      const blocksBetween = sourceChain.slice(1, targetIndexInChain); // 源块之后、目标块之前的块
+      
+      // 获取目标块后面的块（这些块需要接到源块后面）
+      const blocksAfterTarget = sourceChain.slice(targetIndexInChain + 1);
+      
+      // ⚠️ 关键：必须先断开所有连接，使所有块完全独立
+      // 否则会出现 DOM 循环错误 "The new child element contains the parent"
+      
+      // 记录所有需要断开的连接点
+      const disconnectList: Array<{ connection: any; name: string }> = [];
+      
+      // 1. 源块的 previous 连接（与父块或容器的连接）
+      if (sourceBlock.previousConnection?.isConnected?.()) {
+        disconnectList.push({ 
+          connection: sourceBlock.previousConnection, 
+          name: 'source.previous' 
+        });
+      }
+      
+      // 2. 遍历链中每个块的 next 连接，全部断开
+      for (let i = 0; i < sourceChain.length - 1; i++) {
+        const block = sourceChain[i];
+        if (block.nextConnection?.isConnected?.()) {
+          disconnectList.push({ 
+            connection: block.nextConnection, 
+            name: `chain[${i}].next (${block.type})` 
+          });
+        }
+      }
+      
+      // 执行断开操作
+      for (const item of disconnectList) {
+        try {
+          item.connection.disconnect();
+        } catch (e) {
+          console.warn(`断开连接失败 ${item.name}:`, e);
+        }
+      }
+      
+      // 现在所有块都是独立的，可以安全地重新连接
+      
+      // 第一步：如果有中间块，将第一个中间块连接到源块原来的位置
+      if (blocksBetween.length > 0 && sourceParentConnection) {
+        const firstBetween = blocksBetween[0];
+        if (firstBetween.previousConnection) {
+          sourceParentConnection.connect(firstBetween.previousConnection);
+        }
+      }
+      
+      // 第二步：重建中间块之间的连接（如果有多个中间块）
+      for (let i = 0; i < blocksBetween.length - 1; i++) {
+        const currentBlock = blocksBetween[i];
+        const nextBlock = blocksBetween[i + 1];
+        if (currentBlock.nextConnection && nextBlock.previousConnection) {
+          currentBlock.nextConnection.connect(nextBlock.previousConnection);
+        }
+      }
+      
+      // 第三步：将最后一个中间块（或源块原来的父连接）连接到目标块
+      if (blocksBetween.length > 0) {
+        const lastBetween = blocksBetween[blocksBetween.length - 1];
+        if (lastBetween.nextConnection && targetBlock.previousConnection) {
+          lastBetween.nextConnection.connect(targetBlock.previousConnection);
+        }
+      } else if (sourceParentConnection && targetBlock.previousConnection) {
+        // 没有中间块，目标块直接连到源块原来的位置
+        sourceParentConnection.connect(targetBlock.previousConnection);
+      }
+      
+      // 第四步：将源块连接到目标块后面
+      if (targetBlock.nextConnection && sourceBlock.previousConnection) {
+        targetBlock.nextConnection.connect(sourceBlock.previousConnection);
+      }
+      
+      // 第五步：将目标块后面的块连接到源块后面
+      if (blocksAfterTarget.length > 0 && sourceBlock.nextConnection) {
+        const firstAfterTarget = blocksAfterTarget[0];
+        if (firstAfterTarget.previousConnection) {
+          sourceBlock.nextConnection.connect(firstAfterTarget.previousConnection);
+        }
+        
+        // 重建目标块后面各块之间的连接
+        for (let i = 0; i < blocksAfterTarget.length - 1; i++) {
+          const currentBlock = blocksAfterTarget[i];
+          const nextBlock = blocksAfterTarget[i + 1];
+          if (currentBlock.nextConnection && nextBlock.previousConnection) {
+            currentBlock.nextConnection.connect(nextBlock.previousConnection);
+          }
+        }
+      }
+      
+      const baseResult: ToolUseResult = {
+        is_error: false,
+        content: `✅ 链内重排成功：已将 ${sourceBlock.type}(${sourceBlock.id}) 移动到 ${targetBlock.type}(${targetBlock.id}) 之后`,
+        metadata: {
+          connectionType: 'chain_reorder',
+          originalChain: sourceChain.map(b => b.type),
+          blocksBetween: blocksBetween.map(b => b.type),
+          blocksAfterTarget: blocksAfterTarget.map(b => b.type)
+        }
+      };
+      const resultWithOverview = await maybeAppendWorkspaceOverview(baseResult);
+      return injectTodoReminder(resultWithOverview, 'connectBlocksSimpleTool');
+    } catch (e) {
+      return injectTodoReminder({
+        is_error: true,
+        content: `❌ 链内重排失败: ${(e as Error).message}`
+      }, 'connectBlocksSimpleTool');
+    }
   }
   
-  // 如果目标块已经有下一个块，需要插入
-  const existingNext = targetBlock.nextConnection.targetBlock();
+  // 🔄 标准场景：源块和目标块不在同一个链中
   
   // 在实际连接前，先提取源块并尝试重连其原来的前后块
   const extractResult = extractBlockAndReconnect(sourceBlock, moveWithChain);
+  
+  // 提取源块后，重新获取目标块的 nextConnection 目标
+  // 因为提取操作可能已经改变了连接关系
+  const existingNext = targetBlock.nextConnection.targetBlock();
   
   // 构建块链信息
   const chainInfo = extractResult.movedChain && extractResult.movedChain.length > 1 
@@ -1345,7 +1600,7 @@ async function connectChainAfter(sourceBlock: any, targetBlock: any, moveWithCha
       // 将原来的下一个块连接到块链末尾块后面
       if (lastBlockInChain.nextConnection && existingNext.previousConnection) {
         lastBlockInChain.nextConnection.connect(existingNext.previousConnection);
-        return injectTodoReminder({
+        const baseResult: ToolUseResult = {
           is_error: false,
           content: `✅ 已将 ${sourceBlock.type}(${sourceBlock.id})${chainInfo} 插入到 ${targetBlock.type}(${targetBlock.id}) 之后（原有块 ${existingNext.type} 已移至其后）${extractResult.reconnected ? `，${extractResult.message}` : ''}`,
           metadata: {
@@ -1355,7 +1610,9 @@ async function connectChainAfter(sourceBlock: any, targetBlock: any, moveWithCha
             reconnectMessage: extractResult.message,
             movedChain: extractResult.movedChain?.map(b => b.type)
           }
-        }, 'connectBlocksSimpleTool');
+        };
+        const resultWithOverview = await maybeAppendWorkspaceOverview(baseResult);
+        return injectTodoReminder(resultWithOverview, 'connectBlocksSimpleTool');
       }
     }
     
@@ -1372,7 +1629,7 @@ async function connectChainAfter(sourceBlock: any, targetBlock: any, moveWithCha
       }, 'connectBlocksSimpleTool');
     }
     
-    return injectTodoReminder({
+    const baseResult: ToolUseResult = {
       is_error: false,
       content: `✅ 已将 ${sourceBlock.type}(${sourceBlock.id})${chainInfo} 链接到 ${targetBlock.type}(${targetBlock.id}) 之后${extractResult.reconnected ? `，${extractResult.message}` : ''}`,
       metadata: {
@@ -1381,7 +1638,9 @@ async function connectChainAfter(sourceBlock: any, targetBlock: any, moveWithCha
         reconnectMessage: extractResult.message,
         movedChain: extractResult.movedChain?.map(b => b.type)
       }
-    }, 'connectBlocksSimpleTool');
+    };
+    const resultWithOverview = await maybeAppendWorkspaceOverview(baseResult);
+    return injectTodoReminder(resultWithOverview, 'connectBlocksSimpleTool');
   } catch (e) {
     return injectTodoReminder({
       is_error: true,
@@ -1469,14 +1728,16 @@ async function connectSetAsInput(sourceBlock: any, targetBlock: any, inputName?:
       }, 'connectBlocksSimpleTool');
     }
     
-    return injectTodoReminder({
+    const baseResult: ToolUseResult = {
       is_error: false,
       content: `✅ 已将 ${sourceBlock.type}(${sourceBlock.id}) 设置为 ${targetBlock.type}(${targetBlock.id}).${finalInputName} 的值`,
       metadata: {
         connectionType: 'value',
         inputName: finalInputName
       }
-    }, 'connectBlocksSimpleTool');
+    };
+    const resultWithOverview = await maybeAppendWorkspaceOverview(baseResult);
+    return injectTodoReminder(resultWithOverview, 'connectBlocksSimpleTool');
   } catch (e) {
     return injectTodoReminder({
       is_error: true,
@@ -1488,6 +1749,118 @@ async function connectSetAsInput(sourceBlock: any, targetBlock: any, inputName?:
 // =============================================================================
 // 工具 3：设置字段值
 // =============================================================================
+
+/**
+ * 检测字段是否是变量字段
+ */
+function isVariableField(field: any, fieldName: string): boolean {
+  // 方法1: 检查是否有 getVariable 方法
+  if (field.getVariable && typeof field.getVariable === 'function') {
+    return true;
+  }
+  
+  // 方法2: 检查构造函数名（备用）
+  try {
+    if (field.constructor.name === 'FieldVariable') {
+      return true;
+    }
+  } catch {}
+  
+  // 方法3: 根据字段名推断
+  const variableFieldNames = ['VAR', 'VARIABLE', 'VAR_NAME', 'VARIABLE_NAME'];
+  if (variableFieldNames.includes(fieldName) || 
+      fieldName.toLowerCase().includes('var')) {
+    return true;
+  }
+  
+  return false;
+}
+
+/**
+ * 智能处理变量字段值（不创建新变量，只查找现有变量）
+ * 支持：
+ * 1. 直接传入变量ID
+ * 2. 传入变量名（自动查找）
+ * 3. 传入对象 {name: "varName", id: "varId", type: "varType"}
+ */
+function handleVariableFieldValue(
+  workspace: any,
+  field: any,
+  value: any
+): { success: boolean; message?: string; variableId?: string } {
+  let varName: string = '';
+  let varId: string = '';
+  let varType: string = '';
+  
+  // 解析传入的值
+  if (typeof value === 'object' && value !== null) {
+    varName = value.name || '';
+    varId = value.id || '';
+    varType = value.type || '';
+  } else {
+    varName = String(value);
+  }
+  
+  const variableMap = workspace.getVariableMap?.();
+  
+  // 情况1: 如果提供了 id，先检查该 id 是否是有效的变量 ID
+  if (varId && variableMap) {
+    const existingVarById = variableMap.getVariableById?.(varId);
+    if (existingVarById) {
+      // ID 有效，直接使用
+      field.setValue(varId);
+      return { success: true, variableId: varId };
+    }
+  }
+  
+  // 情况2: 检查 varName 是否已经是变量 ID
+  if (varName && variableMap) {
+    const existingVarById = variableMap.getVariableById?.(varName);
+    if (existingVarById) {
+      field.setValue(varName);
+      return { success: true, variableId: varName };
+    }
+  }
+  
+  // 情况3: 按名称查找现有变量（不创建新变量）
+  if (varName && variableMap) {
+    let variable = null;
+    
+    // 方式1: 直接按名称查找
+    variable = variableMap.getVariable(varName);
+    
+    // 方式2: 带类型查找
+    if (!variable && varType) {
+      variable = variableMap.getVariable(varName, varType);
+    }
+    
+    // 方式3: 遍历所有变量精确匹配
+    if (!variable) {
+      const allVariables = variableMap.getAllVariables?.() || [];
+      variable = allVariables.find((v: any) => v.name === varName);
+      
+      // 大小写不敏感匹配
+      if (!variable) {
+        variable = allVariables.find((v: any) => 
+          v.name.toLowerCase() === varName.toLowerCase()
+        );
+      }
+    }
+    
+    // 如果找到了变量，使用它的 ID
+    if (variable) {
+      const foundId = variable.getId();
+      field.setValue(foundId);
+      return { success: true, variableId: foundId };
+    }
+  }
+  
+  // 变量不存在，返回错误（不创建新变量）
+  return { 
+    success: false, 
+    message: `变量 "${varName || varId}" 不存在。请先使用变量初始化块创建变量，或检查变量名/ID是否正确。` 
+  };
+}
 
 /**
  * 单独设置块的字段值
@@ -1538,27 +1911,41 @@ export async function setBlockFieldTool(args: SetBlockFieldArgs): Promise<ToolUs
       }, 'setBlockFieldTool');
     }
     
-    // 处理变量字段
-    if (field.constructor.name === 'FieldVariable') {
-      const varName = typeof value === 'object' ? (value.name || String(value)) : String(value);
-      const varType = typeof value === 'object' ? (value.type || '') : '';
-      let variable = workspace.getVariable(varName, varType);
-      if (!variable) {
-        variable = workspace.createVariable(varName, varType);
-      }
-      if (variable) {
-        field.setValue(variable.getId());
-      } else {
+    // 检测并处理变量字段
+    if (isVariableField(field, fieldName)) {
+      const result = handleVariableFieldValue(workspace, field, value);
+      if (!result.success) {
         return injectTodoReminder({
           is_error: true,
-          content: `❌ 变量 "${varName}" 创建失败`
+          content: `❌ 变量字段设置失败: ${result.message}`
         }, 'setBlockFieldTool');
       }
-    } else {
-      field.setValue(value);
+      
+      const baseResult: ToolUseResult = {
+        is_error: false,
+        content: `✅ 已设置 ${block.type}(${blockId}).${fieldName} = ${result.variableId}${result.message ? ` (${result.message})` : ''}`,
+        metadata: {
+          blockId,
+          blockType: block.type,
+          fieldName,
+          variableId: result.variableId,
+          newValue: field.getValue()
+        }
+      };
+      const resultWithOverview = await maybeAppendWorkspaceOverview(baseResult);
+      return injectTodoReminder(resultWithOverview, 'setBlockFieldTool');
     }
     
-    return injectTodoReminder({
+    // 非变量字段：使用 validateAndSetFieldValue 处理（支持下拉框验证等）
+    const setResult = validateAndSetFieldValue(field, value, block.type, fieldName, workspace);
+    if (!setResult.success) {
+      return injectTodoReminder({
+        is_error: true,
+        content: `❌ 字段设置失败: ${setResult.message}`
+      }, 'setBlockFieldTool');
+    }
+    
+    const baseResult: ToolUseResult = {
       is_error: false,
       content: `✅ 已设置 ${block.type}(${blockId}).${fieldName} = ${JSON.stringify(value)}`,
       metadata: {
@@ -1567,7 +1954,9 @@ export async function setBlockFieldTool(args: SetBlockFieldArgs): Promise<ToolUs
         fieldName,
         newValue: field.getValue()
       }
-    }, 'setBlockFieldTool');
+    };
+    const resultWithOverview = await maybeAppendWorkspaceOverview(baseResult);
+    return injectTodoReminder(resultWithOverview, 'setBlockFieldTool');
     
   } catch (error) {
     return injectTodoReminder({
@@ -1791,7 +2180,7 @@ export async function setBlockInputTool(args: SetBlockInputArgs): Promise<ToolUs
       ? `创建 ${sourceBlock.type} 并连接`
       : `连接 ${sourceBlock.type}(${sourceBlockId})`;
     
-    return injectTodoReminder({
+    const baseResult: ToolUseResult = {
       is_error: false,
       content: `✅ 已${actionDesc}到 ${targetBlock.type}(${blockId}).${inputName}`,
       metadata: {
@@ -1802,7 +2191,9 @@ export async function setBlockInputTool(args: SetBlockInputArgs): Promise<ToolUs
         createdNewBlock,
         newBlockType: createdNewBlock ? sourceBlock.type : undefined
       }
-    }, 'setBlockInputTool');
+    };
+    const resultWithOverview = await maybeAppendWorkspaceOverview(baseResult);
+    return injectTodoReminder(resultWithOverview, 'setBlockInputTool');
     
   } catch (error) {
     return injectTodoReminder({
@@ -2282,18 +2673,30 @@ export async function batchCreateBlocksTool(args: BatchCreateBlocksArgs): Promis
               break;
             }
             
-            // 如果已有块，链接到末尾
+            // 如果已有块，插入到最前面，原有块接到源块后面
             const existingBlock = stmtInput.connection.targetBlock();
             if (existingBlock) {
-              let lastBlock = existingBlock;
-              while (lastBlock.nextConnection?.targetBlock()) {
-                lastBlock = lastBlock.nextConnection.targetBlock();
-              }
-              if (lastBlock.nextConnection) {
-                lastBlock.nextConnection.connect(sourceBlock.previousConnection);
-                success = true;
+              // 断开原有块
+              stmtInput.connection.disconnect();
+              // 将源块连接到容器
+              stmtInput.connection.connect(sourceBlock.previousConnection);
+              success = stmtInput.connection.targetBlock() === sourceBlock;
+              
+              if (success) {
+                // 找到源块链的末尾，将原有块接到后面
+                let lastInSourceChain = sourceBlock;
+                while (lastInSourceChain.nextConnection?.targetBlock()) {
+                  lastInSourceChain = lastInSourceChain.nextConnection.targetBlock();
+                }
+                if (lastInSourceChain.nextConnection && existingBlock.previousConnection) {
+                  lastInSourceChain.nextConnection.connect(existingBlock.previousConnection);
+                }
               } else {
-                message = '无法链接到现有块末尾';
+                // 连接失败，尝试恢复
+                try {
+                  stmtInput.connection.connect(existingBlock.previousConnection);
+                } catch (e) {}
+                message = '插入到最前面失败';
               }
             } else {
               stmtInput.connection.connect(sourceBlock.previousConnection);
@@ -2440,7 +2843,7 @@ export async function batchCreateBlocksTool(args: BatchCreateBlocksArgs): Promis
       content += `  ${tempId} → ${realId} (${blockType})\n`;
     }
     
-    return injectTodoReminder({
+    const baseResult: ToolUseResult = {
       is_error: hasErrors,
       content,
       metadata: {
@@ -2456,7 +2859,11 @@ export async function batchCreateBlocksTool(args: BatchCreateBlocksArgs): Promis
         failedBlocks: failedBlocks.length > 0 ? failedBlocks : undefined,
         failedConnections: failedConns.length > 0 ? failedConns : undefined
       }
-    }, 'batchCreateBlocksTool');
+    };
+    
+    // 批量创建完成后总是获取工作区概览（强制获取）
+    const resultWithOverview = await maybeAppendWorkspaceOverview(baseResult, true);
+    return injectTodoReminder(resultWithOverview, 'batchCreateBlocksTool');
     
   } catch (error) {
     return injectTodoReminder({

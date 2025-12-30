@@ -1027,7 +1027,8 @@ Query and return specific content (for detailed info)
                 },
                 moveWithChain: {
                     type: 'boolean',
-                    description: '是否将块后面连接的块一起移动（默认 true）。设为 false 时只移动单个块，原来在其后的块会自动重连'
+                    description: '是否将块后面连接的块一起移动（默认 false）。设为 false 时只移动单个块，原来在其后的块会自动重连',
+                    default: false
                 }
             },
             required: ['block', 'action', 'target']
@@ -1702,21 +1703,35 @@ Query and return specific content (for detailed info)
     // },
     {
         name: "delete_block_tool",
-        description: `块删除工具，如果使用connect_blocks_tool重新连接能解决则优先使用块连接工具。通过块ID删除工作区中的指定块。支持两种删除模式：普通删除（只删除指定块，保留连接的块，推荐使用）和级联删除（删除整个块树，包括所有连接的子块）。`,
+        description: `块删除工具，支持删除单个或多个块。优先考虑使用配置工具修改块属性、修改代码连接，而非直接删除。
+
+**功能特点**：
+- 支持单个块ID或多个块ID数组输入
+- 智能删除：只删除指定块，保留连接的块并自动重连
+- 删除后自动重连前后块（如果可能）
+
+**示例**：
+\`\`\`json
+// 删除单个块
+{"blockIds": "block_id_123"}
+
+// 删除多个块
+{"blockIds": ["block_id_1", "block_id_2", "block_id_3"]}
+\`\`\`
+
+**注意**：被删除块的前后块会尝试自动重连，连接的子块会保留。`,
         input_schema: {
             type: 'object',
             properties: {
-                blockId: {
-                    type: 'string',
-                    description: '要删除的块的ID'
-                },
-                cascade: {
-                    type: 'boolean',
-                    description: '是否级联删除连接的块。false=只删除指定块，true=删除整个块树',
-                    default: false
+                blockIds: {
+                    oneOf: [
+                        { type: 'string', description: '单个要删除的块ID' },
+                        { type: 'array', items: { type: 'string' }, description: '要删除的块ID数组' }
+                    ],
+                    description: '要删除的块ID，支持单个字符串或字符串数组'
                 }
             },
-            required: ['blockId']
+            required: ['blockIds']
         }
     },
     {

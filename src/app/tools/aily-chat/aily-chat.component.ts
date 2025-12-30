@@ -1631,6 +1631,11 @@ ${JSON.stringify(errData)}
               'create_code_structure_tool',
               'configure_block_tool',
               'delete_block_tool',
+              'create_single_block',
+              'connect_blocks_simple',
+              'set_block_field',
+              'set_block_input',
+              'batch_create_blocks',
               // 'get_workspace_overview_tool',
               // 'queryBlockDefinitionTool',
               // 'analyze_library_blocks',
@@ -2826,7 +2831,12 @@ ${JSON.stringify(errData)}
                 'delete_block_tool',
                 'get_workspace_overview_tool',
                 'edit_abi_file',
-                'reload_abi_json'
+                'reload_abi_json',
+                'create_single_block',
+                'connect_blocks_simple',
+                'set_block_field',
+                'set_block_input',
+                'batch_create_blocks',
               ].includes(data.tool_name);
 
               // 判断是否需要路径信息的工具
@@ -2862,7 +2872,7 @@ ${JSON.stringify(errData)}
 1. 在开始编程前使用get_workspace_overview_tool分析当前工作区，了解已有块和结构情况
 2. 先列出计划使用的所有库(不可跳过以\`lib-core\`开始的库，特别注意lib-core-logic lib-core-variables lib-core-time等基础库)
 3. 逐一完整读取每个库的README确定块存在
-4. 使用smart_block_tool和create_code_structure_tool创建对应代码块
+4. 使用create_single_block和batch_create_blocks创建对应代码块
 - 不要一次性生成大量块(超过10个)，分步创建，每次创建后检查结果
 - 全局变量 setup loop 回调函数 独立结构分开创建(steup/loop基础块已经存在于工作区，无需重复创建)
 - 当尝试使用代码块多次仍然无法创建成功时，安装 @aily-project/lib-core-custom 并使用库中的自定义块进行代码创建
@@ -2871,8 +2881,8 @@ ${JSON.stringify(errData)}
 - 如果发现问题，请及时修复，不要继续往下走
 - 如果部分代码块创建失败，使用第三步的工具继续创建遗漏的块
 - 如果发现连接的块不满足要求，可以使用第三步的工具创建新的块并替换连接
-- 如果连接逻辑问题可使用connect_blocks_tool修改连接关系
-- 避免直接删除整个代码块，优先考虑使用配置工具修改块属性或者删除某一个块后重新创建
+- 如果连接逻辑问题可使用connect_blocks_simple修改连接关系
+- **IMPORTANT** 避免直接删除整个代码块，优先考虑使用配置工具修改块属性或者删除某一个块后重新创建
 - 全局变量请作为独立块创建
 - 独立且无用的块请删除
 7. 重复直至完成
