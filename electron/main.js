@@ -879,6 +879,36 @@ function loadEnv() {
   process.env.AILY_REGION = currentRegion;
   // npm registry
   process.env.AILY_NPM_REGISTRY = regionConfig.npm_registry;
+  // 设置 npm 使用应用数据目录下的配置文件，忽略系统 .npmrc
+  const appNpmrcPath = path.join(process.env.AILY_APPDATA_PATH, ".npmrc");
+  // 如果不存在则创建
+  if (!fs.existsSync(appNpmrcPath)) {
+    try {
+      fs.writeFileSync(appNpmrcPath, `@aily-project:registry=\${AILY_NPM_REGISTRY}\naudit=false\nfund=false\n`);
+    } catch (error) {
+      console.error("创建 .npmrc 文件失败:", error);
+    }
+  }
+  process.env.NPM_CONFIG_USERCONFIG = appNpmrcPath;
+  // 清理可能来自系统/终端的代理相关环境变量，避免 npm 在 app 内部使用系统代理
+  try {
+    const proxyEnvKeys = [
+      'HTTP_PROXY', 'HTTPS_PROXY', 'http_proxy', 'https_proxy',
+      'ALL_PROXY', 'all_proxy', 'PROXY', 'proxy',
+      'NPM_CONFIG_PROXY', 'NPM_CONFIG_HTTPS_PROXY', 'npm_config_proxy', 'npm_config_https_proxy',
+      'npm_config_https-proxy', 'npm_config_proxy'
+    ];
+    proxyEnvKeys.forEach((k) => {
+      if (process.env[k]) {
+        delete process.env[k];
+      }
+    });
+    // 也清理在 env 配置中以 npm 配置形式存在的 https-proxy/http-proxy
+    if (process.env.npm_config_https_proxy) delete process.env.npm_config_https_proxy;
+    if (process.env.npm_config_http_proxy) delete process.env.npm_config_http_proxy;
+  } catch (e) {
+    console.error('清理代理环境变量失败:', e);
+  }
   // 7za path
   process.env.AILY_7ZA_PATH = path.join(childPath, isWin32 ? "7za.exe" : "7zz");
   // aily builder path
