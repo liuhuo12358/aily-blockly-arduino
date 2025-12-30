@@ -64,9 +64,31 @@
         "WECHAT_GROUP_DESC": "Treten Sie der WeChat-Benutzergruppe bei, um sich mit anderen Benutzern auszutauschen",
         "USER_GROUP": "Benutzer-Community",
         "USER_GROUP_DESC": "Treten Sie der Community bei, um sich mit anderen Benutzern auszutauschen",
+        "AI_APP_CENTER": "AI-App-Center",
+        "AI_APP_CENTER_DESC": "Klicken Sie hier, um AI-Hardware und Edge-Computing-Anwendungen zu erkunden",
         "SPONSORS": "Projekt-Sponsoren",
         "SPONSORS_DESC": "Dieses Projekt wird von den folgenden Unternehmen/Personen gesponsert",
-        "NEWS": "Neuigkeiten"
+        "NEWS": "Neuigkeiten",
+        "ONBOARDING": {
+            "SKIP": "Überspringen",
+            "PREV": "Zurück",
+            "NEXT": "Weiter",
+            "DONE": "Fertig",
+            "STEP1_TITLE": "Neues Projekt erstellen",
+            "STEP1_DESC": "Klicken Sie hier, um ein neues Programmierprojekt zu erstellen. Wählen Sie Ihr Board und die Programmiersprache, um Ihre kreative Reise zu beginnen.",
+            "STEP2_TITLE": "Vorhandenes Projekt öffnen",
+            "STEP2_DESC": "Wenn Sie bereits Projekte erstellt haben, klicken Sie hier, um einen vorhandenen Projektordner zu öffnen.",
+            "STEP3_TITLE": "Projekt-Hub",
+            "STEP3_DESC": "Durchsuchen und erkunden Sie hervorragende Projekte, die von der Community geteilt wurden, um Inspiration und Lernressourcen zu erhalten.",
+            "STEP4_TITLE": "KI-Assistent",
+            "STEP4_DESC": "Der KI-Assistent hilft Ihnen bei der Projekterstellung. Beschreiben Sie einfach, was Sie brauchen. Nach der Erstellung kann er auch Fragen beantworten, Code generieren und Fehler beheben.",
+            "STEP5_TITLE": "SenseCraft KI-Hub",
+            "STEP5_DESC": "Erkunden Sie hier verschiedene KI-Hardware und Edge-Computing-Anwendungen und entdecken Sie mehr Möglichkeiten.",
+            "STEP6_TITLE": "Neueste Nachrichten",
+            "STEP6_DESC": "Hier finden Sie die neuesten Nachrichten und Ankündigungen zur Software, damit Sie über neue Funktionen und Updates informiert bleiben.",
+            "STEP7_TITLE": "Community beitreten",
+            "STEP7_DESC": "Haben Sie Fragen? Möchten Sie Ihre Arbeit teilen? Treten Sie unserer Benutzer-Community bei, um sich mit anderen Makern auszutauschen und zu lernen!"
+        }
     },
     "APP_STORE": {
         "HEADER_INFO": "Die ersten {{count}} Apps werden in der Symbolleiste angezeigt",

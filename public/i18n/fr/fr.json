@@ -64,9 +64,31 @@
         "WECHAT_GROUP_DESC": "Rejoignez le groupe d'utilisateurs WeChat pour communiquer avec d'autres utilisateurs",
         "USER_GROUP": "Communauté des Utilisateurs",
         "USER_GROUP_DESC": "Rejoignez la communauté pour communiquer avec d'autres utilisateurs",
+        "AI_APP_CENTER": "Centre d'Applications IA",
+        "AI_APP_CENTER_DESC": "Cliquez pour explorer les applications matérielles IA et edge computing",
         "SPONSORS": "Sponsors du Projet",
         "SPONSORS_DESC": "Ce projet est sponsorisé par les entreprises/individus suivants",
-        "NEWS": "Actualités"
+        "NEWS": "Actualités",
+        "ONBOARDING": {
+            "SKIP": "Passer",
+            "PREV": "Précédent",
+            "NEXT": "Suivant",
+            "DONE": "Terminé",
+            "STEP1_TITLE": "Créer un nouveau projet",
+            "STEP1_DESC": "Cliquez ici pour créer un nouveau projet de programmation. Choisissez votre carte et le langage de programmation pour commencer votre voyage créatif.",
+            "STEP2_TITLE": "Ouvrir un projet existant",
+            "STEP2_DESC": "Si vous avez déjà créé des projets, cliquez ici pour ouvrir un dossier de projet existant.",
+            "STEP3_TITLE": "Centre de Projets",
+            "STEP3_DESC": "Parcourez et explorez les excellents projets partagés par la communauté pour trouver l'inspiration et les ressources d'apprentissage.",
+            "STEP4_TITLE": "Assistant IA",
+            "STEP4_DESC": "L'assistant IA vous aide à créer des projets. Décrivez simplement vos besoins. Après la génération, il peut aussi répondre aux questions, générer du code et corriger les erreurs.",
+            "STEP5_TITLE": "Centre IA SenseCraft",
+            "STEP5_DESC": "Explorez ici diverses applications de matériel IA et de calcul en périphérie, et découvrez plus de possibilités.",
+            "STEP6_TITLE": "Dernières Actualités",
+            "STEP6_DESC": "Ici, vous trouverez les dernières actualités et annonces sur le logiciel, pour vous tenir informé des nouvelles fonctionnalités et mises à jour.",
+            "STEP7_TITLE": "Rejoindre la Communauté",
+            "STEP7_DESC": "Des questions ? Envie de partager votre travail ? Rejoignez notre communauté d'utilisateurs pour échanger et apprendre avec d'autres makers !"
+        }
     },
     "APP_STORE": {
         "HEADER_INFO": "Les {{count}} premières applications seront affichées dans la barre d'outils",

@@ -64,9 +64,31 @@
         "WECHAT_GROUP_DESC": "Junte-se ao grupo de usuários WeChat para se comunicar com outros usuários",
         "USER_GROUP": "Comunidade de Usuários",
         "USER_GROUP_DESC": "Junte-se à comunidade para se comunicar com outros usuários",
+        "AI_APP_CENTER": "Centro de Aplicativos IA",
+        "AI_APP_CENTER_DESC": "Clique para explorar aplicações de hardware IA e edge computing",
         "SPONSORS": "Patrocinadores do Projeto",
         "SPONSORS_DESC": "Este projeto é patrocinado pelas seguintes empresas/indivíduos",
-        "NEWS": "Notícias"
+        "NEWS": "Notícias",
+        "ONBOARDING": {
+            "SKIP": "Pular",
+            "PREV": "Anterior",
+            "NEXT": "Próximo",
+            "DONE": "Concluído",
+            "STEP1_TITLE": "Criar novo projeto",
+            "STEP1_DESC": "Clique aqui para criar um novo projeto de programação. Escolha sua placa e linguagem de programação para começar sua jornada criativa.",
+            "STEP2_TITLE": "Abrir projeto existente",
+            "STEP2_DESC": "Se você já criou projetos antes, clique aqui para abrir uma pasta de projeto existente.",
+            "STEP3_TITLE": "Central de Projetos",
+            "STEP3_DESC": "Navegue e explore excelentes projetos compartilhados pela comunidade para obter inspiração e recursos de aprendizado.",
+            "STEP4_TITLE": "Assistente de IA",
+            "STEP4_DESC": "O assistente de IA ajuda você a criar projetos. Basta descrever o que você precisa. Após a geração, ele também pode responder perguntas, gerar código e corrigir erros.",
+            "STEP5_TITLE": "Hub de IA SenseCraft",
+            "STEP5_DESC": "Explore aqui vários hardwares de IA e aplicações de computação de borda, e descubra mais possibilidades.",
+            "STEP6_TITLE": "Últimas Notícias",
+            "STEP6_DESC": "Aqui você encontrará as últimas notícias e anúncios sobre o software, para se manter atualizado sobre novos recursos e atualizações.",
+            "STEP7_TITLE": "Junte-se à Comunidade",
+            "STEP7_DESC": "Tem perguntas? Quer compartilhar seu trabalho? Junte-se à nossa comunidade de usuários para conectar e aprender com outros makers!"
+        }
     },
     "APP_STORE": {
         "HEADER_INFO": "Os primeiros {{count}} aplicativos serão mostrados na barra de ferramentas",
