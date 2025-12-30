@@ -156,6 +156,6 @@
 }
 
 @if(showMode){
-<app-menu [menuList]="ModeList" [position]="modeListPosition" (closeEvent)="closeMenu()"
+<app-menu class="mode-menu" [menuList]="ModeList" [position]="modeListPosition" (closeEvent)="closeMenu()"
   (itemClickEvent)="modeMenuClick($event)"></app-menu>
 }
