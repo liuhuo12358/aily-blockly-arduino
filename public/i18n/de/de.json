@@ -287,7 +287,21 @@
         "STOP": "Stoppen",
         "MODE_AGENT_FULL": "Agent-Modus",
         "MODE_QA_FULL": "F&A-Modus",
-        "STOP_CURRENT_SESSION_FIRST": "Bitte stoppen Sie zuerst die aktuelle Sitzung, bevor Sie eine neue erstellen"
+        "STOP_CURRENT_SESSION_FIRST": "Bitte stoppen Sie zuerst die aktuelle Sitzung, bevor Sie eine neue erstellen",
+        "ONBOARDING": {
+            "STEP1_TITLE": "Eingabefeld",
+            "STEP1_DESC": "Geben Sie hier Ihre Fragen oder Aufgaben ein, bei denen die KI helfen soll. Enter zum Senden, Ctrl+Enter für neue Zeile",
+            "STEP2_TITLE": "Kontext hinzufügen",
+            "STEP2_DESC": "Klicken Sie hier, um Dateien oder Ordner als Kontext hinzuzufügen, damit die KI Ihre Anforderungen besser versteht",
+            "STEP3_TITLE": "Modus wechseln",
+            "STEP3_DESC": "Agent-Modus kann Aufgaben automatisch ausführen (Code schreiben, Fehler beheben). F&A-Modus beantwortet nur Fragen",
+            "STEP4_TITLE": "Senden/Stoppen",
+            "STEP4_DESC": "Klicken zum Senden der Nachricht, oder Stoppen während die KI antwortet",
+            "SKIP": "Überspringen",
+            "PREV": "Zurück",
+            "NEXT": "Weiter",
+            "DONE": "Fertig"
+        }
     },
     "PROJECT_SETTING_DIALOG": {
         "TITLE": "Projekteinstellungen",

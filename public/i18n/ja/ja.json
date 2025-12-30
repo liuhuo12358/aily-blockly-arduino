@@ -287,7 +287,21 @@
         "STOP": "停止",
         "MODE_AGENT_FULL": "エージェントモード",
         "MODE_QA_FULL": "Q&Aモード",
-        "STOP_CURRENT_SESSION_FIRST": "新しいセッションを作成する前に、現在のセッションを停止してください"
+        "STOP_CURRENT_SESSION_FIRST": "新しいセッションを作成する前に、現在のセッションを停止してください",
+        "ONBOARDING": {
+            "STEP1_TITLE": "入力ボックス",
+            "STEP1_DESC": "ここに質問やAIに手伝ってもらいたいタスクを入力してください。Enterで送信、Ctrl+Enterで改行",
+            "STEP2_TITLE": "コンテキストを追加",
+            "STEP2_DESC": "ここをクリックしてファイルやフォルダをコンテキストとして追加し、AIがあなたのニーズをより理解できるようにします",
+            "STEP3_TITLE": "モード切替",
+            "STEP3_DESC": "エージェントモードはタスクを自動実行できます（コード作成、エラー修正など）。Q&Aモードは質問に回答するのみです",
+            "STEP4_TITLE": "送信/停止",
+            "STEP4_DESC": "クリックでメッセージを送信、AIが応答中の場合は停止できます",
+            "SKIP": "スキップ",
+            "PREV": "前へ",
+            "NEXT": "次へ",
+            "DONE": "完了"
+        }
     },
     "PROJECT_SETTING_DIALOG": {
         "TITLE": "プロジェクト設定",

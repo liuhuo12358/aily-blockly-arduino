@@ -325,7 +325,21 @@
         "STOP": "停止",
         "MODE_AGENT_FULL": "代理模式",
         "MODE_QA_FULL": "问答模式",
-        "STOP_CURRENT_SESSION_FIRST": "请先停止当前会话，再新建"
+        "STOP_CURRENT_SESSION_FIRST": "请先停止当前会话，再新建",
+        "ONBOARDING": {
+            "STEP1_TITLE": "输入框",
+            "STEP1_DESC": "在这里输入你想问的问题或需要AI帮助完成的任务，按 Enter 发送，Ctrl+Enter 换行",
+            "STEP2_TITLE": "添加上下文",
+            "STEP2_DESC": "点击这里可以添加文件或文件夹作为上下文，帮助AI更好地理解你的需求",
+            "STEP3_TITLE": "模式切换",
+            "STEP3_DESC": "代理模式可以自动执行任务（如编写代码、修复错误），问答模式仅回答问题",
+            "STEP4_TITLE": "发送/停止",
+            "STEP4_DESC": "点击发送消息，AI正在回复时可点击停止",
+            "SKIP": "跳过",
+            "PREV": "上一步",
+            "NEXT": "下一步",
+            "DONE": "完成"
+        }
     },
     "PROJECT_SETTING_DIALOG": {
         "TITLE": "项目设置",
