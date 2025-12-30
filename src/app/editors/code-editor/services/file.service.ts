@@ -3,6 +3,7 @@ import { NzTreeNodeOptions } from 'ng-zorro-antd/tree';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { NzModalService } from 'ng-zorro-antd/modal';
 import { DeleteDialogComponent } from '../components/delete-dialog/delete-dialog.component';
+import { PlatformService } from '../../../services/platform.service';
 
 // 文件节点接口
 interface FileNode {
@@ -28,17 +29,19 @@ export class FileService {
 
   constructor(
     private message: NzMessageService,
-    private modal: NzModalService
+    private modal: NzModalService,
+    private platformService: PlatformService
   ) { }
 
 
   readDir(path: string): NzTreeNodeOptions[] {
+    const separator = this.platformService.getPlatformSeparator();
     let entries = window['fs'].readDirSync(path);
     let result = [];
     let dirs = [];
     let files = [];
     for (const entry of entries) {
-      let path = entry.path + '\\' + entry.name;
+      let path = entry.path + separator + entry.name;
       let isDir = window['path'].isDir(path)
       let item: NzTreeNodeOptions = {
         title: entry.name,
@@ -292,7 +295,7 @@ export class FileService {
     if (folderCount > 0) {
       message += `${folderCount} 个文件夹\n`;
     }
-    
+
     // 检查是否支持回收站
     const trashAvailable = window['other'] && window['other'].moveToTrash;
     if (trashAvailable) {
