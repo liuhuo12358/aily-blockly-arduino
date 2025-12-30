@@ -29,7 +29,9 @@
         "UPDATE": "アップデートを確認",
         "USER_AUTH": "ユーザーサービス",
         "USER_SPACE": "クラウドスペース",
-        "LIB_MANAGER": "ライブラリマネージャー"
+        "LIB_MANAGER": "ライブラリマネージャー",
+        "AI_ASSISTANT": "AIアシスタント",
+        "PROJECT_HUB": "プロジェクトハブ"
     },
     "ESP32": {
         "UPLOAD_SPEED": "書き込み速度",
@@ -60,8 +62,11 @@
         "FEEDBACK_DESC": "あなたの体験についてフィードバックを送信してください",
         "WECHAT_GROUP": "WeChatユーザーグループ",
         "WECHAT_GROUP_DESC": "WeChatユーザーグループに参加して他のユーザーと交流する",
+        "USER_GROUP": "ユーザーコミュニティ",
+        "USER_GROUP_DESC": "コミュニティに参加して他のユーザーと交流する",
         "SPONSORS": "プロジェクトスポンサー",
-        "SPONSORS_DESC": "このプロジェクトは以下の企業/個人にスポンサーされています"
+        "SPONSORS_DESC": "このプロジェクトは以下の企業/個人にスポンサーされています",
+        "NEWS": "ニュース"
     },
     "APP_STORE": {
         "HEADER_INFO": "最初の {{count}} 個のアプリがツールバーに表示されます",

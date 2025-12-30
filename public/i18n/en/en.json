@@ -65,7 +65,9 @@
         "MULTI_CUT": "Cut Selected",
         "MULTI_DELETE": "Delete Selected",
         "MULTI_COMPRESS": "Compress to ZIP",
-        "LIB_MANAGER": "Library Manager"
+        "LIB_MANAGER": "Library Manager",
+        "AI_ASSISTANT": "AI Assistant",
+        "PROJECT_HUB": "Project Hub"
     },
     "ESP32": {
         "UPLOAD_SPEED": "Upload Speed",
@@ -96,8 +98,11 @@
         "FEEDBACK_DESC": "Send feedback about your experience",
         "WECHAT_GROUP": "WeChat User Group",
         "WECHAT_GROUP_DESC": "Join the WeChat user group to communicate with other users",
+        "USER_GROUP": "User Community",
+        "USER_GROUP_DESC": "Join the community to communicate with other users",
         "SPONSORS": "Project Sponsors",
-        "SPONSORS_DESC": "This project is sponsored by the following companies/individuals"
+        "SPONSORS_DESC": "This project is sponsored by the following companies/individuals",
+        "NEWS": "News"
     },
     "APP_STORE": {
         "HEADER_INFO": "First {{count}} apps will be shown in the toolbar",
@@ -123,7 +128,7 @@
             "THEME": "Theme Settings",
             "BLOCKLY": "Blockly Settings",
             "COMPILATION": "Compilation",
-            "REPOSITORY": "Repository",
+            "REPOSITORY": "Service Region",
             "DEPENDENCIES": "Dependencies",
             "MCP": "MCP",
             "DEVMODE": "Developer Mode"
@@ -136,6 +141,7 @@
             "BLOCKLY_MINIMAP": "Blockly Minimap",
             "FLYOUT_AUTO_CLOSE": "Auto Close Toolbox",
             "COMPILATION_OPTIONS": "Compilation Options",
+            "REGION": "Service Region",
             "REPOSITORY_URLS": "Repository URLs",
             "BOARD_LIST": "Board List",
             "LIBRARY_LIST": "Library List",

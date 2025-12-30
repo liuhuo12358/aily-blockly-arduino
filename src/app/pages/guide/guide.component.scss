@@ -5,12 +5,13 @@
   min-width: 1197px;
   background: #2b2d30;
   display: flex;
+  justify-content: flex-start;
 
   .left-box {
     width: 500px;
     display: flex;
     flex-direction: column;
-    padding: 20px 0 20px 100px;
+    padding: 10px 0 10px 100px;
     flex-grow: 1;
     flex-shrink: 1;
   }
@@ -18,11 +19,15 @@
   .right-box {
     flex-grow: 0;
     flex-shrink: 0;
+    padding: 10px 0 10px 0;
     width: 680px;
     height: 560px;
     position: relative;
     display: flex;
+    justify-content: flex-end;
+    align-items: flex-start;
     flex-direction: column;
+    gap: 15px;
   }
 
   .stitle {
@@ -33,10 +38,14 @@
     font-size: 30px;
     line-height: 30px;
 
+    .logo{
+      height: 32px;
+    }
+
     .version {
       color: #888888;
       font-size: 12px;
-      margin: 0 0 2px 7px;
+      margin: 0 0 5px 7px;
       line-height: 12px;
     }
   }
@@ -50,6 +59,7 @@
   .menu-box {
     display: flex;
     flex-direction: column;
+    font-size: 15px;
 
     .btn {
       padding: 3px 0;
@@ -60,7 +70,8 @@
     }
 
     .icon {
-      width: 25px;
+      width: 24px;
+      margin-right: 3px;
     }
   }
 
@@ -68,7 +79,7 @@
     display: flex;
     flex-direction: column;
     align-items: flex-start !important;
-    font-size: 14px;
+    font-size: 15px;
     height: 40px;
     line-height: 14px;
 
@@ -93,14 +104,13 @@
 .item {
   width: 400px;
   height: 50px;
-  margin-bottom: 15px;
   display: flex;
   flex-direction: column;
   background: #292929;
   border-radius: 5px;
   padding: 5px 10px;
-  border-left: 5px solid #4d4d4d;
   cursor: pointer;
+  box-shadow: 0 0 3px rgba(0, 0, 0, 0.3);
 
   >div:nth-child(1) {
     span {
@@ -115,9 +125,9 @@
     font-size: 12px;
   }
 
-  &:hover {
-    border-left: 5px solid #2658ce;
-  }
+  // &:hover {
+  //   border-left: 5px solid #2658ce;
+  // }
 }
 
 img.qrcode {
@@ -176,5 +186,57 @@ img.qrcode {
       font-size: 12px;
       color: #999;
     }
+  }
+}
+
+.group-btn {
+  display: flex;
+  margin-top: 8px;
+
+  >div {
+    height: 30px;
+    width: 50px;
+
+    i {
+      font-size: 26px;
+      color: #c5c5c5;
+      transition: all 0.2s;
+
+      &:hover {
+        &.fa-weixin {
+          color: green;
+        }
+
+        &.fa-qq {
+          color: rgb(0, 119, 255);
+        }
+
+        &.fa-github {
+          color: #fff;
+        }
+
+        &.fa-discord{
+          color: #4533ef;
+        }
+      }
+
+    }
+  }
+}
+
+.img-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.8);
+  z-index: 99999;
+  cursor: pointer;
+
+  img {
+    max-width: 210px;
+    max-height: 210px;
+    border-radius: 8px;
   }
 }

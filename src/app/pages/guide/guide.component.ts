@@ -2,6 +2,7 @@ import { Component, OnInit, AfterViewInit } from '@angular/core';
 import { GUIDE_MENU } from '../../configs/menu.config';
 import { UiService } from '../../services/ui.service';
 import { ProjectService } from '../../services/project.service';
+import { ConfigService } from '../../services/config.service';
 import { version } from '../../../../package.json';
 import { TranslateModule } from '@ngx-translate/core';
 import { Router } from '@angular/router';
@@ -22,6 +23,15 @@ export class GuideComponent implements OnInit, AfterViewInit {
   showMenu = true;
   showMore = false;
   sponsors: any[] = [];
+  showImgUrl: string | null = null;
+
+  showImg(url: string) {
+    this.showImgUrl = url;
+  }
+
+  hideImg() {
+    this.showImgUrl = null;
+  }
 
   get recentlyProjects() {
     return this.projectService.recentlyProjects
@@ -32,8 +42,17 @@ export class GuideComponent implements OnInit, AfterViewInit {
     private projectService: ProjectService,
     private router: Router,
     private electronService: ElectronService,
-    private http: HttpClient
+    private http: HttpClient,
+    private configService: ConfigService
   ) { }
+
+  /**
+   * 获取微信二维码 URL（根据当前 region 动态生成）
+   */
+  get wechatQrcodeUrl(): string {
+    const resourceUrl = this.configService.getCurrentResourceUrl();
+    return `${resourceUrl}/wechat.jpg`;
+  }
 
   ngOnInit() {
     this.loadSponsors();
@@ -148,25 +167,23 @@ export class GuideComponent implements OnInit, AfterViewInit {
   }
 
   // 重新加载微信二维码图片
-  retryLoadImage() {
-    setTimeout(() => {
-      const img = document.querySelector('.qrcode') as HTMLImageElement;
-      if (img) {
-        const originalSrc = 'https://dl.diandeng.tech/blockly/wechat.jpg';
-        img.src = `${originalSrc}?t=${Date.now()}`;
-      }
-    }, 1000);
+  // retryLoadImage() {
+  //   setTimeout(() => {
+  //     const img = document.querySelector('.qrcode') as HTMLImageElement;
+  //     if (img) {
+  //       const originalSrc = 'https://dl.diandeng.tech/blockly/wechat.jpg';
+  //       img.src = `${originalSrc}?t=${Date.now()}`;
+  //     }
+  //   }, 1000);
+  // }
 
-  }
-
-  test() {
-    console.log(this.electronService.isWindowFocused());
-    setTimeout(() => {
-      // if (!this.electronService.isWindowFocused()) {
-      //   this.electronService.notify('测试', '开发阶段刷卡JFK拉萨机');
-      // }
-    }, 12000)
-  }
+  // test() {
+  //   console.log(this.electronService.isWindowFocused());
+  //   setTimeout(() => {
+  //     // if (!this.electronService.isWindowFocused()) {
+  //     // }
+  //   }, 12000)
+  // }
 
   openFeedback() {
     this.uiService.openFeedback();

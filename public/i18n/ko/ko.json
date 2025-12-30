@@ -29,7 +29,9 @@
         "UPDATE": "업데이트 확인",
         "USER_AUTH": "사용자 서비스",
         "USER_SPACE": "클라우드 스페이스",
-        "LIB_MANAGER": "라이브러리 관리자"
+        "LIB_MANAGER": "라이브러리 관리자",
+        "AI_ASSISTANT": "AI 어시스턴트",
+        "PROJECT_HUB": "프로젝트 허브"
     },
     "ESP32": {
         "UPLOAD_SPEED": "업로드 속도",
@@ -60,8 +62,11 @@
         "FEEDBACK_DESC": "경험에 대한 피드백을 보내주세요",
         "WECHAT_GROUP": "WeChat 사용자 그룹",
         "WECHAT_GROUP_DESC": "WeChat 사용자 그룹에 가입하여 다른 사용자들과 소통하세요",
+        "USER_GROUP": "사용자 커뮤니티",
+        "USER_GROUP_DESC": "커뮤니티에 가입하여 다른 사용자들과 소통하세요",
         "SPONSORS": "프로젝트 후원자",
-        "SPONSORS_DESC": "이 프로젝트는 다음 회사/개인들의 후원을 받고 있습니다"
+        "SPONSORS_DESC": "이 프로젝트는 다음 회사/개인들의 후원을 받고 있습니다",
+        "NEWS": "뉴스"
     },
     "APP_STORE": {
         "HEADER_INFO": "처음 {{count}}개의 앱이 도구 모음에 표시됩니다",

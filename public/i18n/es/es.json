@@ -29,7 +29,9 @@
         "UPDATE": "Buscar actualizaciones",
         "USER_AUTH": "Servicio de Usuario",
         "USER_SPACE": "Espacio en la Nube",
-        "LIB_MANAGER": "Gestor de Bibliotecas"
+        "LIB_MANAGER": "Gestor de Bibliotecas",
+        "AI_ASSISTANT": "Asistente de IA",
+        "PROJECT_HUB": "Centro de Proyectos"
     },
     "ESP32": {
         "UPLOAD_SPEED": "Velocidad de subida",
@@ -60,8 +62,11 @@
         "FEEDBACK_DESC": "Envíe comentarios sobre su experiencia",
         "WECHAT_GROUP": "Grupo de Usuarios de WeChat",
         "WECHAT_GROUP_DESC": "Únase al grupo de usuarios de WeChat para comunicarse con otros usuarios",
+        "USER_GROUP": "Comunidad de Usuarios",
+        "USER_GROUP_DESC": "Únase a la comunidad para comunicarse con otros usuarios",
         "SPONSORS": "Patrocinadores del Proyecto",
-        "SPONSORS_DESC": "Este proyecto está patrocinado por las siguientes empresas/individuos"
+        "SPONSORS_DESC": "Este proyecto está patrocinado por las siguientes empresas/individuos",
+        "NEWS": "Noticias"
     },
     "APP_STORE": {
         "HEADER_INFO": "Las primeras {{count}} aplicaciones se mostrarán en la barra de herramientas",
