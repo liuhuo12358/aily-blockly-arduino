@@ -292,44 +292,50 @@ export class BlocklyComponent implements DoCheck {
           originalWarn.apply(console, arguments);
         };
       })(console.warn);
+      // 添加递归保护标志，防止无限递归调用
+      let isHandlingError = false;
       console.error = ((originalError) => {
         return (message, ...args) => {
-          console.log(message, ...args);
-          // 保留原始错误输出功能
-          originalError.apply(console, arguments);
-          // 处理特定错误
-          if (args[0] instanceof HttpErrorResponse) {
-            // console.log('HTTP错误:', args[0]);
-            return
+          // 防止递归调用
+          if (isHandlingError) {
+            originalError.apply(console, [message, ...args]);
+            return;
           }
-          let errorMessage = message + '   ' + args.join('\n');
+          
+          isHandlingError = true;
+          try {
+            console.log(message, ...args);
+            // 保留原始错误输出功能
+            originalError.apply(console, arguments);
+            // 处理特定错误
+            if (args[0] instanceof HttpErrorResponse) {
+              // console.log('HTTP错误:', args[0]);
+              return;
+            }
+            let errorMessage = message + '   ' + args.join('\n');
 
-          // 常见错误1：Invalid block definition
-          let title = message;
-          let text = args.join('\n');
-          if (errorMessage.includes('Invalid block definition')) {
-            title = '无效的块定义';
+            // 常见错误1：Invalid block definition
+            let title = message;
+            let text = args.join('\n');
+            if (errorMessage.includes('Invalid block definition')) {
+              title = '无效的块定义';
+            }
+            if (errorMessage.includes('Invalid default type')) {
+              title = '无效的默认类型';
+            }
+            if (text.startsWith("TypeError: ")) {
+              text = text.substring("TypeError: ".length);
+            }
+            this.noticeService.update({
+              title,
+              text,
+              detail: errorMessage,
+              state: 'error',
+              setTimeout: 99000,
+            });
+          } finally {
+            isHandlingError = false;
           }
-          if (errorMessage.includes('Invalid default type')) {
-            title = '无效的默认类型';
-          }
-          if (text.startsWith("TypeError: ")) {
-            text = text.substring("TypeError: ".length);
-          }
-          this.noticeService.update({
-            title,
-            text,
-            detail: errorMessage,
-            state: 'error',
-            setTimeout: 99000,
-          });
-          // this.noticeService.update({
-          //   title: '未知错误',
-          //   text: errorMessage,
-          //   detail: errorMessage,
-          //   state: 'error',
-          //   setTimeout: 99000,
-          // });
         };
       })(console.error);
 
