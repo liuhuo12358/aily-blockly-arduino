@@ -102,7 +102,27 @@
         "USER_GROUP_DESC": "Join the community to communicate with other users",
         "SPONSORS": "Project Sponsors",
         "SPONSORS_DESC": "This project is sponsored by the following companies/individuals",
-        "NEWS": "News"
+        "NEWS": "News",
+        "ONBOARDING": {
+            "SKIP": "Skip",
+            "PREV": "Previous",
+            "NEXT": "Next",
+            "DONE": "Done",
+            "STEP1_TITLE": "Create New Project",
+            "STEP1_DESC": "Click here to create a new programming project. Choose your board and programming language to start your creative journey.",
+            "STEP2_TITLE": "Open Existing Project",
+            "STEP2_DESC": "If you have created projects before, click here to open an existing project folder.",
+            "STEP3_TITLE": "Project Hub",
+            "STEP3_DESC": "Browse and explore excellent projects shared by the community for inspiration and learning resources.",
+            "STEP4_TITLE": "AI Assistant",
+            "STEP4_DESC": "Having coding problems? Let the AI assistant help you answer questions, generate code, and debug programs.",
+            "STEP5_TITLE": "SenseCraft AI Hub",
+            "STEP5_DESC": "Explore various AI hardware and edge computing applications here, and discover more possibilities.",
+            "STEP6_TITLE": "Latest News",
+            "STEP6_DESC": "Here you can find the latest news and announcements about the software, helping you stay updated with new features.",
+            "STEP7_TITLE": "Join Our Community",
+            "STEP7_DESC": "Have questions? Want to share your work? Join our user community to connect and learn with other makers!"
+        }
     },
     "APP_STORE": {
         "HEADER_INFO": "First {{count}} apps will be shown in the toolbar",
