@@ -29,7 +29,7 @@
     "localhost": {
       "name": "Local",
       "enabled": true,
-      "api_server": "",
+      "api_server": "https://aapi.diandeng.tech",
       "npm_registry": "http://localhost:4873",
       "resource": "http://localhost:4874",
       "updater": ""
