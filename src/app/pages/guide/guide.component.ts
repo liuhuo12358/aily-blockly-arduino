@@ -158,6 +158,9 @@ export class GuideComponent implements OnInit, AfterViewInit {
       case 'playground-open':
         this.router.navigate(['/main/playground']);
         break;
+      case 'tool-open':
+        this.uiService.turnTool(item.data);
+        break;
       default:
         break;
     }

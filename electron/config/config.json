@@ -27,7 +27,7 @@
       "updater": "https://dl.aily.pro/blockly"
     },
     "localhost": {
-      "name": "Local Server",
+      "name": "Local",
       "enabled": true,
       "api_server": "",
       "npm_registry": "http://localhost:4873",

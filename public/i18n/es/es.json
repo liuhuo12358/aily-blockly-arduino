@@ -29,7 +29,9 @@
         "UPDATE": "Buscar actualizaciones",
         "USER_AUTH": "Servicio de Usuario",
         "USER_SPACE": "Espacio en la Nube",
-        "LIB_MANAGER": "Gestor de Bibliotecas"
+        "LIB_MANAGER": "Gestor de Bibliotecas",
+        "AI_ASSISTANT": "Asistente de IA",
+        "PROJECT_HUB": "Centro de Proyectos"
     },
     "ESP32": {
         "UPLOAD_SPEED": "Velocidad de subida",

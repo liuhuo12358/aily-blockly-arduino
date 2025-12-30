@@ -29,7 +29,9 @@
         "UPDATE": "檢查更新",
         "USER_AUTH": "用戶服務",
         "USER_SPACE": "雲空間",
-        "LIB_MANAGER": "庫管理"
+        "LIB_MANAGER": "庫管理",
+        "AI_ASSISTANT": "AI助手",
+        "PROJECT_HUB": "專案廣場"
     },
     "ESP32": {
         "UPLOAD_SPEED": "燒錄速度",

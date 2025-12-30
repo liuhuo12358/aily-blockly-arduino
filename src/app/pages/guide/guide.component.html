@@ -1,7 +1,7 @@
 <div class="guide-box ccenter">
   <div class="left-box">
     <div class="stitle">
-      aily blockly IDE
+      <img class="logo" src="imgs/logo.webp" alt="">
       <div class="version">ver {{version}}</div>
     </div>
     <div class="title">{{'GUIDE.START' | translate}}</div>
@@ -55,24 +55,24 @@
     <!-- <div class="item" (click)="openFeedback()">
       <div>{{'GUIDE.FEEDBACK' | translate}}</div>
       <div>{{'GUIDE.FEEDBACK_DESC' | translate}}</div>
-    </div>
-    <div class="item" style="height: 165px;" (click)="test()">
-      <div>{{'GUIDE.WECHAT_GROUP' | translate}}</div>
-      <div>{{'GUIDE.WECHAT_GROUP_DESC' | translate}}</div>
-      <img class="qrcode" [src]="wechatQrcodeUrl" (error)="retryLoadImage()" alt="微信群二维码">
     </div> -->
     <div class="item" style="height: 90px;">
       <div>{{'GUIDE.USER_GROUP' | translate}}</div>
       <div>{{'GUIDE.USER_GROUP_DESC' | translate}}</div>
       <div class="group-btn">
-        <div (click)="showImg(wechatQrcodeUrl)"><i class="fa-brands fa-weixin"></i></div>
-        <div (click)="showImg(qqQrcodeUrl)"><i class="fa-brands fa-qq"></i></div>
-        <div (click)="openUrl('https://github.com/orgs/ailyProject/discussions')"><i class="fa-brands fa-github"></i>
+        <div (click)="showImg('https://dl.diandeng.tech/blockly/wechat.jpg')">
+          <i class="fa-brands fa-weixin"></i>
         </div>
-        <!-- <div><i class="fa-brands fa-discord"></i></div> -->
+        <div (click)="showImg('https://dl.diandeng.tech/blockly/qq.jpg')">
+          <i class="fa-brands fa-qq"></i>
+        </div>
+        <div (click)="openUrl('https://github.com/orgs/ailyProject/discussions')">
+          <i class="fa-brands fa-github"></i>
+        </div>
+        <div (click)="openUrl('https://discord.gg/ddMbGVmpQ8')">
+          <i class="fa-brands fa-discord"></i>
+        </div>
       </div>
-      <!-- <img class="qrcode" src="https://dl.diandeng.tech/blockly/wechat.jpg" (error)="retryLoadImage()" alt="微信群二维码"
-        srcset=""> -->
     </div>
     <div class="item" style="height: 165px;">
       <div>{{'GUIDE.SPONSORS' | translate}}</div>

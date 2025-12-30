@@ -65,7 +65,9 @@
         "MULTI_CUT": "剪切选中项",
         "MULTI_DELETE": "删除选中项",
         "MULTI_COMPRESS": "压缩为zip",
-        "LIB_MANAGER": "库管理"
+        "LIB_MANAGER": "库管理",
+        "AI_ASSISTANT": "AI助手",
+        "PROJECT_HUB": "项目广场"
     },
     "ESP32": {
         "UPLOAD_SPEED": "烧录速度",
