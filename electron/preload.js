@@ -268,14 +268,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
   },
   env: {
     set: (data) => ipcRenderer.invoke("env-set", data),
-    get: (key) => {
-      return new Promise((resolve, reject) => {
-        ipcRenderer
-          .invoke("env-get", key)
-          .then((result) => resolve(result))
-          .catch((error) => reject(error));
-      });
-    },
+    get: (key) => ipcRenderer.invoke("env-get", key),
   },
   // 这个计划移除，替换成cmd.run
   npm: {
