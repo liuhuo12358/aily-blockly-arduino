@@ -287,7 +287,21 @@
         "STOP": "Parar",
         "MODE_AGENT_FULL": "Modo Agente",
         "MODE_QA_FULL": "Modo P&R",
-        "STOP_CURRENT_SESSION_FIRST": "Por favor, pare a sessão atual antes de criar uma nova"
+        "STOP_CURRENT_SESSION_FIRST": "Por favor, pare a sessão atual antes de criar uma nova",
+        "ONBOARDING": {
+            "STEP1_TITLE": "Caixa de entrada",
+            "STEP1_DESC": "Digite aqui suas perguntas ou tarefas para assistência da IA. Pressione Enter para enviar, Ctrl+Enter para nova linha",
+            "STEP2_TITLE": "Adicionar contexto",
+            "STEP2_DESC": "Clique aqui para adicionar arquivos ou pastas como contexto para ajudar a IA a entender melhor suas necessidades",
+            "STEP3_TITLE": "Alternar modo",
+            "STEP3_DESC": "O modo Agente pode executar tarefas automaticamente (escrever código, corrigir erros). O modo P&R apenas responde perguntas",
+            "STEP4_TITLE": "Enviar/Parar",
+            "STEP4_DESC": "Clique para enviar mensagem, ou parar quando a IA estiver respondendo",
+            "SKIP": "Pular",
+            "PREV": "Anterior",
+            "NEXT": "Próximo",
+            "DONE": "Concluído"
+        }
     },
     "PROJECT_SETTING_DIALOG": {
         "TITLE": "Configurações do Projeto",

@@ -760,6 +760,39 @@ appDataPath(**appDataPath**): ${window['path'].getAppDataPath() || '无'}
 
   isLoggedIn = false;
 
+  // 新手引导相关
+  showOnboarding = false;
+  currentStep = 0;
+  onboardingSteps = [
+    {
+      target: '.input-box textarea',
+      titleKey: 'AILY_CHAT.ONBOARDING.STEP1_TITLE',
+      descKey: 'AILY_CHAT.ONBOARDING.STEP1_DESC',
+      position: 'top'
+    },
+    {
+      target: '.input-box .btns .btn:first-child',
+      titleKey: 'AILY_CHAT.ONBOARDING.STEP2_TITLE',
+      descKey: 'AILY_CHAT.ONBOARDING.STEP2_DESC',
+      position: 'top'
+    },
+    {
+      target: '.input-box .btns .btn.mode',
+      titleKey: 'AILY_CHAT.ONBOARDING.STEP3_TITLE',
+      descKey: 'AILY_CHAT.ONBOARDING.STEP3_DESC',
+      position: 'top'
+    },
+    {
+      target: '.input-box .btns .btn.right',
+      titleKey: 'AILY_CHAT.ONBOARDING.STEP4_TITLE',
+      descKey: 'AILY_CHAT.ONBOARDING.STEP4_DESC',
+      position: 'top'
+    }
+  ];
+  highlightStyle: any = {};
+  tooltipStyle: any = {};
+  arrowStyle: any = {};
+
   constructor(
     private uiService: UiService,
     private chatService: ChatService,
@@ -847,6 +880,8 @@ appDataPath(**appDataPath**): ${window['path'].getAppDataPath() || '无'}
             // console.log("startSession result: ", res);
             // 获取历史记录
             this.getHistory();
+            // 检查是否需要显示新手引导
+            this.checkFirstUsage();
           }).catch((err) => {
             // console.warn("startSession error: ", err);
 
@@ -2669,17 +2704,31 @@ Your role is ASK (Advisory & Quick Support) - you provide analysis, recommendati
     this.bottomHeight = height!;
   }
 
-  // 当使用ctrl+enter时发送消息
+  // 回车发送消息，ctrl+回车换行
   async onKeyDown(event: KeyboardEvent) {
-    if (event.ctrlKey && event.key === 'Enter') {
-      if (this.isWaiting) {
-        return;
-      }
+    if (event.key === 'Enter') {
+      if (event.ctrlKey) {
+        // Ctrl+Enter 换行
+        const textarea = event.target as HTMLTextAreaElement;
+        const start = textarea.selectionStart;
+        const end = textarea.selectionEnd;
+        this.inputValue = this.inputValue.substring(0, start) + '\n' + this.inputValue.substring(end);
+        // 需要在下一个事件循环中设置光标位置
+        setTimeout(() => {
+          textarea.selectionStart = textarea.selectionEnd = start + 1;
+        }, 0);
+        event.preventDefault();
+      } else {
+        // Enter 发送消息
+        if (this.isWaiting) {
+          return;
+        }
 
-      this.send("user", this.inputValue.trim(), true);
-      this.selectContent = [];
-      this.inputValue = "";
-      event.preventDefault();
+        this.send("user", this.inputValue.trim(), true);
+        this.selectContent = [];
+        this.inputValue = "";
+        event.preventDefault();
+      }
     }
   }
 
@@ -3243,6 +3292,133 @@ Your role is ASK (Advisory & Quick Support) - you provide analysis, recommendati
     }).catch((err) => {
       this.switchToMode('chat');
     });
+  }
+
+  // ==================== 新手引导相关方法 ====================
+  
+  // 检查是否是第一次使用AI助手
+  private checkFirstUsage() {
+    const hasSeenOnboarding = this.configService.data.ailyChatOnboardingCompleted;
+    if (!hasSeenOnboarding && this.isLoggedIn) {
+      // 延迟显示引导，确保页面已渲染
+      setTimeout(() => {
+        this.showOnboarding = true;
+        this.updateHighlight();
+      }, 800);
+    }
+  }
+
+  // 更新高亮区域位置
+  private updateHighlight() {
+    const step = this.onboardingSteps[this.currentStep];
+    const element = document.querySelector(step.target) as HTMLElement;
+    if (element) {
+      const rect = element.getBoundingClientRect();
+      const padding = 8;
+      this.highlightStyle = {
+        top: `${rect.top - padding}px`,
+        left: `${rect.left - padding}px`,
+        width: `${rect.width + padding * 2}px`,
+        height: `${rect.height + padding * 2}px`
+      };
+      // 计算提示框位置
+      this.calculateTooltipPosition(rect, step.position, this.currentStep);
+    }
+  }
+
+  // 计算提示框位置
+  private calculateTooltipPosition(rect: DOMRect, position: string, stepIndex: number = 0) {
+    const tooltipWidth = 280;
+    const tooltipHeight = 150;
+    const gap = 20;
+    const offsetX = -13; // 向左移动13px
+    let offsetY = -46; // 向上移动46px
+    
+    // 第一个步骤额外向上提升18px
+    if (stepIndex === 0) {
+      offsetY -= 18;
+    }
+    
+    const windowWidth = window.innerWidth;
+    const padding = 10; // 距离窗口边缘的最小间距
+
+    // 重置箭头样式
+    this.arrowStyle = {};
+
+    switch (position) {
+      case 'right':
+        this.tooltipStyle = {
+          top: `${rect.top + offsetY}px`,
+          left: `${rect.right + gap + offsetX}px`
+        };
+        break;
+      case 'left':
+        this.tooltipStyle = {
+          top: `${rect.top + offsetY}px`,
+          left: `${rect.left - tooltipWidth - gap + offsetX}px`
+        };
+        break;
+      case 'bottom':
+      case 'top':
+        // 计算目标元素中心位置
+        const targetCenterX = rect.left + rect.width / 2;
+        // 计算提示框的初始 left 位置
+        let tooltipLeft = rect.left + offsetX;
+        // 计算提示框右边缘位置
+        const tooltipRight = tooltipLeft + tooltipWidth;
+        
+        // 检查是否超出右边界
+        if (tooltipRight > windowWidth - padding) {
+          // 调整提示框位置，使其右边缘距离窗口右边缘有 padding 的间距
+          tooltipLeft = windowWidth - tooltipWidth - padding;
+          // 计算箭头相对于提示框的偏移，使其指向目标元素中心
+          const arrowLeft = targetCenterX - tooltipLeft - 8;
+          this.arrowStyle = { left: `${arrowLeft}px` };
+        }
+        
+        if (position === 'bottom') {
+          this.tooltipStyle = {
+            top: `${rect.bottom + gap + offsetY}px`,
+            left: `${tooltipLeft}px`
+          };
+        } else {
+          this.tooltipStyle = {
+            top: `${rect.top - tooltipHeight - gap + offsetY}px`,
+            left: `${tooltipLeft}px`
+          };
+        }
+        break;
+    }
+  }
+
+  // 下一步
+  nextStep() {
+    if (this.currentStep < this.onboardingSteps.length - 1) {
+      this.currentStep++;
+      this.updateHighlight();
+    } else {
+      this.finishOnboarding();
+    }
+  }
+
+  // 上一步
+  prevStep() {
+    if (this.currentStep > 0) {
+      this.currentStep--;
+      this.updateHighlight();
+    }
+  }
+
+  // 跳过引导
+  skipOnboarding() {
+    this.finishOnboarding();
+  }
+
+  // 完成引导
+  private finishOnboarding() {
+    this.showOnboarding = false;
+    this.configService.data.ailyChatOnboardingCompleted = true;
+    this.configService.save();
   }
 
   /**

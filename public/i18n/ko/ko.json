@@ -283,7 +283,21 @@
         "STOP": "중지",
         "MODE_AGENT_FULL": "에이전트 모드",
         "MODE_QA_FULL": "Q&A 모드",
-        "STOP_CURRENT_SESSION_FIRST": "새 세션을 생성하기 전에 먼저 현재 세션을 중지하세요"
+        "STOP_CURRENT_SESSION_FIRST": "새 세션을 생성하기 전에 먼저 현재 세션을 중지하세요",
+        "ONBOARDING": {
+            "STEP1_TITLE": "입력 상자",
+            "STEP1_DESC": "여기에 질문이나 AI가 도와줄 작업을 입력하세요. Enter로 전송, Ctrl+Enter로 줄바꿈",
+            "STEP2_TITLE": "컨텍스트 추가",
+            "STEP2_DESC": "여기를 클릭하여 파일이나 폴더를 컨텍스트로 추가하면 AI가 귀하의 요구를 더 잘 이해할 수 있습니다",
+            "STEP3_TITLE": "모드 전환",
+            "STEP3_DESC": "에이전트 모드는 작업을 자동으로 실행할 수 있습니다(코드 작성, 오류 수정 등). Q&A 모드는 질문에만 답변합니다",
+            "STEP4_TITLE": "전송/중지",
+            "STEP4_DESC": "클릭하여 메시지 전송, AI가 응답 중일 때 중지 가능",
+            "SKIP": "건너뛰기",
+            "PREV": "이전",
+            "NEXT": "다음",
+            "DONE": "완료"
+        }
     },
     "PROJECT_SETTING_DIALOG": {
         "TITLE": "프로젝트 설정",

@@ -325,7 +325,21 @@
         "STOP": "Stop",
         "MODE_AGENT_FULL": "Agent Mode",
         "MODE_QA_FULL": "Q&A Mode",
-        "STOP_CURRENT_SESSION_FIRST": "Please stop the current session before creating a new one"
+        "STOP_CURRENT_SESSION_FIRST": "Please stop the current session before creating a new one",
+        "ONBOARDING": {
+            "STEP1_TITLE": "Input Box",
+            "STEP1_DESC": "Type your questions or tasks here for AI assistance. Press Enter to send, Ctrl+Enter for new line",
+            "STEP2_TITLE": "Add Context",
+            "STEP2_DESC": "Click here to add files or folders as context to help AI better understand your needs",
+            "STEP3_TITLE": "Mode Switch",
+            "STEP3_DESC": "Agent mode can execute tasks automatically (create code, fix bug). Q&A mode only answers questions",
+            "STEP4_TITLE": "Send/Stop",
+            "STEP4_DESC": "Click to send message, or stop when AI is responding",
+            "SKIP": "Skip",
+            "PREV": "Previous",
+            "NEXT": "Next",
+            "DONE": "Done"
+        }
     },
     "PROJECT_SETTING_DIALOG": {
         "TITLE": "Project Settings",

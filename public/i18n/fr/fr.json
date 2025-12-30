@@ -287,7 +287,21 @@
         "STOP": "Arrêter",
         "MODE_AGENT_FULL": "Mode Agent",
         "MODE_QA_FULL": "Mode Q&R",
-        "STOP_CURRENT_SESSION_FIRST": "Veuillez d'abord arrêter la session en cours avant d'en créer une nouvelle"
+        "STOP_CURRENT_SESSION_FIRST": "Veuillez d'abord arrêter la session en cours avant d'en créer une nouvelle",
+        "ONBOARDING": {
+            "STEP1_TITLE": "Zone de saisie",
+            "STEP1_DESC": "Tapez ici vos questions ou tâches pour l'assistance IA. Appuyez sur Entrée pour envoyer, Ctrl+Entrée pour nouvelle ligne",
+            "STEP2_TITLE": "Ajouter un contexte",
+            "STEP2_DESC": "Cliquez ici pour ajouter des fichiers ou dossiers comme contexte afin d'aider l'IA à mieux comprendre vos besoins",
+            "STEP3_TITLE": "Changement de mode",
+            "STEP3_DESC": "Le mode Agent peut exécuter des tâches automatiquement (écrire du code, corriger des erreurs). Le mode Q&R répond uniquement aux questions",
+            "STEP4_TITLE": "Envoyer/Arrêter",
+            "STEP4_DESC": "Cliquez pour envoyer un message, ou arrêter lorsque l'IA répond",
+            "SKIP": "Passer",
+            "PREV": "Précédent",
+            "NEXT": "Suivant",
+            "DONE": "Terminé"
+        }
     },
     "PROJECT_SETTING_DIALOG": {
         "TITLE": "Paramètres du Projet",
