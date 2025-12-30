@@ -172,25 +172,6 @@ export class GuideComponent implements OnInit, AfterViewInit {
   }
 
   // 重新加载微信二维码图片
-<<<<<<< HEAD
-  retryLoadImage() {
-    setTimeout(() => {
-      const img = document.querySelector('.qrcode') as HTMLImageElement;
-      if (img) {
-        img.src = `${this.wechatQrcodeUrl}?t=${Date.now()}`;
-      }
-    }, 1000);
-  }
-
-  test() {
-    console.log(this.electronService.isWindowFocused());
-    setTimeout(() => {
-      // if (!this.electronService.isWindowFocused()) {
-      //   this.electronService.notify('测试', '开发阶段刷卡JFK拉萨机');
-      // }
-    }, 12000)
-  }
-=======
   // retryLoadImage() {
   //   setTimeout(() => {
   //     const img = document.querySelector('.qrcode') as HTMLImageElement;
@@ -208,7 +189,6 @@ export class GuideComponent implements OnInit, AfterViewInit {
   //     // }
   //   }, 12000)
   // }
->>>>>>> origin/main
 
   openFeedback() {
     this.uiService.openFeedback();
