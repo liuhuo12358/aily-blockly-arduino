@@ -85,6 +85,29 @@ export class ConfigService {
     this.loadAndCacheBoardList(configFilePath);
     this.loadAndCacheLibraryList(configFilePath);
     // ]);
+
+    // 延迟后再次尝试加载，确保最优节点检测完成后能成功下载最新数据
+    if (this.electronService.isElectron) {
+      setTimeout(async () => {
+        try {
+          // 重新获取区域配置（可能已经由主进程检测到最优节点并更新）
+          const newRegion = await this.electronService.electron.ipcRenderer.invoke('env-get', 'AILY_REGION');
+          if (newRegion && this.data.regions && this.data.regions[newRegion]) {
+            // 更新区域配置
+            if (newRegion !== this.data.region) {
+              this.data.region = newRegion;
+              setRegistryUrl(this.data.regions[newRegion].npm_registry);
+              setServerUrl(this.data.regions[newRegion].api_server);
+            }
+            // 重新加载数据，确保获取最新内容
+            this.loadAndCacheBoardList(configFilePath);
+            this.loadAndCacheLibraryList(configFilePath);
+          }
+        } catch (e) {
+          console.error('Failed to reload data after region detection:', e);
+        }
+      }, 5000); // 5秒后重试，给主进程足够时间完成最优节点检测
+    }
   }
 
   private async loadAndCacheBoardList(configFilePath: string): Promise<void> {

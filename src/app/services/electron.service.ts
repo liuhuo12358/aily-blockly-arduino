@@ -301,4 +301,19 @@ export class ElectronService {
       window['ipcRenderer'].send('renderer-ready');
     }
   }
+
+  /**
+   * 获取当前区域（异步方法）
+   */
+  async currentRegion(): Promise<string> {
+    if (!this.isElectron) {
+      return '';
+    }
+    try {
+      return await window['env'].get('AILY_REGION') || '';
+    } catch (error) {
+      console.error('Get current region error:', error);
+      return '';
+    }
+  }
 }

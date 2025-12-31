@@ -601,7 +601,7 @@ function checkLatency(url, resource=false) {
       pingUrl += 'ping';
     }
     try {
-      console.log('[节点检测] Checking latency for URL:', pingUrl);
+      // console.log('[节点检测] Checking latency for URL:', pingUrl);
       const request = net.request({ method: 'HEAD', url: pingUrl });
       request.on('response', (response) => {
         const end = Date.now();
@@ -609,12 +609,12 @@ function checkLatency(url, resource=false) {
           if (response.statusCode >= 200 && response.statusCode < 300) {
             resolve({ url, latency: end - start });
           } else {
-            console.warn(`[节点检测] ${pingUrl} 返回状态码: ${response.statusCode}`);
+            // console.warn(`[节点检测] ${pingUrl} 返回状态码: ${response.statusCode}`);
             resolve({ url, latency: Infinity, error: `Status ${response.statusCode}` });
           }
         });
         response.on('error', (err) => {
-          console.warn(`[节点检测] ${pingUrl} 响应错误:`, err);
+          // console.warn(`[节点检测] ${pingUrl} 响应错误:`, err);
           resolve({ url, latency: Infinity, error: 'Response error' });
         });
         response.resume();
@@ -671,13 +671,13 @@ async function getFastestUrl(urls, item_key='') {
               // Promise 还未完成，跳过
             }
           }
-          console.log(`[节点检测] 超时(${timeout}ms)，已完成 ${settledResults.length}/${urls.length} 个检测`);
+          // console.log(`[节点检测] 超时(${timeout}ms)，已完成 ${settledResults.length}/${urls.length} 个检测`);
           resolve(settledResults);
         }, timeout);
       })
     ]);
     
-    console.log('[节点检测] results: ', results);
+    // console.log('[节点检测] results: ', results);
     
     if (!results || results.length === 0) {
       console.warn(`[节点检测] 超时且无结果，返回第一个节点: ${urls[0]}`);
@@ -687,18 +687,18 @@ async function getFastestUrl(urls, item_key='') {
     const validResults = results.filter(r => r && r.latency !== Infinity);
     if (validResults.length === 0) {
       // 输出所有失败节点和原因
-      console.warn('[节点检测] 所有已完成的节点检测都失败，详细信息如下:');
-      results.forEach(r => {
-        if (r) {
-          console.warn(`  节点: ${r.url}, 错误: ${r.error || '未知'}, latency: ${r.latency}`);
-        }
-      });
-      console.warn(`[节点检测] 返回第一个节点: ${urls[0]}`);
+      // console.warn('[节点检测] 所有已完成的节点检测都失败，详细信息如下:');
+      // results.forEach(r => {
+      //   if (r) {
+      //     console.warn(`  节点: ${r.url}, 错误: ${r.error || '未知'}, latency: ${r.latency}`);
+      //   }
+      // });
+      console.warn(`[节点检测] 所有节点检测失败，返回第一个节点: ${urls[0]}`);
       return urls[0];
     }
     
     validResults.sort((a, b) => a.latency - b.latency);
-    console.log(`[节点检测] 成功检测 ${validResults.length} 个节点，最快: ${validResults[0].url} (${validResults[0].latency}ms)`);
+    // console.log(`[节点检测] 成功检测 ${validResults.length} 个节点，最快: ${validResults[0].url} (${validResults[0].latency}ms)`);
     return validResults[0].url;
   } catch (e) {
     console.error('[节点检测] getFastestUrl error:', e);
@@ -717,11 +717,11 @@ function initFastestServersAsync() {
     const regions = conf.regions;
     if (!regions || Object.keys(regions).length === 0) return;
 
-    console.log('[节点检测] 后台开始检测最优区域节点...');
+    // console.log('[节点检测] 后台开始检测最优区域节点...');
     
-    // 获取所有启用区域的 api_server 进行延迟检测（过滤掉未启用的区域和空URL）
+    // 获取所有启用区域的 api_server 进行延迟检测（过滤掉未启用的区域、空URL和localhost）
     const regionKeys = Object.keys(regions).filter(key => 
-      regions[key].enabled && regions[key].api_server
+      key !== 'localhost' && regions[key].enabled && regions[key].api_server
     );
     const regionUrls = regionKeys.map(key => regions[key].api_server);
     
@@ -748,7 +748,7 @@ function initFastestServersAsync() {
               api_server: fastestRegion.api_server
             });
           }
-          console.log('[节点检测] 区域节点检测完成');
+          // console.log('[节点检测] 区域节点检测完成');
         }
       }
     }).catch(e => {
@@ -879,6 +879,36 @@ function loadEnv() {
   process.env.AILY_REGION = currentRegion;
   // npm registry
   process.env.AILY_NPM_REGISTRY = regionConfig.npm_registry;
+  // 设置 npm 使用应用数据目录下的配置文件，忽略系统 .npmrc
+  const appNpmrcPath = path.join(process.env.AILY_APPDATA_PATH, ".npmrc");
+  // 如果不存在则创建
+  if (!fs.existsSync(appNpmrcPath)) {
+    try {
+      fs.writeFileSync(appNpmrcPath, `@aily-project:registry=\${AILY_NPM_REGISTRY}\naudit=false\nfund=false\n`);
+    } catch (error) {
+      console.error("创建 .npmrc 文件失败:", error);
+    }
+  }
+  process.env.NPM_CONFIG_USERCONFIG = appNpmrcPath;
+  // 清理可能来自系统/终端的代理相关环境变量，避免 npm 在 app 内部使用系统代理
+  try {
+    const proxyEnvKeys = [
+      'HTTP_PROXY', 'HTTPS_PROXY', 'http_proxy', 'https_proxy',
+      'ALL_PROXY', 'all_proxy', 'PROXY', 'proxy',
+      'NPM_CONFIG_PROXY', 'NPM_CONFIG_HTTPS_PROXY', 'npm_config_proxy', 'npm_config_https_proxy',
+      'npm_config_https-proxy', 'npm_config_proxy'
+    ];
+    proxyEnvKeys.forEach((k) => {
+      if (process.env[k]) {
+        delete process.env[k];
+      }
+    });
+    // 也清理在 env 配置中以 npm 配置形式存在的 https-proxy/http-proxy
+    if (process.env.npm_config_https_proxy) delete process.env.npm_config_https_proxy;
+    if (process.env.npm_config_http_proxy) delete process.env.npm_config_http_proxy;
+  } catch (e) {
+    console.error('清理代理环境变量失败:', e);
+  }
   // 7za path
   process.env.AILY_7ZA_PATH = path.join(childPath, isWin32 ? "7za.exe" : "7zz");
   // aily builder path

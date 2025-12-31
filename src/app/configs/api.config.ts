@@ -1,6 +1,3 @@
-declare const process: any;
-declare const window: any;
-
 // 模块级缓存变量，用于存储当前的服务器地址
 // 这些变量可以通过 setServerUrl/setRegistryUrl 在运行时更新
 let _cachedServerUrl: string | null = null;
@@ -8,14 +5,14 @@ let _cachedRegistryUrl: string | null = null;
 
 // 从 process.env 读取初始值（如果可用）
 function getInitialServerUrl(): string {
-  return (typeof process !== 'undefined' && process.env && process.env.AILY_API_SERVER) 
-    ? process.env.AILY_API_SERVER 
+  return (typeof process !== 'undefined' && window['env'].get("AILY_API_SERVER")) 
+    ? window['env'].get("AILY_API_SERVER")
     : 'https://api.aily.pro';
 }
 
 function getInitialRegistryUrl(): string {
-  return (typeof process !== 'undefined' && process.env && process.env.AILY_NPM_REGISTRY)
-    ? process.env.AILY_NPM_REGISTRY
+  return (typeof process !== 'undefined' && window['env'].get("AILY_NPM_REGISTRY"))
+    ? window['env'].get("AILY_NPM_REGISTRY")
     : 'https://registry.diandeng.tech';
 }
 
