@@ -624,73 +624,64 @@ export class AilyChatComponent implements OnDestroy {
     const cmd = parts[0].toLowerCase();
     const args = parts.slice(1);
 
-    // 处理 cd 命令
-    if (cmd === 'cd' && args.length > 0) {
-      const targetPath = args.join(' ').replace(/["']/g, ''); // 移除引号
+    // 命令名称映射表
+    const specialCommands: Record<string, string> = {
+      'cd': '切换到', 'mkdir': '创建目录', 'rmdir': '删除目录',
+      'rm': '删除', 'del': '删除', 'remove': '删除',
+      'cp': '复制', 'copy': '复制',
+      'mv': '移动', 'move': '移动', 'rename': '重命名',
+      'ls': '列出', 'dir': '列出', 'tree': '目录树',
+      'cat': '查看', 'type': '查看', 'head': '查看', 'tail': '查看', 'less': '查看', 'more': '查看',
+      'touch': '创建文件', 'echo': '输出', 'printf': '输出',
+      'chmod': '修改权限', 'chown': '修改所有者',
+      'grep': '搜索', 'find': '查找', 'locate': '定位',
+      'tar': '压缩/解压', 'zip': '压缩', 'unzip': '解压', 'gzip': '压缩', 'gunzip': '解压',
+      'curl': '请求', 'wget': '下载',
+      'pip': 'pip', 'npm': 'npm', 'yarn': 'yarn', 'pnpm': 'pnpm', 'node': 'node', 'python': 'python',
+      'git': 'git', 'svn': 'svn',
+      'make': '构建', 'cmake': '配置构建', 'gcc': '编译', 'g++': '编译', 'clang': '编译',
+      'sudo': '管理员执行', 'su': '切换用户',
+      'ssh': '远程连接', 'scp': '远程复制', 'rsync': '同步',
+      'ps': '进程列表', 'kill': '终止进程', 'top': '系统监控', 'htop': '系统监控',
+      'df': '磁盘空间', 'du': '目录大小', 'free': '内存信息',
+      'pwd': '当前目录', 'whoami': '当前用户', 'hostname': '主机名',
+      'ping': '网络测试', 'ifconfig': '网络配置', 'ipconfig': '网络配置', 'netstat': '网络状态',
+      'apt': 'apt', 'apt-get': 'apt-get', 'yum': 'yum', 'brew': 'brew', 'choco': 'choco',
+      'systemctl': '服务管理', 'service': '服务管理',
+      'docker': 'docker', 'kubectl': 'kubectl',
+    };
+
+    // 过滤掉选项参数（以 - 开头的）
+    const filteredArgs = args.filter(a => !a.startsWith('-'));
+
+    // 特殊处理 cd 命令（需要处理路径显示）
+    if (cmd === 'cd' && filteredArgs.length > 0) {
+      const targetPath = filteredArgs.join(' ').replace(/["']/g, '');
       const normalizedPath = targetPath.replace(/\\/g, '/');
       const pathParts = normalizedPath.split('/').filter(Boolean);
       
       if (pathParts.length > maxPathSegments) {
-        const lastSegments = pathParts.slice(-maxPathSegments).join('/');
-        return `切换到: .../${lastSegments}`;
+        return `切换到: .../${pathParts.slice(-maxPathSegments).join('/')}`;
       } else if (pathParts.length > 0) {
         return `切换到: ${pathParts.join('/')}`;
       }
       return 'cd';
     }
 
-    // 处理 mkdir 命令
-    if (cmd === 'mkdir' && args.length > 0) {
-      const dirName = args[args.length - 1].replace(/["']/g, '');
-      const normalizedDir = dirName.replace(/\\/g, '/');
-      const dirParts = normalizedDir.split('/').filter(Boolean);
-      
-      if (dirParts.length > 0) {
-        return `创建目录: ${dirParts[dirParts.length - 1]}`;
+    // 如果命令在映射表中
+    if (specialCommands[cmd]) {
+      if (filteredArgs.length > 0) {
+        const target = filteredArgs[filteredArgs.length - 1].replace(/["']/g, '');
+        const name = target.split(/[\\/]/).pop() || target;
+        return `${specialCommands[cmd]}: ${name}`;
       }
-      return 'mkdir';
+      return specialCommands[cmd];
     }
 
-    // 处理 rm/del 命令
-    if ((cmd === 'rm' || cmd === 'del') && args.length > 0) {
-      const target = args[args.length - 1].replace(/["']/g, '');
-      const fileName = target.split(/[\\/]/).pop();
-      if (fileName) {
-        return `删除: ${fileName}`;
-      }
-      return cmd;
+    // 其他命令：显示 "命令名 + 第一个参数"
+    if (filteredArgs.length > 0) {
+      return `${cmd} ${filteredArgs[0]}`;
     }
-
-    // 处理 npm 命令
-    if (cmd === 'npm' && args.length > 0) {
-      return `npm ${args[0]}`;
-    }
-
-    // 处理 ls/dir 命令
-    if (cmd === 'ls' || cmd === 'dir') {
-      if (args.length > 0) {
-        const targetPath = args[args.length - 1].replace(/["']/g, '');
-        const pathName = targetPath.split(/[\\/]/).pop() || targetPath;
-        return `列出: ${pathName}`;
-      }
-      return '列出目录';
-    }
-
-    // 处理 cp/copy 命令
-    if ((cmd === 'cp' || cmd === 'copy') && args.length >= 2) {
-      const source = args[0].replace(/["']/g, '');
-      const sourceName = source.split(/[\\/]/).pop();
-      return `复制: ${sourceName}`;
-    }
-
-    // 处理 mv/move 命令
-    if ((cmd === 'mv' || cmd === 'move') && args.length >= 2) {
-      const source = args[0].replace(/["']/g, '');
-      const sourceName = source.split(/[\\/]/).pop();
-      return `移动: ${sourceName}`;
-    }
-
-    // 默认返回命令名
     return cmd;
   }
 
@@ -1673,18 +1664,24 @@ ${JSON.stringify(errData)}
                     // Extract the command main body for display
                     const commandParts = toolArgs.command.split(' ');
                     let displayCommand = toolArgs.command;
+                    let displayArgs = '';
 
                     if (commandParts.length > 1) {
                       // 对于 npm 命令，显示前两个词（如 "npm install"）
                       if (commandParts[0].toLowerCase() === 'npm') {
                         displayCommand = `${commandParts[0]} ${commandParts[1]}`;
                       } else {
-                        // 其他命令只显示第一个词
+                        // 其他命令显示命令词+第一个参数
                         displayCommand = `${commandParts[0]}`;
+                        displayArgs = commandParts[1] || '';
+                        // 如果Args太长，只显示后20个字符
+                        if (displayArgs.length > 20) {
+                          displayArgs = '...' + displayArgs.slice(-20);
+                        }
                       }
                     }
 
-                    this.startToolCall(toolCallId, data.tool_name, `执行: ${displayCommand}`, toolArgs);
+                    this.startToolCall(toolCallId, data.tool_name, `执行: ${displayCommand} ${displayArgs}`, toolArgs);
                     // Check if cwd is specified, otherwise use project paths
                     if (!toolArgs.cwd) {
                       toolArgs.cwd = this.projectService.currentProjectPath || this.projectService.projectRootPath;

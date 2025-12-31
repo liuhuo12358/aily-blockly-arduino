@@ -89,7 +89,7 @@ async function maybeAppendWorkspaceOverview(
     return result;
   }
 
-  console.log(`[workspaceOverview] count=${countForGetWorkspaceOverview}, forceOverview=${forceOverview}`);
+  // console.log(`[workspaceOverview] count=${countForGetWorkspaceOverview}, forceOverview=${forceOverview}`);
   
   // 检查计数器
   if (forceOverview || countForGetWorkspaceOverview++ >= maxCountForOverview) {
@@ -2216,21 +2216,21 @@ export async function batchCreateBlocksTool(args: BatchCreateBlocksArgs): Promis
     const workspace = getActiveWorkspace();
     
     // 解析可能是字符串的参数（增强日志）
-    console.log('[batchCreateBlocksTool] 原始参数:', {
-      blocksType: typeof args.blocks,
-      connectionsType: typeof args.connections,
-      positionType: typeof args.position
-    });
+    // console.log('[batchCreateBlocksTool] 原始参数:', {
+    //   blocksType: typeof args.blocks,
+    //   connectionsType: typeof args.connections,
+    //   positionType: typeof args.position
+    // });
     
     const blocks = parseJsonParam<BatchBlockConfig[]>(args.blocks as any, 'blocks') || [];
     const connections = parseJsonParam<BatchConnectionRule[]>(args.connections as any, 'connections') || [];
     const position = parseJsonParam<{ x: number; y: number }>(args.position as any, 'position');
     
-    console.log('[batchCreateBlocksTool] 解析后:', {
-      blocksCount: blocks.length,
-      connectionsCount: connections.length,
-      position
-    });
+    // console.log('[batchCreateBlocksTool] 解析后:', {
+    //   blocksCount: blocks.length,
+    //   connectionsCount: connections.length,
+    //   position
+    // });
     
     if (blocks.length === 0) {
       const rawBlocks = args.blocks as any;
