@@ -278,8 +278,31 @@ export class MarkdownPipe implements PipeTransform {
   }
 
   /**
+   * 检测名称更可能是库还是开发板
+   * @param name 名称
+   * @returns 'library' | 'board' | 'unknown'
+   */
+  private detectNameType(name: string): 'library' | 'board' | 'unknown' {
+    if (!name) return 'unknown';
+    const lowerName = name.toLowerCase();
+    
+    // 检查是否包含库的特征
+    if (lowerName.includes('lib-') || lowerName.includes('/lib-')) {
+      return 'library';
+    }
+    
+    // 检查是否包含开发板的特征
+    if (lowerName.includes('board-') || lowerName.includes('/board-')) {
+      return 'board';
+    }
+    
+    return 'unknown';
+  }
+
+  /**
    * 验证开发板数据
    * 如果开发板不存在，尝试模糊匹配找到真实存在的开发板
+   * 如果名称看起来像库，会自动尝试匹配库并返回修正后的类型
    */
   private validateBoardData(boardData: any): any {
     if (!boardData || typeof boardData !== 'object') {
@@ -290,6 +313,34 @@ export class MarkdownPipe implements PipeTransform {
     const queryName = boardData.name || boardData.nickname || boardData.displayName;
     
     if (queryName && this.configService) {
+      // 先检测名称类型，判断是否被错误分类
+      const detectedType = this.detectNameType(queryName);
+      
+      // 如果名称看起来像库，优先尝试库验证
+      if (detectedType === 'library') {
+        const libValidation = this.configService.validateLibrary(queryName);
+        if (libValidation.exists && libValidation.library) {
+          console.log(`[MarkdownPipe] 类型修正: "${queryName}" 被错误放入 aily-board，实际是库`);
+          addCorrectionEvent({
+            type: 'library',
+            originalQuery: queryName,
+            correctedName: libValidation.library.name,
+            correctedData: libValidation.library,
+            isFuzzyMatch: libValidation.fuzzyMatch
+          });
+          
+          // 返回库数据，并标记类型已修正
+          return {
+            ...libValidation.library,
+            _validated: true,
+            _fuzzyMatch: libValidation.fuzzyMatch,
+            _originalQuery: queryName,
+            _typeCorrected: true,
+            _actualType: 'library'
+          };
+        }
+      }
+      
       // 使用 ConfigService 验证开发板是否存在
       const validation = this.configService.validateBoard(queryName);
       
@@ -315,6 +366,30 @@ export class MarkdownPipe implements PipeTransform {
           _originalQuery: validation.fuzzyMatch ? queryName : undefined
         };
       }
+      
+      // 开发板验证失败，再次尝试库验证（兜底）
+      if (detectedType !== 'library') {
+        const libFallback = this.configService.validateLibrary(queryName);
+        if (libFallback.exists && libFallback.library) {
+          console.log(`[MarkdownPipe] 类型修正(兜底): "${queryName}" 在开发板中未找到，但在库中找到`);
+          addCorrectionEvent({
+            type: 'library',
+            originalQuery: queryName,
+            correctedName: libFallback.library.name,
+            correctedData: libFallback.library,
+            isFuzzyMatch: libFallback.fuzzyMatch
+          });
+          
+          return {
+            ...libFallback.library,
+            _validated: true,
+            _fuzzyMatch: libFallback.fuzzyMatch,
+            _originalQuery: queryName,
+            _typeCorrected: true,
+            _actualType: 'library'
+          };
+        }
+      }
     }
 
     // 未找到或 ConfigService 不可用，使用原始数据并添加默认值
@@ -337,6 +412,7 @@ export class MarkdownPipe implements PipeTransform {
   /**
    * 验证库数据
    * 如果库不存在，尝试模糊匹配找到真实存在的库
+   * 如果名称看起来像开发板，会自动尝试匹配开发板并返回修正后的类型
    */
   private validateLibraryData(libraryData: any): any {
     if (!libraryData || typeof libraryData !== 'object') {
@@ -347,6 +423,34 @@ export class MarkdownPipe implements PipeTransform {
     const queryName = libraryData.name || libraryData.nickname;
     
     if (queryName && this.configService) {
+      // 先检测名称类型，判断是否被错误分类
+      const detectedType = this.detectNameType(queryName);
+      
+      // 如果名称看起来像开发板，优先尝试开发板验证
+      if (detectedType === 'board') {
+        const boardValidation = this.configService.validateBoard(queryName);
+        if (boardValidation.exists && boardValidation.board) {
+          console.log(`[MarkdownPipe] 类型修正: "${queryName}" 被错误放入 aily-library，实际是开发板`);
+          addCorrectionEvent({
+            type: 'board',
+            originalQuery: queryName,
+            correctedName: boardValidation.board.name,
+            correctedData: boardValidation.board,
+            isFuzzyMatch: boardValidation.fuzzyMatch
+          });
+          
+          // 返回开发板数据，并标记类型已修正
+          return {
+            ...boardValidation.board,
+            _validated: true,
+            _fuzzyMatch: boardValidation.fuzzyMatch,
+            _originalQuery: queryName,
+            _typeCorrected: true,
+            _actualType: 'board'
+          };
+        }
+      }
+      
       // 使用 ConfigService 验证库是否存在
       const validation = this.configService.validateLibrary(queryName);
       
@@ -371,6 +475,30 @@ export class MarkdownPipe implements PipeTransform {
           _fuzzyMatch: validation.fuzzyMatch,
           _originalQuery: validation.fuzzyMatch ? queryName : undefined
         };
+      }
+      
+      // 库验证失败，再次尝试开发板验证（兜底）
+      if (detectedType !== 'board') {
+        const boardFallback = this.configService.validateBoard(queryName);
+        if (boardFallback.exists && boardFallback.board) {
+          console.log(`[MarkdownPipe] 类型修正(兜底): "${queryName}" 在库中未找到，但在开发板中找到`);
+          addCorrectionEvent({
+            type: 'board',
+            originalQuery: queryName,
+            correctedName: boardFallback.board.name,
+            correctedData: boardFallback.board,
+            isFuzzyMatch: boardFallback.fuzzyMatch
+          });
+          
+          return {
+            ...boardFallback.board,
+            _validated: true,
+            _fuzzyMatch: boardFallback.fuzzyMatch,
+            _originalQuery: queryName,
+            _typeCorrected: true,
+            _actualType: 'board'
+          };
+        }
       }
     }
 

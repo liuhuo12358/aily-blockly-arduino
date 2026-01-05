@@ -57,7 +57,7 @@ async function main() {
             throw new Error(`未找到项目包文件: ${projectPackageJsonPath}`);
         }
         const projectPackageJson = JSON.parse(fs.readFileSync(projectPackageJsonPath, 'utf8'));
-        const projectConfig = projectPackageJson.aily || {};
+        const projectConfig = projectPackageJson.projectConfig || {};
 
         // 3. 读取板子信息
         const boardModulePath = path.join(currentProjectPath, 'node_modules', boardModule);

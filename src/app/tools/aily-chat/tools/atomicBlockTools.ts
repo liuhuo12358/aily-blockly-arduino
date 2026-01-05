@@ -185,6 +185,15 @@ export interface CreateSingleBlockArgs {
     // 或直接引用已存在的块 ID
     blockId?: string;
   }>;
+  // extraState 配置（用于动态块如 text_join, lists_create_with 的输入数量）
+  extraState?: Record<string, any>;
+  // 创建后立即连接（可选）
+  connect?: {
+    action: 'put_into' | 'chain_after' | 'set_as_input';
+    target: string;
+    input?: string;
+    moveWithChain?: boolean;
+  };
 }
 
 export interface ConnectBlocksSimpleArgs {
@@ -589,6 +598,146 @@ function generateNextStepSuggestions(block: any): string[] {
 }
 
 // =============================================================================
+// 动态块 extraState 处理
+// =============================================================================
+
+/**
+ * 支持动态输入的块类型配置
+ * 用于智能推断和应用 extraState
+ */
+const DYNAMIC_BLOCK_TYPES: Record<string, {
+  inputPattern: RegExp;
+  extraStateKey: string;
+  defaultCount?: number;
+}> = {
+  'text_join': { inputPattern: /^ADD(\d+)$/, extraStateKey: 'itemCount', defaultCount: 2 },
+  'lists_create_with': { inputPattern: /^ADD(\d+)$/, extraStateKey: 'itemCount', defaultCount: 3 },
+  'controls_if': { inputPattern: /^(IF|DO)(\d+)$/, extraStateKey: 'elseIfCount' },
+  'controls_ifelse': { inputPattern: /^(IF|DO)(\d+)$/, extraStateKey: 'elseIfCount' },
+  'procedures_defnoreturn': { inputPattern: /^ARG(\d+)$/, extraStateKey: 'params' },
+  'procedures_defreturn': { inputPattern: /^ARG(\d+)$/, extraStateKey: 'params' },
+};
+
+/**
+ * 从 inputs 配置智能推断 extraState
+ * 例如: 如果提供了 ADD0, ADD1, ADD2，则推断 itemCount = 3
+ */
+function inferExtraStateFromInputs(
+  blockType: string,
+  inputs?: Record<string, any>
+): Record<string, any> | null {
+  if (!inputs) return null;
+  
+  const config = DYNAMIC_BLOCK_TYPES[blockType];
+  if (!config) return null;
+  
+  const inputKeys = Object.keys(inputs);
+  const pattern = config.inputPattern;
+  
+  // 特殊处理 controls_if/controls_ifelse
+  if (blockType === 'controls_if' || blockType === 'controls_ifelse') {
+    // 计算 IF 输入的最大编号（不包括 IF0）
+    const ifNumbers = inputKeys
+      .filter(key => /^IF\d+$/.test(key) && key !== 'IF0')
+      .map(key => parseInt(key.replace('IF', ''), 10))
+      .filter(n => !isNaN(n));
+    
+    const hasElse = inputKeys.includes('ELSE');
+    
+    const result: Record<string, any> = {};
+    if (ifNumbers.length > 0) {
+      result['elseIfCount'] = Math.max(...ifNumbers);
+    }
+    if (hasElse) {
+      result['hasElse'] = true;
+    }
+    
+    return Object.keys(result).length > 0 ? result : null;
+  }
+  
+  // 通用处理：text_join, lists_create_with 等
+  const matchingInputs = inputKeys.filter(key => pattern.test(key));
+  if (matchingInputs.length === 0) return null;
+  
+  // 提取最大编号
+  const maxNumber = Math.max(...matchingInputs.map(key => {
+    const match = key.match(pattern);
+    return match ? parseInt(match[1], 10) : -1;
+  }));
+  
+  if (maxNumber < 0) return null;
+  
+  // itemCount = maxNumber + 1（因为从0开始）
+  return { [config.extraStateKey]: maxNumber + 1 };
+}
+
+/**
+ * 将 extraState 应用到块上
+ * 支持多种动态块类型
+ */
+function applyExtraStateToBlock(
+  block: any,
+  extraState: Record<string, any>
+): { applied: boolean; message?: string; inferred?: boolean } {
+  try {
+    const blockType = block.type;
+    
+    // 方式1: 使用 loadExtraState（Blockly 标准方式）
+    if (typeof block.loadExtraState === 'function') {
+      block.loadExtraState(extraState);
+      
+      // 某些块在 loadExtraState 后需要重新渲染
+      if (typeof block.render === 'function') {
+        block.render();
+      }
+      
+      return { applied: true, message: `通过 loadExtraState 应用: ${JSON.stringify(extraState)}` };
+    }
+    
+    // 方式2: 直接设置属性并调用 updateShape_
+    const config = DYNAMIC_BLOCK_TYPES[blockType];
+    if (config) {
+      const key = config.extraStateKey;
+      const value = extraState[key];
+      
+      if (value !== undefined) {
+        // 设置内部属性（通常带下划线后缀）
+        block[`${key}_`] = value;
+        
+        // 调用 updateShape_ 更新块形状
+        if (typeof block.updateShape_ === 'function') {
+          block.updateShape_();
+        }
+        
+        // 重新渲染
+        if (typeof block.render === 'function') {
+          block.render();
+        }
+        
+        return { applied: true, message: `通过属性设置应用 ${key}: ${value}` };
+      }
+    }
+    
+    // 方式3: 处理 controls_if 的 hasElse
+    if ((blockType === 'controls_if' || blockType === 'controls_ifelse') && extraState['hasElse']) {
+      block.hasElse_ = true;
+      if (typeof block.updateShape_ === 'function') {
+        block.updateShape_();
+      }
+      if (typeof block.render === 'function') {
+        block.render();
+      }
+      return { applied: true, message: `设置 hasElse: true` };
+    }
+    
+    return { applied: false, message: '块不支持动态 extraState' };
+    
+  } catch (error) {
+    return { applied: false, message: `应用 extraState 失败: ${(error as Error).message}` };
+  }
+}
+
+// =============================================================================
 // 工具 1：创建单个块
 // =============================================================================
 
@@ -751,7 +900,120 @@ function validateAndSetFieldValue(
 }
 
 /**
- * 创建单个块 - 支持简单的 inputs（仅限一层 shadow 块）
+ * 递归创建块及其嵌套输入（支持任意深度嵌套）
+ * @param workspace Blockly 工作区
+ * @param blockConfig 块配置 { type, fields?, inputs?, extraState? }
+ * @param isShadow 是否为 shadow 块
+ * @param errors 错误收集数组
+ * @returns 创建的块，失败返回 null
+ */
+function createBlockRecursive(
+  workspace: any,
+  blockConfig: {
+    type: string;
+    fields?: Record<string, any>;
+    inputs?: Record<string, any>;
+    extraState?: Record<string, any>;
+  },
+  isShadow: boolean = false,
+  errors: string[] = []
+): any | null {
+  // 1. 验证块类型
+  if (!Blockly.Blocks[blockConfig.type]) {
+    errors.push(`块类型 "${blockConfig.type}" 不存在`);
+    return null;
+  }
+  
+  // 2. 创建块
+  const newBlock = workspace.newBlock(blockConfig.type);
+  newBlock.initSvg();
+  if (isShadow) {
+    newBlock.setShadow(true);
+  }
+  
+  // 3. 应用 extraState（动态块如 controls_if, text_join 等）
+  if (blockConfig.extraState) {
+    applyExtraStateToBlock(newBlock, blockConfig.extraState);
+  }
+  
+  // 4. 设置字段
+  if (blockConfig.fields) {
+    for (const [fieldName, fieldValue] of Object.entries(blockConfig.fields)) {
+      const field = newBlock.getField(fieldName);
+      if (field) {
+        if (field.constructor.name === 'FieldVariable') {
+          const varName = typeof fieldValue === 'object' ? ((fieldValue as any).name || String(fieldValue)) : String(fieldValue);
+          const varType = typeof fieldValue === 'object' ? ((fieldValue as any).type || '') : '';
+          let variable = workspace.getVariable(varName, varType);
+          if (!variable) {
+            variable = workspace.createVariable(varName, varType);
+          }
+          if (variable) {
+            field.setValue(variable.getId());
+          }
+        } else {
+          validateAndSetFieldValue(field, fieldValue, blockConfig.type, fieldName, workspace);
+        }
+      }
+    }
+  }
+  
+  // 5. 递归处理 inputs
+  if (blockConfig.inputs) {
+    for (const [inputName, inputConfigRaw] of Object.entries(blockConfig.inputs)) {
+      const inputConfig = inputConfigRaw as {
+        shadow?: { type: string; fields?: Record<string, any>; inputs?: Record<string, any> };
+        block?: { type: string; fields?: Record<string, any>; inputs?: Record<string, any>; extraState?: Record<string, any> };
+        blockId?: string;
+      };
+      
+      const input = newBlock.getInput(inputName);
+      if (!input || !input.connection) {
+        errors.push(`输入 ${inputName} 不存在于块 ${blockConfig.type}`);
+        continue;
+      }
+      
+      if (inputConfig.shadow) {
+        // 递归创建 shadow 块
+        const shadowBlock = createBlockRecursive(workspace, inputConfig.shadow, true, errors);
+        if (shadowBlock) {
+          const conn = shadowBlock.outputConnection || shadowBlock.previousConnection;
+          if (conn) {
+            input.connection.connect(conn);
+          }
+          shadowBlock.render();
+        }
+      } else if (inputConfig.block) {
+        // 递归创建普通块
+        const childBlock = createBlockRecursive(workspace, inputConfig.block, false, errors);
+        if (childBlock) {
+          const conn = childBlock.outputConnection || childBlock.previousConnection;
+          if (conn) {
+            input.connection.connect(conn);
+          }
+          childBlock.render();
+        }
+      } else if (inputConfig.blockId) {
+        // 连接已存在的块
+        const existingBlock = getBlockByIdSmart(workspace, inputConfig.blockId);
+        if (existingBlock) {
+          const conn = existingBlock.outputConnection || existingBlock.previousConnection;
+          if (conn) {
+            input.connection.connect(conn);
+          }
+        } else {
+          errors.push(`块 "${inputConfig.blockId}" 不存在`);
+        }
+      }
+    }
+  }
+  
+  newBlock.render();
+  return newBlock;
+}
+
+/**
+ * 创建单个块 - 支持任意深度嵌套的 inputs
  * 这是半原子化操作，平衡了简洁性和实用性
  */
 export async function createSingleBlockTool(args: CreateSingleBlockArgs): Promise<ToolUseResult> {
@@ -763,6 +1025,13 @@ export async function createSingleBlockTool(args: CreateSingleBlockArgs): Promis
     const fields = parseJsonParam<Record<string, any>>(args.fields as any);
     const position = parseJsonParam<{ x: number; y: number }>(args.position as any);
     const inputs = parseJsonParam<Record<string, any>>(args.inputs as any);
+    const extraState = parseJsonParam<Record<string, any>>(args.extraState as any);
+    const connect = parseJsonParam<{
+      action: 'put_into' | 'chain_after' | 'set_as_input';
+      target: string;
+      input?: string;
+      moveWithChain?: boolean;
+    }>(args.connect as any);
     
     // 1. 验证块类型
     if (!Blockly.Blocks[type]) {
@@ -787,6 +1056,18 @@ export async function createSingleBlockTool(args: CreateSingleBlockArgs): Promis
     // 3. 设置位置
     if (position && (position.x !== undefined || position.y !== undefined)) {
       block.moveTo(new Blockly.utils.Coordinate(position.x || 0, position.y || 0));
+    }
+    
+    // 3.5 处理 extraState（动态块如 text_join, lists_create_with, controls_if 等）
+    // 必须在设置 inputs 之前执行，以确保动态输入已创建
+    let extraStateResult: { applied: boolean; message?: string; inferred?: boolean } = { applied: false };
+    const effectiveExtraState = extraState || inferExtraStateFromInputs(type, inputs);
+    
+    if (effectiveExtraState) {
+      extraStateResult = applyExtraStateToBlock(block, effectiveExtraState);
+      if (extraStateResult.inferred) {
+        extraStateResult.message = `自动推断 extraState: ${JSON.stringify(effectiveExtraState)}`;
+      }
     }
     
     // 4. 设置字段
@@ -824,10 +1105,16 @@ export async function createSingleBlockTool(args: CreateSingleBlockArgs): Promis
       }
     }
     
-    // 5. 处理 inputs（简单的一层 shadow 块）
+    // 5. 处理 inputs（使用递归函数支持任意深度嵌套）
     const inputResults: Array<{name: string, success: boolean, message?: string, blockId?: string}> = [];
     if (inputs) {
-      for (const [inputName, inputConfig] of Object.entries(inputs)) {
+      for (const [inputName, inputConfigRaw] of Object.entries(inputs)) {
+        const inputConfig = inputConfigRaw as {
+          shadow?: { type: string; fields?: Record<string, any>; inputs?: Record<string, any> };
+          block?: { type: string; fields?: Record<string, any>; inputs?: Record<string, any>; extraState?: Record<string, any> };
+          blockId?: string;
+        };
+        
         try {
           const input = block.getInput(inputName);
           if (!input || !input.connection) {
@@ -836,51 +1123,22 @@ export async function createSingleBlockTool(args: CreateSingleBlockArgs): Promis
           }
           
           if (inputConfig.shadow) {
-            // 创建 shadow 块
-            const shadowConfig = inputConfig.shadow;
-            if (!Blockly.Blocks[shadowConfig.type]) {
-              inputResults.push({ name: inputName, success: false, message: `shadow块类型 "${shadowConfig.type}" 不存在` });
-              continue;
-            }
-            
-            const shadowBlock = workspace.newBlock(shadowConfig.type);
-            shadowBlock.initSvg();
-            
-            // 先获取连接点并设置 shadow
-            const connectionToUse = shadowBlock.outputConnection || shadowBlock.previousConnection;
-            if (connectionToUse) {
-              shadowBlock.setShadow(true);
-              input.connection.connect(connectionToUse);
-              
-              // 连接后设置字段值（确保值生效），使用验证函数
-              const shadowFieldErrors: string[] = [];
-              if (shadowConfig.fields) {
-                for (const [fieldName, fieldValue] of Object.entries(shadowConfig.fields)) {
-                  const shadowField = shadowBlock.getField(fieldName);
-                  if (shadowField) {
-                    const result = validateAndSetFieldValue(shadowField, fieldValue, shadowConfig.type, fieldName, workspace);
-                    if (!result.success) {
-                      shadowFieldErrors.push(result.message || `字段 ${fieldName} 设置失败`);
-                    }
-                  }
-                }
+            // 使用递归函数创建 shadow 块
+            const errors: string[] = [];
+            const shadowBlock = createBlockRecursive(workspace, inputConfig.shadow, true, errors);
+            if (shadowBlock) {
+              const conn = shadowBlock.outputConnection || shadowBlock.previousConnection;
+              if (conn) {
+                input.connection.connect(conn);
               }
-              
-              // 最后渲染
-              shadowBlock.render();
-              
-              if (shadowFieldErrors.length > 0) {
-                inputResults.push({ 
-                  name: inputName, 
-                  success: false, 
-                  message: shadowFieldErrors.join('; '),
-                  blockId: shadowBlock.id 
-                });
-              } else {
-                inputResults.push({ name: inputName, success: true, blockId: shadowBlock.id });
-              }
+              inputResults.push({ 
+                name: inputName, 
+                success: errors.length === 0, 
+                message: errors.length > 0 ? errors.join('; ') : undefined,
+                blockId: shadowBlock.id 
+              });
             } else {
-              inputResults.push({ name: inputName, success: false, message: 'shadow块无连接点' });
+              inputResults.push({ name: inputName, success: false, message: errors.join('; ') || 'shadow块创建失败' });
             }
           } else if (inputConfig.blockId) {
             // 连接已存在的块
@@ -898,62 +1156,22 @@ export async function createSingleBlockTool(args: CreateSingleBlockArgs): Promis
               inputResults.push({ name: inputName, success: false, message: '块无连接点' });
             }
           } else if (inputConfig.block) {
-            // 创建新的非shadow块并连接
-            const blockConfig = inputConfig.block;
-            if (!Blockly.Blocks[blockConfig.type]) {
-              inputResults.push({ name: inputName, success: false, message: `块类型 "${blockConfig.type}" 不存在` });
-              continue;
-            }
-            
-            const newBlock = workspace.newBlock(blockConfig.type);
-            newBlock.initSvg();
-            
-            // 设置字段值，使用验证函数
-            const blockFieldErrors: string[] = [];
-            if (blockConfig.fields) {
-              for (const [fieldName, fieldValue] of Object.entries(blockConfig.fields)) {
-                const blockField = newBlock.getField(fieldName);
-                if (blockField) {
-                  // 处理变量字段
-                  if (blockField.constructor.name === 'FieldVariable') {
-                    const varName = typeof fieldValue === 'object' ? ((fieldValue as any).name || String(fieldValue)) : String(fieldValue);
-                    const varType = typeof fieldValue === 'object' ? ((fieldValue as any).type || '') : '';
-                    let variable = workspace.getVariable(varName, varType);
-                    if (!variable) {
-                      variable = workspace.createVariable(varName, varType);
-                    }
-                    if (variable) {
-                      blockField.setValue(variable.getId());
-                    }
-                  } else {
-                    const result = validateAndSetFieldValue(blockField, fieldValue, blockConfig.type, fieldName, workspace);
-                    if (!result.success) {
-                      blockFieldErrors.push(result.message || `字段 ${fieldName} 设置失败`);
-                    }
-                  }
-                }
+            // 使用递归函数创建普通块（支持任意深度嵌套）
+            const errors: string[] = [];
+            const newBlock = createBlockRecursive(workspace, inputConfig.block, false, errors);
+            if (newBlock) {
+              const conn = newBlock.outputConnection || newBlock.previousConnection;
+              if (conn) {
+                input.connection.connect(conn);
               }
-            }
-            
-            newBlock.render();
-            
-            // 连接到输入
-            const connectionToUse = newBlock.outputConnection || newBlock.previousConnection;
-            if (connectionToUse) {
-              input.connection.connect(connectionToUse);
-              
-              if (blockFieldErrors.length > 0) {
-                inputResults.push({ 
-                  name: inputName, 
-                  success: false, 
-                  message: blockFieldErrors.join('; '),
-                  blockId: newBlock.id 
-                });
-              } else {
-                inputResults.push({ name: inputName, success: true, blockId: newBlock.id });
-              }
+              inputResults.push({ 
+                name: inputName, 
+                success: errors.length === 0, 
+                message: errors.length > 0 ? errors.join('; ') : undefined,
+                blockId: newBlock.id 
+              });
             } else {
-              inputResults.push({ name: inputName, success: false, message: '块无连接点' });
+              inputResults.push({ name: inputName, success: false, message: errors.join('; ') || '块创建失败' });
             }
           }
         } catch (e) {
@@ -969,6 +1187,14 @@ export async function createSingleBlockTool(args: CreateSingleBlockArgs): Promis
     
     // 7. 生成结果
     let content = `✅ 创建块成功: ${type} (ID: ${block.id})`;
+    
+    // 添加 extraState 处理信息
+    if (extraStateResult.applied) {
+      content += `\n✅ 动态扩展: ${extraStateResult.message}`;
+    } else if (effectiveExtraState && !extraStateResult.applied) {
+      content += `\n⚠️ extraState 未应用: ${extraStateResult.message || '块不支持'}`;
+    }
+    
     if (failedFields.length > 0) {
       content += `\n⚠️ 部分字段设置失败: ${failedFields.map(f => `${f.name}(${f.message})`).join(', ')}`;
     }
@@ -979,18 +1205,43 @@ export async function createSingleBlockTool(args: CreateSingleBlockArgs): Promis
       content += `\n✅ 已连接输入: ${inputResults.filter(i => i.success).map(i => i.name).join(', ')}`;
     }
     
-    // 8. 构造基础结果并可能附加工作区概览
+    // 8. 处理创建后立即连接（可选）
+    if (connect && connect.target && connect.action) {
+      const connectArgs: ConnectBlocksSimpleArgs = {
+        block: block.id,
+        action: connect.action,
+        target: connect.target,
+        input: connect.input,
+        moveWithChain: connect.moveWithChain ?? false
+      };
+      
+      try {
+        const connectRes = await connectBlocksSimpleTool(connectArgs);
+        if (connectRes.is_error) {
+          content += `\n⚠️ 连接失败: ${connectRes.content}`;
+        } else {
+          content += `\n✅ 已自动连接到目标块`;
+        }
+      } catch (e) {
+        content += `\n⚠️ 连接异常: ${(e as Error).message}`;
+      }
+    }
+    
+    // 9. 构造基础结果并可能附加工作区概览
     const baseResult: ToolUseResult = {
       is_error: false,
       content,
       metadata: {
         blockId: block.id,
         blockType: type,
+        extraStateApplied: extraStateResult.applied,
+        extraState: effectiveExtraState,
         fieldResults: fieldResults.length > 0 ? fieldResults : undefined,
         inputResults: inputResults.length > 0 ? inputResults : undefined,
         availableInputs: blockInfo.inputs.map(i => ({ name: i.name, type: i.type, connected: i.connected })),
         connectionInfo: blockInfo.connections,
-        nextSteps: generateNextStepSuggestions(block)
+        nextSteps: connect ? [] : generateNextStepSuggestions(block),
+        connected: !!connect
       }
     };
     
@@ -2286,12 +2537,13 @@ export async function batchCreateBlocksTool(args: BatchCreateBlocksArgs): Promis
         const block = workspace.newBlock(blockConfig.type);
         block.initSvg();
         
-        // 处理 extraState（如 controls_if 的额外分支）
-        if (blockConfig.extraState && typeof block.loadExtraState === 'function') {
-          try {
-            block.loadExtraState(blockConfig.extraState);
-          } catch (e) {
-            console.warn(`extraState 加载失败: ${(e as Error).message}`);
+        // 处理 extraState（如 controls_if 的额外分支，text_join 的输入数量）
+        // 支持显式提供或从 inputs 自动推断
+        const effectiveExtraState = blockConfig.extraState || inferExtraStateFromInputs(blockConfig.type, blockConfig.inputs);
+        if (effectiveExtraState) {
+          const extraStateResult = applyExtraStateToBlock(block, effectiveExtraState);
+          if (!extraStateResult.applied) {
+            console.warn(`[batchCreateBlocksTool] extraState 应用失败: ${extraStateResult.message}`);
           }
         }
         
@@ -2332,7 +2584,7 @@ export async function batchCreateBlocksTool(args: BatchCreateBlocksArgs): Promis
           }
         }
         
-        // 处理简单 inputs（shadow块、blockRef 或嵌套 block）
+        // 处理 inputs（使用递归函数支持任意深度嵌套）
         if (blockConfig.inputs) {
           for (const [inputName, inputConfig] of Object.entries(blockConfig.inputs)) {
             try {
@@ -2343,68 +2595,24 @@ export async function batchCreateBlocksTool(args: BatchCreateBlocksArgs): Promis
               }
               
               if (inputConfig.shadow) {
-                // 创建 shadow 块
-                if (Blockly.Blocks[inputConfig.shadow.type]) {
-                  const shadowBlock = workspace.newBlock(inputConfig.shadow.type);
-                  shadowBlock.initSvg();
-                  
-                  // 先获取连接点并设置 shadow
+                // 使用递归函数创建 shadow 块（支持任意深度嵌套）
+                const errors: string[] = [];
+                const shadowBlock = createBlockRecursive(workspace, inputConfig.shadow, true, errors);
+                if (shadowBlock) {
                   const conn = shadowBlock.outputConnection || shadowBlock.previousConnection;
                   if (conn) {
-                    shadowBlock.setShadow(true);
                     input.connection.connect(conn);
                   }
-                  
-                  // 设置字段（连接后设置，确保值生效），使用验证函数
-                  if (inputConfig.shadow.fields) {
-                    for (const [fn, fv] of Object.entries(inputConfig.shadow.fields)) {
-                      const sf = shadowBlock.getField(fn);
-                      if (sf) {
-                        const result = validateAndSetFieldValue(sf, fv, inputConfig.shadow.type, fn, workspace);
-                        if (!result.success) {
-                          fieldErrors.push(result.message || `shadow块字段 ${fn} 设置失败`);
-                        }
-                      }
-                    }
-                  }
-                  
-                  // 最后渲染
-                  shadowBlock.render();
+                }
+                if (errors.length > 0) {
+                  fieldErrors.push(...errors);
                 }
               } else if ((inputConfig as any).block) {
-                // 嵌套块语法（兼容 create_code_structure_tool 格式）
+                // 使用递归函数创建嵌套块（支持任意深度嵌套）
                 const nestedBlockConfig = (inputConfig as any).block;
-                if (Blockly.Blocks[nestedBlockConfig.type]) {
-                  const nestedBlock = workspace.newBlock(nestedBlockConfig.type);
-                  nestedBlock.initSvg();
-                  
-                  // 设置嵌套块的字段，使用验证函数
-                  if (nestedBlockConfig.fields) {
-                    for (const [fn, fv] of Object.entries(nestedBlockConfig.fields)) {
-                      const nf = nestedBlock.getField(fn);
-                      if (nf) {
-                        if (nf.constructor.name === 'FieldVariable') {
-                          const varName = typeof fv === 'object' ? ((fv as any).name || String(fv)) : String(fv);
-                          const varType = typeof fv === 'object' ? ((fv as any).type || '') : '';
-                          let variable = workspace.getVariable(varName, varType);
-                          if (!variable) {
-                            variable = workspace.createVariable(varName, varType);
-                          }
-                          if (variable) {
-                            nf.setValue(variable.getId());
-                          }
-                        } else {
-                          const result = validateAndSetFieldValue(nf, fv, nestedBlockConfig.type, fn, workspace);
-                          if (!result.success) {
-                            fieldErrors.push(result.message || `嵌套块字段 ${fn} 设置失败`);
-                          }
-                        }
-                      }
-                    }
-                  }
-                  
-                  nestedBlock.render();
-                  
+                const errors: string[] = [];
+                const nestedBlock = createBlockRecursive(workspace, nestedBlockConfig, false, errors);
+                if (nestedBlock) {
                   const conn = nestedBlock.outputConnection || nestedBlock.previousConnection;
                   if (conn) {
                     input.connection.connect(conn);
@@ -2416,6 +2624,9 @@ export async function batchCreateBlocksTool(args: BatchCreateBlocksArgs): Promis
                     // 注册到全局映射（支持跨调用引用）
                     registerBlockIdMapping(nestedBlockConfig.id, nestedBlock.id);
                   }
+                }
+                if (errors.length > 0) {
+                  fieldErrors.push(...errors);
                 }
               } else if (inputConfig.blockRef) {
                 // 引用其他已创建的块（稍后处理）
@@ -2959,12 +3170,67 @@ export async function getWorkspaceBlocksTool(): Promise<ToolUseResult> {
 export const ATOMIC_BLOCK_TOOLS = [
   {
     name: "create_single_block",
-    description: `【原子化工具-推荐】创建单个 Blockly 块，支持简单的 inputs（一层 shadow 块）。
+    description: `【原子化工具-推荐】创建单个 Blockly 块，支持 inputs（一层 shadow 块）、动态块配置和创建时直接连接。
 
 **核心特点**：
 - ✅ 支持 inputs 中的简单 shadow 块（避免多步创建）
-- ✅ 不支持深层嵌套（避免复杂 JSON 出错）
+- ✅ 支持 extraState 配置动态块（如 text_join, lists_create_with, controls_if）
+- ✅ 智能推断 extraState（根据 inputs 自动计算）
+- ✅ 支持创建时直接连接（可选 connect 参数）
 - ✅ 返回块 ID，后续可用 connect_blocks_simple 连接
+
+**创建并直接连接示例**：
+\`\`\`json
+// 创建 serial_begin 并直接放入 arduino_setup
+{
+  "type": "serial_begin",
+  "fields": {"SERIAL": "Serial", "SPEED": "9600"},
+  "connect": {"action": "put_into", "target": "arduino_setup"}
+}
+
+// 创建 math_number 并设为 delay 的 TIME 输入
+{
+  "type": "math_number",
+  "fields": {"NUM": 1000},
+  "connect": {"action": "set_as_input", "target": "delay_id", "input": "TIME"}
+}
+\`\`\`
+
+**text_join 示例**（动态输入块，3个文本拼接）：
+\`\`\`json
+{
+  "type": "text_join",
+  "extraState": {"itemCount": 3},
+  "inputs": {
+    "ADD0": {"shadow": {"type": "text", "fields": {"TEXT": "humi"}}},
+    "ADD1": {"shadow": {"type": "text", "fields": {"TEXT": "temp"}}},
+    "ADD2": {"shadow": {"type": "text", "fields": {"TEXT": "测量"}}}
+  }
+}
+\`\`\`
+**注意**: text_join 默认只有2个输入(ADD0, ADD1)，需要通过 extraState.itemCount 指定输入数量！
+
+**lists_create_with 示例**（创建列表，4个元素）：
+\`\`\`json
+{
+  "type": "lists_create_with",
+  "extraState": {"itemCount": 4},
+  "inputs": {
+    "ADD0": {"shadow": {"type": "math_number", "fields": {"NUM": 1}}},
+    "ADD1": {"shadow": {"type": "math_number", "fields": {"NUM": 2}}},
+    "ADD2": {"shadow": {"type": "math_number", "fields": {"NUM": 3}}},
+    "ADD3": {"shadow": {"type": "math_number", "fields": {"NUM": 4}}}
+  }
+}
+\`\`\`
+
+**controls_if 示例**（带 else if 和 else）：
+\`\`\`json
+{
+  "type": "controls_if",
+  "extraState": {"elseIfCount": 1, "hasElse": true}
+}
+\`\`\`
 
 **io_digitalwrite 示例**（一步创建完整块）：
 \`\`\`json
@@ -2985,27 +3251,17 @@ export const ATOMIC_BLOCK_TOOLS = [
 }
 \`\`\`
 
-**连接已存在块的示例**：
-\`\`\`json
-{
-  "type": "io_digitalwrite",
-  "inputs": {
-    "PIN": {"blockId": "existing_pin_block_id"},
-    "STATE": {"shadow": {"type": "io_state", "fields": {"STATE": "LOW"}}}
-  }
-}
-\`\`\`
-
 **使用场景**：
+- 创建动态输入块（text_join, lists_create_with）
+- 创建条件块（controls_if 带多个 else if）
 - 创建有多个输入的块（如 io_digitalwrite, io_pinmode）
-- 创建简单块（如 serial_begin, math_number）
-- 之前的 smart_block_tool 失败时`,
+- 创建简单块（如 serial_begin, math_number）`,
     input_schema: {
       type: 'object',
       properties: {
         type: { 
           type: 'string', 
-          description: '块类型，如 serial_begin, io_digitalwrite, dht_init 等' 
+          description: '块类型，如 serial_begin, io_digitalwrite, text_join 等' 
         },
         fields: { 
           type: 'object', 
@@ -3029,6 +3285,15 @@ export const ATOMIC_BLOCK_TOOLS = [
             }
           }
         },
+        extraState: {
+          type: 'object',
+          description: '动态块的额外状态配置。text_join/lists_create_with 用 {itemCount: N}; controls_if 用 {elseIfCount: N, hasElse: true}',
+          properties: {
+            itemCount: { type: 'number', description: 'text_join/lists_create_with 的输入数量' },
+            elseIfCount: { type: 'number', description: 'controls_if 的 else if 分支数量' },
+            hasElse: { type: 'boolean', description: 'controls_if 是否有 else 分支' }
+          }
+        },
         position: {
           type: 'object',
           properties: {
@@ -3036,6 +3301,31 @@ export const ATOMIC_BLOCK_TOOLS = [
             y: { type: 'number', description: 'Y坐标' }
           },
           description: '可选，块的位置'
+        },
+        connect: {
+          type: 'object',
+          description: '可选，创建后立即连接到目标块（参考 connect_blocks_simple）',
+          properties: {
+            action: {
+              type: 'string',
+              enum: ['put_into', 'chain_after', 'set_as_input'],
+              description: 'put_into=放入容器, chain_after=链接到后面, set_as_input=设为值输入'
+            },
+            target: {
+              type: 'string',
+              description: '目标块 ID 或类型名（如 "arduino_setup", "arduino_loop"）'
+            },
+            input: {
+              type: 'string',
+              description: '目标输入名（可选，会自动检测）'
+            },
+            moveWithChain: {
+              type: 'boolean',
+              description: '是否将块后面连接的块一起移动（默认 false）',
+              default: false
+            }
+          },
+          required: ['action', 'target']
         }
       },
       required: ['type']
@@ -3177,12 +3467,29 @@ export const ATOMIC_BLOCK_TOOLS = [
 - 📋 扁平化结构：blocks 数组 + connections 数组（避免深层嵌套）
 - 🔗 使用临时ID（如 "b1", "b2"）引用块，连接时自动解析
 - 📊 详细的执行报告和ID映射
+- ✅ 智能推断 extraState（根据 inputs 自动计算动态输入数量）
 
 **适用场景**：
 - 创建完整的传感器读取+处理+输出结构
 - 创建 if-else 条件判断结构
 - 创建循环结构
+- 创建动态输入块（text_join, lists_create_with）
 - 任何需要多个块+连接的场景
+
+**text_join 文本拼接示例**（3个文本）：
+\`\`\`json
+{
+  "blocks": [
+    {"id": "b1", "type": "text_join", "extraState": {"itemCount": 3}, "inputs": {
+      "ADD0": {"shadow": {"type": "text", "fields": {"TEXT": "humi"}}},
+      "ADD1": {"shadow": {"type": "text", "fields": {"TEXT": "temp"}}},
+      "ADD2": {"shadow": {"type": "text", "fields": {"TEXT": "测量"}}}
+    }}
+  ],
+  "connections": []
+}
+\`\`\`
+**注意**: text_join 默认只有2个输入，需要 extraState.itemCount 指定数量！
 
 **DHT温度读取+LED控制 完整示例**：
 \`\`\`json
@@ -3222,11 +3529,18 @@ export const ATOMIC_BLOCK_TOOLS = [
 | chain_after | 链接到块后面 | 语句块 → 语句块 |
 | set_as_input | 设为值输入 | 值块 → 任意块 |
 
+**动态块 extraState 配置**：
+| 块类型 | extraState | 说明 |
+|--------|------------|------|
+| text_join | {"itemCount": N} | 文本拼接输入数量 |
+| lists_create_with | {"itemCount": N} | 列表元素数量 |
+| controls_if | {"elseIfCount": N, "hasElse": true} | else if 和 else 分支 |
+
 **注意事项**：
 - blocks 中的 id 是临时ID，用于 connections 中引用
 - connections 中的 target 可以是临时ID（新块）或真实ID（已存在的块如 arduino_setup）
 - inputs 中可使用 blockRef 引用其他新建块
-- extraState 用于动态块配置（如 controls_if 的 hasElse）`,
+- extraState 用于动态块配置，也可省略让系统从 inputs 自动推断`,
     input_schema: {
       type: 'object',
       properties: {

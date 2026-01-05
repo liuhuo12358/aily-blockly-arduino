@@ -40,8 +40,8 @@ import { getBoardParametersTool } from './tools/getBoardParametersTool';
 import globTool from './tools/globTool';
 import { fetchTool, FetchToolService } from './tools/fetchTool';
 import {
-  // smartBlockTool,
-  // connectBlocksTool,
+  smartBlockTool,
+  connectBlocksTool,
   createCodeStructureTool,
   configureBlockTool,
   // variableManagerTool,
@@ -59,13 +59,17 @@ import {
 } from './tools/editBlockTool';
 // 原子化块操作工具
 import {
-  createSingleBlockTool,
-  connectBlocksSimpleTool,
-  setBlockFieldTool,
-  setBlockInputTool,
-  getWorkspaceBlocksTool,
-  batchCreateBlocksTool
+  // createSingleBlockTool,
+  // connectBlocksSimpleTool,
+  // setBlockFieldTool,
+  // setBlockInputTool,
+  // getWorkspaceBlocksTool,
+  // batchCreateBlocksTool
 } from './tools/atomicBlockTools';
+// // 扁平化块操作工具
+// import { flatCreateBlocksTool } from './tools/flatBlockTools';
+// // DSL 块操作工具
+// import { dslCreateBlocksTool } from './tools/dslBlockTools';
 import { todoWriteTool } from './tools';
 // import { arduinoSyntaxTool } from './tools/arduinoSyntaxTool';
 import { NzModalService } from 'ng-zorro-antd/modal';
@@ -451,6 +455,24 @@ export class AilyChatComponent implements OnDestroy {
         return `设置输入: ${args.inputName || 'unknown'}`;
       case 'get_workspace_blocks':
         return "获取工作区块列表...";
+      // 扁平化块工具
+      case 'flat_create_blocks':
+        let flatBlockCount = 0;
+        if (args?.blocks) {
+          if (typeof args.blocks === 'string') {
+            try {
+              flatBlockCount = JSON.parse(args.blocks).length;
+            } catch (e) {
+              flatBlockCount = 0;
+            }
+          } else if (Array.isArray(args.blocks)) {
+            flatBlockCount = args.blocks.length;
+          }
+        }
+        return `扁平化创建块: ${flatBlockCount}个块...`;
+      // DSL 块工具
+      // case 'dsl_create_blocks':
+      //   return `DSL 创建块...`;
       // 原有块工具
       case 'smart_block_tool':
         return `操作Blockly块: ${args.type || 'unknown'}`;
@@ -561,6 +583,25 @@ export class AilyChatComponent implements OnDestroy {
         return `输入设置成功: ${args?.inputName || 'unknown'}`;
       case 'get_workspace_blocks':
         return `获取块列表成功`;
+      // 扁平化块工具结果
+      case 'flat_create_blocks':
+        let blocksCreated = result?.data?.stats?.blocksCreated || 0;
+        if (blocksCreated === 0 && args?.blocks) {
+          if (typeof args.blocks === 'string') {
+            try {
+              blocksCreated = JSON.parse(args.blocks).length;
+            } catch (e) {
+              blocksCreated = 0;
+            }
+          } else if (Array.isArray(args.blocks)) {
+            blocksCreated = args.blocks.length;
+          }
+        }
+        const connsCreated = result?.data?.stats?.connectionsEstablished || 0;
+        return `扁平化创建成功: ${blocksCreated}个块, ${connsCreated}个连接`;
+      // DSL 块工具结果
+      // case 'dsl_create_blocks':
+      //   return result?.is_error ? 'DSL 块创建失败' : 'DSL 块创建成功';
       // 原有块工具结果
       case 'smart_block_tool':
         return `智能块操作成功: ${args?.type || 'unknown'}`;
@@ -949,7 +990,7 @@ Do not create non-existent boards and libraries.
     (window as any)['editBlockTool'] = {
       getActiveWorkspace,
       // connectBlocksTool,
-      createCodeStructureTool,
+      // createCodeStructureTool,
       configureBlockTool,
       // variableManagerTool,
       // findBlockTool,
@@ -2323,151 +2364,220 @@ ${JSON.stringify(errData)}
                   // =============================================================================
                   // 原子化块操作工具
                   // =============================================================================
-                  case 'create_single_block':
-                    this.startToolCall(toolCallId, data.tool_name, `创建块: ${toolArgs.type}`, toolArgs);
-                    toolResult = await createSingleBlockTool(toolArgs);
-                    if (toolResult.is_error) {
-                      resultState = "warn";
-                      resultText = `块创建失败: ${toolArgs.type}`;
-                    } else {
-                      resultText = `块创建成功: ${toolArgs.type} (ID: ${toolResult.metadata?.blockId})`;
-                    }
-                    break;
-                  case 'connect_blocks_simple':
-                    this.startToolCall(toolCallId, data.tool_name, `连接块: ${toolArgs.action}`, toolArgs);
-                    toolResult = await connectBlocksSimpleTool(toolArgs);
-                    if (toolResult.is_error) {
-                      resultState = "warn";
-                      resultText = `块连接失败`;
-                    } else {
-                      resultText = `块连接成功: ${toolArgs.action}`;
-                    }
-                    break;
-                  case 'set_block_field':
-                    this.startToolCall(toolCallId, data.tool_name, `设置字段: ${toolArgs.fieldName}`, toolArgs);
-                    toolResult = await setBlockFieldTool(toolArgs);
-                    if (toolResult.is_error) {
-                      resultState = "warn";
-                      resultText = `字段设置失败`;
-                    } else {
-                      resultText = `字段设置成功: ${toolArgs.fieldName}`;
-                    }
-                    break;
-                  case 'set_block_input':
-                    this.startToolCall(toolCallId, data.tool_name, `设置输入: ${toolArgs.inputName}`, toolArgs);
-                    toolResult = await setBlockInputTool(toolArgs);
-                    if (toolResult.is_error) {
-                      resultState = "warn";
-                      resultText = `输入设置失败`;
-                    } else {
-                      resultText = `输入设置成功: ${toolArgs.inputName}`;
-                    }
-                    break;
-                  case 'get_workspace_blocks':
-                    this.startToolCall(toolCallId, data.tool_name, "获取工作区块列表...", toolArgs);
-                    toolResult = await getWorkspaceBlocksTool();
-                    if (toolResult.is_error) {
-                      resultState = "warn";
-                      resultText = `获取块列表失败`;
-                    } else {
-                      resultText = `获取块列表成功`;
-                    }
-                    break;
-                  case 'batch_create_blocks':
-                    // 解析可能是 JSON 字符串的参数以获取正确数量（使用 JSON 修复）
-                    let parsedBlocks: any[] = [];
-                    let parsedConns: any[] = [];
-                    let displayText = '批量创建块...';  // 默认显示文本
-                    try {
-                      // 使用 fixJsonString 修复可能格式错误的 JSON
-                      if (typeof toolArgs.blocks === 'string') {
-                        const fixResult = fixJsonString(toolArgs.blocks);
-                        const jsonToParse = fixResult.success ? fixResult.fixed : toolArgs.blocks;
-                        parsedBlocks = JSON.parse(jsonToParse);
-                      } else if (Array.isArray(toolArgs.blocks)) {
-                        parsedBlocks = toolArgs.blocks;
-                      }
+                  // case 'create_single_block':
+                  //   this.startToolCall(toolCallId, data.tool_name, `创建块: ${toolArgs.type}`, toolArgs);
+                  //   toolResult = await createSingleBlockTool(toolArgs);
+                  //   if (toolResult.is_error) {
+                  //     resultState = "warn";
+                  //     resultText = `块创建失败: ${toolArgs.type}`;
+                  //   } else {
+                  //     resultText = `块创建成功: ${toolArgs.type} (ID: ${toolResult.metadata?.blockId})`;
+                  //   }
+                  //   break;
+                  // case 'connect_blocks_simple':
+                  //   this.startToolCall(toolCallId, data.tool_name, `连接块: ${toolArgs.action}`, toolArgs);
+                  //   toolResult = await connectBlocksSimpleTool(toolArgs);
+                  //   if (toolResult.is_error) {
+                  //     resultState = "warn";
+                  //     resultText = `块连接失败`;
+                  //   } else {
+                  //     resultText = `块连接成功: ${toolArgs.action}`;
+                  //   }
+                  //   break;
+                  // case 'set_block_field':
+                  //   this.startToolCall(toolCallId, data.tool_name, `设置字段: ${toolArgs.fieldName}`, toolArgs);
+                  //   toolResult = await setBlockFieldTool(toolArgs);
+                  //   if (toolResult.is_error) {
+                  //     resultState = "warn";
+                  //     resultText = `字段设置失败`;
+                  //   } else {
+                  //     resultText = `字段设置成功: ${toolArgs.fieldName}`;
+                  //   }
+                  //   break;
+                  // case 'set_block_input':
+                  //   this.startToolCall(toolCallId, data.tool_name, `设置输入: ${toolArgs.inputName}`, toolArgs);
+                  //   toolResult = await setBlockInputTool(toolArgs);
+                  //   if (toolResult.is_error) {
+                  //     resultState = "warn";
+                  //     resultText = `输入设置失败`;
+                  //   } else {
+                  //     resultText = `输入设置成功: ${toolArgs.inputName}`;
+                  //   }
+                  //   break;
+                  // case 'get_workspace_blocks':
+                  //   this.startToolCall(toolCallId, data.tool_name, "获取工作区块列表...", toolArgs);
+                  //   toolResult = await getWorkspaceBlocksTool();
+                  //   if (toolResult.is_error) {
+                  //     resultState = "warn";
+                  //     resultText = `获取块列表失败`;
+                  //   } else {
+                  //     resultText = `获取块列表成功`;
+                  //   }
+                  //   break;
+                  // case 'batch_create_blocks':
+                  //   // 解析可能是 JSON 字符串的参数以获取正确数量（使用 JSON 修复）
+                  //   let parsedBlocks: any[] = [];
+                  //   let parsedConns: any[] = [];
+                  //   let displayText = '批量创建块...';  // 默认显示文本
+                  //   try {
+                  //     // 使用 fixJsonString 修复可能格式错误的 JSON
+                  //     if (typeof toolArgs.blocks === 'string') {
+                  //       const fixResult = fixJsonString(toolArgs.blocks);
+                  //       const jsonToParse = fixResult.success ? fixResult.fixed : toolArgs.blocks;
+                  //       parsedBlocks = JSON.parse(jsonToParse);
+                  //     } else if (Array.isArray(toolArgs.blocks)) {
+                  //       parsedBlocks = toolArgs.blocks;
+                  //     }
                       
-                      if (typeof toolArgs.connections === 'string') {
-                        const fixResult = fixJsonString(toolArgs.connections);
-                        const jsonToParse = fixResult.success ? fixResult.fixed : toolArgs.connections;
-                        parsedConns = JSON.parse(jsonToParse);
-                      } else if (Array.isArray(toolArgs.connections)) {
-                        parsedConns = toolArgs.connections;
-                      }
+                  //     if (typeof toolArgs.connections === 'string') {
+                  //       const fixResult = fixJsonString(toolArgs.connections);
+                  //       const jsonToParse = fixResult.success ? fixResult.fixed : toolArgs.connections;
+                  //       parsedConns = JSON.parse(jsonToParse);
+                  //     } else if (Array.isArray(toolArgs.connections)) {
+                  //       parsedConns = toolArgs.connections;
+                  //     }
                       
-                      // 成功解析后生成显示文本
-                      const batchBlockCount = Array.isArray(parsedBlocks) ? parsedBlocks.length : 0;
-                      const batchConnCount = Array.isArray(parsedConns) ? parsedConns.length : 0;
-                      displayText = `批量创建: ${batchBlockCount}个块, ${batchConnCount}个连接`;
-                    } catch (e) {
-                      console.warn('解析 batch_create_blocks 参数失败（已尝试修复）:', e);
-                      // 解析失败时，尝试从字符串粗略估算数量
-                      try {
-                        const blocksStr = typeof toolArgs.blocks === 'string' ? toolArgs.blocks : JSON.stringify(toolArgs.blocks || []);
-                        const connsStr = typeof toolArgs.connections === 'string' ? toolArgs.connections : JSON.stringify(toolArgs.connections || []);
-                        const estimatedBlocks = (blocksStr.match(/"type"\s*:/g) || []).length;
-                        const estimatedConns = (connsStr.match(/"parent"\s*:/g) || []).length;
-                        if (estimatedBlocks > 0 || estimatedConns > 0) {
-                          displayText = `批量创建: 约${estimatedBlocks}个块, 约${estimatedConns}个连接`;
-                        }
-                      } catch (estimateError) {
-                        // 估算也失败，保持默认显示
-                      }
-                    }
-                    this.startToolCall(toolCallId, data.tool_name, displayText, toolArgs);
-                    toolResult = await batchCreateBlocksTool(toolArgs);
-                    if (toolResult.is_error) {
-                      resultState = "warn";
-                      // 从 metadata 中获取实际的成功和失败数量
-                      const totalBlocks = toolResult.metadata?.totalBlocks || 0;
-                      const successBlocks = toolResult.metadata?.successBlocks || 0;
-                      const totalConns = toolResult.metadata?.totalConnections || 0;
-                      const successConns = toolResult.metadata?.successConnections || 0;
-                      const failedBlocks = totalBlocks - successBlocks;
-                      const failedConns = totalConns - successConns;
-                      resultText = `批量创建部分失败: ${failedBlocks}个块失败, ${failedConns}个连接失败`;
-                    } else {
-                      const successBlocks = toolResult.metadata?.successBlocks || 0;
-                      const successConns = toolResult.metadata?.successConnections || 0;
-                      resultText = `批量创建成功: ${successBlocks}个块, ${successConns}个连接`;
-                    }
-                    break;
+                  //     // 成功解析后生成显示文本
+                  //     const batchBlockCount = Array.isArray(parsedBlocks) ? parsedBlocks.length : 0;
+                  //     const batchConnCount = Array.isArray(parsedConns) ? parsedConns.length : 0;
+                  //     displayText = `批量创建: ${batchBlockCount}个块, ${batchConnCount}个连接`;
+                  //   } catch (e) {
+                  //     console.warn('解析 batch_create_blocks 参数失败（已尝试修复）:', e);
+                  //     // 解析失败时，尝试从字符串粗略估算数量
+                  //     try {
+                  //       const blocksStr = typeof toolArgs.blocks === 'string' ? toolArgs.blocks : JSON.stringify(toolArgs.blocks || []);
+                  //       const connsStr = typeof toolArgs.connections === 'string' ? toolArgs.connections : JSON.stringify(toolArgs.connections || []);
+                  //       const estimatedBlocks = (blocksStr.match(/"type"\s*:/g) || []).length;
+                  //       const estimatedConns = (connsStr.match(/"parent"\s*:/g) || []).length;
+                  //       if (estimatedBlocks > 0 || estimatedConns > 0) {
+                  //         displayText = `批量创建: 约${estimatedBlocks}个块, 约${estimatedConns}个连接`;
+                  //       }
+                  //     } catch (estimateError) {
+                  //       // 估算也失败，保持默认显示
+                  //     }
+                  //   }
+                  //   this.startToolCall(toolCallId, data.tool_name, displayText, toolArgs);
+                  //   toolResult = await batchCreateBlocksTool(toolArgs);
+                  //   if (toolResult.is_error) {
+                  //     resultState = "warn";
+                  //     // 从 metadata 中获取实际的成功和失败数量
+                  //     const totalBlocks = toolResult.metadata?.totalBlocks || 0;
+                  //     const successBlocks = toolResult.metadata?.successBlocks || 0;
+                  //     const totalConns = toolResult.metadata?.totalConnections || 0;
+                  //     const successConns = toolResult.metadata?.successConnections || 0;
+                  //     const failedBlocks = totalBlocks - successBlocks;
+                  //     const failedConns = totalConns - successConns;
+                  //     resultText = `批量创建部分失败: ${failedBlocks}个块失败, ${failedConns}个连接失败`;
+                  //   } else {
+                  //     const successBlocks = toolResult.metadata?.successBlocks || 0;
+                  //     const successConns = toolResult.metadata?.successConnections || 0;
+                  //     resultText = `批量创建成功: ${successBlocks}个块, ${successConns}个连接`;
+                  //   }
+                  //   break;
+                  // =============================================================================
+                  // 扁平化块创建工具
+                  // =============================================================================
+                  // case 'flat_create_blocks':
+                  //   // console.log('🔧 [扁平化块创建工具被调用]');
+                  //   // 解析可能是 JSON 字符串的参数
+                  //   let flatBlockCount = 0;
+                  //   let flatConnCount = 0;
+                    
+                  //   if (toolArgs.blocks) {
+                  //     if (typeof toolArgs.blocks === 'string') {
+                  //       const fixResult = fixJsonString(toolArgs.blocks);
+                  //       toolArgs.blocks = fixResult.success ? fixResult.fixed : toolArgs.blocks;
+                  //       try {
+                  //         flatBlockCount = JSON.parse(toolArgs.blocks).length;
+                  //       } catch (e) {
+                  //         console.warn('解析 flat_create_blocks.blocks 失败:', e);
+                  //       }
+                  //     } else if (Array.isArray(toolArgs.blocks)) {
+                  //       flatBlockCount = toolArgs.blocks.length;
+                  //     }
+                  //   }
+                    
+                  //   if (toolArgs.connections) {
+                  //     if (typeof toolArgs.connections === 'string') {
+                  //       const fixResult = fixJsonString(toolArgs.connections);
+                  //       toolArgs.connections = fixResult.success ? fixResult.fixed : toolArgs.connections;
+                  //       try {
+                  //         flatConnCount = JSON.parse(toolArgs.connections).length;
+                  //       } catch (e) {
+                  //         console.warn('解析 flat_create_blocks.connections 失败:', e);
+                  //       }
+                  //     } else if (Array.isArray(toolArgs.connections)) {
+                  //       flatConnCount = toolArgs.connections.length;
+                  //     }
+                  //   }
+                    
+                  //   this.startToolCall(toolCallId, data.tool_name, `扁平化创建: ${flatBlockCount}个块, ${flatConnCount}个连接`, toolArgs);
+                  //   toolResult = await flatCreateBlocksTool(toolArgs);
+                  //   if (toolResult.is_error) {
+                  //     resultState = "warn";
+                  //     const stats = (toolResult as any).data?.stats;
+                  //     if (stats) {
+                  //       resultText = `扁平化创建部分失败: ${stats.blocksFailed || 0}个块失败, ${stats.connectionsFailed || 0}个连接失败`;
+                  //     } else {
+                  //       resultText = '扁平化块创建异常';
+                  //     }
+                  //   } else {
+                  //     const stats = (toolResult as any).data?.stats;
+                  //     if (stats) {
+                  //       resultText = `扁平化创建成功: ${stats.blocksCreated}个块, ${stats.connectionsEstablished}个连接`;
+                  //     } else {
+                  //       resultText = `扁平化块创建成功`;
+                  //     }
+                  //   }
+                  //   break;
+                  // =============================================================================
+                  // DSL 块创建工具
+                  // =============================================================================
+                  // case 'dsl_create_blocks':
+                  //   this.startToolCall(toolCallId, data.tool_name, `DSL 创建块...`, toolArgs);
+                  //   toolResult = await dslCreateBlocksTool(toolArgs);
+                  //   if (toolResult.is_error) {
+                  //     resultState = "warn";
+                  //     resultText = 'DSL 块创建失败';
+                  //   } else {
+                  //     resultText = 'DSL 块创建成功';
+                  //   }
+                  //   break;
                   // =============================================================================
                   // 原有块操作工具
                   // =============================================================================
-                  // case 'smart_block_tool':
-                  //   // console.log('🔧 [智能块工具被调用]');
-                  //   // console.log('📥 大模型传入的完整参数:', JSON.stringify(toolArgs, null, 2));
-                  //   // console.log('📋 参数解析:');
-                  //   // console.log('  - 块类型:', toolArgs.type);
-                  //   // console.log('  - 位置:', toolArgs.position);
-                  //   // console.log('  - 字段:', toolArgs.fields);
-                  //   // console.log('  - 输入:', toolArgs.inputs);
-                  //   // console.log('  - 父级连接:', toolArgs.parentConnection);
-                  //   // console.log('  - 创建变量:', toolArgs.createVariables);
+                  case 'smart_block_tool':
+                    // console.log('🔧 [智能块工具被调用]');
+                    // console.log('📥 大模型传入的完整参数:', JSON.stringify(toolArgs, null, 2));
+                    // console.log('📋 参数解析:');
+                    // console.log('  - 块类型:', toolArgs.type);
+                    // console.log('  - 位置:', toolArgs.position);
+                    // console.log('  - 字段:', toolArgs.fields);
+                    // console.log('  - 输入:', toolArgs.inputs);
+                    // console.log('  - 父级连接:', toolArgs.parentConnection);
+                    // console.log('  - 创建变量:', toolArgs.createVariables);
 
-                  //   this.startToolCall(toolCallId, data.tool_name, `操作Blockly块: ${toolArgs.type}`, toolArgs);
-                  //   toolResult = await smartBlockTool(toolArgs);
-                  //   // console.log('✅ 智能块工具执行结果:', toolResult);
-                  //   if (toolResult.is_error) {
-                  //     resultState = "warn";
-                  //     resultText = '智能块操作异常';
-                  //   } else {
-                  //     resultText = `智能块操作成功: ${toolArgs.type}`;
-                  //   }
-                  //   break;
-                  // case 'connect_blocks_tool':
-                  //   // console.log('[块连接工具被调用]', toolArgs);
-                  //   this.startToolCall(toolCallId, data.tool_name, "连接Blockly块...", toolArgs);
-                  //   toolResult = await connectBlocksTool(toolArgs);
-                  //   if (toolResult.is_error) {
-                  //     resultState = "warn";
-                  //     resultText = '块连接异常';
-                  //   } else {
-                  //     resultText = `块连接成功: ${toolArgs.connectionType}连接`;
-                  //   }
-                  //   break;
+                    this.startToolCall(toolCallId, data.tool_name, `操作Blockly块: ${toolArgs.type}`, toolArgs);
+                    toolResult = await smartBlockTool(toolArgs);
+                    // console.log('✅ 智能块工具执行结果:', toolResult);
+                    if (toolResult.is_error) {
+                      resultState = "warn";
+                      resultText = '智能块操作异常';
+                    } else {
+                      resultText = `智能块操作成功: ${toolArgs.type}`;
+                    }
+                    break;
+                  case 'connect_blocks_tool':
+                    // console.log('[块连接工具被调用]', toolArgs);
+                    this.startToolCall(toolCallId, data.tool_name, "连接Blockly块...", toolArgs);
+                    toolResult = await connectBlocksTool(toolArgs);
+                    if (toolResult.is_error) {
+                      resultState = "warn";
+                      resultText = '块连接异常';
+                    } else {
+                      resultText = `块连接成功: ${toolArgs.connectionType}连接`;
+                    }
+                    break;
                   case 'create_code_structure_tool':
                     // console.log('[代码结构创建工具被调用]', toolArgs);
                     this.startToolCall(toolCallId, data.tool_name, `创建代码结构: ${toolArgs.structure}`, toolArgs);
@@ -2834,6 +2944,7 @@ ${JSON.stringify(errData)}
                 'set_block_field',
                 'set_block_input',
                 'batch_create_blocks',
+                'flat_create_blocks',
               ].includes(data.tool_name);
 
               // 判断是否需要路径信息的工具
@@ -2861,6 +2972,7 @@ ${JSON.stringify(errData)}
               const shouldIncludeKeyInfo = needsPathInfo || toolResult.is_error || resultState === 'warn';
 
               if (needsRules || newConnect || newProject) {
+                console.log('包含规则提示');
                 newConnect = false;
                 newProject = false;
                 // Blockly 工具失败时：同时包含 keyInfo 和 rules
@@ -2869,21 +2981,20 @@ ${JSON.stringify(errData)}
 1. 在开始编程前使用get_workspace_overview_tool分析当前工作区，了解已有块和结构情况
 2. 先列出计划使用的所有库(不可跳过以\`lib-core\`开始的库，特别注意lib-core-logic lib-core-variables lib-core-time等基础库)
 3. 逐一完整读取每个库的README确定块存在
-4. 使用create_single_block和batch_create_blocks创建对应代码块
+4. 使用smart_block_tool和create_code_structure_tool、flat_create_blocks创建对应代码块
 - 不要一次性生成大量块(超过10个)，分步创建，每次创建后检查结果
 - 全局变量 setup loop 回调函数 独立结构分开创建(steup/loop基础块已经存在于工作区，无需重复创建)
 - 当尝试使用代码块多次仍然无法创建成功时，安装 @aily-project/lib-core-custom 并使用库中的自定义块进行代码创建
 5. 检查工具反馈结果
 6. 修复结构或逻辑问题(多次修复仍然有误时，分析是否遗漏了相关库readme的阅读)
-- 如果发现问题，请及时修复，不要继续往下走
-- 如果部分代码块创建失败，使用第三步的工具继续创建遗漏的块
-- 如果发现连接的块不满足要求，可以使用第三步的工具创建新的块并替换连接
-- 如果连接逻辑问题可使用connect_blocks_simple修改连接关系
-- **IMPORTANT** 避免直接删除整个代码块，优先考虑使用配置工具修改块属性或者删除某一个块后重新创建
-- 全局变量请作为独立块创建
-- 独立且无用的块请删除
+**注意**：严禁遇到小问题就想着"推倒重来"，而不是"精准修复"。
+- 仔细分析代码逻辑和块结构，找出具体问题所在。
+- 精确修复问题，最小化改动，保持代码结构稳定。
+- 仔细分析问题复杂度，避免简单问题复杂化；简单的块缺少，优先使用新建块解决。
+- 复杂问题修复流程：新建块->连接块->配置块->检查反馈->重复修复，如果三次修复仍然失败，才考虑"推倒重来"。
 7. 重复直至完成
 8. 一次只调用一个工具完成一个小目标，等待工具反馈后再进行下一个操作
+9. 语法正确只是基础，良好的逻辑结构和高效的执行流程才是关键，深入分析代码逻辑，整体思考嵌入式代码的实时性和用户体验。
 JSON务必保留必要的换行和缩进格式，否则可能导致解析失败。</rules>
 <toolResult>${toolResult.content}</toolResult>\n<info>如果想结束对话，转交给用户，可以使用[to_xxx]，这里的xxx为user</info>`;
               } else if (shouldIncludeKeyInfo) {
@@ -2896,7 +3007,7 @@ JSON务必保留必要的换行和缩进格式，否则可能导致解析失败�
             } else {
               toolContent = `
 Your role is ASK (Advisory & Quick Support) - you provide analysis, recommendations, and guidance ONLY. You do NOT execute actual tasks or changes.
-<toolResult>${toolResult.content}</toolResult>\n<info>如果想结束对话，转交给用户，可以使用[to_xxx]，这里的xxx为user</info>`;
+<toolResult>${toolResult?.content || '工具执行完成，无返回内容'}</toolResult>\n<info>如果想结束对话，转交给用户，可以使用[to_xxx]，这里的xxx为user</info>`;
             }
 
             // 显示工具完成状态（除了 todo_write_tool）
@@ -2924,7 +3035,7 @@ Your role is ASK (Advisory & Quick Support) - you provide analysis, recommendati
               "tool_id": data.tool_id,
               "content": toolContent,
               "resultText": this.makeJsonSafe(resultText),
-              "is_error": toolResult.is_error
+              "is_error": toolResult?.is_error ?? false
             }, null, 2), false);
           } else if (data.type === 'user_input_required') {
             // 处理用户输入请求 - 需要用户补充消息时停止等待状态
