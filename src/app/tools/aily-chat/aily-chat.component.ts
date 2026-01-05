@@ -57,15 +57,15 @@ import {
   verifyBlockExistenceTool,
   fixJsonString  // 导入 JSON 修复函数
 } from './tools/editBlockTool';
-// 原子化块操作工具
-import {
-  // createSingleBlockTool,
-  // connectBlocksSimpleTool,
-  // setBlockFieldTool,
-  // setBlockInputTool,
-  // getWorkspaceBlocksTool,
-  // batchCreateBlocksTool
-} from './tools/atomicBlockTools';
+// // 原子化块操作工具
+// import {
+//   createSingleBlockTool,
+//   connectBlocksSimpleTool,
+//   setBlockFieldTool,
+//   setBlockInputTool,
+//   getWorkspaceBlocksTool,
+//   batchCreateBlocksTool
+// } from './tools/atomicBlockTools';
 // // 扁平化块操作工具
 // import { flatCreateBlocksTool } from './tools/flatBlockTools';
 // // DSL 块操作工具
@@ -2981,7 +2981,7 @@ ${JSON.stringify(errData)}
 1. 在开始编程前使用get_workspace_overview_tool分析当前工作区，了解已有块和结构情况
 2. 先列出计划使用的所有库(不可跳过以\`lib-core\`开始的库，特别注意lib-core-logic lib-core-variables lib-core-time等基础库)
 3. 逐一完整读取每个库的README确定块存在
-4. 使用smart_block_tool和create_code_structure_tool、flat_create_blocks创建对应代码块
+4. 使用smart_block_tool和create_code_structure_tool创建对应代码块
 - 不要一次性生成大量块(超过10个)，分步创建，每次创建后检查结果
 - 全局变量 setup loop 回调函数 独立结构分开创建(steup/loop基础块已经存在于工作区，无需重复创建)
 - 当尝试使用代码块多次仍然无法创建成功时，安装 @aily-project/lib-core-custom 并使用库中的自定义块进行代码创建
@@ -2991,7 +2991,7 @@ ${JSON.stringify(errData)}
 - 仔细分析代码逻辑和块结构，找出具体问题所在。
 - 精确修复问题，最小化改动，保持代码结构稳定。
 - 仔细分析问题复杂度，避免简单问题复杂化；简单的块缺少，优先使用新建块解决。
-- 复杂问题修复流程：新建块->连接块->配置块->检查反馈->重复修复，如果三次修复仍然失败，才考虑"推倒重来"。
+- 复杂问题修复流程：新建块或者配置块->连接块->检查反馈->重复修复，如果三次修复仍然失败，才考虑"推倒重来"。
 7. 重复直至完成
 8. 一次只调用一个工具完成一个小目标，等待工具反馈后再进行下一个操作
 9. 语法正确只是基础，良好的逻辑结构和高效的执行流程才是关键，深入分析代码逻辑，整体思考嵌入式代码的实时性和用户体验。
