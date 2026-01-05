@@ -475,7 +475,7 @@ export class AilyChatComponent implements OnDestroy {
       //   return `DSL 创建块...`;
       // 原有块工具
       case 'smart_block_tool':
-        return `操作Blockly块: ${args.type || 'unknown'}`;
+        return `创建Blockly块: ${args.type || 'unknown'}`;
       case 'connect_blocks_tool':
         return "连接Blockly块...";
       case 'create_code_structure_tool':
@@ -2557,7 +2557,7 @@ ${JSON.stringify(errData)}
                     // console.log('  - 父级连接:', toolArgs.parentConnection);
                     // console.log('  - 创建变量:', toolArgs.createVariables);
 
-                    this.startToolCall(toolCallId, data.tool_name, `操作Blockly块: ${toolArgs.type}`, toolArgs);
+                    this.startToolCall(toolCallId, data.tool_name, `创建Blockly块: ${toolArgs.type}`, toolArgs);
                     toolResult = await smartBlockTool(toolArgs);
                     // console.log('✅ 智能块工具执行结果:', toolResult);
                     if (toolResult.is_error) {
