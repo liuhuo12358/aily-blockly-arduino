@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, OnDestroy } from '@angular/core';
 import { NzModalRef } from 'ng-zorro-antd/modal';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -31,8 +31,13 @@ import { version } from '../../../../package.json';
   templateUrl: './feedback-dialog.component.html',
   styleUrl: './feedback-dialog.component.scss'
 })
-export class FeedbackDialogComponent {
+export class FeedbackDialogComponent implements OnDestroy {
   readonly modal = inject(NzModalRef);
+
+  private readonly STORAGE_KEY = 'feedback_dialog_draft';
+
+  // 标记是否已成功提交
+  private isSubmitted: boolean = false;
 
   // 反馈类型
   feedbackType: string = 'bug';
@@ -86,14 +91,66 @@ export class FeedbackDialogComponent {
   ) { }
 
   ngOnInit(): void {
+    this.loadDraft();
+  }
+
+  ngOnDestroy(): void {
+    // 组件销毁时，如果未成功提交，则保存草稿
+    if (!this.isSubmitted) {
+      this.saveDraft();
+    }
+  }
+
+  // 从 localStorage 加载草稿数据
+  private loadDraft(): void {
+    try {
+      const draft = localStorage.getItem(this.STORAGE_KEY);
+      if (draft) {
+        const data = JSON.parse(draft);
+        this.feedbackType = data.feedbackType || 'bug';
+        this.feedbackTitle = data.feedbackTitle || '';
+        this.feedbackContent = data.feedbackContent || '';
+        this.contactInfo = data.contactInfo || '';
+        this.email = data.email || '';
+      }
+    } catch (error) {
+      console.warn('加载反馈草稿失败:', error);
+    }
+  }
+
+  // 保存草稿数据到 localStorage
+  private saveDraft(): void {
+    try {
+      const draft = {
+        feedbackType: this.feedbackType,
+        feedbackTitle: this.feedbackTitle,
+        feedbackContent: this.feedbackContent,
+        contactInfo: this.contactInfo,
+        email: this.email
+      };
+      localStorage.setItem(this.STORAGE_KEY, JSON.stringify(draft));
+    } catch (error) {
+      console.warn('保存反馈草稿失败:', error);
+    }
+  }
+
+  // 清除草稿数据
+  private clearDraft(): void {
+    try {
+      localStorage.removeItem(this.STORAGE_KEY);
+    } catch (error) {
+      console.warn('清除反馈草稿失败:', error);
+    }
   }
 
   onCloseDialog(): void {
+    this.saveDraft();
     this.modal.close({ result: 'cancel' });
   }
 
   onButtonClick(action: string): void {
     if (action === 'cancel') {
+      this.saveDraft();
       this.modal.close({ result: 'cancel' });
     } else if (action === 'submit') {
       this.submitFeedback();
@@ -233,6 +290,8 @@ ${descriptionStr}
 
       this.feedbackService.submitFeedback(feedbackData).subscribe(res => {
         this.message.success(this.translate.instant('FEEDBACK_DIALOG.SUCCESS_MESSAGE'));
+        this.isSubmitted = true;
+        this.clearDraft();
         this.modal.close({ result: 'success', data: feedbackData });
         this.isSubmitting = false;
       }, err => {
