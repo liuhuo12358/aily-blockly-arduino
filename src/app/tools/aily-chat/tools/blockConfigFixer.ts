@@ -562,7 +562,13 @@ function cleanMisplacedInputValue(
 function fixMisplacedInputs(
   blockDef: any, 
   workspace?: any
-): { fixed: any; wasFixed: boolean; fixInfo: string[]; orphanInputs?: Array<[string, any]> } {
+): { 
+  fixed: any; 
+  wasFixed: boolean; 
+  fixInfo: string[]; 
+  orphanInputs?: Array<[string, any]>;
+  misplacedStructureDefParts?: { additionalBlocks: any[]; connectionRules: any[] };
+} {
   const fixInfo: string[] = [];
   let wasFixed = false;
   const collectedOrphans: Array<[string, any]> = [];  // 收集来自嵌套块的孤儿
@@ -582,11 +588,34 @@ function fixMisplacedInputs(
   console.log(`[BlockConfigFixer] 块 ${blockType} 的合法输入: [${Array.from(validInputs).join(', ')}]`);
   console.log(`[BlockConfigFixer] 块 ${blockType} 的实际输入 keys: [${inputKeys.join(', ')}]`);
   
+  // 🆕 用于收集错位在 inputs 下的 structureDefinition 属性
+  // 这些会被作为特殊孤儿向上冒泡，最终放到 structureDefinition 顶层
+  const misplacedStructureDefParts: { additionalBlocks: any[]; connectionRules: any[] } = {
+    additionalBlocks: [],
+    connectionRules: []
+  };
+  
   // 分离属于当前块的输入和不属于的输入
   const validInputEntries: [string, any][] = [];
   const invalidInputEntries: [string, any][] = [];
   
   for (const [inputName, inputConfig] of Object.entries(blockDef.inputs)) {
+    // 🆕 首先检查是否是错位的 structureDefinition 属性
+    if (inputName === 'additionalBlocks' && Array.isArray(inputConfig)) {
+      console.log(`[BlockConfigFixer] ⚠️ 发现错位在 ${blockType}.inputs 下的 additionalBlocks (${inputConfig.length} 个块)`);
+      misplacedStructureDefParts.additionalBlocks.push(...inputConfig);
+      wasFixed = true;
+      fixInfo.push(`🔧 提取: inputs.additionalBlocks 错位，应在 structureDefinition 顶层`);
+      continue;
+    }
+    if (inputName === 'connectionRules' && Array.isArray(inputConfig)) {
+      console.log(`[BlockConfigFixer] ⚠️ 发现错位在 ${blockType}.inputs 下的 connectionRules (${inputConfig.length} 条规则)`);
+      misplacedStructureDefParts.connectionRules.push(...inputConfig);
+      wasFixed = true;
+      fixInfo.push(`🔧 提取: inputs.connectionRules 错位，应在 structureDefinition 顶层`);
+      continue;
+    }
+    
     if (validInputs.has(inputName)) {
       validInputEntries.push([inputName, inputConfig]);
     } else if (looksLikeInput(inputName, inputConfig)) {
@@ -782,11 +811,17 @@ function fixMisplacedInputs(
     }
   }
   
+  // 检查是否提取了 structureDefinition 属性
+  const hasMisplacedStructureDef = 
+    misplacedStructureDefParts.additionalBlocks.length > 0 || 
+    misplacedStructureDefParts.connectionRules.length > 0;
+  
   return {
     fixed: { ...blockDef, inputs: fixedInputs },
     wasFixed,
     fixInfo,
-    orphanInputs: collectedOrphans.length > 0 ? collectedOrphans : undefined
+    orphanInputs: collectedOrphans.length > 0 ? collectedOrphans : undefined,
+    misplacedStructureDefParts: hasMisplacedStructureDef ? misplacedStructureDefParts : undefined
   };
 }
 
@@ -868,14 +903,25 @@ function fixMisplacedInputsInObject(
  * 🆕 递归提取错误嵌套在 block 或 inputs 内部的 additionalBlocks 和 connectionRules
  * 这些应该放在 structureDefinition 顶层，而不是放在 block 内部
  * 
- * LLM 可能错误地生成：
+ * LLM 可能错误地生成多种错误结构：
+ * 
+ * 场景1: additionalBlocks 在某个 input 的值内部
  * {
  *   "inputs": {
  *     "DO0": {
  *       "block": {...},
- *       "additionalBlocks": [...],  // ❌ 错误！应该在 structureDefinition 层级
- *       "connectionRules": [...]     // ❌ 错误！应该在 structureDefinition 层级
+ *       "additionalBlocks": [...],  // ❌ 错误！
+ *       "connectionRules": [...]     // ❌ 错误！
  *     }
+ *   }
+ * }
+ * 
+ * 场景2: additionalBlocks 作为 inputs 的直接子属性
+ * {
+ *   "inputs": {
+ *     "IF0": {"block": {...}},
+ *     "additionalBlocks": [...],  // ❌ 错误！应该在 structureDefinition 层级
+ *     "connectionRules": [...]     // ❌ 错误！应该在 structureDefinition 层级
  *   }
  * }
  * 
@@ -933,6 +979,22 @@ function extractMisplacedStructureDefinitionParts(
       if (key === 'inputs' && value && typeof value === 'object') {
         cleaned[key] = {};
         for (const [inputKey, inputValue] of Object.entries(value)) {
+          // 🆕 检查 inputs 的直接子属性是否是错位的 additionalBlocks 或 connectionRules
+          if (inputKey === 'additionalBlocks' && Array.isArray(inputValue)) {
+            console.log(`[BlockConfigFixer] ⚠️ 发现错位在 inputs 下的 additionalBlocks (${inputValue.length} 个块)`);
+            for (const block of inputValue) {
+              const cleanedBlock = cleanRecursively(block);
+              collectedAdditionalBlocks.push(cleanedBlock);
+            }
+            wasExtracted = true;
+            continue; // 不复制到 cleaned.inputs 中
+          }
+          if (inputKey === 'connectionRules' && Array.isArray(inputValue)) {
+            console.log(`[BlockConfigFixer] ⚠️ 发现错位在 inputs 下的 connectionRules (${inputValue.length} 条规则)`);
+            collectedConnectionRules.push(...inputValue);
+            wasExtracted = true;
+            continue; // 不复制到 cleaned.inputs 中
+          }
           cleaned[key][inputKey] = cleanRecursively(inputValue);
         }
         continue;
@@ -968,11 +1030,20 @@ function extractMisplacedStructureDefinitionParts(
  * 新增：孤儿输入冒泡机制
  * 当发现输入不属于当前块类型但看起来像某种块的输入时，
  * 将它作为"孤儿"返回给父级处理
+ * 
+ * 新增：错位的 structureDefinition 属性冒泡机制
+ * 当发现 additionalBlocks/connectionRules 在块内部时，将它们向上冒泡
  */
 function fixBlockRecursively(
   blockConfig: any,
   workspace?: any
-): { fixed: any; wasFixed: boolean; fixInfo: string[]; orphanInputs?: Array<[string, any]> } {
+): { 
+  fixed: any; 
+  wasFixed: boolean; 
+  fixInfo: string[]; 
+  orphanInputs?: Array<[string, any]>;
+  misplacedStructureDefParts?: { additionalBlocks: any[]; connectionRules: any[] };
+} {
   if (!blockConfig || typeof blockConfig !== 'object') {
     return { fixed: blockConfig, wasFixed: false, fixInfo: [] };
   }
@@ -981,6 +1052,12 @@ function fixBlockRecursively(
   const allFixInfo: string[] = [];
   let fixedBlock = { ...blockConfig };
   const collectedOrphans: Array<[string, any]> = [];
+  
+  // 🆕 收集错位的 structureDefinition 属性（从子块冒泡上来的）
+  const collectedStructureDefParts: { additionalBlocks: any[]; connectionRules: any[] } = {
+    additionalBlocks: [],
+    connectionRules: []
+  };
   
   // 0. 🔧 修复块顶层的错位输入属性，同时收集孤儿输入
   const topLevelInputFix = fixTopLevelMisplacedInputs(fixedBlock, workspace);
@@ -1007,6 +1084,11 @@ function fixBlockRecursively(
       console.log(`[BlockConfigFixer] 块 ${fixedBlock.type} 收集到孤儿输入: ${inputsFix.orphanInputs.map(([k]) => k).join(', ')}`);
       collectedOrphans.push(...inputsFix.orphanInputs);
     }
+    // 🆕 收集来自 inputs 的错位 structureDefinition 属性
+    if (inputsFix.misplacedStructureDefParts) {
+      collectedStructureDefParts.additionalBlocks.push(...inputsFix.misplacedStructureDefParts.additionalBlocks);
+      collectedStructureDefParts.connectionRules.push(...inputsFix.misplacedStructureDefParts.connectionRules);
+    }
   }
   
   // 2. 递归修复 next 链
@@ -1021,7 +1103,17 @@ function fixBlockRecursively(
     if (nextFix.orphanInputs && nextFix.orphanInputs.length > 0) {
       collectedOrphans.push(...nextFix.orphanInputs);
     }
+    // 🆕 收集来自 next 链的错位 structureDefinition 属性
+    if (nextFix.misplacedStructureDefParts) {
+      collectedStructureDefParts.additionalBlocks.push(...nextFix.misplacedStructureDefParts.additionalBlocks);
+      collectedStructureDefParts.connectionRules.push(...nextFix.misplacedStructureDefParts.connectionRules);
+    }
   }
+  
+  // 🆕 辅助函数：检查是否有收集到的 structureDefinition 属性
+  const hasMisplacedStructureDef = () => 
+    collectedStructureDefParts.additionalBlocks.length > 0 || 
+    collectedStructureDefParts.connectionRules.length > 0;
   
   // 3. 🆕 尝试将收集到的孤儿输入放入当前块（如果它们属于当前块）
   if (collectedOrphans.length > 0 && fixedBlock.type) {
@@ -1057,7 +1149,13 @@ function fixBlockRecursively(
     
     // 返回未被领养的孤儿
     if (remainingOrphans.length > 0) {
-      return { fixed: fixedBlock, wasFixed, fixInfo: allFixInfo, orphanInputs: remainingOrphans };
+      return { 
+        fixed: fixedBlock, 
+        wasFixed, 
+        fixInfo: allFixInfo, 
+        orphanInputs: remainingOrphans,
+        misplacedStructureDefParts: hasMisplacedStructureDef() ? collectedStructureDefParts : undefined
+      };
     }
   }
   
@@ -1069,7 +1167,13 @@ function fixBlockRecursively(
     allFixInfo.push(...extraStateResult.fixInfo);
   }
   
-  return { fixed: fixedBlock, wasFixed, fixInfo: allFixInfo, orphanInputs: collectedOrphans.length > 0 ? collectedOrphans : undefined };
+  return { 
+    fixed: fixedBlock, 
+    wasFixed, 
+    fixInfo: allFixInfo, 
+    orphanInputs: collectedOrphans.length > 0 ? collectedOrphans : undefined,
+    misplacedStructureDefParts: hasMisplacedStructureDef() ? collectedStructureDefParts : undefined
+  };
 }
 
 /**
@@ -1483,6 +1587,22 @@ function fixConfigRecursively(
         fixedStructDef.rootBlock = rootFix.fixed;
         wasFixed = true;
         allFixInfo.push(...rootFix.fixInfo);
+      }
+      
+      // 🆕 处理从 rootBlock 递归修复中冒泡上来的 misplacedStructureDefParts
+      if (rootFix.misplacedStructureDefParts) {
+        if (rootFix.misplacedStructureDefParts.additionalBlocks.length > 0) {
+          const existing = fixedStructDef.additionalBlocks || [];
+          fixedStructDef.additionalBlocks = [...existing, ...rootFix.misplacedStructureDefParts.additionalBlocks];
+          wasFixed = true;
+          allFixInfo.push(`🔧 从 rootBlock 递归修复中提取了 ${rootFix.misplacedStructureDefParts.additionalBlocks.length} 个错位的 additionalBlocks`);
+        }
+        if (rootFix.misplacedStructureDefParts.connectionRules.length > 0) {
+          const existing = fixedStructDef.connectionRules || [];
+          fixedStructDef.connectionRules = [...existing, ...rootFix.misplacedStructureDefParts.connectionRules];
+          wasFixed = true;
+          allFixInfo.push(`🔧 从 rootBlock 递归修复中提取了 ${rootFix.misplacedStructureDefParts.connectionRules.length} 个错位的 connectionRules`);
+        }
       }
     }
     
