@@ -28,6 +28,7 @@ import { NzMessageService } from 'ng-zorro-antd/message';
 import { SearchBoxComponent } from './components/search-box/search-box.component';
 import { Buffer } from 'buffer';
 import { TranslateService } from '@ngx-translate/core';
+import { ConfigService } from '../../services/config.service';
 
 @Component({
   selector: 'app-serial-monitor',
@@ -148,10 +149,15 @@ export class SerialMonitorComponent {
     private cd: ChangeDetectorRef,
     private message: NzMessageService,
     private translate: TranslateService,
+    private configService: ConfigService,
   ) { }
 
   async ngOnInit() {
     this.currentUrl = this.router.url;
+    
+    // 加载保存的串口监视器配置
+    this.loadSavedConfig();
+    
     if (this.serialService.currentPort) {
       this.currentPort = this.serialService.currentPort;
     }
@@ -290,6 +296,46 @@ export class SerialMonitorComponent {
     }
   }
 
+  // 加载保存的串口监视器配置
+  private loadSavedConfig() {
+    const savedConfig = this.configService.data.serialMonitor;
+    if (savedConfig) {
+      // 只有在当前没有选择串口时才加载保存的串口
+      if (!this.currentPort && savedConfig.port) {
+        this.currentPort = savedConfig.port;
+      }
+      if (savedConfig.baudRate) {
+        this.currentBaudRate = savedConfig.baudRate;
+      }
+      if (savedConfig.dataBits) {
+        this.dataBits = savedConfig.dataBits;
+      }
+      if (savedConfig.stopBits) {
+        this.stopBits = savedConfig.stopBits;
+      }
+      if (savedConfig.parity) {
+        this.parity = savedConfig.parity;
+      }
+      if (savedConfig.flowControl) {
+        this.flowControl = savedConfig.flowControl;
+      }
+    }
+  }
+
+  // 保存串口监视器配置
+  private saveSerialConfig() {
+    if (!this.configService.data.serialMonitor) {
+      this.configService.data.serialMonitor = {};
+    }
+    this.configService.data.serialMonitor.port = this.currentPort;
+    this.configService.data.serialMonitor.baudRate = this.currentBaudRate;
+    this.configService.data.serialMonitor.dataBits = this.dataBits;
+    this.configService.data.serialMonitor.stopBits = this.stopBits;
+    this.configService.data.serialMonitor.parity = this.parity;
+    this.configService.data.serialMonitor.flowControl = this.flowControl;
+    this.configService.save();
+  }
+
   ngOnDestroy() {
     if (this.updateTimer) {
       clearTimeout(this.updateTimer);
@@ -353,6 +399,7 @@ export class SerialMonitorComponent {
   selectPort(portItem) {
     this.currentPort = portItem.name;
     this.closePortList();
+    this.saveSerialConfig();
   }
 
   // 波特率选择列表相关 
@@ -376,6 +423,7 @@ export class SerialMonitorComponent {
   selectBaud(item) {
     this.currentBaudRate = item.name;
     this.closeBaudList();
+    this.saveSerialConfig();
   }
 
   async switchPort() {
@@ -495,6 +543,9 @@ export class SerialMonitorComponent {
     this.stopBits = settings.stopBits.value;
     this.parity = settings.parity.value;
     this.flowControl = settings.flowControl.value;
+
+    // 保存配置
+    this.saveSerialConfig();
 
     // 如果已经连接，需要断开重连以应用新设置
     if (this.switchValue) {

@@ -421,4 +421,20 @@ interface AppConfig {
 
   /** AI聊天模式 */
   aiChatMode?: 'agent' | 'ask';
+
+  /** 串口监视器配置 */
+  serialMonitor?: {
+    /** 上次选择的串口 */
+    port?: string;
+    /** 上次选择的波特率 */
+    baudRate?: string;
+    /** 数据位 */
+    dataBits?: string;
+    /** 停止位 */
+    stopBits?: string;
+    /** 校验位 */
+    parity?: string;
+    /** 流控制 */
+    flowControl?: string;
+  };
 }
