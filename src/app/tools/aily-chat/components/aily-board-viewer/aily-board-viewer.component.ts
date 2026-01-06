@@ -38,7 +38,7 @@ export class AilyBoardViewerComponent implements OnInit, OnDestroy {
   private retryTimer: any = null;
 
   get resourceUrl() {
-    return this.configService.data.resource[0];
+    return this.configService.getCurrentResourceUrl();
   }
 
   constructor(

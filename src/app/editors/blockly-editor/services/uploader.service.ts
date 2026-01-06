@@ -126,10 +126,14 @@ export class _UploaderService {
           completedRegions: 0
         };
 
-        this.noticeService.clear()
+        // 先判断当前是否处于编译状态
+        if (this.workflowService.currentState === ProcessState.BUILDING) {
+          this.message.warning('当前正在编译中，请稍后再试');
+          reject({ state: 'warn', text: '当前正在编译中，请稍后再试' });
+          return;
+        }
 
         // 第一步：检查是否需要编译
-        this._builderService.cancelled = false;
         const code = arduinoGenerator.workspaceToCode(this.blocklyService.workspace);
         const buildPath = await this.projectService.getBuildPath();
         const needsBuild = !this._builderService.passed || 
@@ -144,20 +148,22 @@ export class _UploaderService {
             console.log("build result:", buildResult);
             // 编译成功，继续上传流程
           } catch (error) {
-            // 编译失败，处理错误
-            console.error("编译失败:", error);
-          }
+            // 检查编译是否被取消
+            if (this._builderService.cancelled) {
+              this.noticeService.update({
+                title: "编译已取消",
+                text: '编译已取消',
+                state: 'warn',
+                setTimeout: 55000
+              });
+              reject({ state: 'warn', text: '编译已取消' });
+              return;
+            } else {
+              this.handleUploadError('编译失败，请检查代码', "编译失败");
+              reject({ state: 'error', text: '编译失败，请检查代码' });
+              return;
+            }
 
-          // 检查编译是否被取消
-          if (this._builderService.cancelled) {
-            this.noticeService.update({
-              title: "编译已取消",
-              text: '编译已取消',
-              state: 'warn',
-              setTimeout: 55000
-            });
-            reject({ state: 'warn', text: '编译已取消' });
-            return;
           }
 
           // 检查编译是否成功
@@ -172,8 +178,7 @@ export class _UploaderService {
         if (!this.workflowService.startUpload()) {
           const state = this.workflowService.currentState;
           let msg = "系统繁忙";
-          if (state === ProcessState.BUILDING) msg = "编译正在进行中";
-          else if (state === ProcessState.UPLOADING) msg = "上传正在进行中";
+          if (state === ProcessState.UPLOADING) msg = "上传正在进行中";
           else if (state === ProcessState.INSTALLING) msg = "依赖安装中";
 
           this.message.warning(msg + "，请稍后再试");

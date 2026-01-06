@@ -65,7 +65,9 @@
         "MULTI_CUT": "Cut Selected",
         "MULTI_DELETE": "Delete Selected",
         "MULTI_COMPRESS": "Compress to ZIP",
-        "LIB_MANAGER": "Library Manager"
+        "LIB_MANAGER": "Library Manager",
+        "AI_ASSISTANT": "AI Assistant",
+        "PROJECT_HUB": "Project Hub"
     },
     "ESP32": {
         "UPLOAD_SPEED": "Upload Speed",
@@ -96,8 +98,33 @@
         "FEEDBACK_DESC": "Send feedback about your experience",
         "WECHAT_GROUP": "WeChat User Group",
         "WECHAT_GROUP_DESC": "Join the WeChat user group to communicate with other users",
+        "USER_GROUP": "User Community",
+        "USER_GROUP_DESC": "Join the community to communicate with other users",
+        "AI_APP_CENTER": "AI App Center",
+        "AI_APP_CENTER_DESC": "Click to explore AI hardware and edge computing applications",
         "SPONSORS": "Project Sponsors",
-        "SPONSORS_DESC": "This project is sponsored by the following companies/individuals"
+        "SPONSORS_DESC": "This project is sponsored by the following companies/individuals",
+        "NEWS": "News",
+        "ONBOARDING": {
+            "SKIP": "Skip",
+            "PREV": "Previous",
+            "NEXT": "Next",
+            "DONE": "Done",
+            "STEP1_TITLE": "Create New Project",
+            "STEP1_DESC": "Click here to create a new programming project. Choose your board and programming language to start your creative journey.",
+            "STEP2_TITLE": "Open Existing Project",
+            "STEP2_DESC": "If you have created projects before, click here to open an existing project folder.",
+            "STEP3_TITLE": "Project Hub",
+            "STEP3_DESC": "Browse and explore excellent projects shared by the community for inspiration and learning resources.",
+            "STEP4_TITLE": "AI Assistant",
+            "STEP4_DESC": "Having coding problems? Let the AI assistant help you answer questions, generate code, and debug programs.",
+            "STEP5_TITLE": "SenseCraft AI Hub",
+            "STEP5_DESC": "Explore various AI hardware and edge computing applications here, and discover more possibilities.",
+            "STEP6_TITLE": "Latest News",
+            "STEP6_DESC": "Here you can find the latest news and announcements about the software, helping you stay updated with new features.",
+            "STEP7_TITLE": "Join Our Community",
+            "STEP7_DESC": "Have questions? Want to share your work? Join our user community to connect and learn with other makers!"
+        }
     },
     "APP_STORE": {
         "HEADER_INFO": "First {{count}} apps will be shown in the toolbar",
@@ -123,7 +150,7 @@
             "THEME": "Theme Settings",
             "BLOCKLY": "Blockly Settings",
             "COMPILATION": "Compilation",
-            "REPOSITORY": "Repository",
+            "REPOSITORY": "Service Region",
             "DEPENDENCIES": "Dependencies",
             "MCP": "MCP",
             "DEVMODE": "Developer Mode"
@@ -136,6 +163,7 @@
             "BLOCKLY_MINIMAP": "Blockly Minimap",
             "FLYOUT_AUTO_CLOSE": "Auto Close Toolbox",
             "COMPILATION_OPTIONS": "Compilation Options",
+            "REGION": "Service Region",
             "REPOSITORY_URLS": "Repository URLs",
             "BOARD_LIST": "Board List",
             "LIBRARY_LIST": "Library List",
@@ -297,7 +325,21 @@
         "STOP": "Stop",
         "MODE_AGENT_FULL": "Agent Mode",
         "MODE_QA_FULL": "Q&A Mode",
-        "STOP_CURRENT_SESSION_FIRST": "Please stop the current session before creating a new one"
+        "STOP_CURRENT_SESSION_FIRST": "Please stop the current session before creating a new one",
+        "ONBOARDING": {
+            "STEP1_TITLE": "Input Box",
+            "STEP1_DESC": "Type your questions or tasks here for AI assistance. Press Enter to send, Ctrl+Enter for new line",
+            "STEP2_TITLE": "Add Context",
+            "STEP2_DESC": "Click here to add files or folders as context to help AI better understand your needs",
+            "STEP3_TITLE": "Mode Switch",
+            "STEP3_DESC": "Agent mode can execute tasks automatically (create code, fix bug). Q&A mode only answers questions",
+            "STEP4_TITLE": "Send/Stop",
+            "STEP4_DESC": "Click to send message, or stop when AI is responding",
+            "SKIP": "Skip",
+            "PREV": "Previous",
+            "NEXT": "Next",
+            "DONE": "Done"
+        }
     },
     "PROJECT_SETTING_DIALOG": {
         "TITLE": "Project Settings",
@@ -428,5 +470,31 @@
         "DEFAULT_LOW_TRIGGER_HIGH": "Default Low, Trigger High",
         "DEFAULT_HIGH_TRIGGER_LOW": "Default High, Trigger Low",
         "CANCEL": "Cancel"
+    },
+    "LOGIN": {
+        "HEADER": "Login to use our services",
+        "PHONE": "Phone",
+        "BENEFITS_TITLE": "After logging in, you can:",
+        "BENEFIT_AI": "Try AI Q&A feature for free",
+        "BENEFIT_SHARE": "Share your projects",
+        "BENEFIT_EXPERIENCE": "Enjoy personalized development experience",
+        "NOTICE_LABEL": "Note: ",
+        "NOTICE_CONTENT": "We will use your GitHub account to star our open source repositories, which helps support our project development.",
+        "GITHUB_LOGIN": "Login with Github",
+        "WECHAT_SCAN": "Scan QR code to follow and login",
+        "PHONE_NOT_OPEN": "Phone registration is not yet available",
+        "PHONE_BETA_ONLY": "Phone login is only for AI beta testers",
+        "PHONE_PLACEHOLDER": "Enter phone number",
+        "PASSWORD_PLACEHOLDER": "Enter password",
+        "LOGGING_IN": "Logging in...",
+        "LOGIN": "Login",
+        "SELECT_METHOD": "Click to select login method",
+        "REDIRECTING_GITHUB": "Redirecting to GitHub authorization page...",
+        "GITHUB_LOGIN_FAILED": "Failed to start GitHub login, please check network connection",
+        "GITHUB_ERROR": "GitHub login failed",
+        "ENTER_CREDENTIALS": "Please enter username and password",
+        "LOGIN_SUCCESS": "Login successful",
+        "LOGIN_FAILED": "Login failed",
+        "LOGIN_NETWORK_ERROR": "Login failed, please check network connection"
     }
 }

@@ -2,6 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { lastValueFrom } from 'rxjs';
 import { ElectronService } from './electron.service';
+import { API, setServerUrl, setRegistryUrl } from '../configs/api.config';
 
 @Injectable({
   providedIn: 'root',
@@ -85,31 +86,61 @@ export class ConfigService {
     // 合并用户配置和默认配置
     this.data = { ...this.data, ...userConfData };
 
+    // 使用Electron检测到的最优区域覆盖配置
+    if (this.electronService.isElectron) {
+      try {
+        // 获取当前区域
+        const region = await this.electronService.electron.ipcRenderer.invoke('env-get', 'AILY_REGION');
+        if (region && this.data.regions && this.data.regions[region]) {
+          this.data.region = region;
+          // 更新 API 配置模块的缓存
+          setRegistryUrl(this.data.regions[region].npm_registry);
+          setServerUrl(this.data.regions[region].api_server);
+        } else {
+          // 使用默认区域
+          const defaultRegion = this.data.region || 'cn';
+          if (this.data.regions && this.data.regions[defaultRegion]) {
+            setRegistryUrl(this.data.regions[defaultRegion].npm_registry);
+            setServerUrl(this.data.regions[defaultRegion].api_server);
+          }
+        }
+      } catch (e) {
+        console.error('Failed to get env vars', e);
+      }
+    }
+
     // 添加当前系统类型到data中
     this.data["platform"] = window['platform'].type;
     this.data["lang"] = this.get_lang_filename(window['platform'].lang);
 
     // 并行加载缓存的boards.json和libraries.json
-    await Promise.all([
-      this.loadAndCacheBoardList(configFilePath),
-      this.loadAndCacheLibraryList(configFilePath)
-    ]);
+    // await Promise.all([
+    this.loadAndCacheBoardList(configFilePath);
+    this.loadAndCacheLibraryList(configFilePath);
+    // ]);
 
-    // 加载新格式索引（boards-index.json / libraries-index.json）
-    await Promise.all([
-      this.loadAndCacheBoardIndex(configFilePath),
-      this.loadAndCacheLibraryIndex(configFilePath)
-    ]);
-    
-    // 测试用：模拟慢速加载
-    if (this.SIMULATE_SLOW_LOADING > 0) {
-      console.log(`[ConfigService] 模拟慢速加载，等待 ${this.SIMULATE_SLOW_LOADING}ms...`);
-      await new Promise(resolve => setTimeout(resolve, this.SIMULATE_SLOW_LOADING));
+    // 延迟后再次尝试加载，确保最优节点检测完成后能成功下载最新数据
+    if (this.electronService.isElectron) {
+      setTimeout(async () => {
+        try {
+          // 重新获取区域配置（可能已经由主进程检测到最优节点并更新）
+          const newRegion = await this.electronService.electron.ipcRenderer.invoke('env-get', 'AILY_REGION');
+          if (newRegion && this.data.regions && this.data.regions[newRegion]) {
+            // 更新区域配置
+            if (newRegion !== this.data.region) {
+              this.data.region = newRegion;
+              setRegistryUrl(this.data.regions[newRegion].npm_registry);
+              setServerUrl(this.data.regions[newRegion].api_server);
+            }
+            // 重新加载数据，确保获取最新内容
+            this.loadAndCacheBoardList(configFilePath);
+            this.loadAndCacheLibraryList(configFilePath);
+          }
+        } catch (e) {
+          console.error('Failed to reload data after region detection:', e);
+        }
+      }, 5000); // 5秒后重试，给主进程足够时间完成最优节点检测
     }
-    
-    console.log('[ConfigService] 所有数据加载完成');
-    // 标记数据已加载完成
-    this._isDataReady = true;
   }
 
   private async loadAndCacheBoardList(configFilePath: string): Promise<void> {
@@ -158,12 +189,102 @@ export class ConfigService {
     window['fs'].writeFileSync(`${configFilePath}/config.json`, JSON.stringify(this.data, null, 2));
   }
 
+  /**
+   * 获取当前区域配置
+   */
+  getCurrentRegionConfig() {
+    const region = this.data.region || 'cn';
+    return this.data.regions && this.data.regions[region] ? this.data.regions[region] : this.data.regions['cn'];
+  }
+
+  /**
+   * 获取当前区域的资源URL
+   */
+  getCurrentResourceUrl(): string {
+    return this.getCurrentRegionConfig()?.resource || '';
+  }
+
+  /**
+   * 获取当前区域的NPM Registry URL
+   */
+  getCurrentNpmRegistry(): string {
+    return this.getCurrentRegionConfig()?.npm_registry || '';
+  }
+
+  /**
+   * 获取当前区域的API Server URL
+   */
+  getCurrentApiServer(): string {
+    return this.getCurrentRegionConfig()?.api_server || '';
+  }
+
+  /**
+   * 获取当前区域的Updater URL
+   */
+  getCurrentUpdaterUrl(): string {
+    return this.getCurrentRegionConfig()?.updater || '';
+  }
+
+  /**
+   * 获取所有可用区域列表
+   */
+  getRegionList(): Array<{key: string, name: string, enabled: boolean}> {
+    if (!this.data.regions) return [];
+    return Object.keys(this.data.regions).map(key => ({
+      key,
+      name: this.data.regions[key].name,
+      enabled: this.data.regions[key].enabled !== false
+    }));
+  }
+
+  /**
+   * 获取启用的区域列表
+   */
+  getEnabledRegionList(): Array<{key: string, name: string, enabled: boolean}> {
+    return this.getRegionList().filter(region => region.enabled);
+  }
+
+  /**
+   * 设置当前区域
+   */
+  async setRegion(regionKey: string) {
+    if (this.data.regions && this.data.regions[regionKey]) {
+      this.data.region = regionKey;
+      const regionConfig = this.data.regions[regionKey];
+      
+      // 更新 API 配置模块的缓存
+      setRegistryUrl(regionConfig.npm_registry);
+      setServerUrl(regionConfig.api_server);
+      
+      // 更新环境变量
+      if (window['process']?.env) {
+        window['process'].env['AILY_REGION'] = regionKey;
+        window['process'].env['AILY_NPM_REGISTRY'] = regionConfig.npm_registry;
+        window['process'].env['AILY_ZIP_URL'] = regionConfig.resource;
+        window['process'].env['AILY_API_SERVER'] = regionConfig.api_server;
+      }
+      
+      // 通过 ipcRenderer 通知主进程更新环境变量（等待所有更新完成）
+      if (window['ipcRenderer']) {
+        await Promise.all([
+          window['ipcRenderer'].invoke('env-set', { key: 'AILY_REGION', value: regionKey }),
+          window['ipcRenderer'].invoke('env-set', { key: 'AILY_NPM_REGISTRY', value: regionConfig.npm_registry }),
+          window['ipcRenderer'].invoke('env-set', { key: 'AILY_ZIP_URL', value: regionConfig.resource }),
+          window['ipcRenderer'].invoke('env-set', { key: 'AILY_API_SERVER', value: regionConfig.api_server })
+        ]);
+      }
+      
+      // 保存配置
+      await this.save();
+    }
+  }
+
   boardList = [];
   boardDict = {};
   async loadBoardList(): Promise<any[]> {
     try {
       let boardList: any = await lastValueFrom(
-        this.http.get(this.data.resource[0] + '/boards.json', {
+        this.http.get(this.getCurrentResourceUrl() + '/boards.json', {
           responseType: 'json',
         }),
       );
@@ -179,7 +300,7 @@ export class ConfigService {
   async loadLibraryList(): Promise<any[]> {
     try {
       let libraryList: any = await lastValueFrom(
-        this.http.get(this.data.resource[0] + '/libraries.json', {
+        this.http.get(this.getCurrentResourceUrl() + '/libraries.json', {
           responseType: 'json',
         }),
       );
@@ -328,7 +449,7 @@ export class ConfigService {
   examplesList;
   async loadExamplesList() {
     this.examplesList = await lastValueFrom(
-      this.http.get(this.data.resource[0] + '/examples.json', {
+      this.http.get(this.getCurrentResourceUrl() + '/examples.json', {
         responseType: 'json',
       }),
     );
@@ -628,14 +749,19 @@ interface AppConfig {
   /** 项目默认路径 */
   project_path: string;
 
-  /** NPM 镜像源列表 */
-  npm_registry: string[];
+  /** 当前选中的区域 */
+  region: string;
 
-  /** 资源文件服务器列表 */
-  resource: string[];
-
-  /** 更新服务器列表 */
-  updater: string[];
+  /** 区域配置 */
+  regions: {
+    [key: string]: {
+      name: string;
+      api_server: string;
+      npm_registry: string;
+      resource: string;
+      updater: string;
+    }
+  };
 
   /** 编译选项 */
   compile: {

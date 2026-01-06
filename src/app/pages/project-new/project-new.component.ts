@@ -65,7 +65,7 @@ export class ProjectNewComponent {
   boardList: any[] = [];
 
   get resourceUrl() {
-    return this.configService.data.resource[0];
+    return this.configService.getCurrentResourceUrl();
   }
 
   // 获取已定义的品牌列表（排除'all'和'other'）
