@@ -428,7 +428,10 @@ export class SerialMonitorComponent {
 
   async switchPort() {
     if (!this.switchValue) {
-      this.serialMonitorService.disconnect();
+      const result = await this.serialMonitorService.disconnect();
+      if (result) {
+        this.message.success('串口已关闭');
+      }
       return;
     }
 
@@ -440,20 +443,32 @@ export class SerialMonitorComponent {
       return;
     }
 
-    await this.serialMonitorService.connect({
-      path: this.currentPort,
-      baudRate: parseInt(this.currentBaudRate),
-      dataBits: parseInt(this.dataBits),
-      stopBits: parseFloat(this.stopBits),
-      parity: this.parity,
-      flowControl: this.flowControl
-    });
+    try {
+      const result = await this.serialMonitorService.connect({
+        path: this.currentPort,
+        baudRate: parseInt(this.currentBaudRate),
+        dataBits: parseInt(this.dataBits),
+        stopBits: parseFloat(this.stopBits),
+        parity: this.parity,
+        flowControl: this.flowControl
+      });
 
-    // 发送DTR信号
-    setTimeout(() => {
-      this.serialMonitorService.sendSignal('DTR');
-    }, 50);
-
+      if (result) {
+        this.message.success('串口已打开');
+        // 发送DTR信号
+        setTimeout(() => {
+          this.serialMonitorService.sendSignal('DTR');
+        }, 50);
+      } else {
+        // 连接失败，关闭开关
+        this.switchValue = false;
+        this.cd.detectChanges();
+      }
+    } catch (error) {
+      // 连接失败，关闭开关
+      this.switchValue = false;
+      this.cd.detectChanges();
+    }
   }
 
   changeViewMode(name) {
