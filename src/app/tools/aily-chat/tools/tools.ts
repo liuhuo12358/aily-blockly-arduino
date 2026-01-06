@@ -1379,32 +1379,18 @@ Query and return specific content (for detailed info)
     },
     {
         name: "create_code_structure_tool", 
-        description: `动态结构创建工具，使用动态结构处理器创建任意复杂的代码块结构，支持自定义块组合和连接规则。
-注意事项:
-- 使用工具前必须确保已经读取了使用的block所属库的Readme
-- 建议分步生成代码，如：全局变量-初始化-loop-回调函数。
-- 不要一次性生成超过10个block的代码块结构。
+        description: `动态结构创建工具，创建包含多个块的代码结构并连接到工作区。
 
-基本语法:
-\`\`\`json
-{
-  "structure": "结构名称",
-  "config": {
-    "structureDefinition": {
-      "rootBlock": {...},
-      "additionalBlocks": [...],
-      "connectionRules": [...]
-    }
-  },
-  "insertPosition": "workspace", // 插入位置类型（"workspace" | "after" | "before" | "input" | "statement" | "append"）
-  "targetBlock": "容器块ID", // 目标容器块ID（当 insertPosition 不为 "workspace" 时必需）
-  "targetInput": "目标输入名称", // 目标输入名称（当 insertPosition 为 "input" 或 "statement" 时可选）
-  "position": {"x": 100, "y": 100} // 坐标位置（当 insertPosition 为 "workspace" 时使用）
+**注意事项**:
+- 使用工具前必须确保已读取使用的 block 所属库的 Readme
+- 建议分步生成代码：全局变量 → 初始化 → loop → 回调函数
+- 不要一次性生成超过 10 个 block 的代码块结构
 
-}
-\`\`\`
-示例:
-添加到Arduino Setup
+**参数说明**:
+- \`structureDefinition\`: 定义要创建的块（rootBlock + additionalBlocks）
+- \`connectionRules\`: 定义所有块之间的连接（包括新创建的块之间，以及新块与工作区已有块之间）
+
+**示例: 在 Arduino Setup 中添加初始化代码**
 \`\`\`json
 {
   "structure": "init-code",
@@ -1424,18 +1410,13 @@ Query and return specific content (for detailed info)
             "MODE": {"block": {"type": "base_pin_mode_option", "fields": {"MODE": "OUTPUT"}}}
           }
         }
-      ],
-      "connectionRules": [
-        {
-          "source": "serial_init",
-          "target": "pin_setup",
-          "connectionType": "next"
-        }
       ]
     }
   },
-  "insertPosition": "statement",
-  "targetBlock": "arduino_setup_id"
+  "connectionRules": [
+    {"source": "arduino_setup_id", "target": "serial_init", "connectionType": "statement"},
+    {"source": "serial_init", "target": "pin_setup", "connectionType": "next"}
+  ]
 }
 \`\`\`
 `,
@@ -1444,7 +1425,7 @@ Query and return specific content (for detailed info)
             properties: {
                 structure: {
                     type: 'string',
-                    description: '结构名称（任意字符串，用于日志和元数据）'
+                    description: '结构名称（用于日志和调试）'
                 },
                 config: {
                     type: 'object',
@@ -1454,38 +1435,38 @@ Query and return specific content (for detailed info)
                             properties: {
                                 rootBlock: {
                                     type: 'object',
-                                    description: '根块配置'
+                                    description: '根块配置（必须包含 type 和 id）'
                                 },
                                 additionalBlocks: {
                                     type: 'array',
                                     items: { type: 'object' },
                                     description: '附加块配置数组'
-                                },
-                                connectionRules: {
-                                    type: 'array',
-                                    items: {
-                                        type: 'object',
-                                        properties: {
-                                            source: { type: 'string', description: '输出块引用' },
-                                            target: { type: 'string', description: '接收块引用' },
-                                            inputName: { type: 'string', description: '接收块的输入名称' },
-                                            connectionType: { 
-                                                type: 'string', 
-                                                enum: ['next', 'input', 'statement'],
-                                                description: '连接类型' 
-                                            }
-                                        },
-                                        required: ['source', 'target']
-                                    },
-                                    description: '块连接规则'
                                 }
                             },
                             required: ['rootBlock'],
-                            description: '动态结构定义'
+                            description: '动态结构定义（仅定义要创建的块）'
                         }
                     },
                     required: ['structureDefinition'],
-                    description: '结构配置'
+                    description: '结构配置对象'
+                },
+                connectionRules: {
+                    type: 'array',
+                    items: {
+                        type: 'object',
+                        properties: {
+                            source: { type: 'string', description: '源块的 id（可以是新创建的块 id，也可以是工作区已有块的 id）' },
+                            target: { type: 'string', description: '目标块的 id（可以是新创建的块 id，也可以是工作区已有块的 id）' },
+                            inputName: { type: 'string', description: 'statement/input 连接时指定输入名称' },
+                            connectionType: { 
+                                type: 'string', 
+                                enum: ['next', 'input', 'statement'],
+                                description: 'next=source.nextConnection→target.previousConnection，statement=source.getInput(inputName).connection→target.previousConnection，input=source.getInput(inputName).connection→target.outputConnection' 
+                            }
+                        },
+                        required: ['source', 'target', 'connectionType']
+                    },
+                    description: '块之间的连接规则（统一定义所有连接，包括新块之间和新块与已有块之间）'
                 },
                 position: {
                     type: 'object',
@@ -1493,20 +1474,7 @@ Query and return specific content (for detailed info)
                         x: { type: 'number', description: 'X坐标' },
                         y: { type: 'number', description: 'Y坐标' }
                     },
-                    description: '结构在工作区中的位置'
-                },
-                insertPosition: {
-                    type: 'string',
-                    enum: ['workspace', 'after', 'before', 'input', 'statement', 'append'],
-                    description: '插入位置：workspace=独立放置，after=目标块后，before=目标块前，input=目标块输入，statement=statement连接（用于hat块），append=追加到工作区'
-                },
-                targetBlock: {
-                    type: 'string',
-                    description: '目标容器块ID（当insertPosition不是workspace时必需）'
-                },
-                targetInput: {
-                    type: 'string',
-                    description: '目标输入名（当insertPosition是input时必需）'
+                    description: '结构在工作区中的坐标位置'
                 }
             },
             required: ['structure']

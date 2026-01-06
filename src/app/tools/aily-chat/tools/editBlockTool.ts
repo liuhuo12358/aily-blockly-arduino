@@ -105,6 +105,7 @@ interface SmartBlockResult extends ToolUseResult {
     parentConnected?: boolean;  // 新增：是否连接到父块
     workspaceOverview?: string; // 新增：工作区概览
     cppCode?: string;           // 新增：生成的C++代码
+    createdChain?: Array<{ id: string; type: string }>;  // 🆕 已创建的块链信息
   };
 }
 
@@ -123,20 +124,36 @@ interface CodeStructureArgs {
     structureDefinition: {
       rootBlock: BlockConfig;
       additionalBlocks?: BlockConfig[];
+      // 内部 connectionRules（已废弃，统一使用外层 connectionRules）
       connectionRules?: Array<{
-        source: string; // 输出块的引用（提供连接的块）- 对应 connectBlockTool 的 containerBlock
-        target: string; // 接收块的引用（接收连接的块）- 对应 connectBlockTool 的 contentBlock  
-        inputName?: string; // 连接到接收块(target)的输入名
+        source: string;
+        target: string;
+        inputName?: string;
         connectionType?: 'next' | 'input' | 'statement';
       }>;
     };
+    // 🆕 支持 LLM 把 connectionRules 放在 config 内部（与 structureDefinition 同级）
+    connectionRules?: Array<{
+      source: string;
+      target: string;
+      inputName?: string;
+      connectionType?: 'next' | 'input' | 'statement';
+    }>;
   };
   
-  // 放置选项
+  // 统一的连接规则（包含新建块之间的连接，以及新建块与工作区已有块之间的连接）
+  connectionRules?: Array<{
+    source: string; // 源块 ID（新建块或已有块）
+    target: string; // 目标块 ID（新建块或已有块）
+    inputName?: string; // statement/input 连接时指定输入名称
+    connectionType: 'next' | 'input' | 'statement';
+  }>;
+  
+  // 放置选项（已废弃，建议使用 connectionRules 代替）
   insertPosition?: 'workspace' | 'after' | 'before' | 'input' | 'statement' | 'append';
   targetBlock?: string; // 目标块ID
   targetInput?: string; // 目标输入名
-  position?: { x?: number; y?: number } | string; // 工作区位置（支持字符串格式）
+  position?: { x?: number; y?: number } | string; // 工作区位置
 }
 
 interface CodeStructureResult extends ToolUseResult {
@@ -172,6 +189,7 @@ interface ConnectBlocksResult extends ToolUseResult {
     correctionReason?: string;       // 新增：纠正原因
     workspaceOverview?: string;      // 新增：工作区概览
     cppCode?: string;                // 新增：生成的C++代码
+    connectedChain?: Array<{ id: string; type: string }>;  // 🆕 已连接的块链信息
   };
 }
 
@@ -2708,10 +2726,11 @@ export async function smartBlockTool(args: SmartBlockArgs): Promise<SmartBlockRe
     console.log(`✅ 智能块创建成功: ${type}[${result.block.id}]`);
 
     // 处理父连接
+    let parentConnectSuccess = false;
     if (parsedParentConnection) {
       console.log(`🔗 开始处理父连接: ${JSON.stringify(parsedParentConnection)}`);
-      const success = await connectToParent(workspace, result.block, parsedParentConnection);
-      if (success) {
+      parentConnectSuccess = await connectToParent(workspace, result.block, parsedParentConnection);
+      if (parentConnectSuccess) {
         console.log(`✅ 父连接成功`);
       } else {
         console.warn(`⚠️ 父连接失败`);
@@ -2727,6 +2746,33 @@ export async function smartBlockTool(args: SmartBlockArgs): Promise<SmartBlockRe
     //   enhancedMessage += `，包含 ${result.totalBlocks} 个块`;
     // }
     let enhancedMessage = `✅ 完成创建智能块 ${type} id: ${result.block.id}`;
+    
+    // 🆕 生成块链详细信息（从当前块开始遍历整个链）
+    const createdChain: Array<{ id: string; type: string }> = [];
+    let currentBlock = result.block;
+    while (currentBlock) {
+      createdChain.push({
+        id: currentBlock.id,
+        type: currentBlock.type
+      });
+      currentBlock = currentBlock.getNextBlock?.();
+    }
+    
+    if (createdChain.length > 0) {
+      enhancedMessage += `\n📋 已创建的块链 (${createdChain.length} 个块):`;
+      if (parentConnectSuccess && parsedParentConnection) {
+        // 如果连接到了父块，显示连接关系
+        const parentBlock = getBlockByIdSmart(workspace, parsedParentConnection.blockId);
+        if (parentBlock) {
+          enhancedMessage += `\n   ${parentBlock.type}[${parentBlock.id.substring(0, 12)}...]`;
+          enhancedMessage += `\n   └─ ${createdChain.map(b => b.type).join(' → ')}`;
+        } else {
+          enhancedMessage += `\n   ${createdChain.map(b => b.type).join(' → ')}`;
+        }
+      } else {
+        enhancedMessage += `\n   ${createdChain.map(b => b.type).join(' → ')}`;
+      }
+    }
     
     // 🆕 如果有嵌套块创建失败，添加警告信息
     if (result.failedBlocks && result.failedBlocks.length > 0) {
@@ -2769,7 +2815,8 @@ export async function smartBlockTool(args: SmartBlockArgs): Promise<SmartBlockRe
         blockType: type,
         position: parsedPosition,
         totalBlocks: result.totalBlocks || 1,
-        parentConnected: !!parsedParentConnection,
+        parentConnected: parentConnectSuccess,
+        createdChain: createdChain  // 🆕 添加块链信息
         // workspaceOverview: isError ? null : workspaceOverview
       }
     };
@@ -4272,13 +4319,14 @@ export async function createCodeStructureTool(
   let metadata = null;
 
   console.log('🏗️ createCodeStructureTool 开始执行');
-  console.log('� 接收到的参数:', JSON.stringify(toolArgs, null, 2));
+  console.log('📋 接收到的参数:', JSON.stringify(toolArgs, null, 2));
 
   try {
-    let { structure, config, insertPosition = 'workspace', targetBlock, targetInput, position } = toolArgs;
+    let { structure, config, connectionRules: externalConnectionRules, insertPosition = 'workspace', targetBlock, targetInput, position } = toolArgs;
 
     console.log('🔧 原始参数解析...');
     console.log('- structure:', structure);
+    console.log('- externalConnectionRules:', externalConnectionRules);
     console.log('- config:', config);
     console.log('- position (raw):', position);
     console.log('- insertPosition:', insertPosition);
@@ -4394,27 +4442,83 @@ export async function createCodeStructureTool(
     if (typeof config === 'object' && config.structureDefinition) {
       console.log('   - rootBlock:', config.structureDefinition.rootBlock ? config.structureDefinition.rootBlock.type : 'undefined');
       console.log('   - additionalBlocks:', config.structureDefinition.additionalBlocks ? `${config.structureDefinition.additionalBlocks.length}个` : 'undefined或0个');
-      console.log('   - connectionRules:', config.structureDefinition.connectionRules ? `${config.structureDefinition.connectionRules.length}个` : 'undefined或0个');
+      console.log('   - connectionRules (内层):', config.structureDefinition.connectionRules ? `${config.structureDefinition.connectionRules.length}个` : 'undefined或0个');
     }
 
-    // // 使用动态结构处理器创建结构
+    // 🆕 合并所有层级的 connectionRules
+    let mergedConnectionRules: Array<{
+      source: string;
+      target: string;
+      inputName?: string;
+      connectionType: 'next' | 'input' | 'statement';
+    }> = [];
+    
+    // 🔧 辅助函数：解析可能是字符串的 connectionRules
+    const parseConnectionRules = (rules: any): any[] => {
+      if (!rules) return [];
+      if (typeof rules === 'string') {
+        try {
+          const parsed = JSON.parse(rules);
+          return Array.isArray(parsed) ? parsed : [];
+        } catch (e) {
+          console.warn('⚠️ connectionRules 字符串解析失败:', e);
+          return [];
+        }
+      }
+      return Array.isArray(rules) ? rules : [];
+    };
+    
+    // 1. 从 structureDefinition 内部提取（最内层）
+    if (typeof config === 'object' && config.structureDefinition?.connectionRules) {
+      const rawRules = parseConnectionRules(config.structureDefinition.connectionRules);
+      const internalRules = rawRules.map(rule => ({
+        ...rule,
+        connectionType: (rule.connectionType || 'next') as 'next' | 'input' | 'statement'
+      }));
+      mergedConnectionRules.push(...internalRules);
+      console.log(`📋 从 structureDefinition 内部提取 ${internalRules.length} 条 connectionRules`);
+    }
+    
+    // 2. 从 config 对象提取（中间层，LLM 常放这里）
+    if (typeof config === 'object' && config.connectionRules) {
+      const rawRules = parseConnectionRules(config.connectionRules);
+      const configRules = rawRules.map(rule => ({
+        ...rule,
+        connectionType: (rule.connectionType || 'next') as 'next' | 'input' | 'statement'
+      }));
+      mergedConnectionRules.push(...configRules);
+      console.log(`📋 从 config 对象提取 ${configRules.length} 条 connectionRules`);
+    }
+    
+    // 3. 从 toolArgs 外层提取（最外层，优先级最高）
+    if (externalConnectionRules) {
+      const rawRules = parseConnectionRules(externalConnectionRules);
+      mergedConnectionRules.push(...rawRules.map(rule => ({
+        ...rule,
+        connectionType: (rule.connectionType || 'next') as 'next' | 'input' | 'statement'
+      })));
+      console.log(`📋 从 toolArgs 外层添加 ${rawRules.length} 条 connectionRules`);
+    }
+    
+    console.log(`📊 合并后共 ${mergedConnectionRules.length} 条 connectionRules`);
+
+    // 使用动态结构处理器创建结构（不再处理连接）
     console.log(`🚀 使用动态结构定义创建: ${structure}`);
-    const rootBlock = await createDynamicStructure(workspace, config, blockPosition, createdBlocks, connections);
+    const rootBlock = await createDynamicStructure(workspace, config, blockPosition, createdBlocks, connections, true);  // 传入 true 表示跳过内部连接处理
 
     if (rootBlock.block) {
-      // 处理插入位置
-      console.log('🔗 检查插入位置条件:');
-      console.log('- insertPosition:', insertPosition);
-      console.log('- targetBlock:', targetBlock);
-      console.log('- targetInput:', targetInput);
-      console.log('- 条件判断:', `insertPosition !== 'workspace' (${insertPosition !== 'workspace'}) && targetBlock (${!!targetBlock})`);
-      
-      if (insertPosition !== 'workspace' && targetBlock) {
+      // 🆕 统一处理所有 connectionRules
+      if (mergedConnectionRules.length > 0) {
+        console.log(`🔗 统一处理 connectionRules: ${mergedConnectionRules.length} 条规则`);
+        await applyExternalConnectionRules(workspace, mergedConnectionRules, rootBlock.blockMap, connections);
+      } else if (insertPosition !== 'workspace' && targetBlock) {
+        // 兼容旧的 insertPosition 方式
+        console.log('⚠️ 使用旧的 insertPosition 方式（建议迁移到 connectionRules）');
         console.log(`🎯 执行块插入: ${insertPosition} 到 ${targetBlock}`);
         await handleBlockInsertion(workspace, rootBlock.block, insertPosition, targetBlock, targetInput);
         console.log(`✅ 块插入完成`);
       } else {
-        console.log(`⚠️ 跳过块插入 - 条件不满足`);
+        console.log(`📍 结构独立放置于工作区`);
       }
 
       console.log(`✅ 成功创建 ${structure} 结构，包含 ${createdBlocks.length} 个块`);
@@ -4885,6 +4989,8 @@ export async function connectBlocksTool(args: ConnectBlocksArgs): Promise<Connec
 
     // 生成结果消息
     let message = '';
+    let chainInfo = '';  // 🆕 块链详细信息
+    
     if (result.smartInsertion && result.movedBlockChain && result.movedBlockChain.length > 1) {
       // 移动了块链
       if (result.autoMovedBlock) {
@@ -4903,17 +5009,34 @@ export async function connectBlocksTool(args: ConnectBlocksArgs): Promise<Connec
       message = `✅ 连接成功: "${containerBlockObj.type}" 和 "${contentBlockObj.type}"`;
     }
 
+    // 🆕 生成块链详细信息（从 contentBlock 开始遍历整个链）
+    const connectedChain: Array<{ id: string; type: string }> = [];
+    let currentBlock = contentBlockObj;
+    while (currentBlock) {
+      connectedChain.push({
+        id: currentBlock.id,
+        type: currentBlock.type
+      });
+      currentBlock = currentBlock.getNextBlock?.();
+    }
+    
+    if (connectedChain.length > 0) {
+      chainInfo = `\n📋 已连接的块链 (${connectedChain.length} 个块):\n`;
+      chainInfo += `   ${containerBlockObj.type}[${containerBlockObj.id.substring(0, 12)}...]\n`;
+      chainInfo += `   └─ ${connectedChain.map(b => `${b.type}`).join(' → ')}`;
+    }
+
     console.log(message);
 
     // // 获取工作区概览，包括树状结构和生成的代码
     // const { overview: workspaceOverview, cppCode, isError } = await getWorkspaceOverviewInfo();    
     
     // 生成增强的结果消息
-    let enhancedMessage = `${message}`;
+    let enhancedMessage = `${message}${chainInfo}`;
     
     // 如果进行了参数纠正，添加纠正信息
     if (validation.correctionMade) {
-      enhancedMessage = `${errorMessage}\n${message}
+      enhancedMessage = `${errorMessage}\n${message}${chainInfo}
 
  **智能纠错**：${validation.correctionReason}`;
     }
@@ -4945,7 +5068,8 @@ export async function connectBlocksTool(args: ConnectBlocksArgs): Promise<Connec
         parameterCorrected: validation.correctionMade,
         correctionReason: validation.correctionReason,
         smartInsertion: result.smartInsertion,
-        autoMovedBlock: result.autoMovedBlock
+        autoMovedBlock: result.autoMovedBlock,
+        connectedChain: connectedChain  // 🆕 添加块链信息
       }),
       metadata: {
         containerBlockId: containerBlockObj.id,
@@ -4954,6 +5078,7 @@ export async function connectBlocksTool(args: ConnectBlocksArgs): Promise<Connec
         inputName: optimizedInputName,
         parameterCorrected: validation.correctionMade,
         correctionReason: validation.correctionReason,
+        connectedChain: connectedChain  // 🆕 添加块链信息到 metadata
         // workspaceOverview: isError ? null : workspaceOverview
       }
     };
@@ -8925,15 +9050,18 @@ function calculateBlockPosition(workspace: any, x?: number, y?: number): Positio
 
 /**
  * 创建动态结构 - 支持用户自定义的任意块结构
+ * @param skipInternalConnections 如果为 true，则跳过内部 connectionRules 处理（由外层统一处理）
  */
 async function createDynamicStructure(
   workspace: any, 
   config: any, 
   position: Position, 
   createdBlocks: string[], 
-  connections: any[]
+  connections: any[],
+  skipInternalConnections: boolean = false  // 🆕 是否跳过内部连接处理
 ): Promise<any> {
   console.log('🚀 创建动态自定义结构');
+  console.log(`📋 skipInternalConnections: ${skipInternalConnections}`);
   
   if (!config.structureDefinition) {
     throw new Error('动态结构必须提供 structureDefinition 配置');
@@ -8981,12 +9109,18 @@ async function createDynamicStructure(
     }
   }
   
-  const { rootBlock: rootConfig, additionalBlocks = [], connectionRules = [] } = structureDefinition;
+  let { rootBlock: rootConfig, additionalBlocks = [], connectionRules = [] } = structureDefinition;
+  
+  // 🆕 如果外层统一处理连接，则跳过内部 connectionRules
+  if (skipInternalConnections) {
+    console.log('📋 skipInternalConnections=true，内部 connectionRules 将由外层统一处理');
+    connectionRules = [];  // 清空，不在此处处理
+  }
   
   console.log('📋 结构定义提取完成:');
   console.log('  - rootBlock:', rootConfig ? rootConfig.type : 'undefined');
   console.log('  - additionalBlocks数量:', additionalBlocks.length);
-  console.log('  - connectionRules数量:', connectionRules.length);
+  console.log('  - connectionRules数量:', connectionRules.length, skipInternalConnections ? '(已跳过)' : '');
   
   if (additionalBlocks.length > 0) {
     console.log('📦 additionalBlocks详情:');
@@ -9199,7 +9333,154 @@ async function createDynamicStructure(
     }
   }
 
-  return { block: actualChainHead, error: createError };
+  return { block: actualChainHead, error: createError, blockMap };
+}
+
+/**
+ * 🆕 应用外层连接规则
+ * 处理新创建块之间的连接，以及新创建块与工作区已有块之间的连接
+ */
+async function applyExternalConnectionRules(
+  workspace: any,
+  connectionRules: Array<{
+    source: string;
+    target: string;
+    inputName?: string;
+    connectionType: 'next' | 'input' | 'statement';
+  }>,
+  blockMap: Map<string, any>,
+  connections: any[]
+): Promise<void> {
+  console.log(`🔗 开始处理外层连接规则，共 ${connectionRules.length} 条`);
+  
+  for (const rule of connectionRules) {
+    try {
+      console.log(`🔍 处理连接规则: ${rule.source} -> ${rule.target} (${rule.connectionType})`);
+      
+      // 智能查找块：先在 blockMap 中找新创建的块，找不到则在工作区中找已有块
+      let sourceBlock = findBlockSmart(workspace, rule.source, blockMap);
+      let targetBlock = findBlockSmart(workspace, rule.target, blockMap);
+      
+      if (!sourceBlock) {
+        console.warn(`⚠️ 未找到源块: ${rule.source}`);
+        continue;
+      }
+      if (!targetBlock) {
+        console.warn(`⚠️ 未找到目标块: ${rule.target}`);
+        continue;
+      }
+      
+      console.log(`✅ 找到连接块: ${sourceBlock.type}[${sourceBlock.id}] -> ${targetBlock.type}[${targetBlock.id}]`);
+      
+      // 执行连接
+      const wasRecordingUndo = (window as any)['Blockly'].Events.getRecordUndo();
+      const currentGroup = (window as any)['Blockly'].Events.getGroup();
+      (window as any)['Blockly'].Events.disable();
+      
+      try {
+        if (rule.connectionType === 'next') {
+          // next 连接: source.nextConnection → target.previousConnection
+          if (sourceBlock.nextConnection && targetBlock.previousConnection) {
+            sourceBlock.nextConnection.connect(targetBlock.previousConnection);
+            connections.push({
+              sourceId: sourceBlock.id,
+              targetId: targetBlock.id,
+              connectionType: 'next'
+            });
+            console.log(`✅ next 连接成功`);
+          } else {
+            console.warn(`⚠️ next 连接失败: 缺少必要的连接点`);
+          }
+        } else if (rule.connectionType === 'statement') {
+          // statement 连接: source.getInput(inputName).connection → target.previousConnection
+          const inputName = rule.inputName || findFirstStatementInput(sourceBlock);
+          const inputObj = sourceBlock.getInput(inputName);
+          if (inputObj && inputObj.connection && targetBlock.previousConnection) {
+            inputObj.connection.connect(targetBlock.previousConnection);
+            connections.push({
+              sourceId: sourceBlock.id,
+              targetId: targetBlock.id,
+              connectionType: 'statement',
+              inputName
+            });
+            console.log(`✅ statement 连接成功: ${inputName}`);
+          } else {
+            console.warn(`⚠️ statement 连接失败: 输入 "${inputName}" 不存在或缺少连接点`);
+          }
+        } else if (rule.connectionType === 'input') {
+          // input 连接: source.getInput(inputName).connection → target.outputConnection
+          const inputObj = sourceBlock.getInput(rule.inputName);
+          if (inputObj && inputObj.connection && targetBlock.outputConnection) {
+            inputObj.connection.connect(targetBlock.outputConnection);
+            connections.push({
+              sourceId: sourceBlock.id,
+              targetId: targetBlock.id,
+              connectionType: 'input',
+              inputName: rule.inputName
+            });
+            console.log(`✅ input 连接成功: ${rule.inputName}`);
+          } else {
+            console.warn(`⚠️ input 连接失败: 输入 "${rule.inputName}" 不存在或缺少连接点`);
+          }
+        }
+      } finally {
+        (window as any)['Blockly'].Events.enable();
+        if (currentGroup) {
+          (window as any)['Blockly'].Events.setGroup(currentGroup);
+        }
+        (window as any)['Blockly'].Events.setRecordUndo(wasRecordingUndo);
+      }
+    } catch (error) {
+      console.warn(`❌ 处理连接规则时出错:`, error);
+    }
+  }
+  
+  console.log(`✅ 外层连接规则处理完成`);
+}
+
+/**
+ * 智能查找块：先在新创建的块映射中查找，再在工作区中查找
+ */
+function findBlockSmart(workspace: any, blockId: string, blockMap: Map<string, any>): any {
+  // 1. 先在 blockMap 中查找（新创建的块）
+  if (blockMap.has(blockId)) {
+    return blockMap.get(blockId);
+  }
+  
+  // 2. 尝试模糊匹配 blockMap
+  for (const [key, block] of blockMap.entries()) {
+    if (key.includes(blockId) || blockId.includes(key) || block.type === blockId) {
+      return block;
+    }
+  }
+  
+  // 3. 在工作区中查找已有块
+  const existingBlock = getBlockByIdSmart(workspace, blockId, { enableFuzzyMatch: true, minScore: 60 });
+  if (existingBlock) {
+    return existingBlock;
+  }
+  
+  return null;
+}
+
+/**
+ * 查找块的第一个 statement 类型输入
+ */
+function findFirstStatementInput(block: any): string {
+  const inputs = block.inputList || [];
+  for (const input of inputs) {
+    if (input.type === 3) { // STATEMENT_INPUT = 3
+      return input.name;
+    }
+  }
+  // 常见的默认名称
+  const commonNames = ['DO', 'STACK', 'STATEMENTS', 'DO0'];
+  for (const name of commonNames) {
+    if (block.getInput(name)) {
+      return name;
+    }
+  }
+  return 'DO';
 }
 
 /**
