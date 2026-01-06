@@ -207,27 +207,21 @@ ${errorLogsStr}
 
   // 问题描述
   getIssueDescription(): string {
-    const descriptionStr = this.feedbackContent
-      ? this.feedbackContent.split('\n').map(line => `  ${line}`).join('\n')
-      : "  null";
+    const descriptionStr = this.feedbackContent?.trim() || 'null';
 
     return `**Issue Descriptions:**
-\`\`\`plaintext
+
 ${descriptionStr}
-\`\`\`
     `;
   }
 
   // 功能建议
   getFeatureSuggestion(): string {
-    const descriptionStr = this.feedbackContent
-      ? this.feedbackContent.split('\n').map(line => `  ${line}`).join('\n')
-      : "  null";
+    const descriptionStr = this.feedbackContent?.trim() || 'null';
 
-    return `**Feature Suggestions**
-\`\`\`plaintext
+    return `**Feature Suggestions:**
+
 ${descriptionStr}
-\`\`\`
     `;
   }
 
