@@ -306,7 +306,12 @@
         "WARNING_INVALID_EMAIL": "请输入有效的邮箱地址",
         "SUCCESS_MESSAGE": "感谢您的反馈！",
         "ERROR_SUBMIT_FAILED": "提交失败，请稍后重试",
-        "NO_DEPENDENCIES": "无"
+        "NO_DEPENDENCIES": "无",
+        "IMAGE_UPLOADING": "正在上传图片...",
+        "IMAGE_UPLOAD_SUCCESS": "图片上传成功",
+        "IMAGE_UPLOAD_FAILED": "图片上传失败，请重试",
+        "ATTACH_HINT": "拖放、粘贴或",
+        "SELECT_FILE": "选择图片"
     },
     "AILY_CHAT": {
         "TITLE": "AI助手",

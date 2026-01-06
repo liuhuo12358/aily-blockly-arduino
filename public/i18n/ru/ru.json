@@ -268,7 +268,12 @@
         "WARNING_INVALID_EMAIL": "Пожалуйста, введите действительный адрес email",
         "SUCCESS_MESSAGE": "Спасибо за вашу обратную связь!",
         "ERROR_SUBMIT_FAILED": "Ошибка отправки, пожалуйста, попробуйте позже",
-        "NO_DEPENDENCIES": "Нет"
+        "NO_DEPENDENCIES": "Нет",
+        "IMAGE_UPLOADING": "Загрузка изображения...",
+        "IMAGE_UPLOAD_SUCCESS": "Изображение успешно загружено",
+        "IMAGE_UPLOAD_FAILED": "Ошибка загрузки изображения, попробуйте снова",
+        "ATTACH_HINT": "Прикрепите файлы перетаскиванием, вставкой или",
+        "SELECT_FILE": "выберите файлы"
     },
     "AILY_CHAT": {
         "TITLE": "ИИ-ассистент",

@@ -268,7 +268,12 @@
         "WARNING_INVALID_EMAIL": "Veuillez saisir une adresse email valide",
         "SUCCESS_MESSAGE": "Merci pour votre retour !",
         "ERROR_SUBMIT_FAILED": "Échec de la soumission, veuillez réessayer plus tard",
-        "NO_DEPENDENCIES": "Aucune"
+        "NO_DEPENDENCIES": "Aucune",
+        "IMAGE_UPLOADING": "Téléchargement de l'image...",
+        "IMAGE_UPLOAD_SUCCESS": "Image téléchargée avec succès",
+        "IMAGE_UPLOAD_FAILED": "Échec du téléchargement de l'image, veuillez réessayer",
+        "ATTACH_HINT": "Joindre des fichiers par glisser-déposer, coller ou",
+        "SELECT_FILE": "sélectionner des fichiers"
     },
     "AILY_CHAT": {
         "TITLE": "Assistant IA",

@@ -264,7 +264,12 @@
         "WARNING_INVALID_EMAIL": "유효한 이메일 주소를 입력하세요",
         "SUCCESS_MESSAGE": "피드백을 주셔서 감사합니다!",
         "ERROR_SUBMIT_FAILED": "제출 실패, 나중에 다시 시도해 주세요",
-        "NO_DEPENDENCIES": "없음"
+        "NO_DEPENDENCIES": "없음",
+        "IMAGE_UPLOADING": "이미지 업로드 중...",
+        "IMAGE_UPLOAD_SUCCESS": "이미지 업로드 성공",
+        "IMAGE_UPLOAD_FAILED": "이미지 업로드 실패, 다시 시도해 주세요",
+        "ATTACH_HINT": "드래그 & 드롭, 붙여넣기 또는",
+        "SELECT_FILE": "파일 선택"
     },
     "AILY_CHAT": {
         "TITLE": "AI 어시스턴트",

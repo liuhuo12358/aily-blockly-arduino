@@ -78,6 +78,7 @@ export const API = {
   get cloudPublicProjects() { return `${getServerUrl()}/api/v1/cloud/projects/public`; },
   // feedback
   get feedback() { return `${getServerUrl()}/api/v1/feedback/submit`; },
+  get feedbackImageUpload() { return `${getServerUrl()}/api/v1/feedback/upload-image`; },
   // model list
   get modelList() { return `${getServerUrl()}/api/v1/model/list`; },
   // model details

@@ -268,7 +268,12 @@
         "WARNING_INVALID_EMAIL": "Por favor ingrese una dirección de correo electrónico válida",
         "SUCCESS_MESSAGE": "¡Gracias por sus comentarios!",
         "ERROR_SUBMIT_FAILED": "Error al enviar, por favor intente más tarde",
-        "NO_DEPENDENCIES": "Ninguna"
+        "NO_DEPENDENCIES": "Ninguna",
+        "IMAGE_UPLOADING": "Subiendo imagen...",
+        "IMAGE_UPLOAD_SUCCESS": "Imagen subida correctamente",
+        "IMAGE_UPLOAD_FAILED": "Error al subir la imagen, por favor intente de nuevo",
+        "ATTACH_HINT": "Adjuntar archivos arrastrando, pegando o",
+        "SELECT_FILE": "seleccionar archivos"
     },
     "AILY_CHAT": {
         "TITLE": "Asistente IA",

@@ -13,7 +13,7 @@
     "cn": {
       "name": "China",
       "enabled": true,
-      "api_server": "https://aapi.diandeng.tech",
+      "api_server": "http://127.0.0.1:8080",
       "npm_registry": "https://registry.diandeng.tech",
       "resource": "https://blockly.diandeng.tech",
       "updater": "https://dl.diandeng.tech/blockly"
@@ -29,7 +29,7 @@
     "localhost": {
       "name": "Local",
       "enabled": true,
-      "api_server": "https://aapi.diandeng.tech",
+      "api_server": "",
       "npm_registry": "http://localhost:4873",
       "resource": "http://localhost:4874",
       "updater": ""
