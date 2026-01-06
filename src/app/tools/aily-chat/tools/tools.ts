@@ -1397,25 +1397,39 @@ Query and return specific content (for detailed info)
   "config": {
     "structureDefinition": {
       "rootBlock": {
-        "type": "serial_begin",
-        "id": "serial_init",
-        "fields": {"SERIAL": "Serial", "SPEED": "9600"}
+        "type": "control_if",
+        "id": "if_check",
+        "extraState": {"hasElse": true},
+        "inputs": {
+          "IF0": {"block": {"type": "logic_compare", "id": "logic_compare_id", "fields": {"OP": "GT"}, ...}},
+          "DO0": {"block": {"type": "io_digitalwrite", "id": "green_led_on", "inputs": {...}}},
+          "ELSE": {}
+        }
       },
       "additionalBlocks": [
         {
-          "type": "base_pin_mode",
-          "id": "pin_setup",
+          "type": "io_digitalwrite",
+          "id": "red_led_on",
           "inputs": {
-            "PIN": {"block": {"type": "math_number", "fields": {"NUM": "13"}}},
-            "MODE": {"block": {"type": "base_pin_mode_option", "fields": {"MODE": "OUTPUT"}}}
+            "PIN": {"shadow": {"type": "io_pin_digi", "fields": {"PIN": "13"}}},
+            "MODE": {"shadow": {"type": "io_state", "fields": {"STATE": "HIGH"}}}
+          }
+        },
+        {
+          "type": "io_digitalwrite",
+          "id": "red_led_off",
+          "inputs": {
+            "PIN": {"shadow": {"type": "io_pin_digi", "fields": {"PIN": "13"}}},
+            "MODE": {"shadow": {"type": "io_state", "fields": {"STATE": "LOW"}}}
           }
         }
       ]
     }
   },
   "connectionRules": [
-    {"source": "arduino_setup_id", "target": "serial_init", "connectionType": "statement"},
-    {"source": "serial_init", "target": "pin_setup", "connectionType": "next"}
+    {"source": "arduino_setup_id", "target": "if_check", "connectionType": "statement", "inputName": "ARDUINO_SETUP"},
+    {"source": "green_led_on", "target": "red_led_on", "connectionType": "next"},
+    {"source": "if_check", "target": "red_led_off", "connectionType": "statement", "inputName": "ELSE"}
   ]
 }
 \`\`\`
@@ -2116,7 +2130,7 @@ When in doubt, use this tool. Being proactive with task management demonstrates 
             },
             required: ['blockTypes', 'libraryNames']
         }
-    },
+    }
     // =============================================================================
     // 扁平化块创建工具（推荐）
     // =============================================================================
