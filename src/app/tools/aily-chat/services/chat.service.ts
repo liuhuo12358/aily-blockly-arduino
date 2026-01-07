@@ -121,8 +121,19 @@ export class ChatService {
     }
   }
 
-  startSession(mode: string, tools: MCPTool[] | null = null): Observable<any> {
-    return this.http.post(API.startSession, { session_id: this.currentSessionId, tools: tools || [], mode });
+  startSession(mode: string, tools: MCPTool[] | null = null, maxCount?: number): Observable<any> {
+    const payload: any = { 
+      session_id: this.currentSessionId, 
+      tools: tools || [], 
+      mode 
+    };
+    
+    // 如果提供了 maxCount 参数，添加到请求中
+    if (maxCount !== undefined && maxCount > 0) {
+      payload.max_count = maxCount;
+    }
+    
+    return this.http.post(API.startSession, payload);
   }
 
   closeSession(sessionId: string) {

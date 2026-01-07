@@ -9,6 +9,7 @@ import { NzToolTipModule } from 'ng-zorro-antd/tooltip';
 import { NzSwitchModule } from 'ng-zorro-antd/switch';
 import { TOOLS } from '../../tools/tools';
 import { ElectronService } from '../../../../services/electron.service';
+import { AilyChatConfigService, WorkspaceSecurityOption } from '../../services/aily-chat-config.service';
 
 @Component({
   selector: 'aily-chat-settings',
@@ -41,10 +42,7 @@ export class AilyChatSettingsComponent implements OnInit {
   indeterminate = false;
 
   // 安全工作区配置
-  workspaceOptions = [
-    { name: 'project', displayName: '项目文件', enabled: true },
-    { name: 'library', displayName: '库文件', enabled: true }
-  ];
+  workspaceOptions: WorkspaceSecurityOption[] = [];
   allWorkspaceChecked = false;
   workspaceIndeterminate = false;
 
@@ -57,12 +55,33 @@ export class AilyChatSettingsComponent implements OnInit {
 
   constructor(
     private message: NzMessageService,
-    private electronService: ElectronService
+    private electronService: ElectronService,
+    private ailyChatConfigService: AilyChatConfigService
   ) {
   }
 
   ngOnInit() {
+    this.loadAllConfig();
     this.initializeTools();
+    this.loadWorkspaceOptions();
+  }
+
+  /**
+   * 加载所有配置
+   */
+  private loadAllConfig() {
+    // 从配置服务加载所有配置项
+    this.useCustomApiKey = this.ailyChatConfigService.useCustomApiKey;
+    this.maxCount = this.ailyChatConfigService.maxCount;
+    this.baseUrl = this.ailyChatConfigService.baseUrl;
+    this.apiKey = this.ailyChatConfigService.apiKey;
+  }
+
+  /**
+   * 从配置服务加载安全工作区选项
+   */
+  private loadWorkspaceOptions() {
+    this.workspaceOptions = this.ailyChatConfigService.getWorkspaceSecurityOptions();
     this.updateWorkspaceAllChecked();
   }
 
@@ -70,12 +89,17 @@ export class AilyChatSettingsComponent implements OnInit {
    * 初始化工具列表
    */
   private initializeTools() {
+    // 从配置服务获取已启用的工具列表
+    const savedEnabledTools = this.ailyChatConfigService.enabledTools;
+    const hasStoredConfig = savedEnabledTools && savedEnabledTools.length > 0;
+    
     // 从 TOOLS 常量中读取所有工具
     this.availableTools = TOOLS.map(tool => ({
       name: tool.name,
       displayName: this.formatToolName(tool.name),
       description: typeof tool.description === 'string' ? tool.description : '',
-      enabled: true // 默认全部启用
+      // 如果有存储的配置，则根据配置设置启用状态；否则默认全部启用
+      enabled: hasStoredConfig ? savedEnabledTools.includes(tool.name) : true
     }));
     this.updateAllChecked();
   }
@@ -143,13 +167,27 @@ export class AilyChatSettingsComponent implements OnInit {
   }
 
   async onSave() {
-    // TODO: 实现保存逻辑，保存启用的工具列表和工作区配置
+    // 保存 API 配置
+    this.ailyChatConfigService.useCustomApiKey = this.useCustomApiKey;
+    this.ailyChatConfigService.maxCount = this.maxCount;
+    this.ailyChatConfigService.baseUrl = this.baseUrl;
+    this.ailyChatConfigService.apiKey = this.apiKey;
+
+    // 保存启用的工具列表
     const enabledTools = this.availableTools.filter(t => t.enabled).map(t => t.name);
-    const enabledWorkspaces = this.workspaceOptions.filter(w => w.enabled).map(w => w.name);
-    console.log('已启用的工具:', enabledTools);
-    console.log('已启用的工作区:', enabledWorkspaces);
-    this.message.success('设置已保存');
-    this.saved.emit();
+    this.ailyChatConfigService.enabledTools = enabledTools;
+
+    // 保存安全工作区配置
+    this.ailyChatConfigService.updateFromWorkspaceOptions(this.workspaceOptions);
+
+    // 保存到文件
+    const success = this.ailyChatConfigService.save();
+    if (success) {
+      this.message.success('设置已保存');
+      this.saved.emit();
+    } else {
+      this.message.error('保存设置失败');
+    }
   }
 
   /**

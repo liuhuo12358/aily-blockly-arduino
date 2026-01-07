@@ -75,6 +75,7 @@ import { todoWriteTool } from './tools';
 import { NzModalService } from 'ng-zorro-antd/modal';
 import { ConfigService } from '../../services/config.service';
 import { createSecurityContext } from './services/security.service';
+import { AilyChatConfigService } from './services/aily-chat-config.service';
 
 export interface Tool {
   name: string;
@@ -959,6 +960,13 @@ Do not create non-existent boards and libraries.
 
     // 动态获取安全上下文（每次调用时根据当前项目路径重新创建，只允许当前项目路径）
   private get securityContext(): ReturnType<typeof createSecurityContext> {
+    // 获取安全工作区配置
+    const securityWorkspaces = this.ailyChatConfigService.securityWorkspaces;
+    
+    // 根据配置决定项目路径参数
+    const projectRootPath = securityWorkspaces.project ? this.getProjectRootPath() : '';
+    const currentProjectPath = securityWorkspaces.project ? this.getCurrentProjectPath() : '';
+    
     // 使用会话期间保存的允许路径
     return createSecurityContext(this.getCurrentProjectPath(), {
       allowNodeModulesAccess: true,  // 默认允许访问 node_modules
@@ -1026,6 +1034,7 @@ Do not create non-existent boards and libraries.
     private noticeService: NoticeService,
     private platformService: PlatformService,
     private electronService: ElectronService,
+    private ailyChatConfigService: AilyChatConfigService,
   ) {
     // securityContext 改为 getter，每次使用时动态获取当前项目路径
   }
@@ -1350,7 +1359,15 @@ Do not create non-existent boards and libraries.
 
     // tools + mcp tools
     this.isCompleted = false;
-    let tools = this.tools;
+    
+    // 根据配置过滤启用的工具
+    const enabledToolNames = this.ailyChatConfigService.enabledTools;
+    const hasEnabledToolsConfig = enabledToolNames && enabledToolNames.length > 0;
+    
+    let tools = hasEnabledToolsConfig 
+      ? this.tools.filter(tool => enabledToolNames.includes(tool.name))
+      : this.tools;
+    
     let mcpTools = this.mcpService.tools.map(tool => {
       if (!tool.name.startsWith("mcp_")) {
         tool.name = "mcp_" + tool.name;
@@ -1360,9 +1377,12 @@ Do not create non-existent boards and libraries.
     if (mcpTools && mcpTools.length > 0) {
       tools = tools.concat(mcpTools);
     }
+    
+    // 获取 maxCount 配置
+    const maxCount = this.ailyChatConfigService.maxCount;
 
     return new Promise<void>((resolve, reject) => {
-      this.chatService.startSession(this.currentMode, tools).subscribe({
+      this.chatService.startSession(this.currentMode, tools, maxCount).subscribe({
         next: (res: any) => {
           if (res.status === 'success') {
             if (res.data != this.sessionId) {

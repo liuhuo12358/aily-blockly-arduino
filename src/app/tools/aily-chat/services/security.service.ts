@@ -736,6 +736,22 @@ export function sanitizeForLogging(data: any): any {
 }
 
 /**
+ * 安全上下文创建选项
+ */
+export interface SecurityContextOptions {
+    /** 项目根路径 */
+    projectRootPath?: string;
+    /** 当前项目路径 */
+    currentProjectPath?: string;
+    /** 应用数据路径 */
+    appDataPath?: string;
+    /** 额外允许的路径列表（如用户添加的上下文文件/文件夹） */
+    additionalAllowedPaths?: string[];
+    /** 是否允许访问库文件（默认 true） */
+    includeLibraries?: boolean;
+}
+
+/**
  * 创建安全上下文
  * @param currentProjectPath 当前项目路径
  * @param options 可选配置项
