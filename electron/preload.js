@@ -75,6 +75,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
   },
   terminal: {
     init: (data) => ipcRenderer.invoke("terminal-create", data),
+    getShell: () => ipcRenderer.invoke("terminal-get-shell"),
     onData: (callback) => {
       ipcRenderer.on("terminal-inc-data", (event, data) => {
         callback(data);

@@ -737,7 +737,8 @@ export class AilyChatComponent implements OnDestroy {
   tools: Tool[] = TOOLS;
 
   // 关键信息获取
-  getKeyInfo = () => {
+  getKeyInfo = async () => {
+    const shell = await window['terminal'].getShell();
     return `
 <keyinfo>
 项目存放根路径(**rootFolder**): ${this.projectService.projectRootPath || '无'}
@@ -748,6 +749,7 @@ appDataPath(**appDataPath**): ${window['path'].getAppDataPath() || '无'}
 转换库存放路径(**libraryConversionPath**): ${this.getCurrentProjectPath() ? this.getCurrentProjectPath() : (window['path'].join(window['path'].getAppDataPath(), 'libraries') || '无')}
 当前使用的语言(**lang**)： ${this.configService.data.lang || 'zh-cn'}
 操作系统(**os**): ${window['platform'].type || 'unknown'}
+当前命令行终端(**terminal**): ${shell || 'unknown'}
 </keyinfo>
 `
   }
@@ -2478,7 +2480,7 @@ ${JSON.stringify(errData)}
             }
 
             // 获取keyinfo
-            const keyInfo = this.getKeyInfo();
+            const keyInfo = await this.getKeyInfo();
 
             let toolContent = '';
 
