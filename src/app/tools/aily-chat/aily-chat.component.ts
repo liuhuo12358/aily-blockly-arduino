@@ -1657,8 +1657,8 @@ ${JSON.stringify(errData)}
                       }
                     }
                     
-                    // 执行命令
-                    toolResult = await executeCommandTool(this.cmdService, toolArgs);
+                    // 执行命令，传递安全上下文用于路径验证
+                    toolResult = await executeCommandTool(this.cmdService, toolArgs, this.securityContext);
                     
                     if (!toolResult.is_error) {
                       if (isNpmInstall) {
@@ -1870,7 +1870,7 @@ ${JSON.stringify(errData)}
                     toolResult = await getDirectoryTreeTool(toolArgs);
                     if (toolResult.is_error) {
                       resultState = "error";
-                      resultText = `获取目录树 ${treeFolderName} 失败: ` + (toolResult.content || '未知错误');
+                      resultText = `获取目录树 ${treeFolderName} 失败: ` + (toolResult?.content || '未知错误');
                     } else {
                       resultText = `获取目录树 ${treeFolderName} 成功`;
                     }
@@ -1893,7 +1893,7 @@ ${JSON.stringify(errData)}
                     toolResult = await searchBoardsLibrariesTool.handler(toolArgs, this.configService);
                     if (toolResult.is_error) {
                       resultState = "error";
-                      resultText = `搜索失败: ` + (toolResult.content || '未知错误');
+                      resultText = `搜索失败: ` + (toolResult?.content || '未知错误');
                     } else {
                       const totalMatches = toolResult.metadata?.totalMatches || 0;
                       resultText = `搜索 "${searchQuery}" 成功，找到 ${totalMatches} 个匹配项`;
@@ -1915,7 +1915,7 @@ ${JSON.stringify(errData)}
                     toolResult = await getBoardParametersTool.handler(this.projectService, toolArgs);
                     if (toolResult.is_error) {
                       resultState = "error";
-                      resultText = `获取开发板参数失败: ` + (toolResult.content || '未知错误');
+                      resultText = `获取开发板参数失败: ` + (toolResult?.content || '未知错误');
                     } else {
                       const boardName = toolResult.metadata?.boardName || '未知';
                       const paramsCount = toolResult.metadata?.parameterCount || 0;
@@ -1939,7 +1939,7 @@ ${JSON.stringify(errData)}
                     toolResult = await grepTool(toolArgs);
                     if (toolResult.is_error) {
                       resultState = "error";
-                      resultText = `搜索失败: ` + (toolResult.content || '未知错误');
+                      resultText = `搜索失败: ` + (toolResult?.content || '未知错误');
                     } else {
                       // 优先显示匹配记录数，如果没有则显示文件数
                       const numMatches = toolResult.metadata?.numMatches;
@@ -1982,7 +1982,7 @@ ${JSON.stringify(errData)}
                     toolResult = await globTool(toolArgs);
                     if (toolResult.is_error) {
                       resultState = "error";
-                      resultText = `文件搜索失败: ` + (toolResult.content || '未知错误');
+                      resultText = `文件搜索失败: ` + (toolResult?.content || '未知错误');
                     } else {
                       // 显示找到的文件数量
                       const numFiles = toolResult.metadata?.numFiles;
@@ -2216,7 +2216,7 @@ ${JSON.stringify(errData)}
                   //                     toolResult = await findBlockTool(toolArgs);
                   //                     if (toolResult.is_error) {
                   //                       resultState = "error";
-                  //                       resultText = '块查找失败: ' + (toolResult.content || '未知错误');
+                  //                       resultText = '块查找失败: ' + (toolResult?.content || '未知错误');
                   //                     } else {
                   //                       resultText = '块查找完成';
                   //                     }
@@ -2328,9 +2328,9 @@ ${JSON.stringify(errData)}
                     toolResult = await queryBlockDefinitionTool(this.projectService, toolArgs);
                     if (toolResult.is_error) {
                       resultState = "error";
-                      resultText = '块定义查询失败: ' + (toolResult.content || '未知错误');
+                      resultText = '块定义查询失败: ' + (toolResult?.content || '未知错误');
                     } else {
-                      resultText = `块定义查询完成: ${toolResult.content}`;
+                      resultText = `块定义查询完成: ${toolResult?.content}`;
                     }
                   }
                     break;
@@ -2350,9 +2350,9 @@ ${JSON.stringify(errData)}
                   //                       toolResult = await getBlockConnectionCompatibilityTool(this.projectService, toolArgs);
                   //                       if (toolResult.is_error) {
                   //                         resultState = "error";
-                  //                         resultText = '块连接兼容性分析失败: ' + (toolResult.content || '未知错误');
+                  //                         resultText = '块连接兼容性分析失败: ' + (toolResult?.content || '未知错误');
                   //                       } else {
-                  //                         resultText = `块连接兼容性分析完成: ${toolResult.content}`;
+                  //                         resultText = `块连接兼容性分析完成: ${toolResult?.content}`;
                   //                       }
                   //                     }
                   //                     break;
@@ -2385,7 +2385,7 @@ ${JSON.stringify(errData)}
                     toolResult = await analyzeLibraryBlocksTool(this.projectService, toolArgs);
                     if (toolResult.is_error) {
                       resultState = "error";
-                      resultText = `库分析失败: ${toolResult.content || '未知错误'}`;
+                      resultText = `库分析失败: ${toolResult?.content || '未知错误'}`;
                     } else {
                       const metadata = toolResult.metadata;
                       if (metadata) {
@@ -2410,7 +2410,7 @@ ${JSON.stringify(errData)}
                   //                     toolResult = await intelligentBlockSequenceTool(this.projectService, toolArgs);
                   //                     if (toolResult.is_error) {
                   //                       resultState = "error";
-                  //                       resultText = `智能序列生成失败: ${toolResult.content || '未知错误'}`;
+                  //                       resultText = `智能序列生成失败: ${toolResult?.content || '未知错误'}`;
                   //                     } else {
                   //                       const metadata = toolResult.metadata;
                   //                       if (metadata && metadata.sequenceLength !== undefined) {
@@ -2449,7 +2449,7 @@ ${JSON.stringify(errData)}
                     toolResult = await verifyBlockExistenceTool(this.projectService, toolArgs);
                     if (toolResult.is_error) {
                       resultState = "error";
-                      resultText = `块验证失败: ${toolResult.content || '未知错误'}`;
+                      resultText = `块验证失败: ${toolResult?.content || '未知错误'}`;
                     } else {
                       const metadata = toolResult.metadata;
                       if (metadata) {
@@ -2570,18 +2570,18 @@ ${JSON.stringify(errData)}
 - 独立且无用的块请删除
 7. 重复直至完成
 JSON务必保留必要的换行和缩进格式，否则可能导致解析失败。</rules>
-<toolResult>${toolResult.content}</toolResult>\n<info>如果想结束对话，转交给用户，可以使用[to_xxx]，这里的xxx为user</info>`;
+<toolResult>${toolResult?.content}</toolResult>\n<info>如果想结束对话，转交给用户，可以使用[to_xxx]，这里的xxx为user</info>`;
               } else if (shouldIncludeKeyInfo) {
                 // 需要路径信息的工具 或 工具失败时：只包含 keyInfo
-                toolContent += `\n${keyInfo}\n<toolResult>${toolResult.content}</toolResult>\n<info>如果想结束对话，转交给用户，可以使用[to_xxx]，这里的xxx为user</info>`;
+                toolContent += `\n${keyInfo}\n<toolResult>${toolResult?.content}</toolResult>\n<info>如果想结束对话，转交给用户，可以使用[to_xxx]，这里的xxx为user</info>`;
               } else {
                 // 其他成功的工具：不包含 keyInfo
-                toolContent += `\n<toolResult>${toolResult.content}</toolResult>\n<info>如果想结束对话，转交给用户，可以使用[to_xxx]，这里的xxx为user</info>`;
+                toolContent += `\n<toolResult>${toolResult?.content}</toolResult>\n<info>如果想结束对话，转交给用户，可以使用[to_xxx]，这里的xxx为user</info>`;
               }
             } else {
               toolContent = `
 Your role is ASK (Advisory & Quick Support) - you provide analysis, recommendations, and guidance ONLY. You do NOT execute actual tasks or changes.
-<toolResult>${toolResult.content}</toolResult>\n<info>如果想结束对话，转交给用户，可以使用[to_xxx]，这里的xxx为user</info>`;
+<toolResult>${toolResult?.content}</toolResult>\n<info>如果想结束对话，转交给用户，可以使用[to_xxx]，这里的xxx为user</info>`;
             }
 
             // 显示工具完成状态（除了 todo_write_tool）

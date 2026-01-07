@@ -5,6 +5,8 @@ import {
     CommandSecurity, 
     validateCommand, 
     validateWorkingDirectory,
+    validateFileOperationCommandPaths,
+    CommandPathSecurityContext,
     COMMAND_EXECUTION_LIMITS 
 } from "../services/command-security.service";
 import { 
@@ -17,7 +19,7 @@ import {
 export async function executeCommandTool(
     cmdService: CmdService, 
     data: any,
-    projectRootPath?: string // 新增项目根路径参数
+    securityContext?: CommandPathSecurityContext // 安全上下文参数
 ): Promise<ToolUseResult> {
     let toolResult = null;
     let is_error = false;
@@ -79,9 +81,9 @@ export async function executeCommandTool(
             return injectTodoReminder(toolResults, 'executeCommandTool');
         }
         
-        // 验证工作目录
-        if (projectRootPath) {
-            const cwdCheck = validateWorkingDirectory(data.cwd, projectRootPath);
+        // 验证工作目录和删除命令路径
+        if (securityContext) {
+            const cwdCheck = validateWorkingDirectory(data.cwd, securityContext.projectRootPath);
             if (!cwdCheck.allowed && !cwdCheck.requiresConfirmation) {
                 logBlockedOperation('executeCommandTool', 'executeCommand', data.command, cwdCheck.reason || '工作目录不允许');
                 toolResult = `工作目录验证失败: ${cwdCheck.reason}`;
@@ -91,6 +93,31 @@ export async function executeCommandTool(
                     completeAuditLog(auditLogId, false, {
                         duration: Date.now() - startTime,
                         blockReason: cwdCheck.reason
+                    });
+                }
+                
+                const toolResults = {
+                    is_error,
+                    content: toolResult
+                };
+                return injectTodoReminder(toolResults, 'executeCommandTool');
+            }
+            
+            // 验证文件操作命令的目标路径是否在安全范围内（删除、移动、复制、修改、重定向）
+            const fileOpCheck = validateFileOperationCommandPaths(
+                data.command,
+                data.cwd,
+                securityContext
+            );
+            if (!fileOpCheck.allowed) {
+                logBlockedOperation('executeCommandTool', 'executeCommand', data.command, fileOpCheck.reason || '文件操作路径不在允许范围内');
+                toolResult = `命令执行被拒绝: ${fileOpCheck.reason}`;
+                is_error = true;
+                
+                if (auditLogId) {
+                    completeAuditLog(auditLogId, false, {
+                        duration: Date.now() - startTime,
+                        blockReason: fileOpCheck.reason
                     });
                 }
                 

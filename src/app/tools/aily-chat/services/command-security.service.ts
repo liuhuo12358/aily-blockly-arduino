@@ -750,9 +750,550 @@ export function shouldApplyTimeout(command: string): boolean {
 
 // ==================== 导出 ====================
 
+// ==================== 删除命令路径安全验证 ====================
+
+/**
+ * 删除命令的匹配模式 - 用于提取目标路径
+ */
+const DELETE_COMMAND_PATTERNS = [
+    // Unix/Linux rm 命令
+    { pattern: /^rm\s+(?:-[rRfvi]+\s+)*(.+)$/i, type: 'rm' },
+    // Windows del 命令
+    { pattern: /^del\s+(?:\/[sfqap]\s+)*(.+)$/i, type: 'del' },
+    // Windows rd/rmdir 命令
+    { pattern: /^(?:rd|rmdir)\s+(?:\/[sq]\s+)*(.+)$/i, type: 'rmdir' },
+    // Unix rmdir 命令
+    { pattern: /^rmdir\s+(?:-[pv]+\s+)*(.+)$/i, type: 'rmdir' },
+    // Windows Remove-Item PowerShell
+    { pattern: /^Remove-Item\s+(?:-[a-zA-Z]+\s+)*["']?(.+?)["']?(?:\s+-|$)/i, type: 'remove-item' },
+];
+
+/**
+ * 检测命令是否为删除命令
+ */
+export function isDeleteCommand(command: string): boolean {
+    const normalized = command.trim().toLowerCase();
+    return /^(rm|del|rd|rmdir|remove-item)\s+/i.test(normalized);
+}
+
+/**
+ * 从删除命令中提取目标路径列表
+ */
+export function extractDeleteTargets(command: string): string[] {
+    const trimmed = command.trim();
+    const targets: string[] = [];
+    
+    for (const { pattern } of DELETE_COMMAND_PATTERNS) {
+        const match = trimmed.match(pattern);
+        if (match && match[1]) {
+            // 提取路径部分，处理多个路径的情况
+            const pathsPart = match[1].trim();
+            
+            // 分割路径（处理空格和引号）
+            const extractedPaths = extractPaths(pathsPart);
+            targets.push(...extractedPaths);
+            break;
+        }
+    }
+    
+    return targets;
+}
+
+/**
+ * 从路径字符串中提取单个或多个路径
+ * 处理引号包裹的路径和空格分隔的多路径
+ */
+function extractPaths(pathsString: string): string[] {
+    const paths: string[] = [];
+    let current = '';
+    let inQuotes = false;
+    let quoteChar = '';
+    
+    for (let i = 0; i < pathsString.length; i++) {
+        const char = pathsString[i];
+        
+        if ((char === '"' || char === "'") && !inQuotes) {
+            inQuotes = true;
+            quoteChar = char;
+        } else if (char === quoteChar && inQuotes) {
+            inQuotes = false;
+            if (current.trim()) {
+                paths.push(current.trim());
+            }
+            current = '';
+            quoteChar = '';
+        } else if (char === ' ' && !inQuotes) {
+            if (current.trim()) {
+                paths.push(current.trim());
+            }
+            current = '';
+        } else {
+            current += char;
+        }
+    }
+    
+    if (current.trim()) {
+        paths.push(current.trim());
+    }
+    
+    // 过滤掉看起来是选项的参数（以 - 或 / 开头且只有字母）
+    return paths.filter(p => {
+        if (p.startsWith('-') && /^-[a-zA-Z]+$/.test(p)) return false;
+        if (p.startsWith('/') && /^\/[a-zA-Z]$/.test(p)) return false;
+        return true;
+    });
+}
+
+/**
+ * 路径安全上下文接口（与 security.service.ts 保持一致）
+ */
+export interface CommandPathSecurityContext {
+    projectRootPath: string;
+    currentProjectPath?: string;
+    appDataPath?: string;
+    additionalAllowedPaths?: string[];
+}
+
+/**
+ * 验证删除命令的目标路径是否在安全范围内
+ * @param command 删除命令
+ * @param cwd 当前工作目录
+ * @param securityContext 安全上下文，包含允许的路径列表
+ * @returns 验证结果
+ */
+export function validateDeleteCommandPaths(
+    command: string,
+    cwd: string,
+    securityContext: CommandPathSecurityContext
+): CommandCheckResult {
+    // 如果不是删除命令，直接通过
+    if (!isDeleteCommand(command)) {
+        return { allowed: true, requiresConfirmation: false, category: 'safe' };
+    }
+    
+    const targets = extractDeleteTargets(command);
+    
+    if (targets.length === 0) {
+        return { allowed: true, requiresConfirmation: false, category: 'safe' };
+    }
+    
+    // 获取允许的路径列表（与 security.service.ts 保持一致）
+    const allowedPaths = [
+        securityContext.projectRootPath,
+        securityContext.currentProjectPath,
+        securityContext.appDataPath,
+        ...(securityContext.additionalAllowedPaths || [])
+    ].filter(Boolean) as string[];
+    
+    console.log('[validateDeleteCommandPaths] 允许的路径:', allowedPaths);
+    console.log('[validateDeleteCommandPaths] 删除目标:', targets);
+    
+    for (const target of targets) {
+        // 解析相对路径为绝对路径
+        let absoluteTarget: string;
+        try {
+            if (window['path']?.isAbsolute?.(target)) {
+                absoluteTarget = window['path'].resolve(target);
+            } else {
+                absoluteTarget = window['path'].resolve(cwd, target);
+            }
+        } catch {
+            absoluteTarget = target;
+        }
+        
+        // 规范化路径
+        const normalizedTarget = absoluteTarget.replace(/\\/g, '/').toLowerCase();
+        
+        console.log('[validateDeleteCommandPaths] 检查路径:', normalizedTarget);
+        
+        // 检查是否在允许的路径范围内
+        let isAllowed = false;
+        for (const allowedPath of allowedPaths) {
+            if (!allowedPath) continue;
+            const normalizedAllowed = allowedPath.replace(/\\/g, '/').toLowerCase();
+            
+            // 检查目标路径是否在允许路径内部
+            if (normalizedTarget.startsWith(normalizedAllowed + '/') || 
+                normalizedTarget === normalizedAllowed) {
+                isAllowed = true;
+                console.log('[validateDeleteCommandPaths] 路径匹配:', normalizedAllowed);
+                break;
+            }
+        }
+        
+        if (!isAllowed) {
+            console.log('[validateDeleteCommandPaths] 路径不在允许范围内:', normalizedTarget);
+            return {
+                allowed: false,
+                requiresConfirmation: false,
+                reason: `删除目标路径 "${target}" 不在允许的范围内（项目目录: ${securityContext.projectRootPath}）`,
+                riskLevel: 'high',
+                category: 'blocked'
+            };
+        }
+        
+        // 额外检查：禁止删除项目根目录本身
+        const normalizedProjectRoot = securityContext.projectRootPath.replace(/\\/g, '/').toLowerCase();
+        if (normalizedTarget === normalizedProjectRoot) {
+            return {
+                allowed: false,
+                requiresConfirmation: false,
+                reason: '禁止删除项目根目录',
+                riskLevel: 'critical',
+                category: 'blocked'
+            };
+        }
+        
+        // 检查是否使用了危险的通配符
+        if (target.includes('*') || target.includes('?')) {
+            // 如果通配符删除是在项目目录下，需要确认
+            return {
+                allowed: true,
+                requiresConfirmation: true,
+                reason: `删除命令包含通配符 "${target}"，需要用户确认`,
+                riskLevel: 'medium',
+                category: 'confirm'
+            };
+        }
+    }
+    
+    return { allowed: true, requiresConfirmation: true, category: 'confirm' };
+}
+
+// ==================== 文件操作命令路径验证 ====================
+
+/**
+ * 移动/重命名命令的匹配模式
+ */
+const MOVE_COMMAND_PATTERNS = [
+    // Unix mv 命令: mv [options] source dest 或 mv [options] source... directory
+    { pattern: /^mv\s+(?:-[a-zA-Z]+\s+)*(.+)$/i, type: 'mv' },
+    // Windows move 命令
+    { pattern: /^move\s+(?:\/[yY]\s+)*(.+)$/i, type: 'move' },
+    // Windows rename/ren 命令
+    { pattern: /^(?:rename|ren)\s+(.+)$/i, type: 'rename' },
+    // PowerShell Move-Item
+    { pattern: /^Move-Item\s+(?:-[a-zA-Z]+\s+)*(.+)$/i, type: 'move-item' },
+    // PowerShell Rename-Item
+    { pattern: /^Rename-Item\s+(?:-[a-zA-Z]+\s+)*(.+)$/i, type: 'rename-item' },
+];
+
+/**
+ * 复制命令的匹配模式
+ */
+const COPY_COMMAND_PATTERNS = [
+    // Unix cp 命令
+    { pattern: /^cp\s+(?:-[a-zA-Z]+\s+)*(.+)$/i, type: 'cp' },
+    // Windows copy 命令
+    { pattern: /^copy\s+(?:\/[a-zA-Z]\s+)*(.+)$/i, type: 'copy' },
+    // Windows xcopy 命令
+    { pattern: /^xcopy\s+(?:\/[a-zA-Z]\s+)*(.+)$/i, type: 'xcopy' },
+    // Windows robocopy 命令
+    { pattern: /^robocopy\s+(.+)$/i, type: 'robocopy' },
+    // PowerShell Copy-Item
+    { pattern: /^Copy-Item\s+(?:-[a-zA-Z]+\s+)*(.+)$/i, type: 'copy-item' },
+];
+
+/**
+ * 文件修改命令的匹配模式
+ */
+const MODIFY_COMMAND_PATTERNS = [
+    // sed -i 原地编辑
+    { pattern: /^sed\s+(?:-[a-zA-Z]+\s+)*-i\s+(?:-[a-zA-Z]+\s+)*(?:'[^']*'|"[^"]*")\s+(.+)$/i, type: 'sed' },
+    { pattern: /^sed\s+-i\s+(.+)$/i, type: 'sed' },
+    // PowerShell Set-Content
+    { pattern: /^Set-Content\s+(?:-[a-zA-Z]+\s+)*(?:-Path\s+)?["']?(.+?)["']?(?:\s+-|$)/i, type: 'set-content' },
+    // PowerShell Add-Content
+    { pattern: /^Add-Content\s+(?:-[a-zA-Z]+\s+)*(?:-Path\s+)?["']?(.+?)["']?(?:\s+-|$)/i, type: 'add-content' },
+    // PowerShell Out-File
+    { pattern: /\|\s*Out-File\s+(?:-[a-zA-Z]+\s+)*["']?(.+?)["']?(?:\s+-|$)/i, type: 'out-file' },
+];
+
+/**
+ * 检测命令是否为移动/重命名命令
+ */
+export function isMoveCommand(command: string): boolean {
+    const normalized = command.trim().toLowerCase();
+    return /^(mv|move|rename|ren|move-item|rename-item)\s+/i.test(normalized);
+}
+
+/**
+ * 检测命令是否为复制命令
+ */
+export function isCopyCommand(command: string): boolean {
+    const normalized = command.trim().toLowerCase();
+    return /^(cp|copy|xcopy|robocopy|copy-item)\s+/i.test(normalized);
+}
+
+/**
+ * 检测命令是否为文件修改命令
+ */
+export function isModifyCommand(command: string): boolean {
+    const normalized = command.trim().toLowerCase();
+    // sed -i, Set-Content, Add-Content, Out-File
+    return /\bsed\s+.*-i\b/i.test(normalized) ||
+           /^(set-content|add-content)\s+/i.test(normalized) ||
+           /\|\s*out-file\s+/i.test(normalized);
+}
+
+/**
+ * 检测命令是否包含重定向写入
+ */
+export function hasWriteRedirection(command: string): { has: boolean; targets: string[] } {
+    const targets: string[] = [];
+    
+    // 匹配重定向: > file, >> file, 1> file, 2> file 等
+    // 但要排除 2>&1 这种重定向到文件描述符的情况
+    const redirectPattern = /(?:^|[^>&])\s*(?:1|2)?\s*>{1,2}\s*(?!&)["']?([^"'\s|;&]+)["']?/g;
+    
+    let match;
+    while ((match = redirectPattern.exec(command)) !== null) {
+        if (match[1] && !match[1].startsWith('&')) {
+            targets.push(match[1]);
+        }
+    }
+    
+    return { has: targets.length > 0, targets };
+}
+
+/**
+ * 从移动命令中提取源路径和目标路径
+ * @returns { sources: string[], destination: string | null }
+ */
+export function extractMoveTargets(command: string): { sources: string[]; destination: string | null } {
+    const trimmed = command.trim();
+    
+    for (const { pattern } of MOVE_COMMAND_PATTERNS) {
+        const match = trimmed.match(pattern);
+        if (match && match[1]) {
+            const paths = extractPaths(match[1].trim());
+            if (paths.length >= 2) {
+                // 最后一个是目标，其他是源
+                const destination = paths[paths.length - 1];
+                const sources = paths.slice(0, -1);
+                return { sources, destination };
+            } else if (paths.length === 1) {
+                // rename 命令可能只有新名字，没有完整目标路径
+                return { sources: [paths[0]], destination: null };
+            }
+        }
+    }
+    
+    return { sources: [], destination: null };
+}
+
+/**
+ * 从复制命令中提取源路径和目标路径
+ */
+export function extractCopyTargets(command: string): { sources: string[]; destination: string | null } {
+    const trimmed = command.trim();
+    
+    for (const { pattern } of COPY_COMMAND_PATTERNS) {
+        const match = trimmed.match(pattern);
+        if (match && match[1]) {
+            const paths = extractPaths(match[1].trim());
+            if (paths.length >= 2) {
+                const destination = paths[paths.length - 1];
+                const sources = paths.slice(0, -1);
+                return { sources, destination };
+            }
+        }
+    }
+    
+    return { sources: [], destination: null };
+}
+
+/**
+ * 从修改命令中提取目标文件路径
+ */
+export function extractModifyTargets(command: string): string[] {
+    const trimmed = command.trim();
+    const targets: string[] = [];
+    
+    for (const { pattern } of MODIFY_COMMAND_PATTERNS) {
+        const match = trimmed.match(pattern);
+        if (match && match[1]) {
+            const paths = extractPaths(match[1].trim());
+            targets.push(...paths);
+            break;
+        }
+    }
+    
+    return targets;
+}
+
+/**
+ * 验证路径是否在允许范围内
+ */
+function isPathInAllowedRange(
+    targetPath: string,
+    cwd: string,
+    securityContext: CommandPathSecurityContext
+): { allowed: boolean; normalizedPath: string } {
+    // 解析相对路径为绝对路径
+    let absoluteTarget: string;
+    try {
+        if (window['path']?.isAbsolute?.(targetPath)) {
+            absoluteTarget = window['path'].resolve(targetPath);
+        } else {
+            absoluteTarget = window['path'].resolve(cwd, targetPath);
+        }
+    } catch {
+        absoluteTarget = targetPath;
+    }
+    
+    // 规范化路径
+    const normalizedTarget = absoluteTarget.replace(/\\/g, '/').toLowerCase();
+    
+    // 获取允许的路径列表
+    const allowedPaths = [
+        securityContext.projectRootPath,
+        securityContext.currentProjectPath,
+        securityContext.appDataPath,
+        ...(securityContext.additionalAllowedPaths || [])
+    ].filter(Boolean) as string[];
+    
+    // 检查是否在允许的路径范围内
+    for (const allowedPath of allowedPaths) {
+        if (!allowedPath) continue;
+        const normalizedAllowed = allowedPath.replace(/\\/g, '/').toLowerCase();
+        
+        if (normalizedTarget.startsWith(normalizedAllowed + '/') || 
+            normalizedTarget === normalizedAllowed) {
+            return { allowed: true, normalizedPath: normalizedTarget };
+        }
+    }
+    
+    return { allowed: false, normalizedPath: normalizedTarget };
+}
+
+/**
+ * 验证文件操作命令的路径安全性（统一入口）
+ * 检查删除、移动、复制、修改、重定向写入等操作
+ */
+export function validateFileOperationCommandPaths(
+    command: string,
+    cwd: string,
+    securityContext: CommandPathSecurityContext
+): CommandCheckResult {
+    // 1. 检查删除命令
+    if (isDeleteCommand(command)) {
+        return validateDeleteCommandPaths(command, cwd, securityContext);
+    }
+    
+    // 2. 检查移动/重命名命令
+    if (isMoveCommand(command)) {
+        const { sources, destination } = extractMoveTargets(command);
+        
+        // 验证所有源路径
+        for (const source of sources) {
+            const check = isPathInAllowedRange(source, cwd, securityContext);
+            if (!check.allowed) {
+                return {
+                    allowed: false,
+                    requiresConfirmation: false,
+                    reason: `移动源路径 "${source}" 不在允许的范围内`,
+                    riskLevel: 'high',
+                    category: 'blocked'
+                };
+            }
+        }
+        
+        // 验证目标路径
+        if (destination) {
+            const check = isPathInAllowedRange(destination, cwd, securityContext);
+            if (!check.allowed) {
+                return {
+                    allowed: false,
+                    requiresConfirmation: false,
+                    reason: `移动目标路径 "${destination}" 不在允许的范围内`,
+                    riskLevel: 'high',
+                    category: 'blocked'
+                };
+            }
+        }
+        
+        return { allowed: true, requiresConfirmation: true, category: 'confirm' };
+    }
+    
+    // 3. 检查复制命令
+    if (isCopyCommand(command)) {
+        const { sources, destination } = extractCopyTargets(command);
+        
+        // 对于复制，主要验证目标路径（源路径可以更宽松）
+        if (destination) {
+            const check = isPathInAllowedRange(destination, cwd, securityContext);
+            if (!check.allowed) {
+                return {
+                    allowed: false,
+                    requiresConfirmation: false,
+                    reason: `复制目标路径 "${destination}" 不在允许的范围内`,
+                    riskLevel: 'high',
+                    category: 'blocked'
+                };
+            }
+        }
+        
+        return { allowed: true, requiresConfirmation: true, category: 'confirm' };
+    }
+    
+    // 4. 检查文件修改命令 (sed -i, Set-Content 等)
+    if (isModifyCommand(command)) {
+        const targets = extractModifyTargets(command);
+        
+        for (const target of targets) {
+            const check = isPathInAllowedRange(target, cwd, securityContext);
+            if (!check.allowed) {
+                return {
+                    allowed: false,
+                    requiresConfirmation: false,
+                    reason: `文件修改目标 "${target}" 不在允许的范围内`,
+                    riskLevel: 'high',
+                    category: 'blocked'
+                };
+            }
+        }
+        
+        return { allowed: true, requiresConfirmation: true, category: 'confirm' };
+    }
+    
+    // 5. 检查重定向写入
+    const redirectionCheck = hasWriteRedirection(command);
+    if (redirectionCheck.has) {
+        for (const target of redirectionCheck.targets) {
+            const check = isPathInAllowedRange(target, cwd, securityContext);
+            if (!check.allowed) {
+                return {
+                    allowed: false,
+                    requiresConfirmation: false,
+                    reason: `重定向写入目标 "${target}" 不在允许的范围内`,
+                    riskLevel: 'high',
+                    category: 'blocked'
+                };
+            }
+        }
+        
+        return { allowed: true, requiresConfirmation: true, category: 'confirm' };
+    }
+    
+    // 不是文件操作命令，直接通过
+    return { allowed: true, requiresConfirmation: false, category: 'safe' };
+}
+
 export const CommandSecurity = {
     validateCommand,
     validateWorkingDirectory,
+    validateDeleteCommandPaths,
+    validateFileOperationCommandPaths,
+    isDeleteCommand,
+    isMoveCommand,
+    isCopyCommand,
+    isModifyCommand,
+    hasWriteRedirection,
+    extractDeleteTargets,
+    extractMoveTargets,
+    extractCopyTargets,
+    extractModifyTargets,
     isSafeCommand,
     requiresConfirmation,
     isBlockedCommand,
