@@ -22,6 +22,7 @@ import { FormsModule } from '@angular/forms';
 import { AilyDynamicComponentDirective } from '../../directives/aily-dynamic-component.directive';
 import { MarkdownPipe } from '../../pipes/markdown.pipe';
 import { firstValueFrom } from 'rxjs';
+import { ConfigService } from '../../../../services/config.service';
 
 // import { AilyCodingComponent } from '../../../../components/aily-coding/aily-coding.component';
 
@@ -55,9 +56,10 @@ export class DialogComponent implements OnInit, OnChanges, OnDestroy {
 
   constructor(
     private sanitizer: DomSanitizer,
-    private cd: ChangeDetectorRef
+    private cd: ChangeDetectorRef,
+    private configService: ConfigService
   ) {
-    this.markdownPipe = new MarkdownPipe(this.sanitizer);
+    this.markdownPipe = new MarkdownPipe(this.sanitizer, this.configService);
   }
 
   ngOnInit(): void {
@@ -772,5 +774,6 @@ const agentNameList = [
   ["[to_contextAgent]", "😀"],
   ["[to_libraryInstallationAgent]", "😀"],
   ["[to_fileOperationAgent]", "😁"],
-  ["[to_user]", "😉"]
+  ["[to_user]", "😉"],
+  ["[to_xxx]", "🤖"]
 ]
