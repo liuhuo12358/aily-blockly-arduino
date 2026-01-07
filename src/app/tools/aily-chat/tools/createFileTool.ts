@@ -1,5 +1,6 @@
 import { ToolUseResult } from "./tools";
 import { injectTodoReminder } from "./todoWriteTool";
+import { lintAndFormat, shouldLint } from "../services/lintService";
 import { 
     PathSecurityContext, 
     validateFileWrite,
@@ -109,6 +110,21 @@ export async function createFileTool(
         // console.log(`写入文件内容，长度: ${content.length}`);
         await window['fs'].writeFileSync(filePath, content, encoding);
         
+        // 对 .json 和 .js 文件进行 lint 检测
+        let lintMessage = '';
+        if (shouldLint(filePath) && content) {
+            lintMessage = lintAndFormat(content, filePath);
+        }
+        
+        // 如果有 lint 错误，返回带警告的结果
+        if (lintMessage) {
+            const toolResult = { 
+                is_error: true, 
+                content: `文件创建成功: ${filePath}${lintMessage}` 
+            };
+            return injectTodoReminder(toolResult, 'createFileTool');
+        }
+
         // 记录成功
         if (auditLogId) {
             completeAuditLog(auditLogId, true, { duration: Date.now() - startTime });
