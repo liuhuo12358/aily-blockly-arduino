@@ -32,11 +32,6 @@ export async function readFileTool(
 ): Promise<ToolUseResult> {
     const startTime = Date.now();
     let auditLogId: string | null = null;
-
-    // 打印出securityContext内容以供调试
-    console.log("==============================================");
-    console.log("readFileTool securityContext:", securityContext);
-    console.log("==============================================");
     
     try {
         let { 
