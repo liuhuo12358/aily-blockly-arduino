@@ -1,5 +1,6 @@
 import { ToolUseResult } from "./tools";
 import { injectTodoReminder } from "./todoWriteTool";
+import { normalizePath } from "../services/security.service";
 
 /**
  * 文件编辑工具 - 支持多种编辑模式
@@ -70,34 +71,6 @@ function detectFileEncoding(filePath: string): BufferEncoding {
             return 'utf-8';
         }
     }
-}
-
-/**
- * 路径处理函数 - 转换为绝对路径（Windows或Unix）
- */
-function normalizePath(inputPath: string): string {
-    if (!inputPath || inputPath.trim() === '') {
-        return '';
-    }
-    
-    const path = window['path'];
-    
-    // 检查是否为绝对路径（支持 Windows 和 Unix）
-    const isAbsolutePath = /^([A-Za-z]:\\|\\\\|\/)/i.test(inputPath);
-    
-    // 如果已经是绝对路径，直接返回
-    if (isAbsolutePath) {
-        return inputPath;
-    }
-    
-    // 否则相对于当前工作目录
-    if (path && typeof path.resolve === 'function') {
-        const cwd = window['process']?.cwd?.() || '';
-        return cwd ? path.resolve(cwd, inputPath) : inputPath;
-    }
-    
-    // 如果 path.resolve 不可用，返回原路径
-    return inputPath;
 }
 
 /**

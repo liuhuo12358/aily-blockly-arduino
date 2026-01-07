@@ -59,6 +59,7 @@ import { todoWriteTool } from './tools';
 // import { arduinoSyntaxTool } from './tools/arduinoSyntaxTool';
 import { NzModalService } from 'ng-zorro-antd/modal';
 import { ConfigService } from '../../services/config.service';
+import { createSecurityContext } from './services/security.service';
 
 export interface Tool {
   name: string;
@@ -161,6 +162,9 @@ export class AilyChatComponent implements OnDestroy {
   prjRootPath = '';
   prjPath = '';
   currentUserGroup: string[] = [];
+  
+  // 会话期间允许访问的额外路径（用户添加的上下文文件/文件夹）
+  sessionAllowedPaths: string[] = [];
 
   isCompleted = false;
   private isSessionStarting = false; // 防止重复启动会话的标志位
@@ -183,7 +187,6 @@ export class AilyChatComponent implements OnDestroy {
   get currentMode() {
     return this.chatService.currentMode;
   }
-
 
   /**
    * 确保字符串在 JSON 中是安全的，转义特殊字符
@@ -719,6 +722,10 @@ export class AilyChatComponent implements OnDestroy {
     }
   }
 
+  getProjectRootPath(): string {
+    return this.projectService.projectRootPath;
+  }
+
   getCurrentProjectPath(): string {
     return this.projectService.currentProjectPath !== this.projectService.projectRootPath
       ? this.projectService.currentProjectPath
@@ -752,6 +759,17 @@ appDataPath(**appDataPath**): ${window['path'].getAppDataPath() || '无'}
 当前命令行终端(**terminal**): ${shell || 'unknown'}
 </keyinfo>
 `
+  }
+
+  // 动态获取安全上下文（每次调用时根据当前项目路径重新创建）
+  private get securityContext(): ReturnType<typeof createSecurityContext> {
+    // 使用会话期间保存的允许路径
+    return createSecurityContext(
+      this.getProjectRootPath(),
+      this.getCurrentProjectPath(),
+      window['path'].getAppDataPath(),
+      this.sessionAllowedPaths
+    );
   }
 
   // generate title
@@ -815,6 +833,7 @@ appDataPath(**appDataPath**): ${window['path'].getAppDataPath() || '无'}
     private platformService: PlatformService,
     private electronService: ElectronService,
   ) {
+    // securityContext 改为 getter，每次使用时动态获取当前项目路径
   }
 
   ngOnInit() {
@@ -1126,6 +1145,9 @@ appDataPath(**appDataPath**): ${window['path'].getAppDataPath() || '无'}
     }
 
     this.isSessionStarting = true;
+    
+    // 清空会话期间的额外允许路径
+    this.sessionAllowedPaths = [];
 
     if (!this.mcpInitialized) {
       this.mcpInitialized = true;
@@ -1232,6 +1254,8 @@ ${JSON.stringify(errData)}
     }
 
     this.send('user', this.inputValue.trim(), true);
+    // 将用户添加的上下文路径保存到会话允许路径中
+    this.mergeSelectContentToSessionPaths();
     this.selectContent = [];
     this.inputValue = "";
   }
@@ -1738,7 +1762,7 @@ ${JSON.stringify(errData)}
                       this.startToolCall(toolCallId, data.tool_name, `读取: ${readFileName}`, toolArgs);
                     }
 
-                    toolResult = await readFileTool(toolArgs);
+                    toolResult = await readFileTool(toolArgs, this.securityContext);
                     if (toolResult.is_error) {
                       resultState = "warn";
                       resultText = `读取异常, 即将重试`;
@@ -1763,7 +1787,7 @@ ${JSON.stringify(errData)}
                     // console.log('[创建文件工具被调用]', toolArgs);
                     let createFileName = this.getFileName(toolArgs.path);
                     this.startToolCall(toolCallId, data.tool_name, `创建: ${createFileName}`, toolArgs);
-                    toolResult = await createFileTool(toolArgs);
+                    toolResult = await createFileTool(toolArgs, this.securityContext);
                     if (toolResult.is_error) {
                       resultState = "warn";
                       resultText = `创建${createFileName}文件异常, 即将重试`;
@@ -1799,7 +1823,7 @@ ${JSON.stringify(errData)}
                     // console.log('[删除文件工具被调用]', toolArgs);
                     let deleteFileName = this.getFileName(toolArgs.path);
                     this.startToolCall(toolCallId, data.tool_name, `删除: ${deleteFileName}`, toolArgs);
-                    toolResult = await deleteFileTool(toolArgs);
+                    toolResult = await deleteFileTool(toolArgs, this.securityContext);
                     if (toolResult.is_error) {
                       resultState = "warn";
                       resultText = `删除${deleteFileName}文件异常, 即将重试`;
@@ -1811,7 +1835,7 @@ ${JSON.stringify(errData)}
                     // console.log('[删除文件夹工具被调用]', toolArgs);
                     let deleteFolderName = this.getLastFolderName(toolArgs.path);
                     this.startToolCall(toolCallId, data.tool_name, `删除: ${deleteFolderName}`, toolArgs);
-                    toolResult = await deleteFolderTool(toolArgs);
+                    toolResult = await deleteFolderTool(toolArgs, this.securityContext);
                     if (toolResult.is_error) {
                       resultState = "warn";
                       resultText = `删除${deleteFolderName}文件夹异常, 即将重试`;
@@ -2727,6 +2751,8 @@ Your role is ASK (Advisory & Quick Support) - you provide analysis, recommendati
         }
 
         this.send("user", this.inputValue.trim(), true);
+        // 将用户添加的上下文路径保存到会话允许路径中
+        this.mergeSelectContentToSessionPaths();
         this.selectContent = [];
         this.inputValue = "";
         event.preventDefault();
@@ -3135,6 +3161,23 @@ Your role is ASK (Advisory & Quick Support) - you provide analysis, recommendati
    */
   clearAllResources() {
     this.selectContent = [];
+  }
+
+  /**
+   * 将 selectContent 中的文件/文件夹路径合并到 sessionAllowedPaths
+   * 用于在发送消息后保留用户添加的上下文路径权限
+   */
+  private mergeSelectContentToSessionPaths(): void {
+    const newPaths = this.selectContent
+      .filter(item => (item.type === 'file' || item.type === 'folder') && item.path)
+      .map(item => item.path as string);
+    
+    // 去重合并到 sessionAllowedPaths
+    for (const path of newPaths) {
+      if (!this.sessionAllowedPaths.includes(path)) {
+        this.sessionAllowedPaths.push(path);
+      }
+    }
   }
 
   /**

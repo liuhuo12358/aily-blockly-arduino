@@ -1,37 +1,21 @@
 import { ToolUseResult } from "./tools";
 import { injectTodoReminder } from "./todoWriteTool";
-
-// 路径处理函数
-function normalizePath(inputPath: string): string {
-    if (!inputPath) return '';
-    
-    let normalizedPath = inputPath;
-    
-    if (typeof inputPath === 'string') {
-        const isWindowsPath = /^[A-Za-z]:\\/.test(inputPath);
-        
-        if (isWindowsPath) {
-            normalizedPath = inputPath
-                .replace(/\\\\/g, '\\')
-                .replace(/\//g, '\\');
-        } else {
-            normalizedPath = inputPath
-                .replace(/\\\\/g, '/')
-                .replace(/\\/g, '/')
-                .replace(/\/+/g, '/');
-        }
-        
-        if (normalizedPath.length > 1 && (normalizedPath.endsWith('/') || normalizedPath.endsWith('\\'))) {
-            normalizedPath = normalizedPath.slice(0, -1);
-        }
-    }
-    
-    return normalizedPath;
-}
+import { 
+    PathSecurityContext, 
+    validateFileRead,
+    FILE_READ_LIMITS,
+    normalizePath 
+} from "../services/security.service";
+import { 
+    logFileOperation, 
+    completeAuditLog, 
+    logBlockedOperation 
+} from "../services/audit-log.service";
 
 /**
  * 读取文件内容工具（支持行范围和字节范围读取，自动处理大文件）
  * @param params 参数
+ * @param securityContext 安全上下文（可选）
  * @returns 工具执行结果
  */
 export async function readFileTool(
@@ -43,8 +27,17 @@ export async function readFileTool(
         startByte?: number;
         byteCount?: number;
         maxSize?: number;
-    }
+    },
+    securityContext?: PathSecurityContext
 ): Promise<ToolUseResult> {
+    const startTime = Date.now();
+    let auditLogId: string | null = null;
+
+    // 打印出securityContext内容以供调试
+    console.log("==============================================");
+    console.log("readFileTool securityContext:", securityContext);
+    console.log("==============================================");
+    
     try {
         let { 
             path: filePath, 
@@ -90,6 +83,34 @@ export async function readFileTool(
         // 获取文件大小
         const stats = window['fs'].statSync(filePath);
         const fileSize = stats.size;
+
+        // ==================== 安全验证 ====================
+        if (securityContext) {
+            auditLogId = logFileOperation('readFile', filePath, { fileSize }, 'low');
+            
+            // 验证读取安全性
+            const securityCheck = validateFileRead(filePath, securityContext, fileSize);
+            if (!securityCheck.allowed) {
+                logBlockedOperation('readFileTool', 'readFile', filePath, securityCheck.reason || '安全检查未通过');
+                const toolResult = { 
+                    is_error: true, 
+                    content: `安全检查未通过: ${securityCheck.reason}` 
+                };
+                return injectTodoReminder(toolResult, 'readFileTool');
+            }
+            
+            // 检查文件扩展名
+            const ext = window['path'].extname(filePath).toLowerCase();
+            if (FILE_READ_LIMITS.blockedExtensions.includes(ext)) {
+                logBlockedOperation('readFileTool', 'readFile', filePath, `禁止读取此类型文件: ${ext}`);
+                const toolResult = { 
+                    is_error: true, 
+                    content: `禁止读取此类型文件: ${ext}` 
+                };
+                return injectTodoReminder(toolResult, 'readFileTool');
+            }
+        }
+        // ==================== 安全验证结束 ====================
         
         let resultContent: string;
         let metadata: any = {
@@ -201,6 +222,11 @@ export async function readFileTool(
             }
         }
         
+        // 记录成功
+        if (auditLogId) {
+            completeAuditLog(auditLogId, true, { duration: Date.now() - startTime });
+        }
+        
         const toolResult = { 
             is_error: false, 
             content: resultContent,
@@ -209,6 +235,14 @@ export async function readFileTool(
         return injectTodoReminder(toolResult, 'readFileTool');
     } catch (error: any) {
         console.warn("读取文件失败:", error);
+        
+        // 记录失败
+        if (auditLogId) {
+            completeAuditLog(auditLogId, false, { 
+                duration: Date.now() - startTime,
+                errorMessage: error.message 
+            });
+        }
         
         let errorMessage = `读取文件失败: ${error.message}`;
         if (error.code) {
