@@ -181,7 +181,7 @@ export class AilyMermaidViewerComponent implements OnInit, OnDestroy, OnChanges 
   private scheduleRetry(): void {
     if (this.renderRetryCount < this.MAX_RETRY) {
       this.renderRetryCount++;
-      console.log(`[AilyMermaid] 安排重试 ${this.renderRetryCount}/${this.MAX_RETRY}`);
+      // console.log(`[AilyMermaid] 安排重试 ${this.renderRetryCount}/${this.MAX_RETRY}`);
       this.retryTimer = setTimeout(() => {
         this.processData();
       }, 500 * this.renderRetryCount); // 递增延迟
@@ -292,8 +292,8 @@ export class AilyMermaidViewerComponent implements OnInit, OnDestroy, OnChanges 
   }
 
   logDetail() {
-    console.log('mermaid data:');
-    console.log(this.rawCode);
+    // console.log('mermaid data:');
+    // console.log(this.rawCode);
 
     // // 检查 DOM 中的 SVG 元素
     // if (this.containerId) {

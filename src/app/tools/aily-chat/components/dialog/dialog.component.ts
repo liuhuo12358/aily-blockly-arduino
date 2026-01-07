@@ -774,5 +774,6 @@ const agentNameList = [
   ["[to_contextAgent]", "😀"],
   ["[to_libraryInstallationAgent]", "😀"],
   ["[to_fileOperationAgent]", "😁"],
-  ["[to_user]", "😉"]
+  ["[to_user]", "😉"],
+  ["[to_xxx]", "🤖"]
 ]
