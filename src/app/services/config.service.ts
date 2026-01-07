@@ -117,6 +117,9 @@ export class ConfigService {
     // await Promise.all([
     this.loadAndCacheBoardList(configFilePath);
     this.loadAndCacheLibraryList(configFilePath);
+
+    this.loadAndCacheBoardIndex(configFilePath);
+    this.loadAndCacheLibraryIndex(configFilePath);
     // ]);
 
     // 延迟后再次尝试加载，确保最优节点检测完成后能成功下载最新数据

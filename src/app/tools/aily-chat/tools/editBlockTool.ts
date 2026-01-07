@@ -272,110 +272,110 @@ export function fixJsonString(
   let preProcessedJson = fixedJson;
   const preProcessChanges: string[] = [];
   
-  // 🔧 智能括号修复：检测 }, "key": 模式，如果 } 导致栈深度 <= 0，则移除
-  function fixBracketMismatch(json: string): { fixed: string; changed: boolean; removedCount: number } {
-    const chars = json.split('');
-    let changed = false;
-    let removedCount = 0;
-    let iterations = 0;
-    const maxIterations = 20;
+  // // 🔧 智能括号修复：检测 }, "key": 模式，如果 } 导致栈深度 <= 0，则移除
+  // function fixBracketMismatch(json: string): { fixed: string; changed: boolean; removedCount: number } {
+  //   const chars = json.split('');
+  //   let changed = false;
+  //   let removedCount = 0;
+  //   let iterations = 0;
+  //   const maxIterations = 20;
     
-    while (iterations < maxIterations) {
-      iterations++;
-      let madeChange = false;
+  //   while (iterations < maxIterations) {
+  //     iterations++;
+  //     let madeChange = false;
       
-      for (let i = 0; i < chars.length; i++) {
-        if (chars[i] !== '}') continue;
+  //     for (let i = 0; i < chars.length; i++) {
+  //       if (chars[i] !== '}') continue;
         
-        // 检查这个 } 后面是否跟着 , "key":
-        let j = i + 1;
-        while (j < chars.length && /\s/.test(chars[j])) j++;
-        if (j >= chars.length || chars[j] !== ',') continue;
-        j++;
-        while (j < chars.length && /\s/.test(chars[j])) j++;
-        if (j >= chars.length || chars[j] !== '"') continue;
+  //       // 检查这个 } 后面是否跟着 , "key":
+  //       let j = i + 1;
+  //       while (j < chars.length && /\s/.test(chars[j])) j++;
+  //       if (j >= chars.length || chars[j] !== ',') continue;
+  //       j++;
+  //       while (j < chars.length && /\s/.test(chars[j])) j++;
+  //       if (j >= chars.length || chars[j] !== '"') continue;
         
-        // 确认是 "key": 模式
-        let k = j + 1;
-        while (k < chars.length && chars[k] !== '"') {
-          if (chars[k] === '\\' && k + 1 < chars.length) k++;
-          k++;
-        }
-        k++;
-        while (k < chars.length && /\s/.test(chars[k])) k++;
-        if (k >= chars.length || chars[k] !== ':') continue;
+  //       // 确认是 "key": 模式
+  //       let k = j + 1;
+  //       while (k < chars.length && chars[k] !== '"') {
+  //         if (chars[k] === '\\' && k + 1 < chars.length) k++;
+  //         k++;
+  //       }
+  //       k++;
+  //       while (k < chars.length && /\s/.test(chars[k])) k++;
+  //       if (k >= chars.length || chars[k] !== ':') continue;
         
-        // 计算在位置 i 处的括号栈深度
-        let braceStack = 0;
-        let inString = false;
-        let escape = false;
+  //       // 计算在位置 i 处的括号栈深度
+  //       let braceStack = 0;
+  //       let inString = false;
+  //       let escape = false;
         
-        for (let x = 0; x <= i; x++) {
-          const ch = chars[x];
-          if (escape) { escape = false; continue; }
-          if (ch === '\\' && inString) { escape = true; continue; }
-          if (ch === '"') { inString = !inString; continue; }
-          if (inString) continue;
-          if (ch === '{') braceStack++;
-          else if (ch === '}') braceStack--;
-        }
+  //       for (let x = 0; x <= i; x++) {
+  //         const ch = chars[x];
+  //         if (escape) { escape = false; continue; }
+  //         if (ch === '\\' && inString) { escape = true; continue; }
+  //         if (ch === '"') { inString = !inString; continue; }
+  //         if (inString) continue;
+  //         if (ch === '{') braceStack++;
+  //         else if (ch === '}') braceStack--;
+  //       }
         
-        // 如果栈深度 <= 0，说明这个 } 把外层对象错误关闭了
-        if (braceStack <= 0) {
-          chars.splice(i, 1);
-          madeChange = true;
-          changed = true;
-          removedCount++;
-          break;
-        }
-      }
+  //       // 如果栈深度 <= 0，说明这个 } 把外层对象错误关闭了
+  //       if (braceStack <= 0) {
+  //         chars.splice(i, 1);
+  //         madeChange = true;
+  //         changed = true;
+  //         removedCount++;
+  //         break;
+  //       }
+  //     }
       
-      if (!madeChange) break;
-    }
+  //     if (!madeChange) break;
+  //   }
     
-    let result = chars.join('');
+  //   let result = chars.join('');
     
-    // 检查末尾括号平衡
-    const openBraces = (result.match(/\{/g) || []).length;
-    const closeBraces = (result.match(/\}/g) || []).length;
+  //   // 检查末尾括号平衡
+  //   const openBraces = (result.match(/\{/g) || []).length;
+  //   const closeBraces = (result.match(/\}/g) || []).length;
     
-    if (closeBraces > openBraces) {
-      const excess = closeBraces - openBraces;
-      const endMatch = result.match(/\}+$/);
-      if (endMatch && endMatch[0].length >= excess) {
-        result = result.slice(0, -excess);
-        changed = true;
-        removedCount += excess;
-      }
-    } else if (openBraces > closeBraces) {
-      const missing = openBraces - closeBraces;
-      result = result + '}'.repeat(missing);
-      changed = true;
-    }
+  //   if (closeBraces > openBraces) {
+  //     const excess = closeBraces - openBraces;
+  //     const endMatch = result.match(/\}+$/);
+  //     if (endMatch && endMatch[0].length >= excess) {
+  //       result = result.slice(0, -excess);
+  //       changed = true;
+  //       removedCount += excess;
+  //     }
+  //   } else if (openBraces > closeBraces) {
+  //     const missing = openBraces - closeBraces;
+  //     result = result + '}'.repeat(missing);
+  //     changed = true;
+  //   }
     
-    return { fixed: result, changed, removedCount };
-  }
+  //   return { fixed: result, changed, removedCount };
+  // }
   
-  const bracketFixResult = fixBracketMismatch(preProcessedJson);
-  if (bracketFixResult.changed) {
-    preProcessedJson = bracketFixResult.fixed;
-    preProcessChanges.push(`修复括号错位（移除 ${bracketFixResult.removedCount} 个多余的右括号）`);
-    // console.log(`🔧 预处理: 修复括号错位，移除 ${bracketFixResult.removedCount} 个多余的右括号`);
-  }
+  // const bracketFixResult = fixBracketMismatch(preProcessedJson);
+  // if (bracketFixResult.changed) {
+  //   preProcessedJson = bracketFixResult.fixed;
+  //   preProcessChanges.push(`修复括号错位（移除 ${bracketFixResult.removedCount} 个多余的右括号）`);
+  //   // console.log(`🔧 预处理: 修复括号错位，移除 ${bracketFixResult.removedCount} 个多余的右括号`);
+  // }
   
-  // 如果预处理有改动，先尝试解析
-  if (preProcessChanges.length > 0) {
-    try {
-      JSON.parse(preProcessedJson);
-      // console.log(`✅ 预处理修复成功: ${preProcessedJson}`);
-      return { fixed: preProcessedJson, success: true, changes: preProcessChanges };
-    } catch (e) {
-      // 预处理后仍无法解析，继续后续流程
-      // console.log(`⚠️ 预处理后仍需进一步修复: ${(e as Error).message}`);
-      fixedJson = preProcessedJson; // 使用预处理后的版本继续
-      changes.push(...preProcessChanges);
-    }
-  }
+  // // 如果预处理有改动，先尝试解析
+  // if (preProcessChanges.length > 0) {
+  //   try {
+  //     JSON.parse(preProcessedJson);
+  //     // console.log(`✅ 预处理修复成功: ${preProcessedJson}`);
+  //     return { fixed: preProcessedJson, success: true, changes: preProcessChanges };
+  //   } catch (e) {
+  //     // 预处理后仍无法解析，继续后续流程
+  //     // console.log(`⚠️ 预处理后仍需进一步修复: ${(e as Error).message}`);
+  //     fixedJson = preProcessedJson; // 使用预处理后的版本继续
+  //     changes.push(...preProcessChanges);
+  //   }
+  // }
 
   // 使用 jsonrepair 库修复
   if (useJsonRepair) {
