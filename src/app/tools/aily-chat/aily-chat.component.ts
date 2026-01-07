@@ -328,7 +328,7 @@ export class AilyChatComponent implements OnDestroy {
         item.content.forEach(result => {
           if (result.call_id && toolCallMap.has(result.call_id)) {
             const toolInfo = toolCallMap.get(result.call_id)!;
-            const resultState = result.is_error ? ToolCallState.ERROR : ToolCallState.DONE;
+            const resultState = result?.is_error ? ToolCallState.ERROR : ToolCallState.DONE;
             const resultText = this.generateToolResultText(toolInfo.name, toolInfo.args, result);
 
             const completeInfo: ToolCallInfo = {
@@ -761,15 +761,13 @@ appDataPath(**appDataPath**): ${window['path'].getAppDataPath() || '无'}
 `
   }
 
-  // 动态获取安全上下文（每次调用时根据当前项目路径重新创建）
+    // 动态获取安全上下文（每次调用时根据当前项目路径重新创建，只允许当前项目路径）
   private get securityContext(): ReturnType<typeof createSecurityContext> {
     // 使用会话期间保存的允许路径
-    return createSecurityContext(
-      this.getProjectRootPath(),
-      this.getCurrentProjectPath(),
-      window['path'].getAppDataPath(),
-      this.sessionAllowedPaths
-    );
+    return createSecurityContext(this.getCurrentProjectPath(), {
+      allowNodeModulesAccess: true,  // 默认允许访问 node_modules
+      additionalAllowedPaths: this.sessionAllowedPaths
+    });
   }
 
   // generate title
@@ -1418,7 +1416,7 @@ ${JSON.stringify(errData)}
               for (const result of data.content) {
                 if (result.call_id && result?.name !== "ask_approval") {
                   // 根据工具名称和结果状态确定显示文本
-                  const resultState = result.is_error ? ToolCallState.ERROR : ToolCallState.DONE;
+                  const resultState = result?.is_error ? ToolCallState.ERROR : ToolCallState.DONE;
                   const resultText = this.toolCallStates[result.call_id];
                   if (resultText) {
                     // console.log("完成工具调用: ", result.call_id, result.name, resultState, resultText);
@@ -1551,7 +1549,7 @@ ${JSON.stringify(errData)}
                     // console.log('[创建项目工具被调用]', toolArgs);
                     this.startToolCall(toolCallId, data.tool_name, "正在创建项目...", toolArgs);
                     toolResult = await newProjectTool(this.prjRootPath, toolArgs, this.projectService, this.configService);
-                    if (toolResult.is_error) {
+                    if (toolResult?.is_error) {
                       this.uiService.updateFooterState({ state: 'warn', text: '项目创建失败' });
                       resultState = "warn"
                       resultText = '项目创建异常,即将重试';
@@ -1660,7 +1658,7 @@ ${JSON.stringify(errData)}
                     // 执行命令，传递安全上下文用于路径验证
                     toolResult = await executeCommandTool(this.cmdService, toolArgs, this.securityContext);
                     
-                    if (!toolResult.is_error) {
+                    if (!toolResult?.is_error) {
                       if (isNpmInstall) {
                         console.log('检测到 npm install 命令，尝试加载库');
                         // Extract all @aily-project/ packages from the command
@@ -1709,7 +1707,7 @@ ${JSON.stringify(errData)}
                     // console.log('[获取上下文信息工具被调用]', toolArgs);
                     this.startToolCall(toolCallId, data.tool_name, "获取上下文信息...", toolArgs);
                     toolResult = await getContextTool(this.projectService, toolArgs);
-                    if (toolResult.is_error) {
+                    if (toolResult?.is_error) {
                       resultState = "warn";
                       resultText = '获取上下文信息异常, 即将重试';
                     } else {
@@ -1721,7 +1719,7 @@ ${JSON.stringify(errData)}
                     const distFolderName = this.getLastFolderName(toolArgs.path);
                     this.startToolCall(toolCallId, data.tool_name, `获取${distFolderName}目录内容`, toolArgs);
                     toolResult = await listDirectoryTool(toolArgs);
-                    if (toolResult.is_error) {
+                    if (toolResult?.is_error) {
                       resultState = "warn";
                       resultText = `获取${distFolderName}目录内容异常, 即将重试`;
                     } else {
@@ -1763,7 +1761,7 @@ ${JSON.stringify(errData)}
                     }
 
                     toolResult = await readFileTool(toolArgs, this.securityContext);
-                    if (toolResult.is_error) {
+                    if (toolResult?.is_error) {
                       resultState = "warn";
                       resultText = `读取异常, 即将重试`;
                     } else {
@@ -1775,7 +1773,7 @@ ${JSON.stringify(errData)}
                     //   }
                     //   this.startToolCall(toolCallId, data.tool_name, `读取: ${readFileName}`, toolArgs);
                     //   toolResult = await readFileTool(toolArgs);
-                    //   if (toolResult.is_error) {
+                    //   if (toolResult?.is_error) {
                     //     resultState = "warn";
                     //     resultText = `读取异常, 即将重试`;
                     //   } else {
@@ -1788,7 +1786,7 @@ ${JSON.stringify(errData)}
                     let createFileName = this.getFileName(toolArgs.path);
                     this.startToolCall(toolCallId, data.tool_name, `创建: ${createFileName}`, toolArgs);
                     toolResult = await createFileTool(toolArgs, this.securityContext);
-                    if (toolResult.is_error) {
+                    if (toolResult?.is_error) {
                       resultState = "warn";
                       resultText = `创建${createFileName}文件异常, 即将重试`;
                     } else {
@@ -1800,7 +1798,7 @@ ${JSON.stringify(errData)}
                     let createFolderName = this.getLastFolderName(toolArgs.path);
                     this.startToolCall(toolCallId, data.tool_name, `创建: ${createFolderName}`, toolArgs);
                     toolResult = await createFolderTool(toolArgs);
-                    if (toolResult.is_error) {
+                    if (toolResult?.is_error) {
                       resultState = "warn";
                       resultText = `创建${createFolderName}文件夹异常, 即将重试`;
                     } else {
@@ -1812,7 +1810,7 @@ ${JSON.stringify(errData)}
                     let editFileName = this.getFileName(toolArgs.path);
                     this.startToolCall(toolCallId, data.tool_name, `编辑: ${editFileName}`, toolArgs);
                     toolResult = await editFileTool(toolArgs);
-                    if (toolResult.is_error) {
+                    if (toolResult?.is_error) {
                       resultState = "warn";
                       resultText = `编辑${editFileName}文件异常, 即将重试`;
                     } else {
@@ -1824,7 +1822,7 @@ ${JSON.stringify(errData)}
                     let deleteFileName = this.getFileName(toolArgs.path);
                     this.startToolCall(toolCallId, data.tool_name, `删除: ${deleteFileName}`, toolArgs);
                     toolResult = await deleteFileTool(toolArgs, this.securityContext);
-                    if (toolResult.is_error) {
+                    if (toolResult?.is_error) {
                       resultState = "warn";
                       resultText = `删除${deleteFileName}文件异常, 即将重试`;
                     } else {
@@ -1836,7 +1834,7 @@ ${JSON.stringify(errData)}
                     let deleteFolderName = this.getLastFolderName(toolArgs.path);
                     this.startToolCall(toolCallId, data.tool_name, `删除: ${deleteFolderName}`, toolArgs);
                     toolResult = await deleteFolderTool(toolArgs, this.securityContext);
-                    if (toolResult.is_error) {
+                    if (toolResult?.is_error) {
                       resultState = "warn";
                       resultText = `删除${deleteFolderName}文件夹异常, 即将重试`;
                     } else {
@@ -1856,7 +1854,7 @@ ${JSON.stringify(errData)}
 
                     this.startToolCall(toolCallId, data.tool_name, doingText, toolArgs);
                     toolResult = await checkExistsTool(toolArgs);
-                    if (toolResult.is_error) {
+                    if (toolResult?.is_error) {
                       resultState = "warn";
                       resultText = errText;
                     } else {
@@ -1868,7 +1866,7 @@ ${JSON.stringify(errData)}
                     let treeFolderName = this.getLastFolderName(toolArgs.path);
                     this.startToolCall(toolCallId, data.tool_name, `获取目录树: ${treeFolderName}`, toolArgs);
                     toolResult = await getDirectoryTreeTool(toolArgs);
-                    if (toolResult.is_error) {
+                    if (toolResult?.is_error) {
                       resultState = "error";
                       resultText = `获取目录树 ${treeFolderName} 失败: ` + (toolResult?.content || '未知错误');
                     } else {
@@ -1891,7 +1889,7 @@ ${JSON.stringify(errData)}
 \`\`\`\n\n
                     `);
                     toolResult = await searchBoardsLibrariesTool.handler(toolArgs, this.configService);
-                    if (toolResult.is_error) {
+                    if (toolResult?.is_error) {
                       resultState = "error";
                       resultText = `搜索失败: ` + (toolResult?.content || '未知错误');
                     } else {
@@ -1913,7 +1911,7 @@ ${JSON.stringify(errData)}
 \`\`\`\n\n
                     `);
                     toolResult = await getBoardParametersTool.handler(this.projectService, toolArgs);
-                    if (toolResult.is_error) {
+                    if (toolResult?.is_error) {
                       resultState = "error";
                       resultText = `获取开发板参数失败: ` + (toolResult?.content || '未知错误');
                     } else {
@@ -1937,7 +1935,7 @@ ${JSON.stringify(errData)}
 \`\`\`\n\n
                     `);
                     toolResult = await grepTool(toolArgs);
-                    if (toolResult.is_error) {
+                    if (toolResult?.is_error) {
                       resultState = "error";
                       resultText = `搜索失败: ` + (toolResult?.content || '未知错误');
                     } else {
@@ -1980,7 +1978,7 @@ ${JSON.stringify(errData)}
 \`\`\`\n\n
                     `);
                     toolResult = await globTool(toolArgs);
-                    if (toolResult.is_error) {
+                    if (toolResult?.is_error) {
                       resultState = "error";
                       resultText = `文件搜索失败: ` + (toolResult?.content || '未知错误');
                     } else {
@@ -2007,7 +2005,7 @@ ${JSON.stringify(errData)}
                     const fetchUrl = this.getUrlDisplayName(toolArgs.url);
                     this.startToolCall(toolCallId, data.tool_name, `进行网络请求: ${fetchUrl}`, toolArgs);
                     toolResult = await fetchTool(this.fetchToolService, toolArgs);
-                    if (toolResult.is_error) {
+                    if (toolResult?.is_error) {
                       resultState = "error";
                       resultText = `网络请求异常，即将重试`;
                     } else {
@@ -2077,9 +2075,9 @@ ${JSON.stringify(errData)}
                       const editAbiResult = await editAbiFileTool(editAbiParams);
                       toolResult = {
                         "content": editAbiResult.content,
-                        "is_error": editAbiResult.is_error
+                        "is_error": editAbiResult?.is_error
                       }
-                      if (toolResult.is_error) {
+                      if (toolResult?.is_error) {
                         resultState = "warn";
                         resultText = `ABI文件编辑异常, 即将重试`;
                       } else {
@@ -2104,7 +2102,7 @@ ${JSON.stringify(errData)}
                         const reloadResult = await reloadAbiJsonService.executeReloadAbiJson(toolArgs);
                         toolResult = {
                           content: reloadResult.content,
-                          is_error: reloadResult.is_error
+                          is_error: reloadResult?.is_error
                         }
                       }
                     }
@@ -2118,9 +2116,9 @@ ${JSON.stringify(errData)}
                     const reloadResult = await reloadAbiJsonService.executeReloadAbiJson(toolArgs);
                     toolResult = {
                       content: reloadResult.content,
-                      is_error: reloadResult.is_error
+                      is_error: reloadResult?.is_error
                     };
-                    if (toolResult.is_error) {
+                    if (toolResult?.is_error) {
                       resultState = "warn";
                       resultText = 'ABI数据重新加载异常';
                     } else {
@@ -2141,7 +2139,7 @@ ${JSON.stringify(errData)}
                     this.startToolCall(toolCallId, data.tool_name, `操作Blockly块: ${toolArgs.type}`, toolArgs);
                     toolResult = await smartBlockTool(toolArgs);
                     // console.log('✅ 智能块工具执行结果:', toolResult);
-                    if (toolResult.is_error) {
+                    if (toolResult?.is_error) {
                       resultState = "warn";
                       resultText = '智能块操作异常';
                     } else {
@@ -2152,7 +2150,7 @@ ${JSON.stringify(errData)}
                     // console.log('[块连接工具被调用]', toolArgs);
                     this.startToolCall(toolCallId, data.tool_name, "连接Blockly块...", toolArgs);
                     toolResult = await connectBlocksTool(toolArgs);
-                    if (toolResult.is_error) {
+                    if (toolResult?.is_error) {
                       resultState = "warn";
                       resultText = '块连接异常';
                     } else {
@@ -2163,7 +2161,7 @@ ${JSON.stringify(errData)}
                     // console.log('[代码结构创建工具被调用]', toolArgs);
                     this.startToolCall(toolCallId, data.tool_name, `创建代码结构: ${toolArgs.structure}`, toolArgs);
                     toolResult = await createCodeStructureTool(toolArgs);
-                    if (toolResult.is_error) {
+                    if (toolResult?.is_error) {
                       resultState = "warn";
                       resultText = '代码结构创建异常';
                     } else {
@@ -2174,7 +2172,7 @@ ${JSON.stringify(errData)}
                     // console.log('[块配置工具被调用]', toolArgs);
                     this.startToolCall(toolCallId, data.tool_name, "配置Blockly块...", toolArgs);
                     toolResult = await configureBlockTool(toolArgs);
-                    if (toolResult.is_error) {
+                    if (toolResult?.is_error) {
                       resultState = "warn";
                       resultText = '块配置异常, 即将重试';
                     } else {
@@ -2194,7 +2192,7 @@ ${JSON.stringify(errData)}
                   // \`\`\`\n\n
                   //                     `);
                   //                     toolResult = await variableManagerTool(toolArgs);
-                  //                     if (toolResult.is_error) {
+                  //                     if (toolResult?.is_error) {
                   //                       resultState = "warn";
                   //                       resultText = '变量操作异常,即将重试';
                   //                     } else {
@@ -2214,7 +2212,7 @@ ${JSON.stringify(errData)}
                   // \`\`\`\n\n
                   //                     `);
                   //                     toolResult = await findBlockTool(toolArgs);
-                  //                     if (toolResult.is_error) {
+                  //                     if (toolResult?.is_error) {
                   //                       resultState = "error";
                   //                       resultText = '块查找失败: ' + (toolResult?.content || '未知错误');
                   //                     } else {
@@ -2225,7 +2223,7 @@ ${JSON.stringify(errData)}
                     // console.log('[块删除工具被调用]', toolArgs);
                     this.startToolCall(toolCallId, data.tool_name, "删除Blockly块...", toolArgs);
                     toolResult = await deleteBlockTool(toolArgs);
-                    if (toolResult.is_error) {
+                    if (toolResult?.is_error) {
                       resultState = "warn";
                       resultText = '块删除异常, 即将重试';
                     } else {
@@ -2236,7 +2234,7 @@ ${JSON.stringify(errData)}
                     // console.log('[工作区全览工具被调用]', toolArgs);
                     this.startToolCall(toolCallId, data.tool_name, "分析工作区全览...", toolArgs);
                     toolResult = await getWorkspaceOverviewTool(toolArgs);
-                    if (toolResult.is_error) {
+                    if (toolResult?.is_error) {
                       resultState = "warn";
                       resultText = '工作区分析异常, 即将重试';
                     } else {
@@ -2264,7 +2262,7 @@ ${JSON.stringify(errData)}
                     // 将当前会话ID传递给todoWriteTool，确保每个会话的TODO数据独立存储
                     const todoArgs = { ...toolArgs, sessionId: this.sessionId };
                     toolResult = await todoWriteTool(todoArgs);
-                    if (toolResult.is_error) {
+                    if (toolResult?.is_error) {
                       resultState = "warn";
                       resultText = 'TODO操作异常,即将重试';
                     } else {
@@ -2326,7 +2324,7 @@ ${JSON.stringify(errData)}
                     // console.log('[块定义查询工具被调用]', toolArgs);
                     this.startToolCall(toolCallId, data.tool_name, "查询块定义信息...", toolArgs);
                     toolResult = await queryBlockDefinitionTool(this.projectService, toolArgs);
-                    if (toolResult.is_error) {
+                    if (toolResult?.is_error) {
                       resultState = "error";
                       resultText = '块定义查询失败: ' + (toolResult?.content || '未知错误');
                     } else {
@@ -2348,7 +2346,7 @@ ${JSON.stringify(errData)}
                   // \`\`\`\n\n
                   //                       `);
                   //                       toolResult = await getBlockConnectionCompatibilityTool(this.projectService, toolArgs);
-                  //                       if (toolResult.is_error) {
+                  //                       if (toolResult?.is_error) {
                   //                         resultState = "error";
                   //                         resultText = '块连接兼容性分析失败: ' + (toolResult?.content || '未知错误');
                   //                       } else {
@@ -2383,7 +2381,7 @@ ${JSON.stringify(errData)}
 \`\`\`\n\n
                     `);
                     toolResult = await analyzeLibraryBlocksTool(this.projectService, toolArgs);
-                    if (toolResult.is_error) {
+                    if (toolResult?.is_error) {
                       resultState = "error";
                       resultText = `库分析失败: ${toolResult?.content || '未知错误'}`;
                     } else {
@@ -2408,7 +2406,7 @@ ${JSON.stringify(errData)}
                   // \`\`\`\n\n
                   //                     `);
                   //                     toolResult = await intelligentBlockSequenceTool(this.projectService, toolArgs);
-                  //                     if (toolResult.is_error) {
+                  //                     if (toolResult?.is_error) {
                   //                       resultState = "error";
                   //                       resultText = `智能序列生成失败: ${toolResult?.content || '未知错误'}`;
                   //                     } else {
@@ -2447,7 +2445,7 @@ ${JSON.stringify(errData)}
 \`\`\`\n\n
                     `);
                     toolResult = await verifyBlockExistenceTool(this.projectService, toolArgs);
-                    if (toolResult.is_error) {
+                    if (toolResult?.is_error) {
                       resultState = "error";
                       resultText = `块验证失败: ${toolResult?.content || '未知错误'}`;
                     } else {
@@ -2476,7 +2474,7 @@ ${JSON.stringify(errData)}
                   //                     `);
 
                   //                     toolResult = await arduinoSyntaxTool.use(toolArgs);
-                  //                     if (toolResult.is_error) {
+                  //                     if (toolResult?.is_error) {
                   //                       resultState = "warn";
                   //                       resultText = '代码语法检查发现问题';
                   //                     } else {
@@ -2488,7 +2486,7 @@ ${JSON.stringify(errData)}
               }
 
               // 根据执行结果确定状态
-              if (toolResult && toolResult.is_error) {
+              if (toolResult && toolResult?.is_error) {
                 resultState = "error";
               } else if (toolResult && toolResult.warning) {
                 resultState = "warn";
@@ -2541,10 +2539,10 @@ ${JSON.stringify(errData)}
               ].includes(data.tool_name);
 
               // 只在 Blockly 工具失败或警告时添加规则提示
-              const needsRules = isBlocklyTool && (toolResult.is_error || resultState === 'warn');
+              const needsRules = isBlocklyTool && (toolResult?.is_error || resultState === 'warn');
 
               // 智能决定是否包含 keyInfo：需要路径信息的工具 或 工具失败/警告时
-              const shouldIncludeKeyInfo = needsPathInfo || toolResult.is_error || resultState === 'warn';
+              const shouldIncludeKeyInfo = needsPathInfo || toolResult?.is_error || resultState === 'warn';
 
               if (needsRules || newConnect || newProject) {
                 newConnect = false;
@@ -2609,7 +2607,7 @@ Your role is ASK (Advisory & Quick Support) - you provide analysis, recommendati
               "tool_id": data.tool_id,
               "content": toolContent,
               "resultText": this.makeJsonSafe(resultText),
-              "is_error": toolResult.is_error
+              "is_error": toolResult?.is_error
             }, null, 2), false);
           } else if (data.type === 'user_input_required') {
             // 处理用户输入请求 - 需要用户补充消息时停止等待状态

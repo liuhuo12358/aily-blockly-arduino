@@ -848,9 +848,7 @@ function extractPaths(pathsString: string): string[] {
  * 路径安全上下文接口（与 security.service.ts 保持一致）
  */
 export interface CommandPathSecurityContext {
-    projectRootPath: string;
-    currentProjectPath?: string;
-    appDataPath?: string;
+    currentProjectPath: string;
     additionalAllowedPaths?: string[];
 }
 
@@ -877,11 +875,9 @@ export function validateDeleteCommandPaths(
         return { allowed: true, requiresConfirmation: false, category: 'safe' };
     }
     
-    // 获取允许的路径列表（与 security.service.ts 保持一致）
+    // 获取允许的路径列表（与 security.service.ts 保持一致，只允许当前项目路径）
     const allowedPaths = [
-        securityContext.projectRootPath,
         securityContext.currentProjectPath,
-        securityContext.appDataPath,
         ...(securityContext.additionalAllowedPaths || [])
     ].filter(Boolean) as string[];
     
@@ -926,19 +922,19 @@ export function validateDeleteCommandPaths(
             return {
                 allowed: false,
                 requiresConfirmation: false,
-                reason: `删除目标路径 "${target}" 不在允许的范围内（项目目录: ${securityContext.projectRootPath}）`,
+                reason: `删除目标路径 "${target}" 不在允许的范围内（当前项目目录: ${securityContext.currentProjectPath}）`,
                 riskLevel: 'high',
                 category: 'blocked'
             };
         }
         
-        // 额外检查：禁止删除项目根目录本身
-        const normalizedProjectRoot = securityContext.projectRootPath.replace(/\\/g, '/').toLowerCase();
-        if (normalizedTarget === normalizedProjectRoot) {
+        // 额外检查：禁止删除当前项目目录本身
+        const normalizedProjectPath = securityContext.currentProjectPath.replace(/\\/g, '/').toLowerCase();
+        if (normalizedTarget === normalizedProjectPath) {
             return {
                 allowed: false,
                 requiresConfirmation: false,
-                reason: '禁止删除项目根目录',
+                reason: '禁止删除当前项目目录',
                 riskLevel: 'critical',
                 category: 'blocked'
             };
@@ -1145,11 +1141,9 @@ function isPathInAllowedRange(
     // 规范化路径
     const normalizedTarget = absoluteTarget.replace(/\\/g, '/').toLowerCase();
     
-    // 获取允许的路径列表
+    // 获取允许的路径列表（只允许当前项目路径）
     const allowedPaths = [
-        securityContext.projectRootPath,
         securityContext.currentProjectPath,
-        securityContext.appDataPath,
         ...(securityContext.additionalAllowedPaths || [])
     ].filter(Boolean) as string[];
     

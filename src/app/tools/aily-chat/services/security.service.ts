@@ -16,10 +16,10 @@ export interface SecurityCheckResult {
 }
 
 export interface PathSecurityContext {
-    projectRootPath: string;
     currentProjectPath: string;
-    appDataPath: string;
     librariesPath?: string;
+    nodeModulesPath?: string;  // 当前项目下的 node_modules 目录
+    allowNodeModulesAccess?: boolean;  // 是否允许操作 node_modules 目录，默认 false
     additionalAllowedPaths?: string[];  // 用户添加的额外允许路径（如上下文文件/文件夹）
 }
 
@@ -347,12 +347,36 @@ export function isPathAllowed(
         };
     }
     
-    // 3. 检查是否在允许的目录范围内
+    // 2.5 检查是否在用户添加的额外允许路径中（这些是项目外部的独立目录）
+    const additionalPaths = context.additionalAllowedPaths || [];
+    let isInAdditionalPath = false;
+    for (const additionalPath of additionalPaths) {
+        if (additionalPath && (isPathInside(normalizedInput, additionalPath) || isSamePath(normalizedInput, additionalPath))) {
+            isInAdditionalPath = true;
+            break;
+        }
+    }
+    
+    // 2.6 特别检查 node_modules 目录访问权限（仅针对当前项目下的 node_modules）
+    // 如果路径在用户添加的额外路径中，则跳过此检查
+    if (context.nodeModulesPath && !isInAdditionalPath) {
+        const isInNodeModules = isPathInside(normalizedInput, context.nodeModulesPath) || 
+                                 isSamePath(normalizedInput, context.nodeModulesPath);
+        if (isInNodeModules && !context.allowNodeModulesAccess) {
+            return {
+                allowed: false,
+                reason: `禁止访问 node_modules 目录: ${inputPath}（未开启 node_modules 访问权限）`,
+                riskLevel: 'medium'
+            };
+        }
+    }
+    
+    // 3. 检查是否在允许的目录范围内（当前项目路径 + 用户添加的额外路径）
     const rawAllowedBases = [
-        context.projectRootPath,
         context.currentProjectPath,
-        context.appDataPath,
         context.librariesPath,
+        // 只有开启了 allowNodeModulesAccess 才将 nodeModulesPath 加入允许列表
+        context.allowNodeModulesAccess ? context.nodeModulesPath : undefined,
         getTempDir(),  // 临时目录
         ...(context.additionalAllowedPaths || []),  // 用户添加的额外允许路径
     ];
@@ -411,11 +435,11 @@ export function isCriticalRemovalTarget(
         };
     }
     
-    // 禁止删除项目根目录本身
-    if (context.projectRootPath && isSamePath(resolvedPath, context.projectRootPath)) {
+    // 禁止删除当前项目目录本身
+    if (context.currentProjectPath && isSamePath(resolvedPath, context.currentProjectPath)) {
         return {
             allowed: false,
-            reason: '禁止删除项目根目录',
+            reason: '禁止删除当前项目目录',
             riskLevel: 'critical'
         };
     }
@@ -427,15 +451,6 @@ export function isCriticalRemovalTarget(
             allowed: false,
             reason: '禁止删除顶级系统目录',
             riskLevel: 'critical'
-        };
-    }
-    
-    // 禁止删除 appDataPath 本身
-    if (context.appDataPath && isSamePath(resolvedPath, context.appDataPath)) {
-        return {
-            allowed: false,
-            reason: '禁止删除应用数据目录',
-            riskLevel: 'high'
         };
     }
     
@@ -722,23 +737,27 @@ export function sanitizeForLogging(data: any): any {
 
 /**
  * 创建安全上下文
- * @param projectRootPath 项目根路径
  * @param currentProjectPath 当前项目路径
- * @param appDataPath 应用数据路径
- * @param additionalAllowedPaths 额外允许的路径列表（如用户添加的上下文文件/文件夹）
+ * @param options 可选配置项
+ * @param options.nodeModulesPath 当前项目下的 node_modules 目录路径
+ * @param options.allowNodeModulesAccess 是否允许操作 node_modules 目录，默认 false
+ * @param options.additionalAllowedPaths 额外允许的路径列表（如用户添加的上下文文件/文件夹）
  */
 export function createSecurityContext(
-    projectRootPath: string,
     currentProjectPath: string,
-    appDataPath?: string,
-    additionalAllowedPaths?: string[]
+    options?: {
+        nodeModulesPath?: string;
+        allowNodeModulesAccess?: boolean;
+        additionalAllowedPaths?: string[];
+    }
 ): PathSecurityContext {
+    const opts = options || {};
     return {
-        projectRootPath,
         currentProjectPath,
-        appDataPath: appDataPath || window['path']?.getAppDataPath?.() || '',
         librariesPath: currentProjectPath ? window['path']?.join(currentProjectPath, 'libraries') : undefined,
-        additionalAllowedPaths: additionalAllowedPaths || []
+        nodeModulesPath: opts.nodeModulesPath ?? (currentProjectPath ? window['path']?.join(currentProjectPath, 'node_modules') : undefined),
+        allowNodeModulesAccess: opts.allowNodeModulesAccess ?? false,
+        additionalAllowedPaths: opts.additionalAllowedPaths || []
     };
 }
 

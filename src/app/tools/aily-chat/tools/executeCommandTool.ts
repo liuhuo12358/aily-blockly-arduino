@@ -83,7 +83,7 @@ export async function executeCommandTool(
         
         // 验证工作目录和删除命令路径
         if (securityContext) {
-            const cwdCheck = validateWorkingDirectory(data.cwd, securityContext.projectRootPath);
+            const cwdCheck = validateWorkingDirectory(data.cwd, securityContext.currentProjectPath);
             if (!cwdCheck.allowed && !cwdCheck.requiresConfirmation) {
                 logBlockedOperation('executeCommandTool', 'executeCommand', data.command, cwdCheck.reason || '工作目录不允许');
                 toolResult = `工作目录验证失败: ${cwdCheck.reason}`;
