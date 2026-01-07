@@ -132,7 +132,7 @@
     "@blockly/workspace-minimap": "^0.2.16",
     "@ctrl/tinycolor": "^4.1.0",
     "@lydell/node-pty": "^1.1.0",
-    "@modelcontextprotocol/sdk": "^1.17.5",
+    "@modelcontextprotocol/sdk": "^1.25.1",
     "@ngx-translate/core": "^16.0.3",
     "@splidejs/splide": "^4.1.4",
     "@tensorflow/tfjs": "^4.22.0",
