@@ -113,7 +113,15 @@
 
 @if (showImgUrl) {
 <div class="img-overlay ccenter" (click)="hideImg()">
-  <img [src]="showImgUrl" alt="预览图片">
+  @if (imgLoading) {
+  <div class="img-loading">
+    <div class="spinner"></div>
+  </div>
+  }
+  <img [src]="showImgUrl" alt="预览图片" 
+       [class.hidden]="imgLoading" 
+       (load)="onImgLoad()" 
+       (error)="onImgError()">
 </div>
 }
 

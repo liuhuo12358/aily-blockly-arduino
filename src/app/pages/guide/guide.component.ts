@@ -24,6 +24,9 @@ export class GuideComponent implements OnInit, AfterViewInit {
   showMore = false;
   sponsors: any[] = [];
   showImgUrl: string | null = null;
+  imgLoading = false;
+  private imgRetryCount = 0;
+  private readonly maxRetry = 1;
 
   // 新手引导相关
   showOnboarding = false;
@@ -76,11 +79,35 @@ export class GuideComponent implements OnInit, AfterViewInit {
   tooltipStyle: any = {};
 
   showImg(url: string) {
+    this.imgLoading = true;
+    this.imgRetryCount = 0;
     this.showImgUrl = url;
   }
 
   hideImg() {
     this.showImgUrl = null;
+    this.imgLoading = false;
+    this.imgRetryCount = 0;
+  }
+
+  onImgLoad() {
+    this.imgLoading = false;
+  }
+
+  onImgError() {
+    if (this.imgRetryCount < this.maxRetry && this.showImgUrl) {
+      this.imgRetryCount++;
+      const currentUrl = this.showImgUrl;
+      // 200ms 后重新加载
+      setTimeout(() => {
+        if (this.showImgUrl === currentUrl) {
+          // 添加时间戳强制重新加载
+          this.showImgUrl = currentUrl + (currentUrl.includes('?') ? '&' : '?') + '_t=' + Date.now();
+        }
+      }, 200);
+    } else {
+      this.imgLoading = false;
+    }
   }
 
   get recentlyProjects() {
