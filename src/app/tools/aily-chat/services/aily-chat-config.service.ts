@@ -11,6 +11,18 @@ export interface WorkspaceSecurityOption {
 }
 
 /**
+ * 模型配置项
+ */
+export interface ModelConfigOption {
+    model: string;          // 模型标识符
+    name: string;           // 显示名称
+    family: string;         // 模型家族
+    speed: string;          // 速度标识
+    enabled: boolean;       // 是否在列表中显示
+    isCustom?: boolean;     // 是否是自定义模型
+}
+
+/**
  * Aily Chat 配置接口
  */
 export interface AilyChatConfig {
@@ -33,7 +45,17 @@ export interface AilyChatConfig {
         /** 是否允许访问库文件 */
         library?: boolean;
     };
+    /** 模型配置列表 */
+    models?: ModelConfigOption[];
 }
+
+/**
+ * 默认内置模型列表
+ */
+const DEFAULT_MODELS: ModelConfigOption[] = [
+    { model: 'glm-4.7', family: 'glm', name: 'GLM-4.7', speed: '1x', enabled: true, isCustom: false },
+    { model: 'glm-4.6', family: 'glm', name: 'GLM-4.6', speed: '1x', enabled: true, isCustom: false }
+];
 
 /**
  * 默认配置
@@ -47,7 +69,8 @@ const DEFAULT_CONFIG: AilyChatConfig = {
     securityWorkspaces: {
         project: true,
         library: true
-    }
+    },
+    models: DEFAULT_MODELS
 };
 
 /**
@@ -273,5 +296,76 @@ export class AilyChatConfigService {
                 this.setSecurityWorkspaceOption(opt.name, opt.enabled);
             }
         });
+    }
+
+    // ==================== 模型管理方法 ====================
+
+    /**
+     * 获取模型列表
+     */
+    get models(): ModelConfigOption[] {
+        if (!this.config.models || this.config.models.length === 0) {
+            this.config.models = [...DEFAULT_MODELS];
+        }
+        return this.config.models;
+    }
+
+    set models(value: ModelConfigOption[]) {
+        this.config.models = value;
+    }
+
+    /**
+     * 获取已启用的模型列表
+     * 规则：如果未启用自定义API KEY，则只返回内置模型
+     */
+    getEnabledModels(): ModelConfigOption[] {
+        const enabledModels = this.models.filter(m => m.enabled);
+        
+        // 如果未启用自定义API KEY，过滤掉自定义模型
+        if (!this.useCustomApiKey) {
+            return enabledModels.filter(m => !m.isCustom);
+        }
+        
+        return enabledModels;
+    }
+
+    /**
+     * 添加自定义模型
+     */
+    addCustomModel(model: Omit<ModelConfigOption, 'isCustom'>): void {
+        const newModel: ModelConfigOption = {
+            ...model,
+            isCustom: true
+        };
+        this.models.push(newModel);
+    }
+
+    /**
+     * 删除模型（只能删除自定义模型）
+     */
+    removeModel(modelId: string): boolean {
+        const index = this.models.findIndex(m => m.model === modelId && m.isCustom);
+        if (index !== -1) {
+            this.models.splice(index, 1);
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * 更新模型启用状态
+     */
+    updateModelEnabled(modelId: string, enabled: boolean): void {
+        const model = this.models.find(m => m.model === modelId);
+        if (model) {
+            model.enabled = enabled;
+        }
+    }
+
+    /**
+     * 重置模型列表到默认值
+     */
+    resetModels(): void {
+        this.config.models = [...DEFAULT_MODELS];
     }
 }

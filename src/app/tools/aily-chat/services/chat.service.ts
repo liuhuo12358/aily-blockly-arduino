@@ -4,6 +4,7 @@ import { Observable, Subject } from 'rxjs';
 import { MCPTool } from './mcp.service';
 import { API } from "../../../configs/api.config";
 import { ConfigService } from '../../../services/config.service';
+import { AilyChatConfigService } from './aily-chat-config.service';
 
 export interface ChatTextOptions {
   sender?: string;
@@ -18,12 +19,27 @@ export interface ChatTextMessage {
   timestamp?: number;
 }
 
+// 模型配置接口
+export interface ModelConfig {
+  model: string;
+  family: string;
+  name: string;
+  speed: string;
+}
+
+// 可用模型列表
+export const AVAILABLE_MODELS: ModelConfig[] = [
+  { model: 'glm-4.7', family: 'glm', name: 'GLM-4.7', speed: '1x' },
+  { model: 'glm-4.6', family: 'glm', name: 'GLM-4.6', speed: '1x' }
+];
+
 @Injectable({
   providedIn: 'root'
 })
 export class ChatService {
 
   currentMode = 'ask'; // 默认为代理模式
+  currentModel: ModelConfig | null = null; // 当前模型，在构造函数中初始化
   historyList = [];
   historyChatMap = new Map<string, any>();
 
@@ -40,11 +56,19 @@ export class ChatService {
 
   constructor(
     private http: HttpClient,
-    private configService: ConfigService
+    private configService: ConfigService,
+    private ailyChatConfigService: AilyChatConfigService
   ) {
     ChatService.instance = this;
     // 从配置加载AI聊天模式
     this.loadChatMode();
+    // 从配置加载AI模型
+    this.loadChatModel();
+    
+    // 订阅配置变更，当模型列表更新时重新加载
+    this.ailyChatConfigService.configChanged$.subscribe(() => {
+      this.loadChatModel();
+    });
   }
 
   /**
@@ -62,6 +86,41 @@ export class ChatService {
   saveChatMode(mode: 'agent' | 'ask'): void {
     this.currentMode = mode;
     this.configService.data.aiChatMode = mode;
+    this.configService.save();
+  }
+
+  /**
+   * 从配置加载AI模型
+   */
+  private loadChatModel(): void {
+    const savedModel = this.configService.data.aiChatModel;
+    const enabledModels = this.ailyChatConfigService.getEnabledModels();
+    
+    // 重置当前模型，确保每次都重新验证
+    this.currentModel = null;
+    
+    if (savedModel && enabledModels.length > 0) {
+      // 尝试找到匹配的模型配置（从已启用的模型中查找）
+      const foundModel = enabledModels.find(m => m.model === savedModel.model);
+      if (foundModel) {
+        this.currentModel = foundModel;
+      }
+    }
+    
+    // 如果没有找到保存的模型或保存的模型不可用（如自定义模型但未启用自定义API KEY），使用第一个已启用的模型
+    if (!this.currentModel && enabledModels.length > 0) {
+      this.currentModel = enabledModels[0];
+      // 更新保存的模型配置
+      this.saveChatModel(this.currentModel);
+    }
+  }
+
+  /**
+   * 保存AI模型到配置
+   */
+  saveChatModel(model: ModelConfig): void {
+    this.currentModel = model;
+    this.configService.data.aiChatModel = model;
     this.configService.save();
   }
 

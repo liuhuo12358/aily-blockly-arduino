@@ -10,7 +10,7 @@ import { SubWindowComponent } from '../../components/sub-window/sub-window.compo
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { Subscription, skip, distinctUntilChanged } from 'rxjs';
-import { ChatService, ChatTextOptions } from './services/chat.service';
+import { ChatService, ChatTextOptions, AVAILABLE_MODELS, ModelConfig } from './services/chat.service';
 import { NzToolTipModule } from 'ng-zorro-antd/tooltip';
 import { MenuComponent } from '../../components/menu/menu.component';
 import { IMenuItem } from '../../configs/menu.config';
@@ -208,6 +208,14 @@ export class AilyChatComponent implements OnDestroy {
 
   get currentMode() {
     return this.chatService.currentMode;
+  }
+
+  get currentModel() {
+    return this.chatService.currentModel;
+  }
+
+  get currentModelName() {
+    return this.chatService.currentModel?.name || 'GLM-4.7';
   }
 
   /**
@@ -1527,9 +1535,11 @@ Do not create non-existent boards and libraries.
       customllmConfig = null;
     }
 
-    // customModel
-    // const customModel = {"model": "glm-4.5-air", "family": "glm"}; // TODO: 未来支持自定义模型选择
-    const customModel = null;
+    // 使用当前选择的模型
+    const customModel = this.currentModel ? {
+      model: this.currentModel.model,
+      family: this.currentModel.family
+    } : null;
 
 
     return new Promise<void>((resolve, reject) => {
@@ -3661,6 +3671,18 @@ Your role is ASK (Advisory & Quick Support) - you provide analysis, recommendati
     ];
   }
 
+  // AI模型列表
+  get ModelList(): IMenuItem[] {
+    // 从配置服务获取已启用的模型列表
+    const enabledModels = this.ailyChatConfigService.getEnabledModels();
+    return enabledModels.map(model => ({
+      name: model.name,
+      text: model.speed,
+      action: 'select-model',
+      data: { model }
+    }));
+  }
+
   // 当前AI模式
   // currentMode = 'agent'; // 默认为代理模式
 
@@ -4033,8 +4055,10 @@ Your role is ASK (Advisory & Quick Support) - you provide analysis, recommendati
 
   showHistoryList = false;
   showMode = false;
+  showModelMenu = false;
   historyListPosition = { x: 0, y: 0 };
   modeListPosition = { x: 0, y: 0 };
+  modelListPosition = { x: 0, y: 0 };
 
   openHistoryChat(e) {
     // 设置菜单的位置
@@ -4047,6 +4071,7 @@ Your role is ASK (Advisory & Quick Support) - you provide analysis, recommendati
   closeMenu() {
     this.showHistoryList = false;
     this.showMode = false;
+    this.showModelMenu = false;
   }
 
   menuClick(e) {
@@ -4130,6 +4155,75 @@ Your role is ASK (Advisory & Quick Support) - you provide analysis, recommendati
       // }
     }
     this.showMode = false;
+  }
+
+  // 模型选择相关方法
+  switchModel(event: MouseEvent) {
+    // 获取点击的按钮元素
+    const target = event.currentTarget as HTMLElement;
+    if (target) {
+      // 获取按钮的位置信息
+      const rect = target.getBoundingClientRect();
+
+      // 计算菜单位置：在按钮上方显示
+      const menuWidth = 180; // 菜单宽度
+      const menuHeight = this.ModelList.length * 30 + 6 + 6; // 预估菜单高度：每项30px + 上下padding各3px + 上下间距各3px
+
+      // 计算水平位置
+      let x = rect.left;
+
+      // 计算垂直位置：在按钮上方显示
+      let y = rect.top - menuHeight - 1;
+
+      // 边界检查：如果菜单会超出屏幕左边界，则左对齐到按钮左边缘
+      if (x < 0) {
+        x = rect.left;
+      }
+
+      // 边界检查：如果菜单会超出屏幕上边界，则显示在按钮下方
+      if (y < 0) {
+        y = rect.bottom - 1;
+      }
+
+      // 设置菜单位置
+      this.modelListPosition = { x: Math.max(0, x), y: Math.max(0, y) };
+    } else {
+      // 如果无法获取按钮位置，使用默认位置
+      this.modelListPosition = { x: window.innerWidth - 302, y: window.innerHeight - 280 };
+    }
+
+    // 阻止事件冒泡，避免触发其他点击事件
+    event.preventDefault();
+    event.stopPropagation();
+
+    this.showModelMenu = !this.showModelMenu;
+  }
+
+  modelMenuClick(item: IMenuItem) {
+    if (item.data?.model && item.data.model.model !== this.currentModel?.model) {
+      this.switchToModel(item.data.model);
+    }
+    this.showModelMenu = false;
+  }
+
+  /**
+   * 切换AI模型并创建新会话
+   * @param model 要切换到的模型配置
+   */
+  private async switchToModel(model: ModelConfig) {
+    if (model.model === this.currentModel?.model) {
+      return;
+    }
+
+    // 保存模型到配置
+    this.chatService.saveChatModel(model);
+    // 切换模型需要创建新会话
+    await this.stopAndCloseSession();
+    this.startSession().then((res) => {
+      // console.log('新会话已启动，当前模型:', this.currentModel);
+    }).catch((err) => {
+      console.error('切换模型失败:', err);
+    });
   }
 
   /**

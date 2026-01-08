@@ -9,7 +9,7 @@ import { NzToolTipModule } from 'ng-zorro-antd/tooltip';
 import { NzSwitchModule } from 'ng-zorro-antd/switch';
 import { TOOLS } from '../../tools/tools';
 import { ElectronService } from '../../../../services/electron.service';
-import { AilyChatConfigService, WorkspaceSecurityOption } from '../../services/aily-chat-config.service';
+import { AilyChatConfigService, WorkspaceSecurityOption, ModelConfigOption } from '../../services/aily-chat-config.service';
 
 @Component({
   selector: 'aily-chat-settings',
@@ -46,11 +46,32 @@ export class AilyChatSettingsComponent implements OnInit {
   allWorkspaceChecked = false;
   workspaceIndeterminate = false;
 
+  // 模型管理
+  modelList: ModelConfigOption[] = [];
+  allModelsChecked = false;
+  modelsIndeterminate = false;
+  
+  // 添加模型表单
+  newModel = {
+    model: '',
+    name: '',
+    family: '',
+    speed: '1x'
+  };
+  showAddModelForm = false;
+
   /**
    * 获取启用的工具数量
    */
   get enabledToolsCount(): number {
     return this.availableTools.filter(t => t.enabled).length;
+  }
+
+  /**
+   * 获取启用的模型数量
+   */
+  get enabledModelsCount(): number {
+    return this.modelList.filter(m => m.enabled).length;
   }
 
   constructor(
@@ -64,6 +85,7 @@ export class AilyChatSettingsComponent implements OnInit {
     this.loadAllConfig();
     this.initializeTools();
     this.loadWorkspaceOptions();
+    this.loadModelList();
   }
 
   /**
@@ -162,6 +184,107 @@ export class AilyChatSettingsComponent implements OnInit {
     this.updateWorkspaceAllChecked();
   }
 
+  // ==================== 模型管理方法 ====================
+
+  /**
+   * 加载模型列表
+   */
+  private loadModelList() {
+    this.modelList = [...this.ailyChatConfigService.models];
+    this.updateModelsAllChecked();
+  }
+
+  /**
+   * 更新模型全选状态
+   */
+  updateModelsAllChecked(): void {
+    const enabledCount = this.modelList.filter(m => m.enabled).length;
+    this.allModelsChecked = enabledCount === this.modelList.length;
+    this.modelsIndeterminate = enabledCount > 0 && enabledCount < this.modelList.length;
+  }
+
+  /**
+   * 模型全选/取消全选
+   */
+  onAllModelsCheckedChange(checked: boolean): void {
+    this.modelList.forEach(model => model.enabled = checked);
+    this.updateModelsAllChecked();
+  }
+
+  /**
+   * 单个模型勾选变化
+   */
+  onModelCheckedChange(): void {
+    this.updateModelsAllChecked();
+  }
+
+  /**
+   * 显示/隐藏添加模型表单
+   */
+  toggleAddModelForm(): void {
+    this.showAddModelForm = !this.showAddModelForm;
+    if (!this.showAddModelForm) {
+      this.resetNewModelForm();
+    }
+  }
+
+  /**
+   * 重置添加模型表单
+   */
+  private resetNewModelForm(): void {
+    this.newModel = {
+      model: '',
+      name: '',
+      family: '',
+      speed: '1x'
+    };
+  }
+
+  /**
+   * 添加自定义模型
+   */
+  addCustomModel(): void {
+    if (!this.newModel.model || !this.newModel.name || !this.newModel.family) {
+      this.message.warning('请填写完整的模型信息');
+      return;
+    }
+
+    // 检查模型id是否已存在
+    if (this.modelList.some(m => m.model === this.newModel.model)) {
+      this.message.warning('该模型id已存在');
+      return;
+    }
+
+    const newModelConfig: ModelConfigOption = {
+      ...this.newModel,
+      enabled: true,
+      isCustom: true
+    };
+
+    this.modelList.push(newModelConfig);
+    this.updateModelsAllChecked();
+    this.resetNewModelForm();
+    this.showAddModelForm = false;
+    this.message.success('模型已添加');
+  }
+
+  /**
+   * 删除模型（只能删除自定义模型）
+   */
+  removeModel(model: ModelConfigOption): void {
+    if (!model.isCustom) {
+      this.message.warning('不能删除内置模型');
+      return;
+    }
+
+    const index = this.modelList.findIndex(m => m.model === model.model);
+    if (index !== -1) {
+      this.modelList.splice(index, 1);
+      this.updateModelsAllChecked();
+      this.message.success('模型已删除');
+    }
+  }
+
   onClose() {
     this.close.emit();
   }
@@ -179,6 +302,9 @@ export class AilyChatSettingsComponent implements OnInit {
 
     // 保存安全工作区配置
     this.ailyChatConfigService.updateFromWorkspaceOptions(this.workspaceOptions);
+
+    // 保存模型配置
+    this.ailyChatConfigService.models = this.modelList;
 
     // 保存到文件
     const success = this.ailyChatConfigService.save();
