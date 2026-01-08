@@ -10,10 +10,11 @@ import { ElectronService } from '../../services/electron.service';
 import Splide from '@splidejs/splide';
 import { HttpClient } from '@angular/common/http';
 import { CommonModule } from '@angular/common';
+import { OnboardingComponent, OnboardingConfig } from '../../components/onboarding/onboarding.component';
 
 @Component({
   selector: 'app-guide',
-  imports: [TranslateModule, CommonModule],
+  imports: [TranslateModule, CommonModule, OnboardingComponent],
   templateUrl: './guide.component.html',
   styleUrl: './guide.component.scss'
 })
@@ -30,53 +31,56 @@ export class GuideComponent implements OnInit, AfterViewInit {
 
   // 新手引导相关
   showOnboarding = false;
-  currentStep = 0;
-  onboardingSteps = [
-    {
-      target: '.menu-box .btn:first-child',
-      titleKey: 'GUIDE.ONBOARDING.STEP1_TITLE',
-      descKey: 'GUIDE.ONBOARDING.STEP1_DESC',
-      position: 'right'
-    },
-    {
-      target: '.menu-box .btn:nth-child(2)',
-      titleKey: 'GUIDE.ONBOARDING.STEP2_TITLE',
-      descKey: 'GUIDE.ONBOARDING.STEP2_DESC',
-      position: 'right'
-    },
-    {
-      target: '.menu-box .btn:nth-child(3)',
-      titleKey: 'GUIDE.ONBOARDING.STEP3_TITLE',
-      descKey: 'GUIDE.ONBOARDING.STEP3_DESC',
-      position: 'right'
-    },
-    {
-      target: '.menu-box .btn:nth-child(4)',
-      titleKey: 'GUIDE.ONBOARDING.STEP4_TITLE',
-      descKey: 'GUIDE.ONBOARDING.STEP4_DESC',
-      position: 'right'
-    },
-    {
-      target: '.right-box .item:first-child',
-      titleKey: 'GUIDE.ONBOARDING.STEP5_TITLE',
-      descKey: 'GUIDE.ONBOARDING.STEP5_DESC',
-      position: 'left'
-    },
-    {
-      target: '.right-box .item:nth-child(2)',
-      titleKey: 'GUIDE.ONBOARDING.STEP6_TITLE',
-      descKey: 'GUIDE.ONBOARDING.STEP6_DESC',
-      position: 'left'
-    },
-    {
-      target: '.right-box .item:nth-child(3)',
-      titleKey: 'GUIDE.ONBOARDING.STEP7_TITLE',
-      descKey: 'GUIDE.ONBOARDING.STEP7_DESC',
-      position: 'left'
-    }
-  ];
-  highlightStyle: any = {};
-  tooltipStyle: any = {};
+  onboardingConfig: OnboardingConfig = {
+    steps: [
+      {
+        target: '.menu-box .btn:first-child',
+        titleKey: 'GUIDE.ONBOARDING.STEP1_TITLE',
+        descKey: 'GUIDE.ONBOARDING.STEP1_DESC',
+        position: 'right'
+      },
+      {
+        target: '.menu-box .btn:nth-child(2)',
+        titleKey: 'GUIDE.ONBOARDING.STEP2_TITLE',
+        descKey: 'GUIDE.ONBOARDING.STEP2_DESC',
+        position: 'right'
+      },
+      {
+        target: '.menu-box .btn:nth-child(3)',
+        titleKey: 'GUIDE.ONBOARDING.STEP3_TITLE',
+        descKey: 'GUIDE.ONBOARDING.STEP3_DESC',
+        position: 'right'
+      },
+      {
+        target: '.menu-box .btn:nth-child(4)',
+        titleKey: 'GUIDE.ONBOARDING.STEP4_TITLE',
+        descKey: 'GUIDE.ONBOARDING.STEP4_DESC',
+        position: 'right'
+      },
+      {
+        target: '.right-box .item:first-child',
+        titleKey: 'GUIDE.ONBOARDING.STEP5_TITLE',
+        descKey: 'GUIDE.ONBOARDING.STEP5_DESC',
+        position: 'left'
+      },
+      {
+        target: '.right-box .item:nth-child(2)',
+        titleKey: 'GUIDE.ONBOARDING.STEP6_TITLE',
+        descKey: 'GUIDE.ONBOARDING.STEP6_DESC',
+        position: 'left'
+      },
+      {
+        target: '.right-box .item:nth-child(3)',
+        titleKey: 'GUIDE.ONBOARDING.STEP7_TITLE',
+        descKey: 'GUIDE.ONBOARDING.STEP7_DESC',
+        position: 'left'
+      }
+    ],
+    skipKey: 'GUIDE.ONBOARDING.SKIP',
+    prevKey: 'GUIDE.ONBOARDING.PREV',
+    nextKey: 'GUIDE.ONBOARDING.NEXT',
+    doneKey: 'GUIDE.ONBOARDING.DONE'
+  };
 
   showImg(url: string) {
     this.imgLoading = true;
@@ -148,89 +152,12 @@ export class GuideComponent implements OnInit, AfterViewInit {
       // 延迟显示引导，确保页面已渲染
       setTimeout(() => {
         this.showOnboarding = true;
-        this.updateHighlight();
       }, 500);
     }
   }
 
-  // 更新高亮区域位置
-  private updateHighlight() {
-    const step = this.onboardingSteps[this.currentStep];
-    const element = document.querySelector(step.target) as HTMLElement;
-    if (element) {
-      const rect = element.getBoundingClientRect();
-      const padding = 8;
-      this.highlightStyle = {
-        top: `${rect.top - padding}px`,
-        left: `${rect.left - padding}px`,
-        width: `${rect.width + padding * 2}px`,
-        height: `${rect.height + padding * 2}px`
-      };
-      // 计算提示框位置
-      this.calculateTooltipPosition(rect, step.position);
-    }
-  }
-
-  // 计算提示框位置
-  private calculateTooltipPosition(rect: DOMRect, position: string) {
-    const tooltipWidth = 280;
-    const tooltipHeight = 150;
-    const gap = 20;
-    const verticalOffset = -12; // 向上偏移12px
-
-    switch (position) {
-      case 'right':
-        this.tooltipStyle = {
-          top: `${rect.top + verticalOffset}px`,
-          left: `${rect.right + gap}px`
-        };
-        break;
-      case 'left':
-        this.tooltipStyle = {
-          top: `${rect.top + verticalOffset}px`,
-          left: `${rect.left - tooltipWidth - gap}px`
-        };
-        break;
-      case 'bottom':
-        this.tooltipStyle = {
-          top: `${rect.bottom + gap + verticalOffset}px`,
-          left: `${rect.left}px`
-        };
-        break;
-      case 'top':
-        this.tooltipStyle = {
-          top: `${rect.top - tooltipHeight - gap + verticalOffset}px`,
-          left: `${rect.left}px`
-        };
-        break;
-    }
-  }
-
-  // 下一步
-  nextStep() {
-    if (this.currentStep < this.onboardingSteps.length - 1) {
-      this.currentStep++;
-      this.updateHighlight();
-    } else {
-      this.finishOnboarding();
-    }
-  }
-
-  // 上一步
-  prevStep() {
-    if (this.currentStep > 0) {
-      this.currentStep--;
-      this.updateHighlight();
-    }
-  }
-
-  // 跳过引导
-  skipOnboarding() {
-    this.finishOnboarding();
-  }
-
-  // 完成引导
-  private finishOnboarding() {
+  // 跳过或关闭引导
+  onOnboardingClosed() {
     this.showOnboarding = false;
     this.configService.data.onboardingCompleted = true;
     this.configService.save();

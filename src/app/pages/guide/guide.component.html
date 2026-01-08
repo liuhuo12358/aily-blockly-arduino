@@ -125,33 +125,10 @@
 </div>
 }
 
-<!-- 新手引导蒙板 -->
-@if (showOnboarding) {
-<div class="onboarding-overlay">
-  <!-- 蒙板背景 -->
-  <!-- <div class="onboarding-backdrop"></div> -->
-  <!-- 高亮区域 -->
-  <div class="onboarding-highlight" [ngStyle]="highlightStyle"></div>
-  <!-- 提示框 -->
-  <div class="onboarding-tooltip" [ngStyle]="tooltipStyle">
-    <div class="tooltip-content">
-      <div class="tooltip-step">{{ currentStep + 1 }} / {{ onboardingSteps.length }}</div>
-      <div class="tooltip-title">{{ onboardingSteps[currentStep].titleKey | translate }}</div>
-      <div class="tooltip-desc">{{ onboardingSteps[currentStep].descKey | translate }}</div>
-      <div class="tooltip-actions">
-        <button class="btn-skip" (click)="skipOnboarding()">{{ 'GUIDE.ONBOARDING.SKIP' | translate }}</button>
-        <div class="btn-group">
-          @if (currentStep > 0) {
-          <button class="btn-prev" (click)="prevStep()">{{ 'GUIDE.ONBOARDING.PREV' | translate }}</button>
-          }
-          <button class="btn-next" (click)="nextStep()">
-            {{ currentStep < onboardingSteps.length - 1 ? ('GUIDE.ONBOARDING.NEXT' | translate) :
-              ('GUIDE.ONBOARDING.DONE' | translate) }} </button>
-        </div>
-      </div>
-    </div>
-    <!-- 箭头指示器 -->
-    <div class="tooltip-arrow" [class]="'arrow-' + onboardingSteps[currentStep].position"></div>
-  </div>
-</div>
-}
+<!-- 新手引导组件 -->
+<app-onboarding 
+  [show]="showOnboarding" 
+  [config]="onboardingConfig"
+  (closed)="onOnboardingClosed()"
+  (completed)="onOnboardingClosed()">
+</app-onboarding>

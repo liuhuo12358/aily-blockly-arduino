@@ -122,6 +122,7 @@ import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { LoginComponent } from '../../components/login/login.component';
 import { NoticeService } from '../../services/notice.service';
 import { AilyChatSettingsComponent } from './components/settings/settings.component';
+import { OnboardingComponent, OnboardingConfig } from '../../components/onboarding/onboarding.component';
 
 // import { reloadAbiJsonTool, reloadAbiJsonToolSimple } from './tools';
 
@@ -141,7 +142,8 @@ import { AilyChatSettingsComponent } from './components/settings/settings.compon
     FloatingTodoComponent,
     TranslateModule,
     LoginComponent,
-    AilyChatSettingsComponent
+    AilyChatSettingsComponent,
+    OnboardingComponent
   ],
   templateUrl: './aily-chat.component.html',
   styleUrl: './aily-chat.component.scss',
@@ -177,7 +179,7 @@ export class AilyChatComponent implements OnDestroy {
   prjRootPath = '';
   prjPath = '';
   currentUserGroup: string[] = [];
-  
+
   // 会话期间允许访问的额外路径（用户添加的上下文文件/文件夹）
   sessionAllowedPaths: string[] = [];
 
@@ -703,7 +705,7 @@ export class AilyChatComponent implements OnDestroy {
       const targetPath = filteredArgs.join(' ').replace(/["']/g, '');
       const normalizedPath = targetPath.replace(/\\/g, '/');
       const pathParts = normalizedPath.split('/').filter(Boolean);
-      
+
       if (pathParts.length > maxPathSegments) {
         return `切换到: .../${pathParts.slice(-maxPathSegments).join('/')}`;
       } else if (pathParts.length > 0) {
@@ -738,11 +740,11 @@ export class AilyChatComponent implements OnDestroy {
    */
   formatSearchPattern(pattern: string, maxLength: number = 30): string {
     if (!pattern) return '未知模式';
-    
+
     try {
       // 按 | 分割（处理正则表达式中的 OR 操作）
       const parts = pattern.split('|');
-      
+
       // 提取每个部分的关键词（移除 \b 等正则边界符）
       const keywords = parts.map(part => {
         return part
@@ -752,15 +754,15 @@ export class AilyChatComponent implements OnDestroy {
           .replace(/[\[\]\(\)\{\}\*\+\?\.]/g, '') // 移除常见正则元字符
           .trim();
       }).filter(k => k.length > 0);  // 过滤空字符串
-      
+
       if (keywords.length === 0) {
         // 如果提取不到关键词，直接使用原 pattern 截取
         return pattern.length > maxLength ? pattern.substring(0, maxLength) + '...' : pattern;
       }
-      
+
       // 用 " | " 连接关键词
       const formatted = keywords.join(' | ');
-      
+
       // 检查长度，超过则截断
       if (formatted.length > maxLength) {
         // 尝试只显示前几个关键词
@@ -774,7 +776,7 @@ export class AilyChatComponent implements OnDestroy {
         }
         return result + '...';
       }
-      
+
       return formatted;
     } catch (e) {
       // 解析失败，返回截取的原 pattern
@@ -809,7 +811,7 @@ export class AilyChatComponent implements OnDestroy {
     try {
       // 标准化路径分隔符（处理Windows和Unix路径）
       const normalizedPath = path.replace(/\\/g, '/');
-      
+
       // 查找 @aily-project 的位置
       const ailyProjectIndex = normalizedPath.indexOf('/@aily-project/');
       if (ailyProjectIndex === -1) {
@@ -819,7 +821,7 @@ export class AilyChatComponent implements OnDestroy {
       // 获取 @aily-project 后的部分
       const afterAilyProject = normalizedPath.substring(ailyProjectIndex + '/@aily-project/'.length);
       const pathParts = afterAilyProject.split('/');
-      
+
       // 第一个部分应该是库名（如 lib-esp32-time）
       if (pathParts.length === 0) {
         return '';
@@ -827,16 +829,16 @@ export class AilyChatComponent implements OnDestroy {
 
       const libraryName = pathParts[0];
       // 构建 package.json 的完整路径
-      const packageJsonPath = normalizedPath.substring(0, ailyProjectIndex) + 
-                             '/@aily-project/' + libraryName + '/package.json';
-      
+      const packageJsonPath = normalizedPath.substring(0, ailyProjectIndex) +
+        '/@aily-project/' + libraryName + '/package.json';
+
       // 使用 Electron 的 fs 模块读取文件
       if (window['fs'] && window['fs'].existsSync(packageJsonPath)) {
         const fileContent = window['fs'].readFileSync(packageJsonPath, 'utf-8');
         const packageData = JSON.parse(fileContent);
         return packageData.nickname || '';
       }
-      
+
       return '';
     } catch (error) {
       console.warn('获取库 nickname 失败:', error);
@@ -957,7 +959,7 @@ Do not create non-existent boards and libraries.
 `
   }
 
-    // 动态获取安全上下文（每次调用时根据当前项目路径重新创建，只允许当前项目路径）
+  // 动态获取安全上下文（每次调用时根据当前项目路径重新创建，只允许当前项目路径）
   private get securityContext(): ReturnType<typeof createSecurityContext> {
     // 使用会话期间保存的允许路径
     return createSecurityContext(this.getCurrentProjectPath(), {
@@ -976,36 +978,38 @@ Do not create non-existent boards and libraries.
 
   // 新手引导相关
   showOnboarding = false;
-  currentStep = 0;
-  onboardingSteps = [
-    {
-      target: '.input-box textarea',
-      titleKey: 'AILY_CHAT.ONBOARDING.STEP1_TITLE',
-      descKey: 'AILY_CHAT.ONBOARDING.STEP1_DESC',
-      position: 'top'
-    },
-    {
-      target: '.input-box .btns .btn:first-child',
-      titleKey: 'AILY_CHAT.ONBOARDING.STEP2_TITLE',
-      descKey: 'AILY_CHAT.ONBOARDING.STEP2_DESC',
-      position: 'top'
-    },
-    {
-      target: '.input-box .btns .btn.mode',
-      titleKey: 'AILY_CHAT.ONBOARDING.STEP3_TITLE',
-      descKey: 'AILY_CHAT.ONBOARDING.STEP3_DESC',
-      position: 'top'
-    },
-    {
-      target: '.input-box .btns .btn.right',
-      titleKey: 'AILY_CHAT.ONBOARDING.STEP4_TITLE',
-      descKey: 'AILY_CHAT.ONBOARDING.STEP4_DESC',
-      position: 'top'
-    }
-  ];
-  highlightStyle: any = {};
-  tooltipStyle: any = {};
-  arrowStyle: any = {};
+  onboardingConfig: OnboardingConfig = {
+    steps: [
+      {
+        target: '.input-box textarea',
+        titleKey: 'AILY_CHAT.ONBOARDING.STEP1_TITLE',
+        descKey: 'AILY_CHAT.ONBOARDING.STEP1_DESC',
+        position: 'top'
+      },
+      {
+        target: '.input-box .btns .btn:first-child',
+        titleKey: 'AILY_CHAT.ONBOARDING.STEP2_TITLE',
+        descKey: 'AILY_CHAT.ONBOARDING.STEP2_DESC',
+        position: 'top'
+      },
+      {
+        target: '.input-box .btns .btn.mode',
+        titleKey: 'AILY_CHAT.ONBOARDING.STEP3_TITLE',
+        descKey: 'AILY_CHAT.ONBOARDING.STEP3_DESC',
+        position: 'top'
+      },
+      {
+        target: '.input-box .btns .btn.right',
+        titleKey: 'AILY_CHAT.ONBOARDING.STEP4_TITLE',
+        descKey: 'AILY_CHAT.ONBOARDING.STEP4_DESC',
+        position: 'top'
+      }
+    ],
+    skipKey: 'AILY_CHAT.ONBOARDING.SKIP',
+    prevKey: 'AILY_CHAT.ONBOARDING.PREV',
+    nextKey: 'AILY_CHAT.ONBOARDING.NEXT',
+    doneKey: 'AILY_CHAT.ONBOARDING.DONE'
+  };
 
   constructor(
     private uiService: UiService,
@@ -1339,7 +1343,7 @@ Do not create non-existent boards and libraries.
     }
 
     this.isSessionStarting = true;
-    
+
     // 清空会话期间的额外允许路径
     this.sessionAllowedPaths = [];
 
@@ -1786,15 +1790,15 @@ ${JSON.stringify(errData)}
                     if (!toolArgs.cwd) {
                       toolArgs.cwd = this.projectService.currentProjectPath || this.projectService.projectRootPath;
                     }
-                    
+
                     // Get project path from command args or default
                     const projectPath = toolArgs.cwd || this.prjPath;
-                    
+
                     // Check if this is an npm uninstall command
                     const command = toolArgs.command;
                     const isNpmInstall = command.includes('npm i') || command.includes('npm install')
                     const isNpmUninstall = command.includes('npm uninstall');
-                    
+
                     // 如果是 npm uninstall，需要在执行命令之前先卸载库（因为命令执行后文件就被删除了）
                     if (isNpmUninstall) {
                       console.log('检测到 npm uninstall 命令，在执行前先卸载库');
@@ -1808,21 +1812,21 @@ ${JSON.stringify(errData)}
                         // 使用 Set 去重，避免重复处理
                         const uniqueLibs = [...new Set(matches)];
                         console.log('去重后的卸载库列表:', uniqueLibs);
-                        
+
                         // 检查库是否正在使用中
                         const separator = this.platformService.getPlatformSeparator();
                         const libsInUse: string[] = [];
-                        
+
                         for (const libPackageName of uniqueLibs as string[]) {
                           try {
                             const libPackagePath = projectPath + `${separator}node_modules${separator}` + libPackageName;
                             const libBlockPath = libPackagePath + `${separator}block.json`;
-                            
+
                             // 检查 block.json 文件是否存在
                             if (this.electronService.exists(libBlockPath)) {
                               const blocksData = JSON.parse(this.electronService.readFile(libBlockPath));
                               const abiJson = JSON.stringify(this.blocklyService.getWorkspaceJson());
-                              
+
                               // 检查工作区中是否使用了该库的任何块
                               for (let index = 0; index < blocksData.length; index++) {
                                 const element = blocksData[index];
@@ -1836,7 +1840,7 @@ ${JSON.stringify(errData)}
                             console.warn("检查库使用情况失败:", libPackageName, e);
                           }
                         }
-                        
+
                         // 如果有库正在使用中，阻止卸载并返回错误消息
                         if (libsInUse.length > 0) {
                           const errorMsg = `无法卸载以下库，因为项目代码正在使用它们：${libsInUse.join(', ')}。请先删除相关代码块后再尝试卸载。`;
@@ -1848,7 +1852,7 @@ ${JSON.stringify(errData)}
                           // 直接跳过命令执行
                           break;
                         }
-                        
+
                         // 遍历所有匹配到的库包名进行卸载
                         for (const libPackageName of uniqueLibs) {
                           try {
@@ -1861,10 +1865,10 @@ ${JSON.stringify(errData)}
                         }
                       }
                     }
-                    
+
                     // 执行命令，传递安全上下文用于路径验证
                     toolResult = await executeCommandTool(this.cmdService, toolArgs, this.securityContext);
-                    
+
                     if (!toolResult?.is_error) {
                       if (isNpmInstall) {
                         console.log('检测到 npm install 命令，尝试加载库');
@@ -1878,7 +1882,7 @@ ${JSON.stringify(errData)}
                           // 使用 Set 去重，避免重复加载
                           const uniqueLibs = [...new Set(matches)];
                           console.log('去重后的库列表:', uniqueLibs);
-                          
+
                           // 遍历所有匹配到的库包名
                           for (const libPackageName of uniqueLibs) {
                             // Load the library into blockly
@@ -1942,11 +1946,11 @@ ${JSON.stringify(errData)}
                     // }
                     let libNickName = await this.getLibraryNickname(toolArgs.path);
                     // if (this.configService.data.devmode) {
-                      // 将\\转为/以便显示
-                      // const displayPath = toolArgs.path.replace(/\\\\/g, '/').replace(/\\/g, '/');
-                      // readFileName = `${displayPath}`;
+                    // 将\\转为/以便显示
+                    // const displayPath = toolArgs.path.replace(/\\\\/g, '/').replace(/\\/g, '/');
+                    // readFileName = `${displayPath}`;
 
-                      // 是否包含 lib- 前缀 及 readmd
+                    // 是否包含 lib- 前缀 及 readmd
                     const hasLibPrefix = toolArgs.path.includes('lib-') && (toolArgs.path.endsWith('README.md') || toolArgs.path.endsWith('readme.md'));
 
                     if (libNickName || hasLibPrefix) {
@@ -2084,7 +2088,7 @@ ${JSON.stringify(errData)}
                     // console.log('[开发板库搜索工具被调用]', toolArgs);
                     // 处理查询显示：filters 可能是字符串或对象
                     let searchDisplayText = '';
-                    
+
                     // 解析 filters（可能是 JSON 字符串）
                     let parsedFilters: any = null;
                     if (toolArgs.filters) {
@@ -2101,11 +2105,11 @@ ${JSON.stringify(errData)}
                         parsedFilters = toolArgs.filters;
                       }
                     }
-                    
+
                     // 优先显示 filters.keywords
                     if (parsedFilters?.keywords) {
-                      const keywords = Array.isArray(parsedFilters.keywords) 
-                        ? parsedFilters.keywords 
+                      const keywords = Array.isArray(parsedFilters.keywords)
+                        ? parsedFilters.keywords
                         : String(parsedFilters.keywords).split(/\s+/);
                       if (keywords.length > 0) {
                         searchDisplayText = keywords.slice(0, 3).join(', ');
@@ -2114,7 +2118,7 @@ ${JSON.stringify(errData)}
                         }
                       }
                     }
-                    
+
                     // 显示其他筛选条件（排除 keywords）
                     if (parsedFilters) {
                       const otherFilterKeys = Object.keys(parsedFilters).filter(k => k !== 'keywords');
@@ -2127,7 +2131,7 @@ ${JSON.stringify(errData)}
                         searchDisplayText += searchDisplayText ? ` + ${filterDisplay}` : filterDisplay;
                       }
                     }
-                    
+
                     if (!searchDisplayText) {
                       searchDisplayText = '未知查询';
                     }
@@ -2487,7 +2491,7 @@ ${JSON.stringify(errData)}
                   //     } else if (Array.isArray(toolArgs.blocks)) {
                   //       parsedBlocks = toolArgs.blocks;
                   //     }
-                      
+
                   //     if (typeof toolArgs.connections === 'string') {
                   //       const fixResult = fixJsonString(toolArgs.connections);
                   //       const jsonToParse = fixResult.success ? fixResult.fixed : toolArgs.connections;
@@ -2495,7 +2499,7 @@ ${JSON.stringify(errData)}
                   //     } else if (Array.isArray(toolArgs.connections)) {
                   //       parsedConns = toolArgs.connections;
                   //     }
-                      
+
                   //     // 成功解析后生成显示文本
                   //     const batchBlockCount = Array.isArray(parsedBlocks) ? parsedBlocks.length : 0;
                   //     const batchConnCount = Array.isArray(parsedConns) ? parsedConns.length : 0;
@@ -2541,7 +2545,7 @@ ${JSON.stringify(errData)}
                   //   // 解析可能是 JSON 字符串的参数
                   //   let flatBlockCount = 0;
                   //   let flatConnCount = 0;
-                    
+
                   //   if (toolArgs.blocks) {
                   //     if (typeof toolArgs.blocks === 'string') {
                   //       const fixResult = fixJsonString(toolArgs.blocks);
@@ -2555,7 +2559,7 @@ ${JSON.stringify(errData)}
                   //       flatBlockCount = toolArgs.blocks.length;
                   //     }
                   //   }
-                    
+
                   //   if (toolArgs.connections) {
                   //     if (typeof toolArgs.connections === 'string') {
                   //       const fixResult = fixJsonString(toolArgs.connections);
@@ -2569,7 +2573,7 @@ ${JSON.stringify(errData)}
                   //       flatConnCount = toolArgs.connections.length;
                   //     }
                   //   }
-                    
+
                   //   this.startToolCall(toolCallId, data.tool_name, `扁平化创建: ${flatBlockCount}个块, ${flatConnCount}个连接`, toolArgs);
                   //   toolResult = await flatCreateBlocksTool(toolArgs);
                   //   if (toolResult.is_error) {
@@ -3659,7 +3663,7 @@ Your role is ASK (Advisory & Quick Support) - you provide analysis, recommendati
     const newPaths = this.selectContent
       .filter(item => (item.type === 'file' || item.type === 'folder') && item.path)
       .map(item => item.path as string);
-    
+
     // 去重合并到 sessionAllowedPaths
     for (const path of newPaths) {
       if (!this.sessionAllowedPaths.includes(path)) {
@@ -3828,7 +3832,7 @@ Your role is ASK (Advisory & Quick Support) - you provide analysis, recommendati
   }
 
   // ==================== 新手引导相关方法 ====================
-  
+
   // 检查是否是第一次使用AI助手
   private checkFirstUsage() {
     const hasSeenOnboarding = this.configService.data.ailyChatOnboardingCompleted;
@@ -3836,119 +3840,19 @@ Your role is ASK (Advisory & Quick Support) - you provide analysis, recommendati
       // 延迟显示引导，确保页面已渲染
       setTimeout(() => {
         this.showOnboarding = true;
-        this.updateHighlight();
       }, 800);
     }
   }
 
-  // 更新高亮区域位置
-  private updateHighlight() {
-    const step = this.onboardingSteps[this.currentStep];
-    const element = document.querySelector(step.target) as HTMLElement;
-    if (element) {
-      const rect = element.getBoundingClientRect();
-      const padding = 8;
-      this.highlightStyle = {
-        top: `${rect.top - padding}px`,
-        left: `${rect.left - padding}px`,
-        width: `${rect.width + padding * 2}px`,
-        height: `${rect.height + padding * 2}px`
-      };
-      // 计算提示框位置
-      this.calculateTooltipPosition(rect, step.position, this.currentStep);
-    }
-  }
-
-  // 计算提示框位置
-  private calculateTooltipPosition(rect: DOMRect, position: string, stepIndex: number = 0) {
-    const tooltipWidth = 280;
-    const tooltipHeight = 150;
-    const gap = 20;
-    const offsetX = -13; // 向左移动13px
-    let offsetY = -46; // 向上移动46px
-    
-    // 第一个步骤额外向上提升18px
-    if (stepIndex === 0) {
-      offsetY -= 18;
-    }
-    
-    const windowWidth = window.innerWidth;
-    const padding = 10; // 距离窗口边缘的最小间距
-
-    // 重置箭头样式
-    this.arrowStyle = {};
-
-    switch (position) {
-      case 'right':
-        this.tooltipStyle = {
-          top: `${rect.top + offsetY}px`,
-          left: `${rect.right + gap + offsetX}px`
-        };
-        break;
-      case 'left':
-        this.tooltipStyle = {
-          top: `${rect.top + offsetY}px`,
-          left: `${rect.left - tooltipWidth - gap + offsetX}px`
-        };
-        break;
-      case 'bottom':
-      case 'top':
-        // 计算目标元素中心位置
-        const targetCenterX = rect.left + rect.width / 2;
-        // 计算提示框的初始 left 位置
-        let tooltipLeft = rect.left + offsetX;
-        // 计算提示框右边缘位置
-        const tooltipRight = tooltipLeft + tooltipWidth;
-        
-        // 检查是否超出右边界
-        if (tooltipRight > windowWidth - padding) {
-          // 调整提示框位置，使其右边缘距离窗口右边缘有 padding 的间距
-          tooltipLeft = windowWidth - tooltipWidth - padding;
-          // 计算箭头相对于提示框的偏移，使其指向目标元素中心
-          const arrowLeft = targetCenterX - tooltipLeft - 8;
-          this.arrowStyle = { left: `${arrowLeft}px` };
-        }
-        
-        if (position === 'bottom') {
-          this.tooltipStyle = {
-            top: `${rect.bottom + gap + offsetY}px`,
-            left: `${tooltipLeft}px`
-          };
-        } else {
-          this.tooltipStyle = {
-            top: `${rect.top - tooltipHeight - gap + offsetY}px`,
-            left: `${tooltipLeft}px`
-          };
-        }
-        break;
-    }
-  }
-
-  // 下一步
-  nextStep() {
-    if (this.currentStep < this.onboardingSteps.length - 1) {
-      this.currentStep++;
-      this.updateHighlight();
-    } else {
-      this.finishOnboarding();
-    }
-  }
-
-  // 上一步
-  prevStep() {
-    if (this.currentStep > 0) {
-      this.currentStep--;
-      this.updateHighlight();
-    }
-  }
-
-  // 跳过引导
-  skipOnboarding() {
-    this.finishOnboarding();
+  // 跳过或关闭引导
+  onOnboardingClosed() {
+    this.showOnboarding = false;
+    this.configService.data.ailyChatOnboardingCompleted = true;
+    this.configService.save();
   }
 
   // 完成引导
-  private finishOnboarding() {
+  onOnboardingCompleted() {
     this.showOnboarding = false;
     this.configService.data.ailyChatOnboardingCompleted = true;
     this.configService.save();

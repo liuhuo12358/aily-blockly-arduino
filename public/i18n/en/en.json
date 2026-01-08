@@ -501,5 +501,13 @@
         "LOGIN_SUCCESS": "Login successful",
         "LOGIN_FAILED": "Login failed",
         "LOGIN_NETWORK_ERROR": "Login failed, please check network connection"
+    },
+    "COMMON": {
+        "ONBOARDING": {
+            "SKIP": "Skip",
+            "PREV": "Previous",
+            "NEXT": "Next",
+            "DONE": "Done"
+        }
     }
 }
