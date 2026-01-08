@@ -850,6 +850,10 @@ function extractPaths(pathsString: string): string[] {
 export interface CommandPathSecurityContext {
     currentProjectPath: string;
     additionalAllowedPaths?: string[];
+    allowProjectPathAccess?: boolean;  // 是否允许访问项目路径
+    allowNodeModulesAccess?: boolean;  // 是否允许访问 node_modules
+    nodeModulesPath?: string;          // node_modules 路径
+    librariesPath?: string;            // libraries 路径
 }
 
 /**
@@ -875,13 +879,17 @@ export function validateDeleteCommandPaths(
         return { allowed: true, requiresConfirmation: false, category: 'safe' };
     }
     
-    // 获取允许的路径列表（与 security.service.ts 保持一致，只允许当前项目路径）
+    // 获取允许的路径列表（与 security.service.ts 保持一致）
+    // 只有当 allowProjectPathAccess 为 true 时，才将项目路径加入允许列表
     const allowedPaths = [
-        securityContext.currentProjectPath,
+        securityContext.allowProjectPathAccess ? securityContext.currentProjectPath : undefined,
+        securityContext.allowProjectPathAccess ? securityContext.librariesPath : undefined,
+        securityContext.allowNodeModulesAccess ? securityContext.nodeModulesPath : undefined,
         ...(securityContext.additionalAllowedPaths || [])
     ].filter(Boolean) as string[];
     
     console.log('[validateDeleteCommandPaths] 允许的路径:', allowedPaths);
+    console.log('[validateDeleteCommandPaths] allowProjectPathAccess:', securityContext.allowProjectPathAccess);
     console.log('[validateDeleteCommandPaths] 删除目标:', targets);
     
     for (const target of targets) {
@@ -1141,9 +1149,12 @@ function isPathInAllowedRange(
     // 规范化路径
     const normalizedTarget = absoluteTarget.replace(/\\/g, '/').toLowerCase();
     
-    // 获取允许的路径列表（只允许当前项目路径）
+    // 获取允许的路径列表（与 security.service.ts 保持一致）
+    // 只有当 allowProjectPathAccess 为 true 时，才将项目路径加入允许列表
     const allowedPaths = [
-        securityContext.currentProjectPath,
+        securityContext.allowProjectPathAccess ? securityContext.currentProjectPath : undefined,
+        securityContext.allowProjectPathAccess ? securityContext.librariesPath : undefined,
+        securityContext.allowNodeModulesAccess ? securityContext.nodeModulesPath : undefined,
         ...(securityContext.additionalAllowedPaths || [])
     ].filter(Boolean) as string[];
     

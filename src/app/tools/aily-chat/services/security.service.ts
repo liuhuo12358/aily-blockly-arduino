@@ -19,6 +19,7 @@ export interface PathSecurityContext {
     currentProjectPath: string;
     librariesPath?: string;
     nodeModulesPath?: string;  // 当前项目下的 node_modules 目录
+    allowProjectPathAccess?: boolean; // 是否允许操作当前项目路径
     allowNodeModulesAccess?: boolean;  // 是否允许操作 node_modules 目录，默认 false
     additionalAllowedPaths?: string[];  // 用户添加的额外允许路径（如上下文文件/文件夹）
 }
@@ -373,8 +374,9 @@ export function isPathAllowed(
     
     // 3. 检查是否在允许的目录范围内（当前项目路径 + 用户添加的额外路径）
     const rawAllowedBases = [
-        context.currentProjectPath,
-        context.librariesPath,
+        context.allowProjectPathAccess ? context.currentProjectPath : undefined,
+        // librariesPath 是项目路径的子目录，同样需要受 allowProjectPathAccess 控制
+        context.allowProjectPathAccess ? context.librariesPath : undefined,
         // 只有开启了 allowNodeModulesAccess 才将 nodeModulesPath 加入允许列表
         context.allowNodeModulesAccess ? context.nodeModulesPath : undefined,
         getTempDir(),  // 临时目录
@@ -755,6 +757,7 @@ export interface SecurityContextOptions {
  * 创建安全上下文
  * @param currentProjectPath 当前项目路径
  * @param options 可选配置项
+ * @param options.allowProjectPathAccess 是否允许操作当前项目路径，默认 false
  * @param options.nodeModulesPath 当前项目下的 node_modules 目录路径
  * @param options.allowNodeModulesAccess 是否允许操作 node_modules 目录，默认 false
  * @param options.additionalAllowedPaths 额外允许的路径列表（如用户添加的上下文文件/文件夹）
@@ -763,6 +766,7 @@ export function createSecurityContext(
     currentProjectPath: string,
     options?: {
         nodeModulesPath?: string;
+        allowProjectPathAccess?: boolean;
         allowNodeModulesAccess?: boolean;
         additionalAllowedPaths?: string[];
     }
@@ -772,6 +776,7 @@ export function createSecurityContext(
         currentProjectPath,
         librariesPath: currentProjectPath ? window['path']?.join(currentProjectPath, 'libraries') : undefined,
         nodeModulesPath: opts.nodeModulesPath ?? (currentProjectPath ? window['path']?.join(currentProjectPath, 'node_modules') : undefined),
+        allowProjectPathAccess: opts.allowProjectPathAccess ?? false,
         allowNodeModulesAccess: opts.allowNodeModulesAccess ?? false,
         additionalAllowedPaths: opts.additionalAllowedPaths || []
     };
