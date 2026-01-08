@@ -6845,8 +6845,19 @@ function generateTreeStructure(rootBlocks: any[], allBlocks: any[], groupBy: str
 
   const lines: string[] = [];
   lines.push('🌳 工作区结构树:');
-  lines.push('type [id] @(x,y) {fields}');
-  lines.push('[inputName/targetInput:connectionType/insertPosition]');
+  lines.push('');
+  lines.push('📖 格式说明:');
+  lines.push('  块格式: type [id] @(x,y) {field:value}');
+  lines.push('  连接格式: [inputName:inputType]');
+  lines.push('');
+  lines.push('🔗 层级与连接关系:');
+  lines.push('  ├── 同级有后续兄弟块');
+  lines.push('  └── 同级最后一个块');
+  lines.push('  缩进层级 = 嵌套深度（每2空格为1层）');
+  lines.push('');
+  lines.push('📌 连接类型:');
+  lines.push('  [inputName:statement] → 语句输入（可放入执行块链，如DO/ELSE/SETUP）');
+  lines.push('  [inputName:value] → 值输入（接收返回值，如IF/NUM/TEXT）');
   lines.push('');
 
   rootBlocks.forEach((rootBlock, index) => {
