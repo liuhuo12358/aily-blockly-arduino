@@ -15,3 +15,11 @@
 <app-lib-editor (close)="showLibEditor=false"></app-lib-editor>
 } -->
 <app-notification></app-notification>
+
+<!-- 新手引导组件 -->
+<app-onboarding 
+  [show]="showOnboarding" 
+  [config]="onboardingConfig"
+  (closed)="onOnboardingClosed()"
+  (completed)="onOnboardingClosed()">
+</app-onboarding>
