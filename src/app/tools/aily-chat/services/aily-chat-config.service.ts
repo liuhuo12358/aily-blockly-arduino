@@ -1,4 +1,5 @@
 import { Injectable } from '@angular/core';
+import { Subject, Observable } from 'rxjs';
 
 /**
  * 安全工作区配置项
@@ -21,6 +22,8 @@ export interface AilyChatConfig {
     baseUrl?: string;
     /** API Key (加密存储) */
     apiKey?: string;
+    /** 自定义模型 */
+    customModel?: string;
     /** 启用的工具列表 */
     enabledTools?: string[];
     /** 安全工作区配置 */
@@ -58,6 +61,12 @@ export class AilyChatConfigService {
     private config: AilyChatConfig = { ...DEFAULT_CONFIG };
     private configFileName = 'aily-chat-config.json';
     private loaded = false;
+
+    /** 配置变更通知 Subject */
+    private configChangedSubject = new Subject<AilyChatConfig>();
+
+    /** 配置变更通知 Observable */
+    public configChanged$: Observable<AilyChatConfig> = this.configChangedSubject.asObservable();
 
     constructor() {
         this.load();
@@ -100,6 +109,8 @@ export class AilyChatConfigService {
             const configPath = this.getConfigPath();
             if (configPath) {
                 window['fs'].writeFileSync(configPath, JSON.stringify(this.config, null, 2), 'utf-8');
+                // 发送配置变更通知
+                this.configChangedSubject.next({ ...this.config });
                 return true;
             }
             return false;
@@ -170,6 +181,17 @@ export class AilyChatConfigService {
 
     set apiKey(value: string) {
         this.config.apiKey = value;
+    }
+
+    /**
+     * 获取自定义模型
+     */
+    get customModel(): string {
+        return this.config.customModel ?? '';
+    }
+
+    set customModel(value: string) {
+        this.config.customModel = value;
     }
 
     /**

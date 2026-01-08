@@ -205,7 +205,7 @@ export class ChatService {
     }
   }
 
-  startSession(mode: string, tools: MCPTool[] | null = null, maxCount?: number): Observable<any> {
+  startSession(mode: string, tools: MCPTool[] | null = null, maxCount?: number, customllmConfig?: any, customModel?: any): Observable<any> {
     const payload: any = { 
       session_id: this.currentSessionId, 
       tools: tools || [], 
@@ -215,6 +215,16 @@ export class ChatService {
     // 如果提供了 maxCount 参数，添加到请求中
     if (maxCount !== undefined && maxCount > 0) {
       payload.max_count = maxCount;
+    }
+
+    // 如果提供了自定义LLM配置，添加到请求中
+    if (customllmConfig) {
+      payload.llm_config = customllmConfig;
+    }
+
+    // 如果提供了自定义模型，添加到请求中
+    if (customModel) {
+      payload.custom_model = customModel;
     }
     
     return this.http.post(API.startSession, payload);

@@ -191,6 +191,7 @@ export class AilyChatComponent implements OnDestroy {
   private aiWritingSubscription: Subscription;
   private aiWaitingSubscription: Subscription;
   private projectPathSubscription: Subscription; // 订阅项目路径变化
+  private configChangedSubscription: Subscription; // 订阅配置变更
   private mcpInitialized = false; // 添加标志位防止重复初始化MCP
   
   // 任务操作相关
@@ -1225,6 +1226,36 @@ Do not create non-existent boards and libraries.
         }
       }
     );
+
+    // 订阅配置变更，实时应用新配置
+    this.configChangedSubscription = this.ailyChatConfigService.configChanged$.subscribe(
+      async (newConfig) => {
+        // console.log('配置已变更:', newConfig);
+        
+        // 判断当前会话是否有对话历史（排除系统默认消息）
+        const hasConversationHistory = this.list.length > 0;
+        
+        // 如果当前会话没有对话历史，则可以安全地重新启动会话以应用新配置
+        if (!hasConversationHistory && this.sessionId && this.isLoggedIn) {
+          // console.log('当前会话无对话历史，重新启动会话以应用新配置');
+          try {
+            // 先停止当前会话
+            await this.stopAndCloseSession(true); // skipSave=true，因为只是重新初始化
+            // 启动新会话
+            await this.startSession();
+            this.message.success('配置已更新并生效');
+            // console.log('会话已重新启动，新配置已生效');
+          } catch (error) {
+            console.warn('重新启动会话失败:', error);
+            this.message.warning('配置更新失败，请尝试新建对话');
+          }
+        } else if (hasConversationHistory) {
+          // 如果有对话历史，提示用户配置将在下次会话生效
+          this.message.info('配置已保存，将在下次新建对话时生效');
+          // console.log('当前会话有对话历史，配置将在下次会话生效');
+        }
+      }
+    );
   }
 
   showAiWritingNotice(isWaiting) {
@@ -1485,8 +1516,24 @@ Do not create non-existent boards and libraries.
     // 获取 maxCount 配置
     const maxCount = this.ailyChatConfigService.maxCount;
 
+    // 自定义apiKey与 baseUrl
+    let customllmConfig;
+    if (this.ailyChatConfigService.useCustomApiKey) {
+      customllmConfig = {
+        apiKey: this.ailyChatConfigService.apiKey,
+        baseUrl: this.ailyChatConfigService.baseUrl,
+      }
+    } else {
+      customllmConfig = null;
+    }
+
+    // customModel
+    // const customModel = {"model": "glm-4.5-air", "family": "glm"}; // TODO: 未来支持自定义模型选择
+    const customModel = null;
+
+
     return new Promise<void>((resolve, reject) => {
-      this.chatService.startSession(this.currentMode, tools, maxCount).subscribe({
+      this.chatService.startSession(this.currentMode, tools, maxCount, customllmConfig, customModel).subscribe({
         next: (res: any) => {
           if (res.status === 'success') {
             if (res.data != this.sessionId) {
@@ -4275,6 +4322,12 @@ Your role is ASK (Advisory & Quick Support) - you provide analysis, recommendati
       this.projectPathSubscription = null;
     }
 
+    // 清理配置变更订阅
+    if (this.configChangedSubscription) {
+      this.configChangedSubscription.unsubscribe();
+      this.configChangedSubscription = null;
+    }
+
     // 清理任务操作事件监听
     if (this.taskActionHandler) {
       document.removeEventListener('aily-task-action', this.taskActionHandler);
@@ -4310,6 +4363,10 @@ Your role is ASK (Advisory & Quick Support) - you provide analysis, recommendati
   }
 
   onSettingsSaved() {
-
+    // 关闭设置面板
+    this.showSettings = false;
+    
+    // 注意：配置生效逻辑已由 configChanged$ 订阅处理
+    // 这里不需要额外操作，消息提示会在订阅中统一处理
   }
 }
