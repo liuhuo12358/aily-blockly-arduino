@@ -159,11 +159,3 @@
 <app-menu class="mode-menu" [menuList]="ModeList" [position]="modeListPosition" (closeEvent)="closeMenu()"
   (itemClickEvent)="modeMenuClick($event)"></app-menu>
 }
-
-<!-- 新手引导组件 -->
-<app-onboarding 
-  [show]="showOnboarding" 
-  [config]="onboardingConfig"
-  (closed)="onOnboardingClosed()"
-  (completed)="onOnboardingCompleted()">
-</app-onboarding>

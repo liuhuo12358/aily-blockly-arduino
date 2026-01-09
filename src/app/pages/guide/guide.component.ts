@@ -10,11 +10,12 @@ import { ElectronService } from '../../services/electron.service';
 import Splide from '@splidejs/splide';
 import { HttpClient } from '@angular/common/http';
 import { CommonModule } from '@angular/common';
-import { OnboardingComponent, OnboardingConfig } from '../../components/onboarding/onboarding.component';
+import { OnboardingService } from '../../services/onboarding.service';
+import { GUIDE_ONBOARDING_CONFIG } from '../../configs/onboarding.config';
 
 @Component({
   selector: 'app-guide',
-  imports: [TranslateModule, CommonModule, OnboardingComponent],
+  imports: [TranslateModule, CommonModule],
   templateUrl: './guide.component.html',
   styleUrl: './guide.component.scss'
 })
@@ -28,59 +29,6 @@ export class GuideComponent implements OnInit, AfterViewInit {
   imgLoading = false;
   private imgRetryCount = 0;
   private readonly maxRetry = 1;
-
-  // 新手引导相关
-  showOnboarding = false;
-  onboardingConfig: OnboardingConfig = {
-    steps: [
-      {
-        target: '.menu-box .btn:first-child',
-        titleKey: 'GUIDE.ONBOARDING.STEP1_TITLE',
-        descKey: 'GUIDE.ONBOARDING.STEP1_DESC',
-        position: 'right'
-      },
-      {
-        target: '.menu-box .btn:nth-child(2)',
-        titleKey: 'GUIDE.ONBOARDING.STEP2_TITLE',
-        descKey: 'GUIDE.ONBOARDING.STEP2_DESC',
-        position: 'right'
-      },
-      {
-        target: '.menu-box .btn:nth-child(3)',
-        titleKey: 'GUIDE.ONBOARDING.STEP3_TITLE',
-        descKey: 'GUIDE.ONBOARDING.STEP3_DESC',
-        position: 'right'
-      },
-      {
-        target: '.menu-box .btn:nth-child(4)',
-        titleKey: 'GUIDE.ONBOARDING.STEP4_TITLE',
-        descKey: 'GUIDE.ONBOARDING.STEP4_DESC',
-        position: 'right'
-      },
-      {
-        target: '.right-box .item:first-child',
-        titleKey: 'GUIDE.ONBOARDING.STEP5_TITLE',
-        descKey: 'GUIDE.ONBOARDING.STEP5_DESC',
-        position: 'left'
-      },
-      {
-        target: '.right-box .item:nth-child(2)',
-        titleKey: 'GUIDE.ONBOARDING.STEP6_TITLE',
-        descKey: 'GUIDE.ONBOARDING.STEP6_DESC',
-        position: 'left'
-      },
-      {
-        target: '.right-box .item:nth-child(3)',
-        titleKey: 'GUIDE.ONBOARDING.STEP7_TITLE',
-        descKey: 'GUIDE.ONBOARDING.STEP7_DESC',
-        position: 'left'
-      }
-    ],
-    skipKey: 'GUIDE.ONBOARDING.SKIP',
-    prevKey: 'GUIDE.ONBOARDING.PREV',
-    nextKey: 'GUIDE.ONBOARDING.NEXT',
-    doneKey: 'GUIDE.ONBOARDING.DONE'
-  };
 
   showImg(url: string) {
     this.imgLoading = true;
@@ -124,7 +72,8 @@ export class GuideComponent implements OnInit, AfterViewInit {
     private router: Router,
     private electronService: ElectronService,
     private http: HttpClient,
-    private configService: ConfigService
+    private configService: ConfigService,
+    private onboardingService: OnboardingService
   ) { }
 
   /**
@@ -151,14 +100,16 @@ export class GuideComponent implements OnInit, AfterViewInit {
     if (!hasSeenOnboarding) {
       // 延迟显示引导，确保页面已渲染
       setTimeout(() => {
-        this.showOnboarding = true;
+        this.onboardingService.start(GUIDE_ONBOARDING_CONFIG, {
+          onClosed: () => this.onOnboardingClosed(),
+          onCompleted: () => this.onOnboardingClosed()
+        });
       }, 500);
     }
   }
 
   // 跳过或关闭引导
-  onOnboardingClosed() {
-    this.showOnboarding = false;
+  private onOnboardingClosed() {
     this.configService.data.onboardingCompleted = true;
     this.configService.save();
   }

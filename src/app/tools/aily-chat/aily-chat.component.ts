@@ -122,7 +122,8 @@ import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { LoginComponent } from '../../components/login/login.component';
 import { NoticeService } from '../../services/notice.service';
 import { AilyChatSettingsComponent } from './components/settings/settings.component';
-import { OnboardingComponent, OnboardingConfig } from '../../components/onboarding/onboarding.component';
+import { OnboardingService } from '../../services/onboarding.service';
+import { AILY_CHAT_ONBOARDING_CONFIG } from '../../configs/onboarding.config';
 
 // import { reloadAbiJsonTool, reloadAbiJsonToolSimple } from './tools';
 
@@ -142,8 +143,7 @@ import { OnboardingComponent, OnboardingConfig } from '../../components/onboardi
     FloatingTodoComponent,
     TranslateModule,
     LoginComponent,
-    AilyChatSettingsComponent,
-    OnboardingComponent
+    AilyChatSettingsComponent
   ],
   templateUrl: './aily-chat.component.html',
   styleUrl: './aily-chat.component.scss',
@@ -976,41 +976,6 @@ Do not create non-existent boards and libraries.
 
   isLoggedIn = false;
 
-  // 新手引导相关
-  showOnboarding = false;
-  onboardingConfig: OnboardingConfig = {
-    steps: [
-      {
-        target: '.input-box textarea',
-        titleKey: 'AILY_CHAT.ONBOARDING.STEP1_TITLE',
-        descKey: 'AILY_CHAT.ONBOARDING.STEP1_DESC',
-        position: 'top'
-      },
-      {
-        target: '.input-box .btns .btn:first-child',
-        titleKey: 'AILY_CHAT.ONBOARDING.STEP2_TITLE',
-        descKey: 'AILY_CHAT.ONBOARDING.STEP2_DESC',
-        position: 'top'
-      },
-      {
-        target: '.input-box .btns .btn.mode',
-        titleKey: 'AILY_CHAT.ONBOARDING.STEP3_TITLE',
-        descKey: 'AILY_CHAT.ONBOARDING.STEP3_DESC',
-        position: 'top'
-      },
-      {
-        target: '.input-box .btns .btn.right',
-        titleKey: 'AILY_CHAT.ONBOARDING.STEP4_TITLE',
-        descKey: 'AILY_CHAT.ONBOARDING.STEP4_DESC',
-        position: 'top'
-      }
-    ],
-    skipKey: 'AILY_CHAT.ONBOARDING.SKIP',
-    prevKey: 'AILY_CHAT.ONBOARDING.PREV',
-    nextKey: 'AILY_CHAT.ONBOARDING.NEXT',
-    doneKey: 'AILY_CHAT.ONBOARDING.DONE'
-  };
-
   constructor(
     private uiService: UiService,
     private chatService: ChatService,
@@ -1030,6 +995,7 @@ Do not create non-existent boards and libraries.
     private noticeService: NoticeService,
     private platformService: PlatformService,
     private electronService: ElectronService,
+    private onboardingService: OnboardingService,
   ) {
     // securityContext 改为 getter，每次使用时动态获取当前项目路径
   }
@@ -3856,21 +3822,16 @@ Your role is ASK (Advisory & Quick Support) - you provide analysis, recommendati
     if (!hasSeenOnboarding && this.isLoggedIn) {
       // 延迟显示引导，确保页面已渲染
       setTimeout(() => {
-        this.showOnboarding = true;
+        this.onboardingService.start(AILY_CHAT_ONBOARDING_CONFIG, {
+          onClosed: () => this.onOnboardingClosed(),
+          onCompleted: () => this.onOnboardingClosed()
+        });
       }, 800);
     }
   }
 
-  // 跳过或关闭引导
-  onOnboardingClosed() {
-    this.showOnboarding = false;
-    this.configService.data.ailyChatOnboardingCompleted = true;
-    this.configService.save();
-  }
-
-  // 完成引导
-  onOnboardingCompleted() {
-    this.showOnboarding = false;
+  // 引导关闭或完成时的处理
+  private onOnboardingClosed() {
     this.configService.data.ailyChatOnboardingCompleted = true;
     this.configService.save();
   }

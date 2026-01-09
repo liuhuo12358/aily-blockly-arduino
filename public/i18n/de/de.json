@@ -70,10 +70,6 @@
         "SPONSORS_DESC": "Dieses Projekt wird von den folgenden Unternehmen/Personen gesponsert",
         "NEWS": "Neuigkeiten",
         "ONBOARDING": {
-            "SKIP": "Überspringen",
-            "PREV": "Zurück",
-            "NEXT": "Weiter",
-            "DONE": "Fertig",
             "STEP1_TITLE": "Neues Projekt erstellen",
             "STEP1_DESC": "Klicken Sie hier, um ein neues Programmierprojekt zu erstellen. Wählen Sie Ihr Board und die Programmiersprache, um Ihre kreative Reise zu beginnen.",
             "STEP2_TITLE": "Vorhandenes Projekt öffnen",
@@ -301,11 +297,7 @@
             "STEP3_TITLE": "Modus wechseln",
             "STEP3_DESC": "Agent-Modus kann Aufgaben automatisch ausführen (Code schreiben, Fehler beheben). F&A-Modus beantwortet nur Fragen",
             "STEP4_TITLE": "Senden/Stoppen",
-            "STEP4_DESC": "Klicken zum Senden der Nachricht, oder Stoppen während die KI antwortet",
-            "SKIP": "Überspringen",
-            "PREV": "Zurück",
-            "NEXT": "Weiter",
-            "DONE": "Fertig"
+            "STEP4_DESC": "Klicken zum Senden der Nachricht, oder Stoppen während die KI antwortet"
         }
     },
     "PROJECT_SETTING_DIALOG": {

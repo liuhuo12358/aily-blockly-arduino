@@ -70,10 +70,6 @@
         "SPONSORS_DESC": "Este projeto é patrocinado pelas seguintes empresas/indivíduos",
         "NEWS": "Notícias",
         "ONBOARDING": {
-            "SKIP": "Pular",
-            "PREV": "Anterior",
-            "NEXT": "Próximo",
-            "DONE": "Concluído",
             "STEP1_TITLE": "Criar novo projeto",
             "STEP1_DESC": "Clique aqui para criar um novo projeto de programação. Escolha sua placa e linguagem de programação para começar sua jornada criativa.",
             "STEP2_TITLE": "Abrir projeto existente",
@@ -301,11 +297,7 @@
             "STEP3_TITLE": "Alternar modo",
             "STEP3_DESC": "O modo Agente pode executar tarefas automaticamente (escrever código, corrigir erros). O modo P&R apenas responde perguntas",
             "STEP4_TITLE": "Enviar/Parar",
-            "STEP4_DESC": "Clique para enviar mensagem, ou parar quando a IA estiver respondendo",
-            "SKIP": "Pular",
-            "PREV": "Anterior",
-            "NEXT": "Próximo",
-            "DONE": "Concluído"
+            "STEP4_DESC": "Clique para enviar mensagem, ou parar quando a IA estiver respondendo"
         }
     },
     "PROJECT_SETTING_DIALOG": {
