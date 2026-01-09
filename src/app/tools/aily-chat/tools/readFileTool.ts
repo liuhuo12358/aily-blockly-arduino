@@ -181,6 +181,20 @@ export async function readFileTool(
             fileSizeMB: (fileSize / 1024 / 1024).toFixed(2)
         };
 
+        // 参数类型转换（LLM可能传递字符串类型的数字）
+        if (typeof startByte === 'string') startByte = parseInt(startByte, 10) || undefined;
+        if (typeof byteCount === 'string') byteCount = parseInt(byteCount, 10) || undefined;
+        if (typeof startLine === 'string') startLine = parseInt(startLine, 10) || undefined;
+        if (typeof lineCount === 'string') lineCount = parseInt(lineCount, 10) || undefined;
+
+        // 忽略无效的字节参数（0 或 NaN 视为未指定）
+        if (startByte === 0 && (byteCount === undefined || byteCount === 0)) {
+            startByte = undefined;
+        }
+        if (byteCount === 0) {
+            byteCount = undefined;
+        }
+
         // 按字节范围读取（优先级最高）
         if (startByte !== undefined || byteCount !== undefined) {
             const start = startByte || 0;
