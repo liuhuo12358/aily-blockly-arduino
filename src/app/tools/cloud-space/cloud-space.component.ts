@@ -417,6 +417,10 @@ export class CloudSpaceComponent {
       });
     } else {
       this.cloudService.publishProject(item.id).subscribe(res => {
+        if(res.status !== 200){
+          this.message.error(`${res.messages}`);
+          return;
+        }
         this.message.info(`项目 "${item.nickname}" 已设为公开`);
         item.is_published = true;
       });
