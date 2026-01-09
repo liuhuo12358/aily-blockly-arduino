@@ -268,7 +268,12 @@
         "WARNING_INVALID_EMAIL": "請輸入有效的郵箱地址",
         "SUCCESS_MESSAGE": "感謝您的反饋！",
         "ERROR_SUBMIT_FAILED": "提交失敗，請稍後重試",
-        "NO_DEPENDENCIES": "無"
+        "NO_DEPENDENCIES": "無",
+        "IMAGE_UPLOADING": "正在上傳圖片...",
+        "IMAGE_UPLOAD_SUCCESS": "圖片上傳成功",
+        "IMAGE_UPLOAD_FAILED": "圖片上傳失敗，請重試",
+        "ATTACH_HINT": "拖放、貼上或",
+        "SELECT_FILE": "選擇圖片"
     },
     "AILY_CHAT": {
         "TITLE": "AI助手",

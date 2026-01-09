@@ -268,7 +268,12 @@
         "WARNING_INVALID_EMAIL": "Bitte geben Sie eine gültige E-Mail-Adresse ein",
         "SUCCESS_MESSAGE": "Vielen Dank für Ihr Feedback!",
         "ERROR_SUBMIT_FAILED": "Absenden fehlgeschlagen, bitte versuchen Sie es später erneut",
-        "NO_DEPENDENCIES": "Keine"
+        "NO_DEPENDENCIES": "Keine",
+        "IMAGE_UPLOADING": "Bild wird hochgeladen...",
+        "IMAGE_UPLOAD_SUCCESS": "Bild erfolgreich hochgeladen",
+        "IMAGE_UPLOAD_FAILED": "Bild-Upload fehlgeschlagen, bitte erneut versuchen",
+        "ATTACH_HINT": "Dateien per Drag & Drop, Einfügen oder",
+        "SELECT_FILE": "Dateien auswählen"
     },
     "AILY_CHAT": {
         "TITLE": "KI-Assistent",

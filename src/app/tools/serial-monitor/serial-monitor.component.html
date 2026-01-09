@@ -63,7 +63,13 @@
         </div>
       </div>
       @if(showMoreSettings){
-      <app-setting-more (settingsChanged)="onSettingsChanged($event)"></app-setting-more>
+      <app-setting-more 
+        [initialDataBits]="dataBits"
+        [initialStopBits]="stopBits"
+        [initialParity]="parity"
+        [initialFlowControl]="flowControl"
+        (settingsChanged)="onSettingsChanged($event)">
+      </app-setting-more>
       }
       <div class="monitor">
         <div class="r-box">

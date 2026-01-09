@@ -126,6 +126,24 @@
             "STEP7_DESC": "Have questions? Want to share your work? Join our user community to connect and learn with other makers!"
         }
     },
+    "BLOCKLY": {
+        "ONBOARDING": {
+            "SKIP": "Skip",
+            "PREV": "Previous",
+            "NEXT": "Next",
+            "DONE": "Done",
+            "TOOLBOX_TITLE": "Block Toolbox",
+            "TOOLBOX_DESC": "Find all available blocks here. Drag and drop blocks to the workspace to build your program.",
+            "WORKSPACE_TITLE": "Workspace",
+            "WORKSPACE_DESC": "This is the main programming area. Connect blocks together here to create your program logic.",
+            "BUILD_TITLE": "Build",
+            "BUILD_DESC": "Click here to compile your program. The system will check for errors and generate code.",
+            "UPLOAD_TITLE": "Upload",
+            "UPLOAD_DESC": "Upload your compiled program to the connected hardware device.",
+            "LIB_MANAGER_TITLE": "Library Manager",
+            "LIB_MANAGER_DESC": "Manage external libraries here. You can add, remove, or update libraries for your project."
+        }
+    },
     "APP_STORE": {
         "HEADER_INFO": "First {{count}} apps will be shown in the toolbar",
         "RESET": "Reset",
@@ -306,7 +324,12 @@
         "WARNING_INVALID_EMAIL": "Please enter a valid email address",
         "SUCCESS_MESSAGE": "Thank you for your feedback!",
         "ERROR_SUBMIT_FAILED": "Submission failed, please try again later",
-        "NO_DEPENDENCIES": "None"
+        "NO_DEPENDENCIES": "None",
+        "IMAGE_UPLOADING": "Uploading image...",
+        "IMAGE_UPLOAD_SUCCESS": "Image uploaded successfully",
+        "IMAGE_UPLOAD_FAILED": "Image upload failed, please try again",
+        "ATTACH_HINT": "Attach files by dragging & dropping, pasting, or",
+        "SELECT_FILE": "select files"
     },
     "AILY_CHAT": {
         "TITLE": "AI Assistant",
@@ -496,5 +519,13 @@
         "LOGIN_SUCCESS": "Login successful",
         "LOGIN_FAILED": "Login failed",
         "LOGIN_NETWORK_ERROR": "Login failed, please check network connection"
+    },
+    "COMMON": {
+        "ONBOARDING": {
+            "SKIP": "Skip",
+            "PREV": "Previous",
+            "NEXT": "Next",
+            "DONE": "Done"
+        }
     }
 }

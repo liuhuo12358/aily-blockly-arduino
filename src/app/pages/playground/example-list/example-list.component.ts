@@ -163,15 +163,12 @@ export class ExampleListComponent implements OnInit, AfterViewInit, OnDestroy {
         this.total = res.data.total;
         
         res.data.list.forEach(prj => {
-          // 图片url - 添加时间戳参数避免缓存
+          // 图片url
           if (prj.image_url) {
-            const timestamp = new Date().getTime();
-            const separator = prj.image_url.includes('?') ? '&' : '?';
-            prj.image_url = this.cloudService.baseUrl + prj.image_url + separator + 't=' + timestamp;
+            prj.image_url = this.cloudService.baseUrl + prj.image_url;
           } else {
             prj.image_url = 'imgs/subject.webp';
           }
-
           // archive_url
           if (prj.archive_url) {
             prj.archive_url = this.cloudService.baseUrl + prj.archive_url;

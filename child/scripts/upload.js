@@ -87,7 +87,7 @@ async function main() {
         logger.log('使用的上传参数:', uploadParam);
 
         // 6. 获取波特率
-        const baudRate = projectConfig?.UploadSpeed || '115200';
+        const baudRate = projectConfig?.UploadSpeed || '921600';
 
         // 7. 获取工具依赖
         const toolDependencies = {};
@@ -161,7 +161,7 @@ async function processUploadParams(uploadParam, buildPath, toolsPath, sdkPath, b
     
     // 替换 ${baud}
     if (paramString.includes('${baud}')) {
-        paramString = paramString.replace(/\$\{baud\}/g, baudRate || '115200');
+        paramString = paramString.replace(/\$\{baud\}/g, baudRate || '921600');
     }
 
     // 替换 ${serial}

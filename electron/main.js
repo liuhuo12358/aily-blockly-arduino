@@ -15,7 +15,7 @@ if (isWin32) {
   app.setAppUserModelId("pro.aily.blockly");
 }
 
-PROTOCOL = "abis";
+const PROTOCOL = "abis";
 
 // OAuth实例管理
 const OAUTH_STATE_FILE = 'oauth-instances.json';

@@ -119,6 +119,7 @@ export class SerialMonitorService {
 
         this.serialPort.on('error', (err: any) => {
           console.error('串口错误:', err);
+          this.message.error(`串口错误: ${err.message || err}`);
           this.isConnected = false;
           this.connectionStatus.next(false);
           reject(err);
@@ -127,6 +128,7 @@ export class SerialMonitorService {
         this.serialPort.open((err: any) => {
           if (err) {
             console.error('打开串口失败:', err);
+            this.message.error(`打开串口失败: ${err.message || err}`);
             this.isConnected = false;
             this.connectionStatus.next(false);
             reject(err);
@@ -135,6 +137,7 @@ export class SerialMonitorService {
       });
     } catch (error) {
       console.error('连接串口失败:', error);
+      this.message.error(`连接串口失败: ${error.message || error}`);
       this.isConnected = false;
       this.connectionStatus.next(false);
       return false;
@@ -267,6 +270,7 @@ export class SerialMonitorService {
       this.serialPort.close((err: any) => {
         if (err) {
           console.error('关闭串口失败:', err);
+          this.message.error(`关闭串口失败: ${err.message || err}`);
           resolve(false);
         } else {
           this.isConnected = false;

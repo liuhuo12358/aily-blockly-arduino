@@ -268,7 +268,12 @@
         "WARNING_INVALID_EMAIL": "有効なメールアドレスを入力してください",
         "SUCCESS_MESSAGE": "フィードバックをありがとうございます！",
         "ERROR_SUBMIT_FAILED": "送信に失敗しました。後でもう一度お試しください",
-        "NO_DEPENDENCIES": "なし"
+        "NO_DEPENDENCIES": "なし",
+        "IMAGE_UPLOADING": "画像をアップロード中...",
+        "IMAGE_UPLOAD_SUCCESS": "画像のアップロードに成功しました",
+        "IMAGE_UPLOAD_FAILED": "画像のアップロードに失敗しました。もう一度お試しください",
+        "ATTACH_HINT": "ドラッグ＆ドロップ、貼り付け、または",
+        "SELECT_FILE": "ファイルを選択"
     },
     "AILY_CHAT": {
         "TITLE": "AIアシスタント",

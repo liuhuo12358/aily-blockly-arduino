@@ -125,6 +125,24 @@
             "STEP7_DESC": "遇到问题？想分享作品？加入我们的用户社区，与其他开发者一起交流学习！"
         }
     },
+    "BLOCKLY": {
+        "ONBOARDING": {
+            "SKIP": "跳过引导",
+            "PREV": "上一步",
+            "NEXT": "下一步",
+            "DONE": "完成",
+            "TOOLBOX_TITLE": "积木工具箱",
+            "TOOLBOX_DESC": "这里是积木分类区域，点击不同的分类可以找到各种功能积木块，拖拽到右边工作区使用。",
+            "WORKSPACE_TITLE": "工作区",
+            "WORKSPACE_DESC": "这是您的编程工作区，可以在这里拖拽、连接积木块来创建程序。支持缩放、拖动画布。",
+            "BUILD_TITLE": "编译程序",
+            "BUILD_DESC": "完成积木拼接后，点击这里编译程序。编译成功后可以看到生成的代码。",
+            "UPLOAD_TITLE": "烧录程序",
+            "UPLOAD_DESC": "连接开发板后，点击这里将程序烧录到开发板上运行。",
+            "LIB_MANAGER_TITLE": "库管理器",
+            "LIB_MANAGER_DESC": "点击这里打开库管理器，可以安装、卸载各种功能扩展库，为您的项目添加更多积木块。"
+        }
+    },
     "APP_STORE": {
         "HEADER_INFO": "前 {{count}} 个应用会显示在顶部工具栏",
         "RESET": "重置",
@@ -306,7 +324,12 @@
         "WARNING_INVALID_EMAIL": "请输入有效的邮箱地址",
         "SUCCESS_MESSAGE": "感谢您的反馈！",
         "ERROR_SUBMIT_FAILED": "提交失败，请稍后重试",
-        "NO_DEPENDENCIES": "无"
+        "NO_DEPENDENCIES": "无",
+        "IMAGE_UPLOADING": "正在上传图片...",
+        "IMAGE_UPLOAD_SUCCESS": "图片上传成功",
+        "IMAGE_UPLOAD_FAILED": "图片上传失败，请重试",
+        "ATTACH_HINT": "拖放、粘贴或",
+        "SELECT_FILE": "选择图片"
     },
     "AILY_CHAT": {
         "TITLE": "AI助手",
@@ -496,5 +519,13 @@
         "LOGIN_SUCCESS": "登录成功",
         "LOGIN_FAILED": "登录失败",
         "LOGIN_NETWORK_ERROR": "登录失败，请检查网络连接"
+    },
+    "COMMON": {
+        "ONBOARDING": {
+            "SKIP": "跳过",
+            "PREV": "上一步",
+            "NEXT": "下一步",
+            "DONE": "完成"
+        }
     }
 }

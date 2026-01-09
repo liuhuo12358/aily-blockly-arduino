@@ -2,6 +2,8 @@ const { contextBridge, ipcRenderer, shell, safeStorage, webFrame } = require("el
 const { SerialPort } = require("serialport");
 const { exec } = require("child_process");
 const { existsSync, statSync } = require("fs");
+const { isAbsolute } = require("path");
+const { tmpdir } = require("os");
 
 // 单双杠虽不影响实用性，为了路径规范好看，还是单独使用
 const pt = process.platform === "win32" ? "\\" : "/"
@@ -27,7 +29,9 @@ contextBridge.exposeInMainWorld("electronAPI", {
     extname: (path) => require("path").extname(path),
     normalize: (path) => require("path").normalize(path),
     resolve: (path) => require("path").resolve(path),
-    basename: (path, suffix = undefined) => require("path").basename(path, suffix)
+    relative: (from, to) => require("path").relative(from, to),
+    basename: (path, suffix = undefined) => require("path").basename(path, suffix),
+    isAbsolute: (path) => isAbsolute(path),
   },
   versions: () => process.versions,
   SerialPort: {
@@ -65,6 +69,9 @@ contextBridge.exposeInMainWorld("electronAPI", {
       };
     }
   },
+  os: {
+    tmpdir: () => tmpdir(),
+  },
   platform: {
     type: process.platform,
     pt,
@@ -75,6 +82,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
   },
   terminal: {
     init: (data) => ipcRenderer.invoke("terminal-create", data),
+    getShell: () => ipcRenderer.invoke("terminal-get-shell"),
     onData: (callback) => {
       ipcRenderer.on("terminal-inc-data", (event, data) => {
         callback(data);

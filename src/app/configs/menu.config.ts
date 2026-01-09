@@ -21,6 +21,7 @@ export interface IMenuItem {
 export let HEADER_BTNS: IMenuItem[] = [
   {
     name: 'MENU.BUILD',
+    text: 'F5',
     action: 'compile',
     data: { type: 'cmd', data: 'compile' },
     icon: 'fa-regular fa-check',
@@ -31,6 +32,7 @@ export let HEADER_BTNS: IMenuItem[] = [
   },
   {
     name: 'MENU.RUN',
+    text: 'F6',
     action: 'upload',
     data: { type: 'cmd', data: 'upload' },
     icon: 'fa-regular fa-play',

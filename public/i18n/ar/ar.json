@@ -268,7 +268,12 @@
         "WARNING_INVALID_EMAIL": "يرجى إدخال عنوان بريد إلكتروني صالح",
         "SUCCESS_MESSAGE": "شكرا لملاحظاتك!",
         "ERROR_SUBMIT_FAILED": "فشل الإرسال، يرجى المحاولة لاحقًا",
-        "NO_DEPENDENCIES": "لا شيء"
+        "NO_DEPENDENCIES": "لا شيء",
+        "IMAGE_UPLOADING": "جاري رفع الصورة...",
+        "IMAGE_UPLOAD_SUCCESS": "تم رفع الصورة بنجاح",
+        "IMAGE_UPLOAD_FAILED": "فشل رفع الصورة، يرجى المحاولة مرة أخرى",
+        "ATTACH_HINT": "إرفاق الملفات عن طريق السحب والإفلات أو اللصق أو",
+        "SELECT_FILE": "اختيار الملفات"
     },
     "AILY_CHAT": {
         "TITLE": "مساعد الذكاء الاصطناعي",
