@@ -153,7 +153,7 @@ function getValidInputsForBlockType(
       inputInfo.dummyInputs.forEach(name => validInputs.add(name));
     }
 
-    console.log(`[BlockConfigFixer] 动态检测 ${blockType} 输入: [${Array.from(validInputs).join(', ')}]`);
+    // console.log(`[BlockConfigFixer] 动态检测 ${blockType} 输入: [${Array.from(validInputs).join(', ')}]`);
   }
   
   // 2. 🆕 通用动态输入模式 - 不再硬编码具体块类型
@@ -196,7 +196,7 @@ function getValidInputsForBlockType(
         validInputs.add('ELSE');
       }
       
-      console.log(`[BlockConfigFixer] 从 extraState 推断输入 (elseIfCount=${elseIfCount}, hasElse=${hasElse}): [${Array.from(validInputs).join(', ')}]`);
+      // console.log(`[BlockConfigFixer] 从 extraState 推断输入 (elseIfCount=${elseIfCount}, hasElse=${hasElse}): [${Array.from(validInputs).join(', ')}]`);
     }
     
     // text_join / lists_create_with 系列：根据 itemCount 推断
@@ -205,7 +205,7 @@ function getValidInputsForBlockType(
       for (let i = 0; i < itemCount; i++) {
         validInputs.add(`ADD${i}`);
       }
-      console.log(`[BlockConfigFixer] 从 extraState 推断列表输入 (itemCount=${itemCount})`);
+      // console.log(`[BlockConfigFixer] 从 extraState 推断列表输入 (itemCount=${itemCount})`);
     }
   }
   
@@ -231,7 +231,7 @@ function getValidInputsForBlockType(
         }
       }
     }
-    console.log(`[BlockConfigFixer] 从现有 keys 推断输入: [${existingInputKeys.filter(k => validInputs.has(k)).join(', ')}]`);
+    // console.log(`[BlockConfigFixer] 从现有 keys 推断输入: [${existingInputKeys.filter(k => validInputs.has(k)).join(', ')}]`);
   }
   
   // 5. 添加常见的固定输入名（这些是非动态的，大多数块都可能有）
@@ -314,13 +314,13 @@ function isMisplacedInput(
         ...inputInfo.dummyInputs
       ];
       if (allInputNames.includes(key)) {
-        console.log(`[BlockConfigFixer] 动态检测: ${key} 是 ${parentBlockType} 的有效输入，判定为错位`);
+        // console.log(`[BlockConfigFixer] 动态检测: ${key} 是 ${parentBlockType} 的有效输入，判定为错位`);
         return true;
       }
       // 🔑 关键改进：对于动态块，即使动态检测失败也要继续检查模式匹配
       // 因为动态块的临时实例可能没有完整的输入列表
       if (isTopLevel && !isDynamicBlock) {
-        console.log(`[BlockConfigFixer] 动态检测: ${key} 不是 ${parentBlockType} 的有效输入，不判定为错位`);
+        // console.log(`[BlockConfigFixer] 动态检测: ${key} 不是 ${parentBlockType} 的有效输入，不判定为错位`);
         return false;
       }
     }
@@ -387,11 +387,11 @@ function isMisplacedInput(
         // 如果是顶层检测，需要验证块类型匹配
         if (isTopLevel && parentBlockType) {
           if (!blockTypes.includes(parentBlockType)) {
-            console.log(`[BlockConfigFixer] 模式匹配: ${key} 符合模式但不属于 ${parentBlockType}（期望 ${blockTypes.join('|')}），跳过`);
+            // console.log(`[BlockConfigFixer] 模式匹配: ${key} 符合模式但不属于 ${parentBlockType}（期望 ${blockTypes.join('|')}），跳过`);
             return false;
           }
         }
-        console.log(`[BlockConfigFixer] 模式匹配: ${key} 符合已知输入模式（hasContent=${hasContent}, isEmptyOrphan=${isEmptyOrphan}），判定为错位输入`);
+        // console.log(`[BlockConfigFixer] 模式匹配: ${key} 符合已知输入模式（hasContent=${hasContent}, isEmptyOrphan=${isEmptyOrphan}），判定为错位输入`);
         return true;
       }
     }
@@ -401,7 +401,7 @@ function isMisplacedInput(
   if (!isTopLevel) {
     if (genericInputPatterns.some(pattern => pattern.test(key))) {
       if (hasInputStructure(value)) {
-        console.log(`[BlockConfigFixer] 通用模式匹配: ${key} 符合已知输入模式且包含输入结构，判定为错位输入`);
+        // console.log(`[BlockConfigFixer] 通用模式匹配: ${key} 符合已知输入模式且包含输入结构，判定为错位输入`);
         return true;
       }
     }
@@ -411,7 +411,7 @@ function isMisplacedInput(
   // 这是最宽松的检测，作为兜底（但对顶层检测禁用，因为可能误判）
   if (!isTopLevel && typeof value === 'object' && value !== null) {
     if ('block' in value || 'shadow' in value) {
-      console.log(`[BlockConfigFixer] 结构分析: ${key} 的值包含 block/shadow，判定为错位输入`);
+      // console.log(`[BlockConfigFixer] 结构分析: ${key} 的值包含 block/shadow，判定为错位输入`);
       return true;
     }
   }
@@ -426,7 +426,7 @@ function isMisplacedInput(
 function looksLikeInput(key: string, value: any): boolean {
   // 1. 值必须是对象
   if (typeof value !== 'object' || value === null) {
-    console.log(`[BlockConfigFixer] looksLikeInput(${key}): 值不是对象，返回 false`);
+    // console.log(`[BlockConfigFixer] looksLikeInput(${key}): 值不是对象，返回 false`);
     return false;
   }
   
@@ -455,7 +455,7 @@ function looksLikeInput(key: string, value: any): boolean {
   };
   
   if (!hasDirectBlockOrShadow && !hasNestedInputStructure()) {
-    console.log(`[BlockConfigFixer] looksLikeInput(${key}): 值不包含 block/shadow 也无嵌套输入结构，返回 false`);
+    // console.log(`[BlockConfigFixer] looksLikeInput(${key}): 值不包含 block/shadow 也无嵌套输入结构，返回 false`);
     return false;
   }
   
@@ -490,7 +490,7 @@ function looksLikeInput(key: string, value: any): boolean {
   ];
   
   const result = inputNamePatterns.some(pattern => pattern.test(key));
-  console.log(`[BlockConfigFixer] looksLikeInput(${key}): 模式匹配结果 = ${result}`);
+  // console.log(`[BlockConfigFixer] looksLikeInput(${key}): 模式匹配结果 = ${result}`);
   return result;
 }
 
@@ -647,8 +647,8 @@ function fixMisplacedInputs(
   const extraState = blockDef.extraState;  // 获取 extraState 用于智能推断
   const validInputs = getValidInputsForBlockType(blockType, workspace, inputKeys, extraState);
   
-  console.log(`[BlockConfigFixer] 块 ${blockType} 的合法输入: [${Array.from(validInputs).join(', ')}]`);
-  console.log(`[BlockConfigFixer] 块 ${blockType} 的实际输入 keys: [${inputKeys.join(', ')}]`);
+  // console.log(`[BlockConfigFixer] 块 ${blockType} 的合法输入: [${Array.from(validInputs).join(', ')}]`);
+  // console.log(`[BlockConfigFixer] 块 ${blockType} 的实际输入 keys: [${inputKeys.join(', ')}]`);
   
   // 🆕 用于收集错位在 inputs 下的 structureDefinition 属性
   // 这些会被作为特殊孤儿向上冒泡，最终放到 structureDefinition 顶层
@@ -664,14 +664,14 @@ function fixMisplacedInputs(
   for (const [inputName, inputConfig] of Object.entries(blockDef.inputs)) {
     // 🆕 首先检查是否是错位的 structureDefinition 属性
     if (inputName === 'additionalBlocks' && Array.isArray(inputConfig)) {
-      console.log(`[BlockConfigFixer] ⚠️ 发现错位在 ${blockType}.inputs 下的 additionalBlocks (${inputConfig.length} 个块)`);
+      // console.log(`[BlockConfigFixer] ⚠️ 发现错位在 ${blockType}.inputs 下的 additionalBlocks (${inputConfig.length} 个块)`);
       misplacedStructureDefParts.additionalBlocks.push(...inputConfig);
       wasFixed = true;
       fixInfo.push(`🔧 提取: inputs.additionalBlocks 错位，应在 structureDefinition 顶层`);
       continue;
     }
     if (inputName === 'connectionRules' && Array.isArray(inputConfig)) {
-      console.log(`[BlockConfigFixer] ⚠️ 发现错位在 ${blockType}.inputs 下的 connectionRules (${inputConfig.length} 条规则)`);
+      // console.log(`[BlockConfigFixer] ⚠️ 发现错位在 ${blockType}.inputs 下的 connectionRules (${inputConfig.length} 条规则)`);
       misplacedStructureDefParts.connectionRules.push(...inputConfig);
       wasFixed = true;
       fixInfo.push(`🔧 提取: inputs.connectionRules 错位，应在 structureDefinition 顶层`);
@@ -682,7 +682,7 @@ function fixMisplacedInputs(
       validInputEntries.push([inputName, inputConfig]);
     } else if (looksLikeInput(inputName, inputConfig)) {
       // 不属于当前块但看起来像输入，标记为孤儿
-      console.log(`[BlockConfigFixer] ⚠️ 输入 ${inputName} 不属于 ${blockType}，将作为孤儿向上冒泡`);
+      // console.log(`[BlockConfigFixer] ⚠️ 输入 ${inputName} 不属于 ${blockType}，将作为孤儿向上冒泡`);
       invalidInputEntries.push([inputName, inputConfig]);
       wasFixed = true;
       fixInfo.push(`🔍 检测: inputs.${inputName} 不是 ${blockType} 的合法输入，作为孤儿向上冒泡`);
@@ -733,7 +733,7 @@ function fixMisplacedInputs(
           }
           // 🆕 收集来自嵌套块的孤儿输入
           if (nestedBlockFix.orphanInputs && nestedBlockFix.orphanInputs.length > 0) {
-            console.log(`[BlockConfigFixer] 从嵌套块收到孤儿: ${nestedBlockFix.orphanInputs.map(([k]) => k).join(', ')}，当前块类型: ${blockType}`);
+            // console.log(`[BlockConfigFixer] 从嵌套块收到孤儿: ${nestedBlockFix.orphanInputs.map(([k]) => k).join(', ')}，当前块类型: ${blockType}`);
             // 检查这些孤儿是否属于当前块
             for (const [orphanKey, orphanValue] of nestedBlockFix.orphanInputs) {
               if (isMisplacedInput(orphanKey, orphanValue, blockType, workspace, true)) {
@@ -742,7 +742,7 @@ function fixMisplacedInputs(
                 fixInfo.push(`🔧 修复: 孤儿输入 ${orphanKey} 从嵌套块提升到 ${blockType}.inputs.${orphanKey}`);
               } else {
                 // 不属于当前块，继续向上冒泡
-                console.log(`[BlockConfigFixer] 孤儿 ${orphanKey} 不属于 ${blockType}，继续向上冒泡`);
+                // console.log(`[BlockConfigFixer] 孤儿 ${orphanKey} 不属于 ${blockType}，继续向上冒泡`);
                 collectedOrphans.push([orphanKey, orphanValue]);
               }
             }
@@ -792,7 +792,7 @@ function fixMisplacedInputs(
       fixedInputs[inputName] = cleanedConfig;
     } else if (/^(IF|DO|ELSE|ELSEIF|ADD|ITEM|CASE|DEFAULT|SUBSTACK)\d*$/.test(inputName)) {
       // 合法的动态输入名，保留为空对象（后续可能需要填充 block）
-      console.log(`[BlockConfigFixer] 输入 ${inputName} 清理后为空，但保留输入名`);
+      // console.log(`[BlockConfigFixer] 输入 ${inputName} 清理后为空，但保留输入名`);
       fixedInputs[inputName] = {};
     }
     
@@ -807,7 +807,7 @@ function fixMisplacedInputs(
           const cleanedMisplacedValue: Record<string, any> = {};
           
           for (const [mvKey, mvValue] of Object.entries(misplacedValue)) {
-            console.log(`[BlockConfigFixer] 处理 misplacedInput ${misplacedKey} 的属性: ${mvKey}`);
+            // console.log(`[BlockConfigFixer] 处理 misplacedInput ${misplacedKey} 的属性: ${mvKey}`);
             if (mvKey === 'block') {
               // 递归修复嵌套的 block
               const nestedBlockFix = fixBlockRecursively(mvValue, workspace);
@@ -834,7 +834,7 @@ function fixMisplacedInputs(
             } else if (mvKey === 'shadow') {
               cleanedMisplacedValue[mvKey] = mvValue;
             } else if (looksLikeInput(mvKey, mvValue)) {
-              console.log(`[BlockConfigFixer] ${mvKey} 被 looksLikeInput 识别，开始递归提取`);
+              // console.log(`[BlockConfigFixer] ${mvKey} 被 looksLikeInput 识别，开始递归提取`);
               // 🆕 发现错位输入中还有其他看起来像输入的属性
               // 使用递归提取函数来处理任意深度的嵌套
               const extractedInputs = recursivelyExtractInputs(mvValue, blockType, workspace);
@@ -944,7 +944,7 @@ function fixMisplacedInputsInObject(
       fixedInputs[inputName] = cleanedConfig;
     } else if (/^(IF|DO|ELSE|ELSEIF|ADD|ITEM|CASE|DEFAULT|SUBSTACK)\d*$/.test(inputName)) {
       // 合法的动态输入名，保留为空对象
-      console.log(`[BlockConfigFixer] fixNestedMisplacedInputs: 输入 ${inputName} 清理后为空，但保留输入名`);
+      // console.log(`[BlockConfigFixer] fixNestedMisplacedInputs: 输入 ${inputName} 清理后为空，但保留输入名`);
       fixedInputs[inputName] = {};
     }
     
@@ -1028,7 +1028,7 @@ function extractMisplacedStructureDefinitionParts(
       if (key === 'additionalBlocks' && Array.isArray(value)) {
         // 判断是否在错误位置（不应该在 input config 或 block 内部直接出现）
         // 正确位置是 structureDefinition 顶层，此时调用此函数时已经在 rootBlock 内部
-        console.log(`[BlockConfigFixer] ⚠️ 发现错位的 additionalBlocks (${(value as any[]).length} 个块)`);
+        // console.log(`[BlockConfigFixer] ⚠️ 发现错位的 additionalBlocks (${(value as any[]).length} 个块)`);
         
         // 🆕 对 additionalBlocks 中的每个块也进行递归提取清理
         for (const block of value as any[]) {
@@ -1042,7 +1042,7 @@ function extractMisplacedStructureDefinitionParts(
       
       // 检测 connectionRules 在错误位置
       if (key === 'connectionRules' && Array.isArray(value)) {
-        console.log(`[BlockConfigFixer] ⚠️ 发现错位的 connectionRules (${(value as any[]).length} 条规则)`);
+        // console.log(`[BlockConfigFixer] ⚠️ 发现错位的 connectionRules (${(value as any[]).length} 条规则)`);
         collectedConnectionRules.push(...(value as any[]));
         wasExtracted = true;
         continue; // 不复制到 cleaned 中
@@ -1054,7 +1054,7 @@ function extractMisplacedStructureDefinitionParts(
         for (const [inputKey, inputValue] of Object.entries(value)) {
           // 🆕 检查 inputs 的直接子属性是否是错位的 additionalBlocks 或 connectionRules
           if (inputKey === 'additionalBlocks' && Array.isArray(inputValue)) {
-            console.log(`[BlockConfigFixer] ⚠️ 发现错位在 inputs 下的 additionalBlocks (${inputValue.length} 个块)`);
+            // console.log(`[BlockConfigFixer] ⚠️ 发现错位在 inputs 下的 additionalBlocks (${inputValue.length} 个块)`);
             for (const block of inputValue) {
               const cleanedBlock = cleanRecursively(block);
               collectedAdditionalBlocks.push(cleanedBlock);
@@ -1063,7 +1063,7 @@ function extractMisplacedStructureDefinitionParts(
             continue; // 不复制到 cleaned.inputs 中
           }
           if (inputKey === 'connectionRules' && Array.isArray(inputValue)) {
-            console.log(`[BlockConfigFixer] ⚠️ 发现错位在 inputs 下的 connectionRules (${inputValue.length} 条规则)`);
+            // console.log(`[BlockConfigFixer] ⚠️ 发现错位在 inputs 下的 connectionRules (${inputValue.length} 条规则)`);
             collectedConnectionRules.push(...inputValue);
             wasExtracted = true;
             continue; // 不复制到 cleaned.inputs 中
@@ -1154,7 +1154,7 @@ function fixBlockRecursively(
     }
     // 收集来自 inputs 内部的孤儿
     if (inputsFix.orphanInputs && inputsFix.orphanInputs.length > 0) {
-      console.log(`[BlockConfigFixer] 块 ${fixedBlock.type} 收集到孤儿输入: ${inputsFix.orphanInputs.map(([k]) => k).join(', ')}`);
+      // console.log(`[BlockConfigFixer] 块 ${fixedBlock.type} 收集到孤儿输入: ${inputsFix.orphanInputs.map(([k]) => k).join(', ')}`);
       collectedOrphans.push(...inputsFix.orphanInputs);
     }
     // 🆕 收集来自 inputs 的错位 structureDefinition 属性
@@ -1190,7 +1190,7 @@ function fixBlockRecursively(
   
   // 3. 🆕 尝试将收集到的孤儿输入放入当前块（如果它们属于当前块）
   if (collectedOrphans.length > 0 && fixedBlock.type) {
-    console.log(`[BlockConfigFixer] 块 ${fixedBlock.type} 开始处理 ${collectedOrphans.length} 个孤儿: ${collectedOrphans.map(([k]) => k).join(', ')}`);
+    // console.log(`[BlockConfigFixer] 块 ${fixedBlock.type} 开始处理 ${collectedOrphans.length} 个孤儿: ${collectedOrphans.map(([k]) => k).join(', ')}`);
     const adoptedOrphans: Array<[string, any]> = [];
     const remainingOrphans: Array<[string, any]> = [];
     
@@ -1198,13 +1198,13 @@ function fixBlockRecursively(
     const existingInputKeys = fixedBlock.inputs ? Object.keys(fixedBlock.inputs) : [];
     const blockExtraState = fixedBlock.extraState;  // 获取 extraState 用于智能推断
     const validInputs = getValidInputsForBlockType(fixedBlock.type, workspace, [...existingInputKeys, ...collectedOrphans.map(([k]) => k)], blockExtraState);
-    console.log(`[BlockConfigFixer] 块 ${fixedBlock.type} 可接受的输入: [${Array.from(validInputs).join(', ')}]`);
+    // console.log(`[BlockConfigFixer] 块 ${fixedBlock.type} 可接受的输入: [${Array.from(validInputs).join(', ')}]`);
     
     for (const [orphanKey, orphanValue] of collectedOrphans) {
       // 使用新的验证函数检查这个孤儿是否属于当前块类型
       if (validInputs.has(orphanKey)) {
         // 这个孤儿属于当前块！
-        console.log(`[BlockConfigFixer] ✅ 孤儿 ${orphanKey} 属于 ${fixedBlock.type}，领养成功`);
+        // console.log(`[BlockConfigFixer] ✅ 孤儿 ${orphanKey} 属于 ${fixedBlock.type}，领养成功`);
         if (!fixedBlock.inputs) {
           fixedBlock.inputs = {};
         }
@@ -1216,7 +1216,7 @@ function fixBlockRecursively(
         }
       } else {
         // 不属于当前块，继续向上传递
-        console.log(`[BlockConfigFixer] ❌ 孤儿 ${orphanKey} 不属于 ${fixedBlock.type}，继续向上冒泡`);
+        // console.log(`[BlockConfigFixer] ❌ 孤儿 ${orphanKey} 不属于 ${fixedBlock.type}，继续向上冒泡`);
         remainingOrphans.push([orphanKey, orphanValue]);
       }
     }
@@ -1407,7 +1407,7 @@ function fixTopLevelMisplacedInputs(
   const cleanedBlock: Record<string, any> = {};
   
   for (const [key, value] of Object.entries(blockConfig)) {
-    console.log(`[BlockConfigFixer] fixTopLevelMisplacedInputs 检查属性: ${key}, blockType: ${blockType}`);
+    // console.log(`[BlockConfigFixer] fixTopLevelMisplacedInputs 检查属性: ${key}, blockType: ${blockType}`);
     if (validBlockProperties.has(key)) {
       // 这是块定义的合法属性
       cleanedBlock[key] = value;
@@ -1418,13 +1418,13 @@ function fixTopLevelMisplacedInputs(
       fixInfo.push(`🔧 修复: 将块顶层的 ${key} 移动到 inputs.${key}（块类型: ${blockType}）`);
     } else if (looksLikeInput(key, value)) {
       // 看起来像输入但不属于当前块类型，作为孤儿向上传递
-      console.log(`[BlockConfigFixer] ${key} 被识别为孤儿输入，不属于 ${blockType}，向上冒泡`);
+      // console.log(`[BlockConfigFixer] ${key} 被识别为孤儿输入，不属于 ${blockType}，向上冒泡`);
       orphanInputs.push([key, value]);
       wasFixed = true;
       fixInfo.push(`🔍 检测: ${key} 不属于 ${blockType}，标记为孤儿输入，向上冒泡`);
     } else {
       // 未知属性，保留在顶层
-      console.log(`[BlockConfigFixer] ${key} 未被识别为输入，保留在顶层`);
+      // console.log(`[BlockConfigFixer] ${key} 未被识别为输入，保留在顶层`);
       cleanedBlock[key] = value;
     }
   }
@@ -1513,7 +1513,7 @@ function tryFixBareInputsFormat(
   
   if (!hasDynamicInputKeys) {
     // 没有动态输入名，这是一个普通的 inputs 对象，不需要包装
-    console.log(`[BlockConfigFixer] keys [${keys.join(', ')}] 是普通输入名，不需要包装`);
+    // console.log(`[BlockConfigFixer] keys [${keys.join(', ')}] 是普通输入名，不需要包装`);
     return { fixed: config, wasFixed: false, fixInfo: [] };
   }
   
@@ -1560,27 +1560,27 @@ function inferBlockTypeFromInputKeys(keys: string[], workspace?: any): string | 
   
   if (hasIfPattern && hasDoPattern) {
     const inferredType = hasElse ? 'controls_ifelse' : 'controls_if';
-    console.log(`[BlockConfigFixer] 根据 IF/DO 模式推断块类型: ${inferredType}`);
+    // console.log(`[BlockConfigFixer] 根据 IF/DO 模式推断块类型: ${inferredType}`);
     return inferredType;
   }
   
   // text_join 的特征：ADD0, ADD1, ADD2...
   const hasAddPattern = keys.some(k => /^ADD\d+$/.test(k));
   if (hasAddPattern && keys.every(k => /^ADD\d+$/.test(k))) {
-    console.log(`[BlockConfigFixer] 根据 ADD 模式推断块类型: text_join`);
+    // console.log(`[BlockConfigFixer] 根据 ADD 模式推断块类型: text_join`);
     return 'text_join';
   }
   
   // lists_create_with 的特征：ITEM0, ITEM1, ITEM2...
   const hasItemPattern = keys.some(k => /^ITEM\d+$/.test(k));
   if (hasItemPattern && keys.every(k => /^ITEM\d+$/.test(k))) {
-    console.log(`[BlockConfigFixer] 根据 ITEM 模式推断块类型: lists_create_with`);
+    // console.log(`[BlockConfigFixer] 根据 ITEM 模式推断块类型: lists_create_with`);
     return 'lists_create_with';
   }
   
   // logic_operation 的特征：A, B
   if (keySet.has('A') && keySet.has('B') && keys.length === 2) {
-    console.log(`[BlockConfigFixer] 根据 A/B 模式推断块类型: logic_operation`);
+    // console.log(`[BlockConfigFixer] 根据 A/B 模式推断块类型: logic_operation`);
     return 'logic_operation';
   }
   
@@ -1632,7 +1632,7 @@ function fixConfigRecursively(
     // 🆕 首先提取错误嵌套在 rootBlock 或 inputs 内部的 additionalBlocks 和 connectionRules
     const extracted = extractMisplacedStructureDefinitionParts(structDef.rootBlock);
     if (extracted.wasExtracted) {
-      console.log('[BlockConfigFixer] 🔧 从 rootBlock 中提取了错位的 additionalBlocks/connectionRules');
+      // console.log('[BlockConfigFixer] 🔧 从 rootBlock 中提取了错位的 additionalBlocks/connectionRules');
       
       // 合并提取的 additionalBlocks
       if (extracted.additionalBlocks.length > 0) {
@@ -1718,7 +1718,7 @@ function fixConfigRecursively(
   if (!config.type && !config.structureDefinition) {
     const bareInputsFix = tryFixBareInputsFormat(config, workspace, knownBlockType);
     if (bareInputsFix.wasFixed) {
-      console.log(`[BlockConfigFixer] 检测到裸 inputs 格式，已包装为块定义`);
+      // console.log(`[BlockConfigFixer] 检测到裸 inputs 格式，已包装为块定义`);
       // 对包装后的块定义进行递归修复
       const wrappedFix = fixBlockRecursively(bareInputsFix.fixed, workspace);
       return {
@@ -1785,7 +1785,7 @@ export function fixBlockConfig(
   if (typeof input === 'string') {
     if (enableJsonFix) {
       if (logProcess) {
-        console.log('[BlockConfigFixer] 阶段1: JSON 语法修复');
+        // console.log('[BlockConfigFixer] 阶段1: JSON 语法修复');
       }
       
       const jsonFixResult = baseFixJsonString(input, {
@@ -1835,7 +1835,7 @@ export function fixBlockConfig(
   // 阶段2: 结构语义修复
   // ==========================================================================
   if (enableStructureFix && parsedConfig && typeof parsedConfig === 'object') {
-    console.log('[BlockConfigFixer] 阶段2: 开始结构语义修复');
+    // console.log('[BlockConfigFixer] 阶段2: 开始结构语义修复');
     
     // 处理数组（批量块定义）
     if (Array.isArray(parsedConfig)) {
@@ -1859,7 +1859,7 @@ export function fixBlockConfig(
           : knownBlockType
             ? `裸inputs格式（已知类型: ${knownBlockType}）`
             : '未知格式（可能是裸inputs）';
-      console.log(`[BlockConfigFixer] 检测配置类型: ${configType}`);
+      // console.log(`[BlockConfigFixer] 检测配置类型: ${configType}`);
       const structureFix = fixConfigRecursively(parsedConfig, workspace, knownBlockType);
       if (structureFix.wasFixed) {
         parsedConfig = structureFix.fixed;
@@ -1870,15 +1870,15 @@ export function fixBlockConfig(
     }
     
     if (result.stages.structureFix.changes.length > 0) {
-      console.log('[BlockConfigFixer] 结构修复详情:');
+      // console.log('[BlockConfigFixer] 结构修复详情:');
       result.stages.structureFix.changes.forEach(change => {
-        console.log(`  ${change}`);
+        // console.log(`  ${change}`);
       });
       // 输出修复后的 JSON 结构（用于调试）
-      console.log('[BlockConfigFixer] 修复后的 JSON 结构:');
-      console.log(JSON.stringify(parsedConfig, null, 2));
+      // console.log('[BlockConfigFixer] 修复后的 JSON 结构:');
+      // console.log(JSON.stringify(parsedConfig, null, 2));
     } else {
-      console.log('[BlockConfigFixer] 结构检查完成，无需修复');
+      // console.log('[BlockConfigFixer] 结构检查完成，无需修复');
     }
   }
   
@@ -1889,7 +1889,7 @@ export function fixBlockConfig(
       typeof parsedConfig === 'object' && 
       parsedConfig.type === knownBlockType && 
       parsedConfig.inputs) {
-    console.log(`[BlockConfigFixer] 已知块类型 ${knownBlockType}，提取 inputs 返回`);
+    // console.log(`[BlockConfigFixer] 已知块类型 ${knownBlockType}，提取 inputs 返回`);
     result.fixed = parsedConfig.inputs;
   } else {
     result.fixed = parsedConfig;

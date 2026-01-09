@@ -6845,8 +6845,19 @@ function generateTreeStructure(rootBlocks: any[], allBlocks: any[], groupBy: str
 
   const lines: string[] = [];
   lines.push('🌳 工作区结构树:');
-  lines.push('type [id] @(x,y) {fields}');
-  lines.push('[inputName/targetInput:connectionType/insertPosition]');
+  lines.push('');
+  lines.push('📖 格式说明:');
+  lines.push('  块格式: type [id] @(x,y) {field:value}');
+  lines.push('  连接格式: [inputName:inputType]');
+  lines.push('');
+  lines.push('🔗 层级与连接关系:');
+  lines.push('  ├── 同级有后续兄弟块');
+  lines.push('  └── 同级最后一个块');
+  lines.push('  缩进层级 = 嵌套深度（每2空格为1层）');
+  lines.push('');
+  lines.push('📌 连接类型:');
+  lines.push('  [inputName:statement] → 语句输入（可放入执行块链，如DO/ELSE/SETUP）');
+  lines.push('  [inputName:value] → 值输入（接收返回值，如IF/NUM/TEXT）');
   lines.push('');
 
   rootBlocks.forEach((rootBlock, index) => {
@@ -7307,7 +7318,7 @@ function formatWorkspaceOverviewText(
   const lines: string[] = [];
   
   // console.log('==========================🌍 工作区完整概览==========================');
-  lines.push('<keyInfon>请确保生成的内容符合用户需求，并且结构清晰易懂。</keyInfon>');
+  lines.push('<keyInfon>请确保生成的代码逻辑正确，符合用户需求，逻辑正确性高于语法正确性。主动分析边界条件和异常情况，确保代码健壮性。</keyInfon>');
   lines.push('🌍 工作区完整概览');
   lines.push('='.repeat(50));
   lines.push('');
@@ -10088,6 +10099,243 @@ async function getCurrentProjectInfo(projectService?: any): Promise<{
   }
 }
 
+// =============================================================================
+// 库块分析辅助函数
+// =============================================================================
+
+/**
+ * 生成块的 .abi 格式示例
+ * 参考多个 readme 的格式规范:
+ * - 有字段时: "fields":{"FIELD":"value",...}
+ * - 有输入时: "inputs":{"INPUT":{"block":{...}},...}
+ * - 两者都有: "fields":{...},"inputs":{...}
+ * - 变量字段: "VAR":{"id":"var_id"}
+ */
+function generateAbiFormat(block: any): string {
+  const fieldParts: string[] = [];
+  const inputParts: string[] = [];
+  
+  // 处理字段
+  if (block.fields && block.fields.length > 0) {
+    for (const field of block.fields) {
+      if (field.type === 'variable') {
+        // 变量字段使用对象格式
+        fieldParts.push(`"${field.name}":{"id":"var_id"}`);
+      } else if (field.type === 'dropdown') {
+        const defaultVal = getDropdownDefaultValue(field);
+        if (defaultVal) {
+          fieldParts.push(`"${field.name}":"${defaultVal}"`);
+        }
+      } else if (field.type === 'text') {
+        const val = field.defaultValue || 'name';
+        fieldParts.push(`"${field.name}":"${val}"`);
+      } else if (field.type === 'number') {
+        const val = field.defaultValue || '0';
+        fieldParts.push(`"${field.name}":"${val}"`);
+      }
+    }
+  }
+  
+  // 处理输入
+  if (block.inputs && block.inputs.length > 0) {
+    for (const input of block.inputs) {
+      inputParts.push(`"${input.name}":{"block":{...}}`);
+    }
+  }
+  
+  // 组装结果
+  const parts: string[] = [];
+  if (fieldParts.length > 0) {
+    parts.push(`"fields":{${fieldParts.join(',')}}`);
+  }
+  if (inputParts.length > 0) {
+    parts.push(`"inputs":{${inputParts.join(',')}}`);
+  }
+  
+  if (parts.length === 0) {
+    return '`{}`';
+  }
+  
+  // 组合并截断过长内容
+  let result = parts.join(',');
+  if (result.length > 80) {
+    result = result.substring(0, 77) + '...';
+  }
+  
+  return '`' + result + '`';
+}
+
+/**
+ * 获取下拉字段的默认值
+ */
+function getDropdownDefaultValue(field: any): string {
+  // 检查是否是动态选项（如 ${board.digitalPins}）
+  if (typeof field.options === 'string' && field.options.startsWith('${')) {
+    // 动态选项，返回示例值
+    if (field.options.includes('digitalPins')) return '13';
+    if (field.options.includes('analogPins')) return 'A0';
+    if (field.options.includes('pwmPins')) return '3';
+    if (field.options.includes('i2c')) return 'Wire';
+    return 'value';
+  }
+  
+  // 使用默认值
+  if (field.defaultValue) {
+    return String(field.defaultValue);
+  }
+  
+  // 从选项中获取第一个值
+  if (field.options && Array.isArray(field.options) && field.options.length > 0) {
+    const firstOpt = field.options[0];
+    if (Array.isArray(firstOpt)) {
+      return String(firstOpt[1] || firstOpt[0] || '');
+    }
+    return String(firstOpt);
+  }
+  
+  return '';
+}
+
+/**
+ * 收集块定义中的字段类型示例
+ * 参考 readme 的字段类型映射格式
+ */
+function collectFieldTypeExamples(blocks: any[]): Record<string, { format: string; sample: string }> {
+  const examples: Record<string, { format: string; sample: string }> = {};
+  
+  // 收集所有输入类型
+  let hasInputValue = false;
+  let hasInputStatement = false;
+  
+  // 预设常见字段类型的格式说明
+  const fieldTypeFormats: Record<string, string> = {
+    'field_input': '字符串',
+    'field_dropdown': '字符串',
+    'field_variable': '对象',
+    'field_number': '数字',
+    'input_value': '块连接',
+    'input_statement': '语句块连接'
+  };
+  
+  for (const block of blocks) {
+    // 处理字段
+    if (block.fields) {
+      for (const field of block.fields) {
+        const fieldTypeKey = `field_${field.type === 'text' ? 'input' : field.type}`;
+        
+        // 跳过已经收集过的类型
+        if (examples[fieldTypeKey]) continue;
+        
+        switch (field.type) {
+          case 'variable':
+            examples[fieldTypeKey] = {
+              format: fieldTypeFormats['field_variable'],
+              sample: `"${field.name}": {"id": "name"}`
+            };
+            break;
+          case 'text':
+            examples[fieldTypeKey] = {
+              format: fieldTypeFormats['field_input'],
+              sample: `"${field.name}": "${field.defaultValue || 'value'}"`
+            };
+            break;
+          case 'dropdown':
+            // 检查是否是动态选项
+            const isDynamic = typeof field.options === 'string' && field.options.startsWith('${');
+            const optVal = getDropdownDefaultValue(field);
+            if (isDynamic) {
+              examples['field_dropdown(动态)'] = {
+                format: '字符串(动态)',
+                sample: `"${field.name}": "${optVal}"`
+              };
+            } else if (!examples[fieldTypeKey]) {
+              examples[fieldTypeKey] = {
+                format: fieldTypeFormats['field_dropdown'],
+                sample: `"${field.name}": "${optVal}"`
+              };
+            }
+            break;
+          case 'number':
+            examples[fieldTypeKey] = {
+              format: '数值字符串',
+              sample: `"${field.name}": "${field.defaultValue || '0'}"`
+            };
+            break;
+          case 'checkbox':
+            examples[fieldTypeKey] = {
+              format: '布尔值',
+              sample: `"${field.name}": true`
+            };
+            break;
+          case 'colour':
+            examples[fieldTypeKey] = {
+              format: '颜色字符串',
+              sample: `"${field.name}": "${field.defaultValue || '#ff0000'}"`
+            };
+            break;
+        }
+      }
+    }
+    
+    // 处理输入
+    if (block.inputs) {
+      for (const input of block.inputs) {
+        if (input.type === 'value') hasInputValue = true;
+        if (input.type === 'statement') hasInputStatement = true;
+      }
+    }
+  }
+  
+  // 添加输入类型示例
+  if (hasInputValue && !examples['input_value']) {
+    examples['input_value'] = {
+      format: '块连接',
+      sample: `"inputs": {"VALUE": {"block": {...}}}`
+    };
+  }
+  if (hasInputStatement && !examples['input_statement']) {
+    examples['input_statement'] = {
+      format: '语句块连接',
+      sample: `"inputs": {"DO": {"block": {...}}}`
+    };
+  }
+  
+  return examples;
+}
+
+/**
+ * 收集块的下拉选项（用于字段选项说明）
+ */
+function collectDropdownOptions(blocks: any[]): Record<string, string[]> {
+  const options: Record<string, string[]> = {};
+  
+  for (const block of blocks) {
+    if (!block.fields) continue;
+    
+    for (const field of block.fields) {
+      if (field.type !== 'dropdown') continue;
+      if (!field.options || !Array.isArray(field.options)) continue;
+      
+      // 已有的选项跳过
+      if (options[field.name]) continue;
+      
+      // 提取选项值
+      const values = field.options.map((opt: any) => {
+        if (Array.isArray(opt)) {
+          return String(opt[1] || opt[0] || '');
+        }
+        return String(opt);
+      }).filter(Boolean);
+      
+      if (values.length > 0) {
+        options[field.name] = values;
+      }
+    }
+  }
+  
+  return options;
+}
+
 /**
  * 分析库块工具参数接口
  */
@@ -10270,82 +10518,87 @@ export async function analyzeLibraryBlocksTool(
 
     const analysisTime = Date.now() - startTime;
     
-    // 生成详细的分析报告
-    let report = `📊 库块分析报告\n\n`;
-    report += `🕒 分析耗时: ${analysisTime}ms\n`;
-    report += `📚 分析库数: ${Object.keys(libraryResults).length}/${libraryNames.length}\n`;
-    report += `🧩 总块数: ${totalBlocks}\n`;
-    report += `📋 总模式数: ${totalPatterns}\n\n`;
+    // 生成简化的块定义报告（类似 readme.md 格式）
+    let report = `# 库块定义\n\n`;
 
     for (const [libraryName, knowledge] of Object.entries(libraryResults)) {
-      report += `## ${libraryName}\n`;
-      report += `- 块数量: ${knowledge.blocks.length}\n`;
-      report += `- 使用模式: ${knowledge.usagePatterns.length}\n`;
-      report += `- 分类数: ${knowledge.categories.length}\n`;
+      report += `## ${libraryName}\n\n`;
       
       if (knowledge.blocks.length > 0) {
-        // 返回完整的块类型列表，按分类组织
-        const blocksByCategory = knowledge.blocks.reduce((acc, block) => {
-          if (!acc[block.category]) acc[block.category] = [];
-          acc[block.category].push(block);
-          return acc;
-        }, {} as Record<string, any[]>);
+        // 生成块定义表格
+        report += `| 块类型 | 连接 | 字段/输入 | .abi格式 | 生成代码 |\n`;
+        report += `|--------|------|----------|----------|----------|\n`;
         
-        report += `\n### 完整块类型列表 (${knowledge.blocks.length}个):\n`;
-        for (const [category, blocks] of Object.entries(blocksByCategory)) {
-          report += `\n#### 分类: ${category}\n`;
-          blocks.forEach(block => {
-            report += `- **${block.type}**: ${block.description || '无描述'}\n`;
-            
-            // 添加完整的块配置模板
-            const blockTemplate: any = {
-              type: block.type
-            };
-            
-            // 添加字段配置
-            if (block.fields && Object.keys(block.fields).length > 0) {
-              blockTemplate.fields = block.fields;
-            }
-            
-            // 添加输入配置（包括shadow块）
-            if (block.inputs && Object.keys(block.inputs).length > 0) {
-              blockTemplate.inputs = block.inputs;
-            }
-            
-            report += `  配置模板: \`${JSON.stringify(blockTemplate, null, 2)}\`\n\n`;
-          });
-        }
-      }
-      
-      if (knowledge.usagePatterns.length > 0) {
-        report += `\n### 推荐使用模式:\n`;
-        knowledge.usagePatterns.slice(0, 5).forEach((pattern, index) => {
-          report += `${index + 1}. **${pattern.name}**: ${pattern.description}\n`;
+        for (const block of knowledge.blocks) {
+          const blockType = block.type;
           
-          // 添加模式的完整配置示例
-          if (pattern.sequence && pattern.sequence.length > 0) {
-            report += `   示例配置:\n`;
-            pattern.sequence.slice(0, 2).forEach((step, stepIndex) => {
-              const stepTemplate: any = {
-                type: step.blockType
-              };
-              // 注意：UsagePattern的sequence只有基本信息，需要从blocks中查找完整配置
-              const blockInfo = knowledge.blocks.find(b => b.type === step.blockType);
-              if (blockInfo) {
-                if (blockInfo.fields) stepTemplate.fields = blockInfo.fields;
-                if (blockInfo.inputs) stepTemplate.inputs = blockInfo.inputs;
-              }
-              
-              report += `   ${stepIndex + 1}. \`${JSON.stringify(stepTemplate, null, 2)}\`\n`;
-            });
+          // 连接类型
+          const connectionParts: string[] = [];
+          if (block.connectionTypes.hasPrevious || block.connectionTypes.hasNext) {
+            connectionParts.push('语句块');
           }
-        });
-        if (knowledge.usagePatterns.length > 5) {
-          report += `... 还有 ${knowledge.usagePatterns.length - 5} 个模式\n`;
+          if (block.connectionTypes.hasOutput) {
+            connectionParts.push('值块');
+          }
+          const connectionType = connectionParts.length > 0 ? connectionParts.join('/') : '独立块';
+          
+          // 字段/输入信息
+          const fieldInputParts: string[] = [];
+          if (block.fields && block.fields.length > 0) {
+            for (const field of block.fields) {
+              const fieldTypeStr = field.type === 'variable' ? 'field_variable' : 
+                                   field.type === 'dropdown' ? 'field_dropdown' :
+                                   field.type === 'text' ? 'field_input' :
+                                   field.type === 'number' ? 'field_number' :
+                                   `field_${field.type}`;
+              fieldInputParts.push(`${field.name}(${fieldTypeStr})`);
+            }
+          }
+          if (block.inputs && block.inputs.length > 0) {
+            for (const input of block.inputs) {
+              const inputTypeStr = input.type === 'value' ? 'input_value' : 'input_statement';
+              fieldInputParts.push(`${input.name}(${inputTypeStr})`);
+            }
+          }
+          const fieldInputStr = fieldInputParts.length > 0 ? fieldInputParts.join(', ') : '-';
+          
+          // .abi格式示例 - 已经包含反引号格式
+          const abiFormat = generateAbiFormat(block);
+          
+          // 生成代码（从 generatorInfo 提取）
+          const generatedCode = block.generatorInfo?.generatedCode || '-';
+          
+          report += `| \`${blockType}\` | ${connectionType} | ${fieldInputStr} | ${abiFormat} | \`${generatedCode}\` |\n`;
         }
+        
+        report += '\n';
+        
+        // 添加字段类型映射说明
+        report += `### 字段类型映射\n\n`;
+        report += `| 类型 | .abi格式 | 示例 |\n`;
+        report += `|------|----------|------|\n`;
+        
+        const fieldTypeExamples = collectFieldTypeExamples(knowledge.blocks);
+        for (const [fieldType, example] of Object.entries(fieldTypeExamples)) {
+          report += `| ${fieldType} | ${example.format} | \`${example.sample}\` |\n`;
+        }
+        
+        report += '\n';
+        
+        // 添加连接规则说明
+        report += `### 连接规则\n\n`;
+        const statementBlocks = knowledge.blocks.filter(b => b.connectionTypes.hasPrevious || b.connectionTypes.hasNext);
+        const valueBlocks = knowledge.blocks.filter(b => b.connectionTypes.hasOutput);
+        
+        if (statementBlocks.length > 0) {
+          report += `- **语句块**: ${statementBlocks.map(b => `\`${b.type}\``).join('、')} 具有 \`previousStatement\`/\`nextStatement\`\n`;
+        }
+        if (valueBlocks.length > 0) {
+          report += `- **值块**: ${valueBlocks.map(b => `\`${b.type}\``).join('、')} 有 \`output\`，可作为表达式使用\n`;
+        }
+        
+        report += '\n';
       }
-      
-      report += '\n';
     }
 
     toolResult = report;
