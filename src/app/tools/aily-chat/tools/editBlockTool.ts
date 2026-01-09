@@ -10105,109 +10105,235 @@ async function getCurrentProjectInfo(projectService?: any): Promise<{
 
 /**
  * 生成块的 .abi 格式示例
+ * 参考多个 readme 的格式规范:
+ * - 有字段时: "fields":{"FIELD":"value",...}
+ * - 有输入时: "inputs":{"INPUT":{"block":{...}},...}
+ * - 两者都有: "fields":{...},"inputs":{...}
+ * - 变量字段: "VAR":{"id":"var_id"}
  */
 function generateAbiFormat(block: any): string {
-  const abiObj: any = {};
+  const fieldParts: string[] = [];
+  const inputParts: string[] = [];
   
   // 处理字段
   if (block.fields && block.fields.length > 0) {
-    const fields: any = {};
     for (const field of block.fields) {
       if (field.type === 'variable') {
-        // 变量字段使用简洁的 ID 格式
-        fields[field.name] = `${field.name.toLowerCase()}_id`;
+        // 变量字段使用对象格式
+        fieldParts.push(`"${field.name}":{"id":"var_id"}`);
       } else if (field.type === 'dropdown') {
-        // 下拉字段使用默认值或第一个选项
-        fields[field.name] = field.defaultValue || (field.options && field.options[0]) || '';
-      } else {
-        // 其他字段直接使用默认值
-        fields[field.name] = field.defaultValue || '';
+        const defaultVal = getDropdownDefaultValue(field);
+        if (defaultVal) {
+          fieldParts.push(`"${field.name}":"${defaultVal}"`);
+        }
+      } else if (field.type === 'text') {
+        const val = field.defaultValue || 'name';
+        fieldParts.push(`"${field.name}":"${val}"`);
+      } else if (field.type === 'number') {
+        const val = field.defaultValue || '0';
+        fieldParts.push(`"${field.name}":"${val}"`);
       }
-    }
-    if (Object.keys(fields).length > 0) {
-      abiObj.fields = fields;
     }
   }
   
   // 处理输入
   if (block.inputs && block.inputs.length > 0) {
-    const inputs: any = {};
     for (const input of block.inputs) {
-      inputs[input.name] = { block: { type: '...' } };
-    }
-    if (Object.keys(inputs).length > 0) {
-      abiObj.inputs = inputs;
+      inputParts.push(`"${input.name}":{"block":{...}}`);
     }
   }
   
-  // 简化输出，避免过长
-  const jsonStr = JSON.stringify(abiObj);
-  return jsonStr.length > 80 ? jsonStr.substring(0, 77) + '...' : jsonStr;
+  // 组装结果
+  const parts: string[] = [];
+  if (fieldParts.length > 0) {
+    parts.push(`"fields":{${fieldParts.join(',')}}`);
+  }
+  if (inputParts.length > 0) {
+    parts.push(`"inputs":{${inputParts.join(',')}}`);
+  }
+  
+  if (parts.length === 0) {
+    return '`{}`';
+  }
+  
+  // 组合并截断过长内容
+  let result = parts.join(',');
+  if (result.length > 80) {
+    result = result.substring(0, 77) + '...';
+  }
+  
+  return '`' + result + '`';
+}
+
+/**
+ * 获取下拉字段的默认值
+ */
+function getDropdownDefaultValue(field: any): string {
+  // 检查是否是动态选项（如 ${board.digitalPins}）
+  if (typeof field.options === 'string' && field.options.startsWith('${')) {
+    // 动态选项，返回示例值
+    if (field.options.includes('digitalPins')) return '13';
+    if (field.options.includes('analogPins')) return 'A0';
+    if (field.options.includes('pwmPins')) return '3';
+    if (field.options.includes('i2c')) return 'Wire';
+    return 'value';
+  }
+  
+  // 使用默认值
+  if (field.defaultValue) {
+    return String(field.defaultValue);
+  }
+  
+  // 从选项中获取第一个值
+  if (field.options && Array.isArray(field.options) && field.options.length > 0) {
+    const firstOpt = field.options[0];
+    if (Array.isArray(firstOpt)) {
+      return String(firstOpt[1] || firstOpt[0] || '');
+    }
+    return String(firstOpt);
+  }
+  
+  return '';
 }
 
 /**
  * 收集块定义中的字段类型示例
+ * 参考 readme 的字段类型映射格式
  */
 function collectFieldTypeExamples(blocks: any[]): Record<string, { format: string; sample: string }> {
   const examples: Record<string, { format: string; sample: string }> = {};
+  
+  // 收集所有输入类型
+  let hasInputValue = false;
+  let hasInputStatement = false;
+  
+  // 预设常见字段类型的格式说明
+  const fieldTypeFormats: Record<string, string> = {
+    'field_input': '字符串',
+    'field_dropdown': '字符串',
+    'field_variable': '对象',
+    'field_number': '数字',
+    'input_value': '块连接',
+    'input_statement': '语句块连接'
+  };
+  
+  for (const block of blocks) {
+    // 处理字段
+    if (block.fields) {
+      for (const field of block.fields) {
+        const fieldTypeKey = `field_${field.type === 'text' ? 'input' : field.type}`;
+        
+        // 跳过已经收集过的类型
+        if (examples[fieldTypeKey]) continue;
+        
+        switch (field.type) {
+          case 'variable':
+            examples[fieldTypeKey] = {
+              format: fieldTypeFormats['field_variable'],
+              sample: `"${field.name}": {"id": "name"}`
+            };
+            break;
+          case 'text':
+            examples[fieldTypeKey] = {
+              format: fieldTypeFormats['field_input'],
+              sample: `"${field.name}": "${field.defaultValue || 'value'}"`
+            };
+            break;
+          case 'dropdown':
+            // 检查是否是动态选项
+            const isDynamic = typeof field.options === 'string' && field.options.startsWith('${');
+            const optVal = getDropdownDefaultValue(field);
+            if (isDynamic) {
+              examples['field_dropdown(动态)'] = {
+                format: '字符串(动态)',
+                sample: `"${field.name}": "${optVal}"`
+              };
+            } else if (!examples[fieldTypeKey]) {
+              examples[fieldTypeKey] = {
+                format: fieldTypeFormats['field_dropdown'],
+                sample: `"${field.name}": "${optVal}"`
+              };
+            }
+            break;
+          case 'number':
+            examples[fieldTypeKey] = {
+              format: '数值字符串',
+              sample: `"${field.name}": "${field.defaultValue || '0'}"`
+            };
+            break;
+          case 'checkbox':
+            examples[fieldTypeKey] = {
+              format: '布尔值',
+              sample: `"${field.name}": true`
+            };
+            break;
+          case 'colour':
+            examples[fieldTypeKey] = {
+              format: '颜色字符串',
+              sample: `"${field.name}": "${field.defaultValue || '#ff0000'}"`
+            };
+            break;
+        }
+      }
+    }
+    
+    // 处理输入
+    if (block.inputs) {
+      for (const input of block.inputs) {
+        if (input.type === 'value') hasInputValue = true;
+        if (input.type === 'statement') hasInputStatement = true;
+      }
+    }
+  }
+  
+  // 添加输入类型示例
+  if (hasInputValue && !examples['input_value']) {
+    examples['input_value'] = {
+      format: '块连接',
+      sample: `"inputs": {"VALUE": {"block": {...}}}`
+    };
+  }
+  if (hasInputStatement && !examples['input_statement']) {
+    examples['input_statement'] = {
+      format: '语句块连接',
+      sample: `"inputs": {"DO": {"block": {...}}}`
+    };
+  }
+  
+  return examples;
+}
+
+/**
+ * 收集块的下拉选项（用于字段选项说明）
+ */
+function collectDropdownOptions(blocks: any[]): Record<string, string[]> {
+  const options: Record<string, string[]> = {};
   
   for (const block of blocks) {
     if (!block.fields) continue;
     
     for (const field of block.fields) {
-      const fieldTypeKey = field.type;
+      if (field.type !== 'dropdown') continue;
+      if (!field.options || !Array.isArray(field.options)) continue;
       
-      // 跳过已经收集过的类型
-      if (examples[fieldTypeKey]) continue;
+      // 已有的选项跳过
+      if (options[field.name]) continue;
       
-      switch (field.type) {
-        case 'variable':
-          examples[fieldTypeKey] = {
-            format: '变量ID',
-            sample: `"${field.name}": "var_id"`
-          };
-          break;
-        case 'text':
-          examples[fieldTypeKey] = {
-            format: '字符串',
-            sample: `"${field.name}": "${field.defaultValue || 'text'}"`
-          };
-          break;
-        case 'dropdown':
-          const optionStr = field.options ? field.options.slice(0, 2).join('/') : 'option';
-          examples[fieldTypeKey] = {
-            format: '字符串(选项)',
-            sample: `"${field.name}": "${field.defaultValue || optionStr}"`
-          };
-          break;
-        case 'number':
-          examples[fieldTypeKey] = {
-            format: '数值字符串',
-            sample: `"${field.name}": "${field.defaultValue || '0'}"`
-          };
-          break;
-        case 'checkbox':
-          examples[fieldTypeKey] = {
-            format: '布尔值',
-            sample: `"${field.name}": ${field.defaultValue || 'true'}`
-          };
-          break;
-        case 'colour':
-          examples[fieldTypeKey] = {
-            format: '颜色字符串',
-            sample: `"${field.name}": "${field.defaultValue || '#ff0000'}"`
-          };
-          break;
-        default:
-          examples[fieldTypeKey] = {
-            format: '自定义',
-            sample: `"${field.name}": "${field.defaultValue || '...'}"`
-          };
+      // 提取选项值
+      const values = field.options.map((opt: any) => {
+        if (Array.isArray(opt)) {
+          return String(opt[1] || opt[0] || '');
+        }
+        return String(opt);
+      }).filter(Boolean);
+      
+      if (values.length > 0) {
+        options[field.name] = values;
       }
     }
   }
   
-  return examples;
+  return options;
 }
 
 /**
@@ -10436,13 +10562,13 @@ export async function analyzeLibraryBlocksTool(
           }
           const fieldInputStr = fieldInputParts.length > 0 ? fieldInputParts.join(', ') : '-';
           
-          // .abi格式示例
+          // .abi格式示例 - 已经包含反引号格式
           const abiFormat = generateAbiFormat(block);
           
           // 生成代码（从 generatorInfo 提取）
           const generatedCode = block.generatorInfo?.generatedCode || '-';
           
-          report += `| \`${blockType}\` | ${connectionType} | ${fieldInputStr} | \`${abiFormat}\` | \`${generatedCode}\` |\n`;
+          report += `| \`${blockType}\` | ${connectionType} | ${fieldInputStr} | ${abiFormat} | \`${generatedCode}\` |\n`;
         }
         
         report += '\n';
