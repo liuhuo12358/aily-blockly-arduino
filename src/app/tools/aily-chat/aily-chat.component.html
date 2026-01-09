@@ -164,6 +164,11 @@
   (itemClickEvent)="modeMenuClick($event)"></app-menu>
 }
 
+@if(showModelMenu){
+<app-menu class="model-menu" [menuList]="ModelList" [position]="modelListPosition" (closeEvent)="closeMenu()"
+  (itemClickEvent)="modelMenuClick($event)"></app-menu>
+}
+
 <!-- 新手引导组件 -->
 <app-onboarding 
   [show]="showOnboarding" 

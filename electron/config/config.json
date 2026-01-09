@@ -13,7 +13,7 @@
     "cn": {
       "name": "China",
       "enabled": true,
-      "api_server": "http://127.0.0.1:8080",
+      "api_server": "http://42.193.22.41:8180",
       "npm_registry": "https://registry.diandeng.tech",
       "resource": "https://blockly.diandeng.tech",
       "updater": "https://dl.diandeng.tech/blockly"
