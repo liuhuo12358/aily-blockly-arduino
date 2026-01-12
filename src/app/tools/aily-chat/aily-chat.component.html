@@ -165,3 +165,8 @@
 <app-menu class="mode-menu" [menuList]="ModeList" [position]="modeListPosition" (closeEvent)="closeMenu()"
   (itemClickEvent)="modeMenuClick($event)"></app-menu>
 }
+
+@if(showModelMenu){
+<app-menu class="model-menu" [menuList]="ModelList" [position]="modelListPosition" (closeEvent)="closeMenu()"
+  (itemClickEvent)="modelMenuClick($event)"></app-menu>
+}
