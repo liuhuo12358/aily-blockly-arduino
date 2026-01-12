@@ -16,7 +16,6 @@
       display: flex;
       align-items: center;
       gap: 8px;
-      margin-bottom: 8px;
 
       .error-text {
         color: #999;
@@ -87,7 +86,7 @@
 
         // 确保 SVG 正确显示
         svg {
-          max-width: 100% !important;
+          // max-width: 100% !important;
           height: auto !important;
           display: block !important;
           margin: 0 auto;
