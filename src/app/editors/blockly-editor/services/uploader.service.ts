@@ -39,6 +39,7 @@ export class _UploaderService {
   private uploadCompleted = false;
   private isErrored = false;
   cancelled = false;
+  private uploadPromiseReject: any = null; // 保存 Promise 的 reject 函数
 
   private initialized = false; // 防止重复初始化
 
@@ -133,8 +134,12 @@ export class _UploaderService {
     this.isErrored = false;
     this.cancelled = false;
     this.uploadCompleted = false;
+    this.uploadInProgress = true; // 立即设置为true，使取消功能生效
   
     return new Promise<ActionState>(async (resolve, reject) => {
+      // 保存 reject 函数，以便 cancel() 方法可以立即中断
+      this.uploadPromiseReject = reject;
+      
       try {
         // 重置ESP32上传状态，防止进度累加
         this['esp32UploadState'] = {
@@ -166,8 +171,9 @@ export class _UploaderService {
             console.log("build result:", buildResult);
             // 编译成功，继续上传流程
           } catch (error) {
+            this.uploadInProgress = false; // 重置状态
             // 检查编译是否被取消
-            if (this._builderService.cancelled) {
+            if (this._builderService.cancelled || this.cancelled) {
               this.noticeService.update({
                 title: "编译已取消",
                 text: '编译已取消',
@@ -186,10 +192,25 @@ export class _UploaderService {
 
           // 检查编译是否成功
           if (!this._builderService.passed) {
+            this.uploadInProgress = false; // 重置状态
             this.handleUploadError('编译失败，请检查代码', "编译失败");
             reject({ state: 'error', text: '编译失败，请检查代码' });
             return;
           }
+        }
+        
+        // 检查是否在编译期间被取消
+        if (this.cancelled) {
+          this.uploadInProgress = false;
+          this.noticeService.update({
+            title: "上传已取消",
+            text: '上传已取消',
+            state: 'warn',
+            setTimeout: 55000
+          });
+          this.workflowService.finishUpload(false, 'Cancelled during build');
+          reject({ state: 'warn', text: '上传已取消' });
+          return;
         }
 
         // 第二步：编译完成或不需要编译，现在进入上传状态
@@ -205,7 +226,7 @@ export class _UploaderService {
           return;
         }
 
-        // 设置上传状态
+        // 设置上传状态（uploadInProgress 已在方法开始时设置）
         this._builderService.isUploading = true;
 
         const boardJson = await this.projectService.getBoardJson()
@@ -320,6 +341,20 @@ export class _UploaderService {
         this.cmdService.run(uploadCmd, null, false).subscribe({
           next: async (output: CmdOutput) => {
             this.streamId = output.streamId;
+            
+            // 如果已被取消且需要立即杀死，现在立即杀死进程
+            if (this.cancelled && this['shouldKillImmediately'] && this.streamId) {
+              console.log("取消标志已设置，立即杀死上传进程:", this.streamId);
+              this.cmdService.kill(this.streamId);
+              this['shouldKillImmediately'] = false;
+              return; // 不再处理任何数据
+            }
+            
+            // 如果已被取消，不处理任何上传数据，直接返回
+            if (this.cancelled) {
+              console.log("上传已被取消，跳过数据处理");
+              return;
+            }
 
             if (output.data) {
               const data = output.data;
@@ -330,6 +365,11 @@ export class _UploaderService {
                 bufferData = lines.pop() || '';
 
                 lines.forEach((line: string) => {
+                  // 如果已取消，不再处理任何行
+                  if (this.cancelled) {
+                    return;
+                  }
+                  
                   const trimmedLine = line.trim();
                   if (trimmedLine) {
                     errorText = trimmedLine;
@@ -466,14 +506,32 @@ export class _UploaderService {
             this._builderService.isUploading = false;
             this.handleUploadError(error.message || '上传过程中发生错误');
             this.workflowService.finishUpload(false, error.message || 'Upload error');
+            this.uploadPromiseReject = null;
             reject({ state: 'error', text: error.message || '上传失败' });
           },
           complete: () => {
-            console.log("上传命令完成");
-            if (this.isErrored) {
+            console.log("上传命令完成，cancelled:", this.cancelled, "isErrored:", this.isErrored, "uploadCompleted:", this.uploadCompleted);
+            
+            // 第一优先级：检查是否已取消
+            if (this.cancelled) {
+              console.warn("上传中断 - 用户取消");
+              // 安全更新UI
+              this.safeUpdateNotice({
+                title: "上传已取消",
+                text: '上传已取消',
+                state: 'warn',
+                setTimeout: 55000
+              });
+              this._builderService.isUploading = false;
+              this.workflowService.finishUpload(false, 'Cancelled');
+              this.uploadPromiseReject = null;
+              reject({ state: 'warn', text: '上传已取消' });
+            } else if (this.isErrored) {
+              console.log("上传命令完成 - 发生错误");
               this._builderService.isUploading = false;
               this.handleUploadError('上传过程中发生错误');
               this.workflowService.finishUpload(false, errorText);
+              this.uploadPromiseReject = null;
               reject({ state: 'error', text: errorText });
             } else if (this.uploadCompleted) {
               console.log("上传完成");
@@ -488,19 +546,8 @@ export class _UploaderService {
               }
               this._builderService.isUploading = false;
               this.workflowService.finishUpload(true);
+              this.uploadPromiseReject = null;
               resolve({ state: 'done', text: '上传完成' });
-            } else if (this.cancelled) {
-              console.warn("上传中断");
-              // 安全更新UI
-              this.safeUpdateNotice({
-                title: "上传已取消",
-                text: '上传已取消',
-                state: 'warn',
-                setTimeout: 55000
-              });
-              this._builderService.isUploading = false;
-              this.workflowService.finishUpload(false, 'Cancelled');
-              reject({ state: 'warn', text: '上传已取消' });
             } else {
               console.warn("上传未完成，可能是由于超时或其他原因");
               // 安全更新UI
@@ -513,6 +560,7 @@ export class _UploaderService {
               });
               this._builderService.isUploading = false;
               this.workflowService.finishUpload(false, 'Upload incomplete');
+              this.uploadPromiseReject = null;
               reject({ state: 'error', text: '上传未完成，请检查日志' });
             }
           }
@@ -521,6 +569,7 @@ export class _UploaderService {
         this._builderService.isUploading = false; // 确保在异常情况下设置为false
         this.handleUploadError(error.message || '上传失败');
         this.workflowService.finishUpload(false, error.message || 'Upload failed');
+        this.uploadPromiseReject = null;
         reject({ state: 'error', text: error.message || '上传失败' });
       }
     });
@@ -577,9 +626,46 @@ export class _UploaderService {
     if (!this.uploadInProgress) {
       return;
     }
+    
+    console.log("取消上传，当前streamId:", this.streamId);
+    
+    // 立即设置取消标志，阻止所有后续处理
     this.cancelled = true;
+    this.uploadInProgress = false;
     this._builderService.isUploading = false;
-    this.cmdService.kill(this.streamId || '');
+    
+    // 立即更新通知状态为已取消
+    this.noticeService.update({
+      title: "上传已取消",
+      text: '上传已取消',
+      state: 'warn',
+      setTimeout: 55000
+    });
+    
+    // 如果正在编译，取消编译
+    if (this.workflowService.currentState === ProcessState.BUILDING) {
+      this._builderService.cancel();
+    }
+    
+    // 立即杀死进程（无论streamId是否存在）
+    // 如果streamId存在，杀死它；如果不存在，可能需要等待它被设置后再杀死
+    if (this.streamId) {
+      console.log("杀死上传进程:", this.streamId);
+      this.cmdService.kill(this.streamId);
+    } else {
+      console.log("streamId尚未设置，将在获取后立即杀死");
+      // 标记为需要立即杀死，当streamId被设置后会立即杀死
+      this['shouldKillImmediately'] = true;
+    }
+    
+    // 完成工作流状态
+    this.workflowService.finishUpload(false, 'Cancelled by user');
+    
+    // 立即 reject Promise，使按钮状态快速更新
+    if (this.uploadPromiseReject) {
+      this.uploadPromiseReject({ state: 'warn', text: '上传已取消' });
+      this.uploadPromiseReject = null;
+    }
   }
 }
 
