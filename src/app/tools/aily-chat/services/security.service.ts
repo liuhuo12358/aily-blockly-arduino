@@ -150,11 +150,6 @@ export const FILE_READ_LIMITS: FileReadLimits = {
         '.makefile', 'Makefile', '.cmake',
     ],
     blockedExtensions: [
-        // 二进制和可执行文件
-        '.exe', '.dll', '.so', '.dylib', '.bin',
-        '.msi', '.dmg', '.pkg', '.deb', '.rpm',
-        '.app', '.com', '.sys', '.drv',
-        
         // 密钥和证书
         '.key', '.pem', '.crt', '.cer', '.p12', '.pfx',
         '.jks', '.keystore',
@@ -538,19 +533,13 @@ export function validateFileRead(
     context: PathSecurityContext,
     fileSize?: number
 ): SecurityCheckResult {
-    // 1. 路径安全检查
-    const pathCheck = isPathAllowed(filePath, context);
-    if (!pathCheck.allowed) {
-        return pathCheck;
-    }
-    
-    // 2. 文件类型检查
+    // 1. 文件类型检查
     const typeCheck = isFileReadAllowed(filePath);
     if (!typeCheck.allowed) {
         return typeCheck;
     }
     
-    // 3. 文件大小检查
+    // 2. 文件大小检查
     if (fileSize !== undefined && fileSize > FILE_READ_LIMITS.maxFileSize) {
         return {
             allowed: false,
