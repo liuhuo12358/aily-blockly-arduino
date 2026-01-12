@@ -594,6 +594,14 @@ export class _BuilderService {
       console.log('已经处于取消状态，跳过');
       return; // 避免重复取消
     }
+
+    // 如果当前没有进行中的编译流程，直接返回，避免初始化时误报“编译已取消”
+    const isBuilding = this.workflowService.currentState === ProcessState.BUILDING;
+    const hasActiveProcess = !!this.buildSubscription || !!this.streamId;
+    if (!isBuilding && !hasActiveProcess) {
+      console.log('没有进行中的编译，忽略取消请求');
+      return;
+    }
     
     console.log('开始取消编译流程...');
     
