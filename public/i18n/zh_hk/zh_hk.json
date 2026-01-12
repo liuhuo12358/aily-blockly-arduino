@@ -70,10 +70,6 @@
         "SPONSORS_DESC": "本專案得到了以下企業/個人的贊助",
         "NEWS": "動態",
         "ONBOARDING": {
-            "SKIP": "跳過引導",
-            "PREV": "上一步",
-            "NEXT": "下一步",
-            "DONE": "完成",
             "STEP1_TITLE": "建立新專案",
             "STEP1_DESC": "點擊這裡可以建立一個新的程式設計專案，選擇開發板和程式語言開始您的創作之旅。",
             "STEP2_TITLE": "開啟現有專案",
@@ -301,11 +297,7 @@
             "STEP3_TITLE": "模式切換",
             "STEP3_DESC": "代理模式可以自動執行任務（如編寫代碼、修復錯誤），問答模式僅回答問題",
             "STEP4_TITLE": "發送/停止",
-            "STEP4_DESC": "點擊發送消息，AI正在回覆時可點擊停止",
-            "SKIP": "跳過",
-            "PREV": "上一步",
-            "NEXT": "下一步",
-            "DONE": "完成"
+            "STEP4_DESC": "點擊發送消息，AI正在回覆時可點擊停止"
         }
     },
     "PROJECT_SETTING_DIALOG": {

@@ -2086,7 +2086,7 @@ When in doubt, use this tool. Being proactive with task management demonstrates 
     },
     {
         name: 'analyze_library_blocks',
-        description: `分析指定库的块定义和使用模式，在库对应的readme不存在或者描述不准确的情况下使用这个工具来补充和完善库的文档说明。深入解析库文件，提取块定义、生成器逻辑、工具箱配置等信息，生成完整的库知识图谱。`,
+        description: `分析指定库的块定义，生成类似 readme.md 格式的块定义文档。优先使用read_file工具读取库readme，当库对应的 readme 不存在或描述不准确时，使用此工具补充和完善库的文档说明。`,
         input_schema: {
             type: 'object',
             properties: {
@@ -2094,17 +2094,6 @@ When in doubt, use this tool. Being proactive with task management demonstrates 
                     type: 'array',
                     items: { type: 'string' },
                     description: '要分析的库名称列表，如 ["@aily-project/lib-blinker", "@aily-project/lib-sensor"]'
-                },
-                analysisDepth: {
-                    type: 'string',
-                    enum: ['basic', 'detailed', 'full'],
-                    default: 'detailed',
-                    description: '分析深度：basic(基本信息)、detailed(详细信息)、full(完整关系图)'
-                },
-                includeExamples: {
-                    type: 'boolean',
-                    default: true,
-                    description: '是否包含使用示例'
                 }
             },
             required: ['libraryNames']

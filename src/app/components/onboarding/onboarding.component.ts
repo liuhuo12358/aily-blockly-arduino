@@ -1,46 +1,7 @@
 import { Component, Input, Output, EventEmitter, OnInit, OnDestroy, OnChanges, SimpleChanges, ViewChild, ElementRef, AfterViewChecked } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TranslateModule } from '@ngx-translate/core';
-
-/**
- * 新手引导步骤定义接口
- */
-export interface OnboardingStep {
-  /** 目标元素的 CSS 选择器 */
-  target: string;
-  /** 标题的国际化 key */
-  titleKey: string;
-  /** 描述的国际化 key */
-  descKey: string;
-  /** 提示框相对于高亮元素的位置: 'top' | 'bottom' | 'left' | 'right' */
-  position: 'top' | 'bottom' | 'left' | 'right';
-}
-
-/**
- * 新手引导配置接口
- */
-export interface OnboardingConfig {
-  /** 引导步骤列表 */
-  steps: OnboardingStep[];
-  /** 高亮区域的内边距，默认为 8 */
-  padding?: number;
-  /** 提示框与高亮区域的间距，默认为 20 */
-  gap?: number;
-  /** 提示框宽度，默认为 280 */
-  tooltipWidth?: number;
-  /** 提示框高度（用于计算位置），默认为 150 */
-  tooltipHeight?: number;
-  /** 是否启用动画，默认为 true */
-  animated?: boolean;
-  /** 跳过按钮的国际化 key */
-  skipKey?: string;
-  /** 上一步按钮的国际化 key */
-  prevKey?: string;
-  /** 下一步按钮的国际化 key */
-  nextKey?: string;
-  /** 完成按钮的国际化 key */
-  doneKey?: string;
-}
+import { OnboardingConfig, OnboardingStep } from '../../services/onboarding.service';
 
 @Component({
   selector: 'app-onboarding',
@@ -362,22 +323,5 @@ export class OnboardingComponent implements OnInit, OnDestroy, OnChanges, AfterV
   /** 完成引导 */
   private finish(): void {
     this.completed.emit();
-  }
-
-  /** 获取国际化 key */
-  getSkipKey(): string {
-    return this.getConfig('skipKey', 'COMMON.ONBOARDING.SKIP');
-  }
-
-  getPrevKey(): string {
-    return this.getConfig('prevKey', 'COMMON.ONBOARDING.PREV');
-  }
-
-  getNextKey(): string {
-    return this.getConfig('nextKey', 'COMMON.ONBOARDING.NEXT');
-  }
-
-  getDoneKey(): string {
-    return this.getConfig('doneKey', 'COMMON.ONBOARDING.DONE');
   }
 }

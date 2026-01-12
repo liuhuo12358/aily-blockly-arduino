@@ -70,10 +70,6 @@
         "SPONSORS_DESC": "Ce projet est sponsorisé par les entreprises/individus suivants",
         "NEWS": "Actualités",
         "ONBOARDING": {
-            "SKIP": "Passer",
-            "PREV": "Précédent",
-            "NEXT": "Suivant",
-            "DONE": "Terminé",
             "STEP1_TITLE": "Créer un nouveau projet",
             "STEP1_DESC": "Cliquez ici pour créer un nouveau projet de programmation. Choisissez votre carte et le langage de programmation pour commencer votre voyage créatif.",
             "STEP2_TITLE": "Ouvrir un projet existant",
@@ -301,11 +297,7 @@
             "STEP3_TITLE": "Changement de mode",
             "STEP3_DESC": "Le mode Agent peut exécuter des tâches automatiquement (écrire du code, corriger des erreurs). Le mode Q&R répond uniquement aux questions",
             "STEP4_TITLE": "Envoyer/Arrêter",
-            "STEP4_DESC": "Cliquez pour envoyer un message, ou arrêter lorsque l'IA répond",
-            "SKIP": "Passer",
-            "PREV": "Précédent",
-            "NEXT": "Suivant",
-            "DONE": "Terminé"
+            "STEP4_DESC": "Cliquez pour envoyer un message, ou arrêter lorsque l'IA répond"
         }
     },
     "PROJECT_SETTING_DIALOG": {

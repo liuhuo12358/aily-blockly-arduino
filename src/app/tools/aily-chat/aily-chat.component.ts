@@ -123,7 +123,8 @@ import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { LoginComponent } from '../../components/login/login.component';
 import { NoticeService } from '../../services/notice.service';
 import { AilyChatSettingsComponent } from './components/settings/settings.component';
-import { OnboardingComponent, OnboardingConfig } from '../../components/onboarding/onboarding.component';
+import { OnboardingService } from '../../services/onboarding.service';
+import { AILY_CHAT_ONBOARDING_CONFIG } from '../../configs/onboarding.config';
 
 // import { reloadAbiJsonTool, reloadAbiJsonToolSimple } from './tools';
 
@@ -143,8 +144,7 @@ import { OnboardingComponent, OnboardingConfig } from '../../components/onboardi
     FloatingTodoComponent,
     TranslateModule,
     LoginComponent,
-    AilyChatSettingsComponent,
-    OnboardingComponent
+    AilyChatSettingsComponent
   ],
   templateUrl: './aily-chat.component.html',
   styleUrl: './aily-chat.component.scss',
@@ -1031,41 +1031,6 @@ Do not create non-existent boards and libraries.
 
   isLoggedIn = false;
 
-  // 新手引导相关
-  showOnboarding = false;
-  onboardingConfig: OnboardingConfig = {
-    steps: [
-      {
-        target: '.input-box textarea',
-        titleKey: 'AILY_CHAT.ONBOARDING.STEP1_TITLE',
-        descKey: 'AILY_CHAT.ONBOARDING.STEP1_DESC',
-        position: 'top'
-      },
-      {
-        target: '.input-box .btns .btn:first-child',
-        titleKey: 'AILY_CHAT.ONBOARDING.STEP2_TITLE',
-        descKey: 'AILY_CHAT.ONBOARDING.STEP2_DESC',
-        position: 'top'
-      },
-      {
-        target: '.input-box .btns .btn.mode',
-        titleKey: 'AILY_CHAT.ONBOARDING.STEP3_TITLE',
-        descKey: 'AILY_CHAT.ONBOARDING.STEP3_DESC',
-        position: 'top'
-      },
-      {
-        target: '.input-box .btns .btn.right',
-        titleKey: 'AILY_CHAT.ONBOARDING.STEP4_TITLE',
-        descKey: 'AILY_CHAT.ONBOARDING.STEP4_DESC',
-        position: 'top'
-      }
-    ],
-    skipKey: 'AILY_CHAT.ONBOARDING.SKIP',
-    prevKey: 'AILY_CHAT.ONBOARDING.PREV',
-    nextKey: 'AILY_CHAT.ONBOARDING.NEXT',
-    doneKey: 'AILY_CHAT.ONBOARDING.DONE'
-  };
-
   constructor(
     private uiService: UiService,
     private chatService: ChatService,
@@ -1086,6 +1051,7 @@ Do not create non-existent boards and libraries.
     private platformService: PlatformService,
     private electronService: ElectronService,
     private ailyChatConfigService: AilyChatConfigService,
+    private onboardingService: OnboardingService
   ) {
     // securityContext 改为 getter，每次使用时动态获取当前项目路径
   }
@@ -3026,15 +2992,32 @@ ${JSON.stringify(errData)}
 
                     // 安全地处理 libraryNames 参数
                     let libraryNamesDisplay = '未知库';
+                    let parsedLibraryNames: string[] = [];
                     try {
-                      const libraryNames = typeof toolArgs.libraryNames === 'string'
-                        ? JSON.parse(toolArgs.libraryNames)
-                        : toolArgs.libraryNames;
-                      if (Array.isArray(libraryNames)) {
-                        libraryNamesDisplay = libraryNames.join(', ');
+                      if (typeof toolArgs.libraryNames === 'string') {
+                        // 尝试解析 JSON 数组字符串
+                        if (toolArgs.libraryNames.startsWith('[')) {
+                          parsedLibraryNames = JSON.parse(toolArgs.libraryNames);
+                        } else {
+                          // 普通字符串，可能是逗号分隔或单个库名
+                          parsedLibraryNames = toolArgs.libraryNames.split(',').map((s: string) => s.trim()).filter(Boolean);
+                        }
+                      } else if (Array.isArray(toolArgs.libraryNames)) {
+                        parsedLibraryNames = toolArgs.libraryNames;
+                      }
+                      if (parsedLibraryNames.length > 0) {
+                        libraryNamesDisplay = parsedLibraryNames.join(', ');
+                        // 更新 toolArgs 以便传递给工具
+                        toolArgs.libraryNames = parsedLibraryNames;
                       }
                     } catch (error) {
                       console.warn('解析 libraryNames 失败:', error);
+                      // 降级处理：直接作为单个库名使用
+                      if (typeof toolArgs.libraryNames === 'string' && toolArgs.libraryNames) {
+                        parsedLibraryNames = [toolArgs.libraryNames];
+                        libraryNamesDisplay = toolArgs.libraryNames;
+                        toolArgs.libraryNames = parsedLibraryNames;
+                      }
                     }
 
                     this.appendMessage('aily', `
@@ -3054,7 +3037,7 @@ ${JSON.stringify(errData)}
                     } else {
                       const metadata = toolResult.metadata;
                       if (metadata) {
-                        resultText = `库分析完成: 分析了${metadata.librariesAnalyzed || 0}个库，找到${metadata.totalBlocks || 0}个块，${metadata.totalPatterns || 0}个使用模式`;
+                        resultText = `库分析完成: 分析了 ${metadata.librariesAnalyzed || 0} 个库，找到 ${metadata.totalBlocks || 0} 个块定义`;
                       } else {
                         resultText = '库分析完成';
                       }
@@ -3234,7 +3217,7 @@ ${JSON.stringify(errData)}
 - 当尝试使用代码块多次仍然无法创建成功时，安装 @aily-project/lib-core-custom 并使用库中的自定义块进行代码创建
 5. 检查工具反馈结果
 6. 修复结构或逻辑问题(多次修复仍然有误时，分析是否遗漏了相关库readme的阅读)
-**注意**：严禁遇到小问题就删除代码块。
+**注意**：严禁遇到问题就删除代码块。
 - 仔细分析代码逻辑和块结构，找出具体问题所在。
 - 精确修复问题，最小化改动，保持代码结构稳定。
 - 仔细分析问题复杂度，避免简单问题复杂化: 简单的块缺少，优先使用新建块解决；块错误，新建块进行替换；块连接错误，优先使用连接块进行修复。
@@ -3243,7 +3226,7 @@ ${JSON.stringify(errData)}
 - 这个过程中只能使用blockly相关工具，禁止使用任何文件操作工具对代码块进行编辑。
 7. 重复直至完成
 8. 一次只调用一个工具完成一个小目标，等待工具反馈后再进行下一个操作。
-9. 语法正确只是基础，良好的逻辑结构和高效的执行流程才是关键，**深入分析代码逻辑，整体思考嵌入式代码的实时性和用户体验**。
+9. **深入分析代码逻辑，全面思考嵌入式代码的整体逻辑及硬件特性，逻辑正确高于一切**。
 JSON务必保留必要的换行和缩进格式，否则可能导致解析失败。</rules>
 <toolResult>${toolResult?.content}</toolResult>\n<info>如果想结束对话，转交给用户，可以使用[to_xxx]，这里的xxx为user</info>`;
               } else if (shouldIncludeKeyInfo) {
@@ -4257,21 +4240,16 @@ Your role is ASK (Advisory & Quick Support) - you provide analysis, recommendati
     if (!hasSeenOnboarding && this.isLoggedIn) {
       // 延迟显示引导，确保页面已渲染
       setTimeout(() => {
-        this.showOnboarding = true;
+        this.onboardingService.start(AILY_CHAT_ONBOARDING_CONFIG, {
+          onClosed: () => this.onOnboardingClosed(),
+          onCompleted: () => this.onOnboardingClosed()
+        });
       }, 800);
     }
   }
 
-  // 跳过或关闭引导
-  onOnboardingClosed() {
-    this.showOnboarding = false;
-    this.configService.data.ailyChatOnboardingCompleted = true;
-    this.configService.save();
-  }
-
-  // 完成引导
-  onOnboardingCompleted() {
-    this.showOnboarding = false;
+  // 引导关闭或完成时的处理
+  private onOnboardingClosed() {
     this.configService.data.ailyChatOnboardingCompleted = true;
     this.configService.save();
   }

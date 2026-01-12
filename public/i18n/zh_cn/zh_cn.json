@@ -105,10 +105,6 @@
         "SPONSORS_DESC": "本项目得到了以下企业/个人的赞助",
         "NEWS": "动态",
         "ONBOARDING": {
-            "SKIP": "跳过引导",
-            "PREV": "上一步",
-            "NEXT": "下一步",
-            "DONE": "完成",
             "STEP1_TITLE": "创建新项目",
             "STEP1_DESC": "点击这里可以创建一个新的编程项目，选择开发板和编程语言开始您的创作之旅。",
             "STEP2_TITLE": "打开已有项目",
@@ -127,10 +123,6 @@
     },
     "BLOCKLY": {
         "ONBOARDING": {
-            "SKIP": "跳过引导",
-            "PREV": "上一步",
-            "NEXT": "下一步",
-            "DONE": "完成",
             "TOOLBOX_TITLE": "积木工具箱",
             "TOOLBOX_DESC": "这里是积木分类区域，点击不同的分类可以找到各种功能积木块，拖拽到右边工作区使用。",
             "WORKSPACE_TITLE": "工作区",
@@ -357,11 +349,7 @@
             "STEP3_TITLE": "模式切换",
             "STEP3_DESC": "代理模式可以自动执行任务（如编写代码、修复错误），问答模式仅回答问题",
             "STEP4_TITLE": "发送/停止",
-            "STEP4_DESC": "点击发送消息，AI正在回复时可点击停止",
-            "SKIP": "跳过",
-            "PREV": "上一步",
-            "NEXT": "下一步",
-            "DONE": "完成"
+            "STEP4_DESC": "点击发送消息，AI正在回复时可点击停止"
         }
     },
     "PROJECT_SETTING_DIALOG": {
