@@ -86,8 +86,24 @@ async function main() {
 
         logger.log('使用的上传参数:', uploadParam);
 
+        // core
+        const coreItem = boardJson?.core || 'arduino';
+        const core = coreItem.split(":")[0];
+
+        // 5. 根据核心选择不同的上传参数处理方式
+        let defaultBaudRate;
+        if (core === 'arduino') {
+            defaultBaudRate = '115200';
+        } else {
+            defaultBaudRate = '921600';
+        }
+
+        console.log('使用的核心:', core);
+        console.log('默认波特率:', defaultBaudRate);
+
         // 6. 获取波特率
-        const baudRate = projectConfig?.UploadSpeed || '921600';
+        const baudRate = projectConfig?.UploadSpeed || defaultBaudRate;
+        console.log('使用的波特率:', baudRate);
 
         // 7. 获取工具依赖
         const toolDependencies = {};
@@ -161,7 +177,7 @@ async function processUploadParams(uploadParam, buildPath, toolsPath, sdkPath, b
     
     // 替换 ${baud}
     if (paramString.includes('${baud}')) {
-        paramString = paramString.replace(/\$\{baud\}/g, baudRate || '921600');
+        paramString = paramString.replace(/\$\{baud\}/g, baudRate);
     }
 
     // 替换 ${serial}

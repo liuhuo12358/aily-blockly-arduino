@@ -95,6 +95,24 @@ export class _UploaderService {
     this.initialized = false; // 重置初始化状态
   }
 
+  /**
+   * 安全的通知更新方法
+   * 在取消状态下阻止所有非取消相关的UI更新
+   */
+  private safeUpdateNotice(config: any) {
+    // 如果已取消，只允许更新为取消状态
+    if (this.cancelled) {
+      if (config.state === 'warn' && config.title && config.title.includes('取消')) {
+        this.noticeService.update(config);
+      }
+      // 其他所有更新都被忽略
+      return;
+    }
+    
+    // 正常状态下直接更新
+    this.noticeService.update(config);
+  }
+
   // 添加这个错误处理方法
   private handleUploadError(errorMessage: string, title = "上传失败") {
     // console.error("handle errror: ", errorMessage);
@@ -181,6 +199,7 @@ export class _UploaderService {
           if (state === ProcessState.UPLOADING) msg = "上传正在进行中";
           else if (state === ProcessState.INSTALLING) msg = "依赖安装中";
 
+          this._builderService.isUploading = false; // 确保设置为false
           this.message.warning(msg + "，请稍后再试");
           reject({ state: 'warn', text: msg + "，请稍后" });
           return;
@@ -212,28 +231,44 @@ export class _UploaderService {
 
         // 上传预处理：处理 1200bps touch 和 wait_for_upload
         if (use_1200bps_touch) {
-          console.log("1200bps touch triggered, current port:", this.serialService.currentPort);
-          await this.serialMonitorService.connect({ path: this.serialService.currentPort || '', baudRate: 1200 });
-          await new Promise(resolve => setTimeout(resolve, 250));
-          this.serialMonitorService.disconnect();
-          await new Promise(resolve => setTimeout(resolve, 250));
+          try {
+            console.log("1200bps touch triggered, current port:", this.serialService.currentPort);
+            await this.serialMonitorService.connect({ path: this.serialService.currentPort || '', baudRate: 1200 });
+            await new Promise(resolve => setTimeout(resolve, 250));
+            this.serialMonitorService.disconnect();
+            await new Promise(resolve => setTimeout(resolve, 250));
+          } catch (err) {
+            this._builderService.isUploading = false; // 确保设置为false
+            this.handleUploadError('串口连接失败: ' + err.message);
+            this.workflowService.finishUpload(false, 'Serial connection failed');
+            reject({ state: 'error', text: '串口连接失败' });
+            return;
+          }
         }
 
         console.log("Wait for upload:", wait_for_upload);
 
         if (wait_for_upload) {
-          const portList = await this.serialMonitorService.getPortsList();
-          await this.serialMonitorService.connect({ path: this.serialService.currentPort });
-          await new Promise(resolve => setTimeout(resolve, 5000));
-          this.serialMonitorService.disconnect();
-          const currentPortList = await this.serialMonitorService.getPortsList();
+          try {
+            const portList = await this.serialMonitorService.getPortsList();
+            await this.serialMonitorService.connect({ path: this.serialService.currentPort });
+            await new Promise(resolve => setTimeout(resolve, 5000));
+            this.serialMonitorService.disconnect();
+            const currentPortList = await this.serialMonitorService.getPortsList();
 
-          // 对比portList和currentPortList, 找出新增的port
-          const newPorts = currentPortList.filter(port => !portList.some(existingPort => existingPort.path === port.path));
-          if (newPorts.length > 0) {
-            this.serialService.currentPort = newPorts[0].path;
-          } else {
-            console.log("没有检测到新串口，继续使用旧串口");
+            // 对比portList和currentPortList, 找出新增的port
+            const newPorts = currentPortList.filter(port => !portList.some(existingPort => existingPort.path === port.path));
+            if (newPorts.length > 0) {
+              this.serialService.currentPort = newPorts[0].path;
+            } else {
+              console.log("没有检测到新串口，继续使用旧串口");
+            }
+          } catch (err) {
+            this._builderService.isUploading = false; // 确保设置为false
+            this.handleUploadError('串口操作失败: ' + err.message);
+            this.workflowService.finishUpload(false, 'Serial operation failed');
+            reject({ state: 'error', text: '串口操作失败' });
+            return;
           }
         }
 
@@ -254,7 +289,15 @@ export class _UploaderService {
         };
 
         const configFilePath = window['path'].join(tempPath, 'upload-config.json');
-        await window['fs'].writeFileSync(configFilePath, JSON.stringify(uploadConfig, null, 2));
+        try {
+          await window['fs'].writeFileSync(configFilePath, JSON.stringify(uploadConfig, null, 2));
+        } catch (err) {
+          this._builderService.isUploading = false;
+          this.handleUploadError('配置文件写入失败: ' + err.message);
+          this.workflowService.finishUpload(false, 'Config write failed');
+          reject({ state: 'error', text: '配置文件写入失败' });
+          return;
+        }
 
         // 运行上传脚本
         const uploadScriptPath = window['path'].join(window['path'].getAilyChildPath(), 'scripts', 'upload.js');
@@ -271,7 +314,7 @@ export class _UploaderService {
         let errorText = '';
 
         this.uploadInProgress = true;
-        this.noticeService.update({ title: title, text: lastUploadText, state: 'doing', progress: 0, setTimeout: 0 });
+        this.noticeService.update({ title: title, text: lastUploadText, state: 'doing', progress: 0, setTimeout: 0, stop: () => { this.cancel(); } });
 
         let bufferData = '';
         this.cmdService.run(uploadCmd, null, false).subscribe({
@@ -384,16 +427,19 @@ export class _UploaderService {
 
                     if (progressValue && progressValue > lastProgress) {
                       lastProgress = progressValue;
-                      this.noticeService.update({
-                        title: title,
-                        text: lastUploadText,
-                        state: 'doing',
-                        progress: lastProgress,
-                        setTimeout: 0,
-                        stop: () => {
-                          this.cancel()
-                        }
-                      });
+                      // 更新UI前检查是否已取消
+                      if (!this.cancelled) {
+                        this.safeUpdateNotice({
+                          title: title,
+                          text: lastUploadText,
+                          state: 'doing',
+                          progress: lastProgress,
+                          setTimeout: 0,
+                          stop: () => {
+                            this.cancel()
+                          }
+                        });
+                      }
                     }
 
                     // 进度为100%时标记完成
@@ -417,6 +463,7 @@ export class _UploaderService {
           },
           error: (error: any) => {
             console.log("上传命令错误:", error);
+            this._builderService.isUploading = false;
             this.handleUploadError(error.message || '上传过程中发生错误');
             this.workflowService.finishUpload(false, error.message || 'Upload error');
             reject({ state: 'error', text: error.message || '上传失败' });
@@ -424,23 +471,28 @@ export class _UploaderService {
           complete: () => {
             console.log("上传命令完成");
             if (this.isErrored) {
+              this._builderService.isUploading = false;
               this.handleUploadError('上传过程中发生错误');
               this.workflowService.finishUpload(false, errorText);
               reject({ state: 'error', text: errorText });
             } else if (this.uploadCompleted) {
               console.log("上传完成");
-              this.noticeService.update({
-                title: completeTitle,
-                text: completeText,
-                state: 'done',
-                setTimeout: 55000
-              });
+              // 安全更新UI
+              if (!this.cancelled) {
+                this.safeUpdateNotice({
+                  title: completeTitle,
+                  text: completeText,
+                  state: 'done',
+                  setTimeout: 55000
+                });
+              }
               this._builderService.isUploading = false;
               this.workflowService.finishUpload(true);
               resolve({ state: 'done', text: '上传完成' });
             } else if (this.cancelled) {
               console.warn("上传中断");
-              this.noticeService.update({
+              // 安全更新UI
+              this.safeUpdateNotice({
                 title: "上传已取消",
                 text: '上传已取消',
                 state: 'warn',
@@ -451,7 +503,8 @@ export class _UploaderService {
               reject({ state: 'warn', text: '上传已取消' });
             } else {
               console.warn("上传未完成，可能是由于超时或其他原因");
-              this.noticeService.update({
+              // 安全更新UI
+              this.safeUpdateNotice({
                 title: errorTitle,
                 text: lastUploadText,
                 detail: "超时或其他原因",
@@ -465,6 +518,7 @@ export class _UploaderService {
           }
         })
       } catch (error) {
+        this._builderService.isUploading = false; // 确保在异常情况下设置为false
         this.handleUploadError(error.message || '上传失败');
         this.workflowService.finishUpload(false, error.message || 'Upload failed');
         reject({ state: 'error', text: error.message || '上传失败' });
@@ -517,13 +571,14 @@ export class _UploaderService {
   }
 
   /**
-* 取消当前编译过程
+* 取消当前上传过程
 */
   cancel() {
     if (!this.uploadInProgress) {
       return;
     }
     this.cancelled = true;
+    this._builderService.isUploading = false;
     this.cmdService.kill(this.streamId || '');
   }
 }
