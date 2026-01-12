@@ -217,7 +217,7 @@ export class AilyChatComponent implements OnDestroy {
   }
 
   get currentModelName() {
-    return this.chatService.currentModel?.name || 'GLM-4.7';
+    return this.chatService.currentModel?.name;
   }
 
   /**
@@ -3681,7 +3681,6 @@ Your role is ASK (Advisory & Quick Support) - you provide analysis, recommendati
     const enabledModels = this.ailyChatConfigService.getEnabledModels();
     return enabledModels.map(model => ({
       name: model.name,
-      text: model.speed,
       action: 'select-model',
       data: { model }
     }));
