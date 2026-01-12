@@ -250,49 +250,6 @@ export class _UploaderService {
 
         let lastUploadText = `正在上传${boardJson.name}`;
 
-        // 上传预处理：处理 1200bps touch 和 wait_for_upload
-        if (use_1200bps_touch) {
-          try {
-            console.log("1200bps touch triggered, current port:", this.serialService.currentPort);
-            await this.serialMonitorService.connect({ path: this.serialService.currentPort || '', baudRate: 1200 });
-            await new Promise(resolve => setTimeout(resolve, 250));
-            this.serialMonitorService.disconnect();
-            await new Promise(resolve => setTimeout(resolve, 250));
-          } catch (err) {
-            this._builderService.isUploading = false; // 确保设置为false
-            this.handleUploadError('串口连接失败: ' + err.message);
-            this.workflowService.finishUpload(false, 'Serial connection failed');
-            reject({ state: 'error', text: '串口连接失败' });
-            return;
-          }
-        }
-
-        console.log("Wait for upload:", wait_for_upload);
-
-        if (wait_for_upload) {
-          try {
-            const portList = await this.serialMonitorService.getPortsList();
-            await this.serialMonitorService.connect({ path: this.serialService.currentPort });
-            await new Promise(resolve => setTimeout(resolve, 5000));
-            this.serialMonitorService.disconnect();
-            const currentPortList = await this.serialMonitorService.getPortsList();
-
-            // 对比portList和currentPortList, 找出新增的port
-            const newPorts = currentPortList.filter(port => !portList.some(existingPort => existingPort.path === port.path));
-            if (newPorts.length > 0) {
-              this.serialService.currentPort = newPorts[0].path;
-            } else {
-              console.log("没有检测到新串口，继续使用旧串口");
-            }
-          } catch (err) {
-            this._builderService.isUploading = false; // 确保设置为false
-            this.handleUploadError('串口操作失败: ' + err.message);
-            this.workflowService.finishUpload(false, 'Serial operation failed');
-            reject({ state: 'error', text: '串口操作失败' });
-            return;
-          }
-        }
-
         // 准备上传配置
         const currentProjectPath = this.projectService.currentProjectPath;
         const tempPath = window['path'].join(currentProjectPath, '.temp');
@@ -306,7 +263,9 @@ export class _UploaderService {
           boardModule,
           appDataPath: window['path'].getAppDataPath(),
           serialPort: this.serialService.currentPort,
-          uploadParam: cleanParam // 传递清理后的上传参数
+          uploadParam: cleanParam, // 传递清理后的上传参数
+          use_1200bps_touch,
+          wait_for_upload
         };
 
         const configFilePath = window['path'].join(tempPath, 'upload-config.json');
@@ -320,7 +279,7 @@ export class _UploaderService {
           return;
         }
 
-        // 运行上传脚本
+        // 运行上传脚本（1200bps_touch 和 wait_for_upload 预处理已移至 upload.js）
         const uploadScriptPath = window['path'].join(window['path'].getAilyChildPath(), 'scripts', 'upload.js');
         const uploadCmd = `node "${uploadScriptPath}" "${configFilePath}"`;
 
