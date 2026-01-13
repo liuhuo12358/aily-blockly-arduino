@@ -26,7 +26,10 @@ export class SecurityToolContext {
         this.projectRootPath = projectRootPath;
         this.currentProjectPath = currentProjectPath;
         this.appDataPath = appDataPath || '';
-        this.context = createSecurityContext(projectRootPath, currentProjectPath, appDataPath);
+        this.context = createSecurityContext(currentProjectPath, {
+            allowProjectPathAccess: true,
+            additionalAllowedPaths: appDataPath ? [appDataPath] : []
+        });
     }
     
     /**
@@ -41,7 +44,10 @@ export class SecurityToolContext {
      */
     updateProjectPath(currentProjectPath: string): void {
         this.currentProjectPath = currentProjectPath;
-        this.context = createSecurityContext(this.projectRootPath, currentProjectPath, this.appDataPath);
+        this.context = createSecurityContext(currentProjectPath, {
+            allowProjectPathAccess: true,
+            additionalAllowedPaths: this.appDataPath ? [this.appDataPath] : []
+        });
     }
     
     /**

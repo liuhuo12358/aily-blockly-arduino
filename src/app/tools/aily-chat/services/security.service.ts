@@ -19,6 +19,7 @@ export interface PathSecurityContext {
     currentProjectPath: string;
     librariesPath?: string;
     nodeModulesPath?: string;  // 当前项目下的 node_modules 目录
+    allowProjectPathAccess?: boolean; // 是否允许操作当前项目路径
     allowNodeModulesAccess?: boolean;  // 是否允许操作 node_modules 目录，默认 false
     additionalAllowedPaths?: string[];  // 用户添加的额外允许路径（如上下文文件/文件夹）
 }
@@ -149,11 +150,6 @@ export const FILE_READ_LIMITS: FileReadLimits = {
         '.makefile', 'Makefile', '.cmake',
     ],
     blockedExtensions: [
-        // 二进制和可执行文件
-        '.exe', '.dll', '.so', '.dylib', '.bin',
-        '.msi', '.dmg', '.pkg', '.deb', '.rpm',
-        '.app', '.com', '.sys', '.drv',
-        
         // 密钥和证书
         '.key', '.pem', '.crt', '.cer', '.p12', '.pfx',
         '.jks', '.keystore',
@@ -373,8 +369,9 @@ export function isPathAllowed(
     
     // 3. 检查是否在允许的目录范围内（当前项目路径 + 用户添加的额外路径）
     const rawAllowedBases = [
-        context.currentProjectPath,
-        context.librariesPath,
+        context.allowProjectPathAccess ? context.currentProjectPath : undefined,
+        // librariesPath 是项目路径的子目录，同样需要受 allowProjectPathAccess 控制
+        context.allowProjectPathAccess ? context.librariesPath : undefined,
         // 只有开启了 allowNodeModulesAccess 才将 nodeModulesPath 加入允许列表
         context.allowNodeModulesAccess ? context.nodeModulesPath : undefined,
         getTempDir(),  // 临时目录
@@ -536,19 +533,13 @@ export function validateFileRead(
     context: PathSecurityContext,
     fileSize?: number
 ): SecurityCheckResult {
-    // 1. 路径安全检查
-    const pathCheck = isPathAllowed(filePath, context);
-    if (!pathCheck.allowed) {
-        return pathCheck;
-    }
-    
-    // 2. 文件类型检查
+    // 1. 文件类型检查
     const typeCheck = isFileReadAllowed(filePath);
     if (!typeCheck.allowed) {
         return typeCheck;
     }
     
-    // 3. 文件大小检查
+    // 2. 文件大小检查
     if (fileSize !== undefined && fileSize > FILE_READ_LIMITS.maxFileSize) {
         return {
             allowed: false,
@@ -736,9 +727,26 @@ export function sanitizeForLogging(data: any): any {
 }
 
 /**
+ * 安全上下文创建选项
+ */
+export interface SecurityContextOptions {
+    /** 项目根路径 */
+    projectRootPath?: string;
+    /** 当前项目路径 */
+    currentProjectPath?: string;
+    /** 应用数据路径 */
+    appDataPath?: string;
+    /** 额外允许的路径列表（如用户添加的上下文文件/文件夹） */
+    additionalAllowedPaths?: string[];
+    /** 是否允许访问库文件（默认 true） */
+    includeLibraries?: boolean;
+}
+
+/**
  * 创建安全上下文
  * @param currentProjectPath 当前项目路径
  * @param options 可选配置项
+ * @param options.allowProjectPathAccess 是否允许操作当前项目路径，默认 false
  * @param options.nodeModulesPath 当前项目下的 node_modules 目录路径
  * @param options.allowNodeModulesAccess 是否允许操作 node_modules 目录，默认 false
  * @param options.additionalAllowedPaths 额外允许的路径列表（如用户添加的上下文文件/文件夹）
@@ -747,6 +755,7 @@ export function createSecurityContext(
     currentProjectPath: string,
     options?: {
         nodeModulesPath?: string;
+        allowProjectPathAccess?: boolean;
         allowNodeModulesAccess?: boolean;
         additionalAllowedPaths?: string[];
     }
@@ -756,6 +765,7 @@ export function createSecurityContext(
         currentProjectPath,
         librariesPath: currentProjectPath ? window['path']?.join(currentProjectPath, 'libraries') : undefined,
         nodeModulesPath: opts.nodeModulesPath ?? (currentProjectPath ? window['path']?.join(currentProjectPath, 'node_modules') : undefined),
+        allowProjectPathAccess: opts.allowProjectPathAccess ?? false,
         allowNodeModulesAccess: opts.allowNodeModulesAccess ?? false,
         additionalAllowedPaths: opts.additionalAllowedPaths || []
     };

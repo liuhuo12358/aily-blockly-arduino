@@ -127,7 +127,7 @@ export class MarkdownPipe implements PipeTransform {
    * 检查是否为特殊的 Aily 代码块类型
    */
   private isAilyCodeBlock(lang: string): boolean {
-    const ailyTypes = ['aily-blockly', 'aily-board', 'aily-library', 'aily-state', 'aily-button', 'aily-error', 'aily-mermaid', 'mermaid'];
+    const ailyTypes = ['aily-blockly', 'aily-board', 'aily-library', 'aily-state', 'aily-button', 'aily-error', 'aily-mermaid', 'mermaid', 'aily-task-action'];
     return ailyTypes.includes(lang);
   }/**
    * 渲染 Aily 特殊代码块为组件占位符
@@ -250,7 +250,22 @@ export class MarkdownPipe implements PipeTransform {
             type: 'aily-button',
             buttons: Array.isArray(jsonData) ? jsonData : (jsonData.buttons || [jsonData]),
             config: jsonData.config || {},
-            metadata: jsonData.metadata || {}
+            metadata: jsonData.metadata || {},
+            isHistory: jsonData.isHistory || false
+          };
+        case 'aily-task-action':
+          return {
+            type: 'aily-task-action',
+            actionType: jsonData.actionType || jsonData.action_type || 'unknown',
+            message: jsonData.message || jsonData.text || '',
+            stopReason: jsonData.stopReason || jsonData.stop_reason || '',
+            metadata: {
+              maxMessages: jsonData.metadata?.maxMessages || jsonData.maxMessages,
+              currentMessages: jsonData.metadata?.currentMessages || jsonData.currentMessages,
+              errorCode: jsonData.metadata?.errorCode || jsonData.errorCode,
+              ...jsonData.metadata
+            },
+            isHistory: jsonData.isHistory || false
           };
         default:
           console.warn(`Unknown aily type: ${type}, using raw data`);
