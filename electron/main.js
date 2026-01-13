@@ -861,6 +861,31 @@ function loadEnv() {
   // 读取用户配置文件
   try {
     userConf = JSON.parse(fs.readFileSync(userConfigPath));
+    
+    // TODO: 下一版删除，统一修正 regions.cn.api_server 地址为标准地址
+    let needSave = false;
+    if (userConf.regions && userConf.regions.cn) {
+      const correctApiServer = "https://aapi.diandeng.tech";
+      const currentApiServer = userConf.regions.cn.api_server;
+      
+      // 检查当前地址是否需要修正（只要不是正确地址就修正）
+      if (currentApiServer !== correctApiServer) {
+        console.log(`检测到需要更新的 API 地址: ${currentApiServer || '(空)'} → ${correctApiServer}`);
+        userConf.regions.cn.api_server = correctApiServer;
+        needSave = true;
+      }
+    }
+    
+    // 如果配置被修改，保存回文件
+    if (needSave) {
+      try {
+        fs.writeFileSync(userConfigPath, JSON.stringify(userConf, null, 2));
+        console.log("用户配置文件已更新并保存:", userConfigPath);
+      } catch (error) {
+        console.error("保存用户配置文件失败:", error);
+      }
+    }
+    
     // 合并配置文件
     Object.assign(conf, userConf);
   } catch (error) {
@@ -870,6 +895,11 @@ function loadEnv() {
 
   // child Path
   process.env.AILY_CHILD_PATH = childPath;
+
+  // TODO 下一版本删除，强制将cn区域的api_server地址设置为https://aapi.diandeng.tech
+  conf.regions["cn"]["api_server"] = "https://aapi.diandeng.tech";
+  
+  console.log("conf: ", conf);
 
   // 从 regions 配置中获取当前区域的服务地址
   const currentRegion = conf.region || 'cn';
