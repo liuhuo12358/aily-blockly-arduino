@@ -1,5 +1,6 @@
 const { contextBridge, ipcRenderer, shell, safeStorage, webFrame } = require("electron");
 const { SerialPort } = require("serialport");
+const { createThrottledSerialPort, listPorts } = require("./serial");
 const { exec } = require("child_process");
 const { existsSync, statSync } = require("fs");
 const { isAbsolute } = require("path");
@@ -35,39 +36,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
   },
   versions: () => process.versions,
   SerialPort: {
-    list: async () => await SerialPort.list(),
-    create: (options) => {
-      const port = new SerialPort(options);
-      return {
-        write: (data, callback) => port.write(data, callback),
-        open: (callback) => port.open(callback),
-        close: (callback) => port.close(callback),
-        on: (event, callback) => {
-          port.on(event, callback);
-          return port; // 允许链式调用
-        },
-        off: (event, callback) => {
-          port.off(event, callback);
-          return port;
-        },
-        set: (options, callback) => port.set(options, callback),
-        dtrBool: () => {
-          if (typeof port.dtrBool === 'function') {
-            return port.dtrBool();
-          }
-          return false; // 如果方法不存在，返回默认值
-        },
-        // 添加获取RTS状态的方法
-        rtsBool: () => {
-          if (typeof port.rtsBool === 'function') {
-            return port.rtsBool();
-          }
-          return false; // 如果方法不存在，返回默认值
-        },
-        get path() { return port.path; },
-        get isOpen() { return port.isOpen; }
-      };
-    }
+    list: async () => await listPorts(),
+    create: (options) => createThrottledSerialPort(options)
   },
   os: {
     tmpdir: () => tmpdir(),
