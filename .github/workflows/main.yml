@@ -25,6 +25,7 @@ jobs:
         run: |
           npm install -g @angular/cli
           npm ci
+          cd electron && npm ci
 
       - name: Compile Windows Executable
         run: |
@@ -61,6 +62,7 @@ jobs:
         run: |
           npm install -g @angular/cli
           npm ci
+          cd electron && npm ci
 
       - name: Compile macOS Executable
         run: |
