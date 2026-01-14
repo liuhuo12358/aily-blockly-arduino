@@ -1,36 +1,107 @@
-name: CI&&CD
+name: CI & CD Pipeline
 
 on:
   push:
     branches:
       - deploy
+    tags:
+      - 'v*' # 增加标签触发，这通常是申请签名时的加分项
 
 jobs:
-  build:
-    runs-on: ubuntu-latest
-
+  # 任务 1：Windows 客户端构建 (新增，用于向 SignPath 证明构建能力)
+  build-windows:
+    runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v1
+      - uses: actions/checkout@v4
 
-      - name: Use Node.js 18.x
-        uses: actions/setup-node@v1
+      - name: Use Node.js 22.x
+        uses: actions/setup-node@v4
         with:
-          node-version: '18.x'
-      
-      - name: Dependent environment
+          node-version: '22.x'
+          cache: 'npm'
+
+      - name: Install Dependencies
         run: |
-          npm i -g @angular/cli
-          npm i
+          npm install -g @angular/cli
+          npm ci
+
+      - name: Compile Windows Executable
+        run: npm run build # 假设你在 package.json 中配置了 Windows 打包命令
+        env:
+          NODE_ENV: production
+
+      # --- SignPath 预留位 (申请时给审核员看的重点) ---
+      # - name: Sign with SignPath
+      #   uses: signpath/github-action@v1
+      #   with:
+      #     api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+      #     ... (待申请通过后完善)
       
-      - name: Compile
-        run: |
-          npm run build
-      
-      - name: Deploy
-        uses: Dylan700/sftp-upload-action@latest
+      - name: Archive Windows Artifact
+        uses: actions/upload-artifact@v4
         with:
-          server: ${{ secrets.HOST }}
-          username: ubuntu
-          key: ${{ secrets.PRIVATEKEY }}
-          uploads: |
-            dist/aily-software => ${{ secrets.TARGET }}
+          name: AilyBlockly-Windows-Package
+          path: dist/*.exe # 根据你 electron-builder 的实际输出路径调整
+
+  # 任务 2：macOS 客户端构建
+  build-macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Use Node.js 22.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.x'
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: |
+          npm install -g @angular/cli
+          npm ci
+
+      - name: Compile macOS Executable
+        run: npm run build # 假设你在 package.json 中配置了 macOS 打包命令
+        env:
+          NODE_ENV: production
+
+      # --- Apple 代码签名和公证预留位 (可选) ---
+      # - name: Sign and Notarize for macOS
+      #   uses: apple-actions/import-codesign-certs@v2
+      #   with:
+      #     p12-file-base64: ${{ secrets.APPLE_SIGNING_CERT }}
+      #     p12-password: ${{ secrets.APPLE_SIGNING_PASSWORD }}
+      #   ... (待配置)
+      
+      - name: Archive macOS Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: AilyBlockly-macOS-Package
+          path: dist/*.dmg # 根据你 electron-builder 的实际输出路径调整
+
+  # 任务 3：发布到 GitHub Release
+  release:
+    needs: [build-windows, build-macos]
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    steps:
+      - name: Download Windows Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: AilyBlockly-Windows-Package
+          path: ./release
+
+      - name: Download macOS Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: AilyBlockly-macOS-Package
+          path: ./release
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: ./release/*
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
