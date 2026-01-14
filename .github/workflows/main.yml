@@ -41,7 +41,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: AilyBlockly-Windows-Package
-          path: dist/*.exe # 根据你 electron-builder 的实际输出路径调整
+          path: dist/aily-blockly/*.exe # 根据你 electron-builder 的实际输出路径调整
 
   # 任务 2：macOS 客户端构建
   build-macos:
@@ -77,7 +77,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: AilyBlockly-macOS-Package
-          path: dist/*.dmg # 根据你 electron-builder 的实际输出路径调整
+          path: dist/aily-blockly/*.dmg # 根据你 electron-builder 的实际输出路径调整
 
   # 任务 3：发布到 GitHub Release
   release:
