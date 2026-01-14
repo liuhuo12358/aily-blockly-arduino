@@ -65,13 +65,26 @@ jobs:
         env:
           NODE_ENV: production
 
-      # --- Apple 代码签名和公证预留位 (可选) ---
-      # - name: Sign and Notarize for macOS
-      #   uses: apple-actions/import-codesign-certs@v2
-      #   with:
-      #     p12-file-base64: ${{ secrets.APPLE_SIGNING_CERT }}
-      #     p12-password: ${{ secrets.APPLE_SIGNING_PASSWORD }}
-      #   ... (待配置)
+      # --- Apple 代码签名和公证 ---
+      - name: Import Codesign Certificates
+        uses: apple-actions/import-codesign-certs@v2
+        with:
+          p12-file-base64: ${{ secrets.APPLE_SIGNING_CERT }}
+          p12-password: ${{ secrets.APPLE_SIGNING_PASSWORD }}
+
+      - name: Notarize and Staple macOS App
+        uses: lando/notarize-action@v2
+        with:
+          product-path: "dist/aily-blockly/*.dmg" # 或 .app 路径
+          appstore-connect-username: ${{ secrets.APPLE_ID }}
+          appstore-connect-password: ${{ secrets.APPLE_APP_PASSWORD }}
+          appstore-connect-team-id: ${{ secrets.APPLE_TEAM_ID }}
+          primary-bundle-id: "blockly.aily.pro" # 根据你的实际 bundle ID 修改
+
+      - name: Verify Notarization
+        run: |
+          spctl -a -vvv -t install dist/aily-blockly/*.dmg
+          stapler validate dist/aily-blockly/*.dmg
       
       - name: Archive macOS Artifact
         uses: actions/upload-artifact@v4
@@ -84,6 +97,8 @@ jobs:
     needs: [build-windows, build-macos]
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/v')
+    permissions:
+      contents: write
     steps:
       - name: Download Windows Artifact
         uses: actions/download-artifact@v4
