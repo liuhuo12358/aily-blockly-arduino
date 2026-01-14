@@ -27,7 +27,7 @@ import { QuickSendEditorComponent } from './components/quick-send-editor/quick-s
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { SearchBoxComponent } from './components/search-box/search-box.component';
 import { Buffer } from 'buffer';
-import { TranslateService } from '@ngx-translate/core';
+import { TranslateService, TranslateModule } from '@ngx-translate/core';
 import { ConfigService } from '../../services/config.service';
 
 @Component({
@@ -51,7 +51,8 @@ import { ConfigService } from '../../services/config.service';
     SettingMoreComponent,
     QuickSendEditorComponent,
     SearchBoxComponent,
-    UiScrollModule
+    UiScrollModule,
+    TranslateModule
   ],
   templateUrl: './serial-monitor.component.html',
   styleUrl: './serial-monitor.component.scss',
@@ -421,7 +422,7 @@ export class SerialMonitorComponent {
     if (!this.switchValue) {
       const result = await this.serialMonitorService.disconnect();
       if (result) {
-        this.message.success('串口已关闭');
+        this.message.success(this.translate.instant('SERIAL.PORT_CLOSED'));
       }
       return;
     }
@@ -445,7 +446,7 @@ export class SerialMonitorComponent {
       });
 
       if (result) {
-        this.message.success('串口已打开');
+        this.message.success(this.translate.instant('SERIAL.PORT_OPENED'));
         // 发送DTR信号
         setTimeout(() => {
           this.serialMonitorService.sendSignal('DTR');

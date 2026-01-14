@@ -343,7 +343,23 @@
         "NO_DOCUMENTATION": "Documentation non disponible pour cette carte"
     },
     "SERIAL": {
-        "SELECT_PORT_FIRST": "Veuillez d'abord sélectionner un port série"
+        "SELECT_PORT_FIRST": "Veuillez d'abord sélectionner un port série",
+        "PORT": "Port",
+        "BAUD_RATE": "Débit en bauds",
+        "MORE_SETTINGS": "Plus de paramètres",
+        "HEX_DISPLAY": "Affichage HEX",
+        "AUTO_WRAP": "Retour à la ligne automatique",
+        "AUTO_SCROLL": "Défilement automatique",
+        "TIMESTAMP": "Horodatage",
+        "SHOW_CTRL_CHAR": "Afficher les caractères invisibles",
+        "SEARCH": "Rechercher",
+        "EXPORT": "Exporter",
+        "CLEAR": "Effacer",
+        "SEND_BY_ENTER": "Envoyer avec Entrée",
+        "END_R": "Fin de ligne \\r",
+        "END_N": "Fin de ligne \\n",
+        "PORT_OPENED": "Port série ouvert",
+        "PORT_CLOSED": "Port série fermé"
     },
     "MODEL_DEPLOY": {
         "TITLE": "Déploiement de modèle",
