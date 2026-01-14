@@ -212,25 +212,16 @@ export class SerialMonitorComponent {
 
   @ViewChild('dataListBox', { static: false }) dataListBoxRef!: ElementRef<HTMLDivElement>;
 
-  private scrollToBottom(fast = false) {
+  private scrollToBottom() {
     if (!this.autoScroll) return;
     setTimeout(() => {
-      // console.log('scroll To Bottom');
       requestAnimationFrame(() => {
         if (this.dataListBoxRef) {
           const element = this.dataListBoxRef.nativeElement;
-          if (fast) {
-            element.scrollTop = element.scrollHeight;
-          } else {
-            // 使用 scrollTo 实现平滑滚动
-            element.scrollTo({
-              top: element.scrollHeight,
-              behavior: 'smooth'
-            });
-          }
+          element.scrollTop = element.scrollHeight;
         }
       });
-    }, fast ? 50 : 100);
+    }, 50);
   }
 
   // 处理数据更新
@@ -278,7 +269,7 @@ export class SerialMonitorComponent {
     }
     this.cd.detectChanges();
     // 如果开启自动滚动,滚动到底部
-    this.scrollToBottom(true);
+    this.scrollToBottom();
   }
 
 
