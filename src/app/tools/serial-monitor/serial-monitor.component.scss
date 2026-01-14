@@ -145,6 +145,16 @@
   }
 }
 
+.chart-box {
+  // flex: 1;
+  height: 250px;
+  background: #292929;
+  border-radius: 5px;
+  margin: 0 10px 10px 10px;
+  padding: 5px;
+  position: relative;
+}
+
 .monitor {
   position: relative;
   flex: 1;
@@ -186,6 +196,16 @@
   .right3 {
     position: absolute;
     right: 74px;
+  }
+
+  .right4 {
+    position: absolute;
+    right: 106px;
+  }
+
+  .right5 {
+    position: absolute;
+    right: 138px;
   }
 
   button {
