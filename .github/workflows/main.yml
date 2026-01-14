@@ -26,7 +26,8 @@ jobs:
           npm ci
 
       - name: Compile Windows Executable
-        run: npm run build # 假设你在 package.json 中配置了 Windows 打包命令
+        run: |
+          npm run build -- --win
         env:
           NODE_ENV: production
 
@@ -61,7 +62,8 @@ jobs:
           npm ci
 
       - name: Compile macOS Executable
-        run: npm run build # 假设你在 package.json 中配置了 macOS 打包命令
+        run: |
+          npm run build -- --mac
         env:
           NODE_ENV: production
 
@@ -72,25 +74,32 @@ jobs:
           p12-file-base64: ${{ secrets.APPLE_SIGNING_CERT }}
           p12-password: ${{ secrets.APPLE_SIGNING_PASSWORD }}
 
+      - name: Find DMG file
+        id: find_dmg
+        run: |
+          DMG_PATH=$(find dist/aily-blockly -name "*.dmg" -type f | head -n 1)
+          echo "dmg_path=$DMG_PATH" >> $GITHUB_OUTPUT
+          echo "Found DMG at: $DMG_PATH"
+
       - name: Notarize and Staple macOS App
         uses: lando/notarize-action@v2
         with:
-          product-path: "dist/aily-blockly/*.dmg" # 或 .app 路径
+          product-path: "${{ steps.find_dmg.outputs.dmg_path }}"
           appstore-connect-username: ${{ secrets.APPLE_ID }}
           appstore-connect-password: ${{ secrets.APPLE_APP_PASSWORD }}
           appstore-connect-team-id: ${{ secrets.APPLE_TEAM_ID }}
-          primary-bundle-id: "blockly.aily.pro" # 根据你的实际 bundle ID 修改
+          primary-bundle-id: "blockly.aily.pro"
 
       - name: Verify Notarization
         run: |
-          spctl -a -vvv -t install dist/aily-blockly/*.dmg
-          stapler validate dist/aily-blockly/*.dmg
+          spctl -a -vvv -t install "${{ steps.find_dmg.outputs.dmg_path }}"
+          stapler validate "${{ steps.find_dmg.outputs.dmg_path }}"
       
       - name: Archive macOS Artifact
         uses: actions/upload-artifact@v4
         with:
           name: AilyBlockly-macOS-Package
-          path: dist/aily-blockly/*.dmg # 根据你 electron-builder 的实际输出路径调整
+          path: dist/aily-blockly/*.dmg
 
   # 任务 3：发布到 GitHub Release
   release:
