@@ -43,7 +43,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: AilyBlockly-Windows-Package
-          path: dist/aily-blockly/*.exe # 根据你 electron-builder 的实际输出路径调整
+          path: dist/aily-blockly/ # 包含所有输出：exe, yml 等
 
   # 任务 2：macOS 客户端构建
   build-macos:
@@ -124,7 +124,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: AilyBlockly-macOS-Package
-          path: dist/aily-blockly/*.dmg
+          path: dist/aily-blockly/ # 包含所有输出：dmg, zip, yml 等
 
   # 任务 3：发布到 GitHub Release
   release:
@@ -149,7 +149,9 @@ jobs:
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
-          files: ./release/*
+          files: |
+            ./release/*.exe
+            ./release/*.dmg
           draft: false
           prerelease: false
         env:
@@ -205,7 +207,7 @@ jobs:
           echo "准备yml配置文件..."
           mkdir -p ./yml-files
           cp ./artifacts/windows/latest.yml ./yml-files/ 2>/dev/null || echo "未找到Windows latest.yml"
-          cp ./artifacts/macos/mac-latest.yml ./yml-files/ 2>/dev/null || echo "未找到macOS mac-latest.yml"
+          cp ./artifacts/macos/latest-mac.yml ./yml-files/ 2>/dev/null || echo "未找到macOS latest-mac.yml"
           
           if [ -n "$(ls -A ./yml-files/)" ]; then
             echo "上传yml配置文件到服务器..."
