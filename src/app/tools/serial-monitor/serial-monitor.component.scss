@@ -153,6 +153,14 @@
   margin: 0 10px 10px 10px;
   padding: 5px;
   position: relative;
+
+  // 隐藏 lightweight-charts 的 logo
+  ::ng-deep {
+    #tv-attr-logo,
+    a[href^="https://www.tradingview.com/"] {
+      display: none !important;
+    }
+  }
 }
 
 .monitor {
