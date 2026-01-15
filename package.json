@@ -51,7 +51,7 @@
     "win": {
       "target": "nsis",
       "sign": false,
-      "signAndEditExecutable": false,
+      "signAndEditExecutable": true,
       "artifactName": "aily-blockly-${version}.${ext}",
       "icon": "public/icon.ico",
       "fileAssociations": [
@@ -102,7 +102,7 @@
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
-      "createDesktopShortcut": false,
+      "createDesktopShortcut": true,
       "perMachine": true,
       "allowElevation": true,
       "deleteAppDataOnUninstall": true,
