@@ -1865,7 +1865,7 @@ ${JSON.stringify(errData)}
             let resultState = "done";
             let resultText = '';
 
-            // console.log("工具调用请求: ", data.tool_name, toolArgs);
+            console.log("工具调用请求: ", data.tool_name, toolArgs);
 
             // 定义 block 工具列表
             const blockTools = [
@@ -3209,7 +3209,7 @@ ${JSON.stringify(errData)}
 
 【准备阶段】
 1. 使用get_workspace_overview_tool分析当前工作区的已有块和结构
-2. 列出所有需要使用的库（必须包含\`lib-core-*\`系列基础库：logic、variables、time等）
+2. 列出所有需要使用及可能会使用的库（必须包含\`lib-core-*\`系列核心库：logic、variables、time、math等）
 3. 逐一阅读各库README了解块定义，README不存在时使用工具分析
 4. 如果需要的库未安装，则使用工具查询并安装所需库
 
@@ -3266,7 +3266,7 @@ Your role is ASK (Advisory & Quick Support) - you provide analysis, recommendati
               this.completeToolCall(data.tool_id, data.tool_name, finalState, resultText);
             }
 
-            // console.log(`工具调用结果: `, toolResult, resultText);
+            console.log(`工具调用结果: `, toolResult, resultText);
 
             this.send("tool", JSON.stringify({
               "type": "tool",
