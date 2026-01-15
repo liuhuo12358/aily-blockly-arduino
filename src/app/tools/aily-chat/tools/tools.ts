@@ -1511,10 +1511,6 @@ Query and return specific content (for detailed info)
 - 目标块必须已存在于工作区。
 - 必须提供有效的 blockId 或 blockType。
 - 字段修改需提供非空的 fields 对象；结构修改需提供 extraState 对象。
-
-限制与注意：
-- 不用于创建新块（请使用 smart_block_tool）。
-- 不用于删除块或改变块之间的连接关系（请使用 delete_block_tool / connect_blocks_tool）。
 - 修改前请确保理解目标块的字段名与 extraState 结构，错误参数可能导致操作失败。
 
 **extraState 使用示例：**
@@ -1528,6 +1524,14 @@ Query and return specific content (for detailed info)
   }
 }
 \`\`\`
+
+修改IO下拉菜单字段：
+\`\`\`json
+{
+  "blockId": "pin_block_id",
+  "blockType": "io_pin_digi",
+  "fields": {"PIN": "2"}
+}
 
 **必须提供完整的参数结构，空参数会导致工具执行失败。**`,
         input_schema: {
