@@ -42,6 +42,10 @@
       {
         "from": "child/scripts",
         "to": "app/child/scripts"
+      },
+      {
+        "from": "public/icon.ico",
+        "to": "app/icon.ico"
       }
     ],
     "win": {
@@ -98,7 +102,7 @@
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
-      "createDesktopShortcut": true,
+      "createDesktopShortcut": false,
       "perMachine": true,
       "allowElevation": true,
       "deleteAppDataOnUninstall": true,
