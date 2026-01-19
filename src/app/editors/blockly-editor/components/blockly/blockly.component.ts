@@ -116,9 +116,11 @@ export class BlocklyComponent implements DoCheck, OnDestroy {
   @Input() devmode;
   generator;
 
-  // RxJS 防抖优化
+  // RxJS debounce optimization
   private codeGenerationSubject = new Subject<void>();
   private destroy$ = new Subject<void>();
+  // Track previous #include and #define for dependency change detection
+  private previousDependencies = '';
   // Control bitmap upload handler visibility
   showBitmapUploadHandler = true;
 
@@ -413,7 +415,7 @@ export class BlocklyComponent implements DoCheck, OnDestroy {
       // 设置全局工作区引用，供 editBlockTool 使用
       (window as any)['blocklyWorkspace'] = this.workspace;
       this.workspace.addChangeListener((event: any) => {
-        this.codeGeneration();
+        this.codeGenerationSubject.next();
       });
       this.initLanguage();
     }, 100);
@@ -485,18 +487,26 @@ export class BlocklyComponent implements DoCheck, OnDestroy {
     }.bind(this);
   }
 
+
   /**
    * 初始化代码生成的防抖订阅
    * 使用 RxJS debounceTime 实现防抖，更优雅且自动管理订阅生命周期
    */
   private initCodeGenerationDebounce(): void {
     this.codeGenerationSubject.pipe(
-      debounceTime(500), // 500毫秒防抖延迟
+      debounceTime(500),
       takeUntil(this.destroy$)
     ).subscribe(() => {
       try {
         const code = this.generator.workspaceToCode(this.workspace);
         this.blocklyService.codeSubject.next(code);
+        // Extract #include and #define, check for changes
+        const currentDependencies = this.extractDependencies(code);
+        if (currentDependencies !== this.previousDependencies) {
+          console.log('currentDependencies: ', currentDependencies);
+          this.blocklyService.dependencySubject.next(currentDependencies);
+          this.previousDependencies = currentDependencies;
+        }
       } catch (error) {
         console.error('Code generation error:', error);
       }
@@ -504,9 +514,14 @@ export class BlocklyComponent implements DoCheck, OnDestroy {
   }
 
   /**
-   * 触发代码生成（防抖处理）
+   * Extract #include and #define from code
    */
-  codeGeneration(): void {
-    this.codeGenerationSubject.next();
+  private extractDependencies(code: string): string {
+    const lines = code.split('\n');
+    const dependencies = lines.filter(line => {
+      const trimmed = line.trim();
+      return trimmed.startsWith('#include') || trimmed.startsWith('#define');
+    });
+    return dependencies.join('\n');
   }
 }
