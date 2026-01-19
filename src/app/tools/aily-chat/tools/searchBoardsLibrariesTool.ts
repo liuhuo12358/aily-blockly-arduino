@@ -487,7 +487,9 @@ export const searchBoardsLibrariesTool = {
                 resultContent += `[${index + 1}]\n`;
                 resultContent += `name: ${item.name}\n`;
                 resultContent += `displayName: ${item.displayName}\n`;
-                resultContent += `description: ${item.description}\n`;
+                if (dataFormat !== 'new') {
+                    resultContent += `description: ${item.description}\n`;
+                }
                 
                 // 显示关键硬件信息（仅新格式有 metadata）
                 if (item.metadata) {
