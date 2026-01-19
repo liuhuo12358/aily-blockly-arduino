@@ -99,9 +99,11 @@
               <button nz-button nzType="primary" (click)="nextStep()">
                 AI创建项目
               </button> -->
+              @if(hasExamples){
               <button nz-button nzType="primary" (click)="nextStepFromProjectHub()">
                 {{ 'PROJECT_NEW.BUTTONS.USE_THIS_FROM_HUB' | translate }}
               </button>
+              }
               <div class="links">
                 @if(currentBoard.url){
                 <div class="btn link ccenter" (click)="openUrl(currentBoard.url)">

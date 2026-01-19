@@ -17,6 +17,7 @@ import { BrandListComponent } from './components/brand-list/brand-list.component
 import { BRAND_LIST, CORE_LIST } from '../../configs/board.config';
 import { PlatformService } from '../../services/platform.service';
 import { NzRadioModule } from 'ng-zorro-antd/radio';
+import { CloudService } from '../../tools/cloud-space/services/cloud.service';
 
 @Component({
   selector: 'app-project-new',
@@ -90,6 +91,7 @@ export class ProjectNewComponent {
     private configService: ConfigService,
     private npmService: NpmService,
     private platformService: PlatformService,
+    private cloudService: CloudService,
   ) { }
 
   async ngOnInit() {
@@ -142,13 +144,26 @@ export class ProjectNewComponent {
   }
 
   devmodes = [];
+  hasExamples = false;
   selectBoard(boardInfo: BoardInfo) {
     this.currentBoard = boardInfo;
     this.newProjectData.board.name = boardInfo.name;
     this.newProjectData.board.nickname = boardInfo.nickname;
     this.newProjectData.board.version = boardInfo.version;
     this.newProjectData.devmode = boardInfo.mode ? this.currentBoard.mode[0] : 'arduino';
-    this.devmodes = boardInfo.mode
+    this.devmodes = boardInfo.mode;
+    this.checkHasExamples(boardInfo.name);
+  }
+
+  checkHasExamples(boardName: string) {
+    this.hasExamples = false;
+    this.cloudService.getPublicProjects(1, 1, '', '', boardName).subscribe(res => {
+      if (res && res.status === 200 && res.data && res.data.total > 0) {
+        this.hasExamples = true;
+      } else {
+        this.hasExamples = false;
+      }
+    });
   }
 
   // 可用版本列表
