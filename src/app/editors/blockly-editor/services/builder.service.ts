@@ -357,6 +357,12 @@ export class _BuilderService {
                 this.safeUpdateNotice({ title: completeTitle, text: displayTextWithTime, state: 'done', setTimeout: 600000 });
                 
                 this.passed = true;
+                
+                // 保存编译元数据（不阻塞）
+                this.electronService.calculateHash(this.lastCode).then(codeHash => {
+                  this.saveBuildInfo('success', buildDuration, codeHash);
+                });
+                
                 this.workflowService.finishBuild(true);
                 resolve({ state: 'done', text: `编译完成 (耗时: ${buildDuration}s)` });
               } else if (this.isErrored) {
@@ -368,6 +374,12 @@ export class _BuilderService {
                 this.handleCompileError(lastStdErr || '编译未完成', false);
                 this.logService.update({ detail: fullStdErr, state: 'error' });
                 this.passed = false;
+                
+                // 记录编译失败状态（不阻塞）
+                this.electronService.calculateHash(this.lastCode).then(codeHash => {
+                  this.saveBuildInfo('failed', buildDuration, codeHash);
+                });
+                
                 this.workflowService.finishBuild(false, 'Compilation failed');
                 reject({ state: 'error', text: `编译失败 (耗时: ${buildDuration}s)` });
               } else if (this.cancelled) {
@@ -383,6 +395,12 @@ export class _BuilderService {
                   setTimeout: 55000
                 });
                 this.passed = false;
+                
+                // 记录编译取消状态（不阻塞）
+                this.electronService.calculateHash(this.lastCode).then(codeHash => {
+                  this.saveBuildInfo('cancelled', buildDuration, codeHash);
+                });
+                
                 this.workflowService.finishBuild(false, 'Cancelled');
                 reject({ state: 'warn', text: `编译已取消 (耗时: ${buildDuration}s)` });
               } else {
@@ -432,6 +450,45 @@ export class _BuilderService {
         reject({ state: 'error', text: error.message });
       }
     });
+  }
+
+  /**
+   * 保存编译元数据到 package.json
+   * @param status 编译状态：success | failed | cancelled
+   * @param duration 编译耗时（秒）
+   * @param codeHash 代码SHA256哈希值
+   */
+  private async saveBuildInfo(
+    status: 'success' | 'failed' | 'cancelled',
+    duration: string,
+    codeHash: string
+  ): Promise<void> {
+    try {
+      const currentPackageJson = await this.projectService.getPackageJson();
+      if (!currentPackageJson) return;
+
+      // 初始化 buildInfo 对象
+      if (!currentPackageJson.buildInfo) {
+        currentPackageJson.buildInfo = {};
+      }
+
+      currentPackageJson.buildInfo = {
+        lastBuildTime: new Date().toISOString(),
+        lastBuildCode: codeHash,
+        lastBuildStatus: status,
+        lastBuildDuration: parseFloat(duration)
+      };
+
+      // 仅在编译成功时更新 codeHash（表示当前代码已通过编译）
+      if (status === 'success') {
+        currentPackageJson.codeHash = codeHash;
+      }
+
+      await this.projectService.setPackageJson(currentPackageJson);
+      console.log('✅ 编译元数据已保存:', currentPackageJson.buildInfo);
+    } catch (error) {
+      console.error('❌ 保存编译元数据失败:', error);
+    }
   }
 
   /**
