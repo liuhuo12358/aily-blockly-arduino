@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectorRef, Component, ElementRef, isDevMode, ViewChild, viewChild } from '@angular/core';
+import { ChangeDetectorRef, Component, ElementRef, isDevMode, OnDestroy, ViewChild, viewChild } from '@angular/core';
 import { HEADER_BTNS, HEADER_MENU } from '../../../configs/menu.config';
 import { NzToolTipModule } from 'ng-zorro-antd/tooltip';
 import { FormsModule } from '@angular/forms';
@@ -39,7 +39,7 @@ import { APP_LIST } from '../../../configs/tool.config';
   templateUrl: './header.component.html',
   styleUrl: './header.component.scss',
 })
-export class HeaderComponent {
+export class HeaderComponent implements OnDestroy {
   headerBtns = HEADER_BTNS;
   headerMenu = HEADER_MENU;
   headerApps = APP_LIST;
@@ -51,6 +51,11 @@ export class HeaderComponent {
   get isWindowFullScreen() {
     return this.electronService.isWindowFullScreen();
   }
+
+  isMacFullScreen = false;
+  private unsubscribeFullScreenChanged?: () => void;
+  private unsubscribeCloseRequest?: () => void;
+  private unsaveDialogOpen = false; // 标记未保存对话框是否已打开
 
   get projectData() {
     return this.projectService.currentPackageData;
@@ -107,6 +112,24 @@ export class HeaderComponent {
   ) { }
 
   async ngAfterViewInit() {
+    if (this.electronService.isElectron) {
+      // 监听窗口全屏状态变化
+      this.unsubscribeFullScreenChanged = this.electronService.onWindowFullScreenChanged((isFullScreen: boolean) => {
+        this.isMacFullScreen = isFullScreen;
+        this.cd.detectChanges();
+      });
+
+      // Mac 平台下监听系统关闭按钮的关闭请求
+      if (this.isMac && window['iWindow'] && window['iWindow'].onCloseRequest) {
+        this.unsubscribeCloseRequest = window['iWindow'].onCloseRequest(async () => {
+          const canClose = await this.checkUnsavedChanges('close');
+          if (canClose) {
+            window['iWindow'].confirmClose();
+          }
+        });
+      }
+    }
+
     this.projectService.stateSubject.subscribe((state) => {
       if (state == 'loaded' || state == 'saved') {
         // 将headerMenu中有disabled的按钮置为可用
@@ -130,13 +153,20 @@ export class HeaderComponent {
           }
         });
       }
-      this.cd.detectChanges();
+      // 使用 setTimeout 将变更检测推迟到下一个变更检测周期，避免 ExpressionChangedAfterItHasBeenCheckedError
+      setTimeout(() => {
+        this.cd.detectChanges();
+      }, 0);
     });
 
     this.listenShortcutKeys();
 
     this.authService.showUser.subscribe(state => {
       this.showUser = state;
+      // 使用 setTimeout 将变更检测推迟到下一个变更检测周期
+      setTimeout(() => {
+        this.cd.markForCheck();
+      }, 0);
     })
     this.checkAndSetDefaultPort();
   }
@@ -417,6 +447,20 @@ export class HeaderComponent {
     } else {
       window['iWindow'].maximize();
     }
+    // 状态会通过事件监听器自动更新
+  }
+
+  ngOnDestroy() {
+    if (this.electronService.isElectron) {
+      // 取消窗口全屏状态变化监听
+      if (this.unsubscribeFullScreenChanged) {
+        this.unsubscribeFullScreenChanged();
+      }
+      // 取消 Mac 平台关闭请求监听
+      if (this.unsubscribeCloseRequest) {
+        this.unsubscribeCloseRequest();
+      }
+    }
   }
 
   async close() {
@@ -511,7 +555,7 @@ export class HeaderComponent {
 
       // 处理功能键 F1-F12
       const isFunctionKey = /^f([1-9]|1[0-2])$/i.test(event.key);
-      
+
       // 处理包含修饰键的组合键或功能键
       if (event.ctrlKey || event.shiftKey || event.altKey || isFunctionKey) {
         const shortcutKey = this.getShortcutFromEvent(event);
@@ -573,7 +617,15 @@ export class HeaderComponent {
       return true;
     }
 
+    // 如果弹窗已经打开，直接返回 false，避免重复弹出
+    if (this.unsaveDialogOpen) {
+      return false;
+    }
+
     return new Promise<boolean>((resolve) => {
+      // 标记弹窗已打开
+      this.unsaveDialogOpen = true;
+
       const modalRef = this.modal.create({
         nzTitle: null,
         nzFooter: null,
@@ -588,6 +640,9 @@ export class HeaderComponent {
       });
 
       modalRef.afterClose.subscribe(async result => {
+        // 弹窗关闭后重置标志位
+        this.unsaveDialogOpen = false;
+
         if (!result) {
           // 用户直接关闭对话框，视为取消操作
           resolve(false);

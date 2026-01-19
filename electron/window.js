@@ -90,6 +90,27 @@ function registerWindowHandlers(mainWindow) {
         }
     });
 
+    mainWindow.on('enter-full-screen', () => {
+        try {
+            if (mainWindow && mainWindow.webContents) {
+                mainWindow.webContents.send('window-full-screen-changed', true);
+            }
+        } catch (error) {
+            console.error('Error sending window-full-screen-changed:', error.message);
+        }
+    });
+
+    mainWindow.on('leave-full-screen', () => {
+        try {
+            if (mainWindow && mainWindow.webContents) {
+                mainWindow.webContents.send('window-full-screen-changed', false);
+            }
+        } catch (error) {
+            console.error('Error sending window-full-screen-changed:', error.message);
+        }
+    });
+
+
     ipcMain.on("window-open", (event, data) => {
         const windowUrl = data.path;
 
@@ -164,6 +185,25 @@ function registerWindowHandlers(mainWindow) {
             senderWindow.close();
         }
     });
+
+    // Mac 平台下处理系统关闭按钮的关闭检查
+    if (process.platform === 'darwin') {
+        mainWindow.on('close', (event) => {
+            event.preventDefault();
+            mainWindow.webContents.send('window-close-request');
+        });
+
+        // 监听渲染进程返回的关闭确认结果
+        ipcMain.on('window-close-confirmed', (event) => {
+            const senderWindow = BrowserWindow.fromWebContents(event.sender);
+            if (senderWindow === mainWindow) {
+                mainWindow.removeAllListeners('close');
+                mainWindow.close();
+                app.quit();
+                terminateAilyProcess();
+            }
+        });
+    }
 
     // 修改为同步处理程序
     ipcMain.on("window-is-maximized", (event) => {

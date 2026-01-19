@@ -288,6 +288,23 @@ export class ElectronService {
     }
   }
 
+  /**
+   * 监听窗口全屏状态变化事件
+   * @param callback 回调函数，参数为是否全屏
+   * @returns 取消监听的函数
+   */
+  onWindowFullScreenChanged(callback: (isFullScreen: boolean) => void): () => void {
+    if (!this.isElectron) {
+      return () => {};
+    }
+
+    try {
+      return window['iWindow'].onFullScreenChanged(callback);
+    } catch (error) {
+      console.error('Listen window full screen changed error:', error);
+      return () => {};
+    }
+  }
 
   openByExplorer(path){
     window['other'].openByExplorer(path);
