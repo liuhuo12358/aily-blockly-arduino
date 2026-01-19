@@ -1,5 +1,7 @@
-import { Component, ElementRef, Input, ViewChild, DoCheck } from '@angular/core';
+import { Component, ElementRef, Input, ViewChild, DoCheck, OnDestroy } from '@angular/core';
 import * as Blockly from 'blockly';
+import { Subject } from 'rxjs';
+import { debounceTime, takeUntil } from 'rxjs/operators';
 import * as zhHans from 'blockly/msg/zh-hans';
 // import {
 //   ContinuousToolbox,
@@ -108,11 +110,15 @@ class OverlayFlyoutMetricsManager extends (Blockly as any).MetricsManager {
   templateUrl: './blockly.component.html',
   styleUrl: './blockly.component.scss',
 })
-export class BlocklyComponent implements DoCheck {
+export class BlocklyComponent implements DoCheck, OnDestroy {
   @ViewChild('blocklyDiv', { static: true }) blocklyDiv!: ElementRef;
 
   @Input() devmode;
   generator;
+
+  // RxJS 防抖优化
+  private codeGenerationSubject = new Subject<void>();
+  private destroy$ = new Subject<void>();
   // Control bitmap upload handler visibility
   showBitmapUploadHandler = true;
 
@@ -218,6 +224,7 @@ export class BlocklyComponent implements DoCheck {
   ngOnInit(): void {
     this.initDevMode();
     this.initPrompt();
+    this.initCodeGenerationDebounce();
     this.bitmapUploadService.uploadRequestSubject.subscribe((request) => {
       const modalRef = this.modal.create({
         nzTitle: null,
@@ -251,10 +258,9 @@ export class BlocklyComponent implements DoCheck {
   }
 
   ngOnDestroy(): void {
-    // 清理定时器
-    if (this.codeGenerationTimer) {
-      clearTimeout(this.codeGenerationTimer);
-    }
+    // 清理 RxJS 订阅
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 
   ngDoCheck(): void {
@@ -302,7 +308,7 @@ export class BlocklyComponent implements DoCheck {
             originalError.apply(console, [message, ...args]);
             return;
           }
-          
+
           isHandlingError = true;
           try {
             console.log(message, ...args);
@@ -407,20 +413,7 @@ export class BlocklyComponent implements DoCheck {
       // 设置全局工作区引用，供 editBlockTool 使用
       (window as any)['blocklyWorkspace'] = this.workspace;
       this.workspace.addChangeListener((event: any) => {
-        // if (event.type == Blockly.Events.SELECTED) {
-        //   console.log('积木选择事件：', event);
-        //   // const code = Blockly;
-        //   // console.log('代码生成结果：', code);
-        //  const block = this.workspace.getBlockById(event.newElementId);
-        //  console.log('选中的积木：', block);
-        // }
-        try {
-          this.codeGeneration();
-        } catch (error) {
-          // 仅在开发环境下打印错误，避免用户看到错误
-          console.debug('代码生成时出现错误，可能是某些块尚未注册：', error);
-          // 错误发生时不更新代码
-        }
+        this.codeGeneration();
       });
       this.initLanguage();
     }, 100);
@@ -492,24 +485,28 @@ export class BlocklyComponent implements DoCheck {
     }.bind(this);
   }
 
-  private codeGenerationTimer: any = null;
-
-  codeGeneration(): void {
-    // 清除之前的定时器
-    if (this.codeGenerationTimer) {
-      clearTimeout(this.codeGenerationTimer);
-    }
-
-    // 设置新的定时器，1秒后执行代码生成
-    this.codeGenerationTimer = setTimeout(() => {
+  /**
+   * 初始化代码生成的防抖订阅
+   * 使用 RxJS debounceTime 实现防抖，更优雅且自动管理订阅生命周期
+   */
+  private initCodeGenerationDebounce(): void {
+    this.codeGenerationSubject.pipe(
+      debounceTime(500), // 500毫秒防抖延迟
+      takeUntil(this.destroy$)
+    ).subscribe(() => {
       try {
         const code = this.generator.workspaceToCode(this.workspace);
         this.blocklyService.codeSubject.next(code);
       } catch (error) {
-        // 仅在开发环境下打印错误，避免用户看到错误
-        console.error('代码生成时出现错误，可能是某些块尚未注册：', error);
-        // 错误发生时不更新代码
+        console.error('Code generation error:', error);
       }
-    }, 500); // 500毫秒防抖延迟
+    });
+  }
+
+  /**
+   * 触发代码生成（防抖处理）
+   */
+  codeGeneration(): void {
+    this.codeGenerationSubject.next();
   }
 }
