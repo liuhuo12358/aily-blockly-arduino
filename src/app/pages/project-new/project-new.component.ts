@@ -342,6 +342,11 @@ export class ProjectNewComponent {
       }
     }
   }
+
+  nextStepFromProjectHub() {
+    this.router.navigate(['main', 'playground','list'], { queryParams: { board: this.currentBoard.name } })
+    // this.router.navigate(['/main/playground']);
+  }
 }
 
 

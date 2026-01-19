@@ -157,6 +157,7 @@
         },
         "BUTTONS": {
             "USE_THIS": "このボードを使用",
+            "USE_THIS_FROM_HUB": "ハブからプロジェクトを読み込む",
             "NEXT": "次へ",
             "PREV": "前へ",
             "CREATE": "プロジェクトを作成",

@@ -157,6 +157,7 @@
         },
         "BUTTONS": {
             "USE_THIS": "Usar esta Placa",
+            "USE_THIS_FROM_HUB": "Carregar projeto do Hub",
             "NEXT": "Próximo",
             "PREV": "Anterior",
             "CREATE": "Criar projeto",
