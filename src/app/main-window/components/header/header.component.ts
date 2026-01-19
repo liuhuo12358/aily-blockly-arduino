@@ -116,7 +116,10 @@ export class HeaderComponent implements OnDestroy {
       // 监听窗口全屏状态变化
       this.unsubscribeFullScreenChanged = this.electronService.onWindowFullScreenChanged((isFullScreen: boolean) => {
         this.isMacFullScreen = isFullScreen;
-        this.cd.detectChanges();
+        // 使用 setTimeout 将变更检测推迟到下一个变更检测周期，避免 ExpressionChangedAfterItHasBeenCheckedError
+        setTimeout(() => {
+          this.cd.detectChanges();
+        }, 0);
       });
 
       // Mac 平台下监听系统关闭按钮的关闭请求
@@ -178,7 +181,10 @@ export class HeaderComponent implements OnDestroy {
       if (ports && ports.length === 1 && !this.currentPort) {
         // 只有一个串口且当前没有选择串口时，设为默认
         this.currentPort = ports[0].name;
-        this.cd.detectChanges();
+        // 使用 setTimeout 将变更检测推迟到下一个变更检测周期，避免 ExpressionChangedAfterItHasBeenCheckedError
+        setTimeout(() => {
+          this.cd.detectChanges();
+        }, 0);
       }
     } catch (error) {
       console.warn('获取串口列表失败:', error);
@@ -282,7 +288,10 @@ export class HeaderComponent implements OnDestroy {
       // children: boardList
     })
     this.configList = portList0;
-    this.cd.detectChanges();
+    // 使用 setTimeout 将变更检测推迟到下一个变更检测周期，避免 ExpressionChangedAfterItHasBeenCheckedError
+    setTimeout(() => {
+      this.cd.detectChanges();
+    }, 0);
   }
 
   onClick(item, event = null) {
