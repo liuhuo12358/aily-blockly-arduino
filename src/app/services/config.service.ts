@@ -449,15 +449,15 @@ export class ConfigService {
     }
   }
 
-  examplesList;
-  async loadExamplesList() {
-    this.examplesList = await lastValueFrom(
-      this.http.get(this.getCurrentResourceUrl() + '/examples.json', {
-        responseType: 'json',
-      }),
-    );
-    return this.examplesList;
-  }
+  // examplesList;
+  // async loadExamplesList() {
+  //   this.examplesList = await lastValueFrom(
+  //     this.http.get(this.getCurrentResourceUrl() + '/examples.json', {
+  //       responseType: 'json',
+  //     }),
+  //   );
+  //   return this.examplesList;
+  // }
 
   /**
    * 记录开发板使用次数
