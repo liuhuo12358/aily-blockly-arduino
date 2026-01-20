@@ -43,6 +43,7 @@ export class SubjectListComponent implements OnInit {
       if (params['keyword']) {
         this.keyword = params['keyword'];
       }
+      
     });
   }
 

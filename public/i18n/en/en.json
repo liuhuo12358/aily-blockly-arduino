@@ -209,6 +209,7 @@
         },
         "BUTTONS": {
             "USE_THIS": "Use This Board",
+            "USE_THIS_FROM_HUB": "Load Project from Hub",
             "NEXT": "Next",
             "PREV": "Previous",
             "CREATE": "Create Project",

@@ -153,6 +153,7 @@
         },
         "BUTTONS": {
             "USE_THIS": "이 보드 사용",
+            "USE_THIS_FROM_HUB": "허브에서 프로젝트 불러오기",
             "NEXT": "다음",
             "PREV": "이전",
             "CREATE": "프로젝트 생성",

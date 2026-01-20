@@ -156,7 +156,8 @@
             "NAME_EXISTS": "專案名稱已存在，請修改"
         },
         "BUTTONS": {
-            "USE_THIS": "使用此開發板",
+            "USE_THIS": "使用此開發板創建專案",
+            "USE_THIS_FROM_HUB": "從廣場載入專案",
             "NEXT": "下一步",
             "PREV": "上一步",
             "CREATE": "創建專案",
