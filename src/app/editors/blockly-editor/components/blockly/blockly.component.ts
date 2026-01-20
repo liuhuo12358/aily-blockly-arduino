@@ -501,12 +501,12 @@ export class BlocklyComponent implements DoCheck, OnDestroy {
         const code = this.generator.workspaceToCode(this.workspace);
         this.blocklyService.codeSubject.next(code);
         // Extract #include and #define, check for changes
-        const currentDependencies = this.extractDependencies(code);
-        if (currentDependencies !== this.previousDependencies) {
-          console.log('currentDependencies: ', currentDependencies);
-          this.blocklyService.dependencySubject.next(currentDependencies);
-          this.previousDependencies = currentDependencies;
-        }
+        // const currentDependencies = this.extractDependencies(code);
+        // if (currentDependencies !== this.previousDependencies) {
+        //   console.log('currentDependencies: ', currentDependencies);
+        //   this.blocklyService.dependencySubject.next(currentDependencies);
+        //   this.previousDependencies = currentDependencies;
+        // }
       } catch (error) {
         console.error('Code generation error:', error);
       }
