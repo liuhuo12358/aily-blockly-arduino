@@ -269,17 +269,60 @@ async function main() {
         // 9. 同步编译器工具
         await syncCompilerToolsToToolsPath(fullCompilerPath, toolsPath);
 
-        // 10. 执行编译
+        // 10. 判断是否需要预编译
+        const preprocessCachePath = path.join(tempPath, 'preprocess.json');
+        const needPreprocess = !fs.existsSync(preprocessCachePath);
+
+        // 11. 执行预编译（如果需要）
+        if (needPreprocess) {
+            logger.log('预编译缓存不存在，开始预编译...');
+            logger.log('开始预编译...');
+            const pre_args = [
+                `"${path.join(ailyBuilderPath, 'index.js')}"`,
+                'preprocess',
+                `"${sketchFilePath}"`,
+                '--board', `"${boardType}"`,
+                '--libraries-path', `"${librariesPath}"`,
+                '--sdk-path', `"${fullSdkPath}"`,
+                '--tools-path', `"${toolsPath}"`,
+                '--tool-versions', `"${toolVersions.join(',')}"`,
+                '--save-result', `"${preprocessCachePath}"`
+            ];
+
+            logger.log(`执行预编译: node ${pre_args.join(' ')}`);
+
+            // 使用同步执行预编译，确保完成后再继续
+            await new Promise((resolve, reject) => {
+                const preChild = spawn('node', pre_args, {
+                    cwd: currentProjectPath,
+                    shell: true,
+                    stdio: 'ignore'
+                });
+
+                preChild.on('close', (code) => {
+                    if (code !== 0) {
+                        reject(new Error(`预编译失败，退出码: ${code}`));
+                    } else {
+                        logger.log('预编译完成');
+                        resolve();
+                    }
+                });
+
+                preChild.on('error', (error) => {
+                    reject(new Error(`预编译进程错误: ${error.message}`));
+                });
+            });
+        } else {
+            logger.log('预编译缓存已存在，跳过预编译');
+        }
+
+        // 12. 执行编译
         const args = [
             `"${path.join(ailyBuilderPath, 'index.js')}"`,
-            ...parseArgs(compilerParam),
+            'compile',
             `"${sketchFilePath}"`,
-            '--jobs', '4',
             '--board', `"${boardType}"`,
-            '--libraries-path', `"${librariesPath}"`,
-            '--sdk-path', `"${fullSdkPath}"`,
-            '--tools-path', `"${toolsPath}"`,
-            '--tool-versions', `"${toolVersions.join(',')}"`
+            '--preprocess-result', `"${preprocessCachePath}"`,
         ];
 
         logger.log(`Executing: node ${args.join(' ')}`);

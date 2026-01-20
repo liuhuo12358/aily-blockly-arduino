@@ -44,6 +44,7 @@ export class _BuilderService {
   private progressTimer: any = null; // 进度检查定时器
   private currentProgress: number = 0; // 当前显示的进度
   private hasReceivedRealProgress: boolean = false; // 是否已收到真实进度
+  private dependencySubscription: any = null; // 保存依赖变化订阅引用
 
   currentProjectPath = "";
   lastCode = "";
@@ -76,12 +77,38 @@ export class _BuilderService {
       this.passed = false;
       this.lastCode = "";
     }, 'builder-compile-reset');
+
+    // 保存订阅引用以便后续取消
+    this.dependencySubscription = this.blocklyService.dependencySubject.subscribe(() => {
+      // 删除temp目录下的preprocess.json文件，强制下次编译时重新预编译
+      const tempPath = this.electronService.pathJoin(this.projectService.currentProjectPath, '.temp');
+      const preprocessCachePath = this.electronService.pathJoin(tempPath, 'preprocess.json');
+
+      // console.log('检测到依赖变化，删除预编译缓存文件:', preprocessCachePath);
+
+      if (window['path'].isExists(preprocessCachePath)) {
+        try {
+          window['fs'].unlinkSync(preprocessCachePath);
+          console.log('已删除预编译缓存文件，强制下次编译重新预编译:', preprocessCachePath);
+        } catch (error) {
+          console.warn('删除预编译缓存文件失败:', error);
+        }
+      }
+    });
   }
 
   destroy() {
     this.actionService.unlisten('builder-compile-begin');
     this.actionService.unlisten('builder-compile-cancel');
     this.clearProgressTimer(); // 清理定时器
+    
+    // 取消依赖变化订阅
+    if (this.dependencySubscription) {
+      this.dependencySubscription.unsubscribe();
+      this.dependencySubscription = null;
+      console.log('已取消依赖变化订阅');
+    }
+    
     this.initialized = false; // 重置初始化状态
   }
 
@@ -304,6 +331,7 @@ export class _BuilderService {
 
                     if (trimmedLine.includes('Global variables use')) {
                       outputComplete = true;
+                      this.buildCompleted = true;
                       this.logService.update({ "detail": trimmedLine, "state": "done" });
                     } else {
                       if (!outputComplete) {
