@@ -36,11 +36,11 @@ export class BuilderService {
         console.warn('编译器重置失败:', error);
       }
 
-      // this.clearCache(this.projectService.currentProjectPath).then(() => {
-      //   console.log('编译缓存已清除');
-      // }).catch(err => {
-      //   console.warn('清除编译缓存时出错:', err);
-      // });
+      this.clearCache(this.projectService.currentProjectPath).then(() => {
+        console.log('编译缓存已清除');
+      }).catch(err => {
+        console.warn('清除编译缓存时出错:', err);
+      });
     });
   }
 

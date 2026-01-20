@@ -346,8 +346,6 @@ export class ProjectService {
 
     // 更新当前packageData
     this.currentPackageData = data;
-
-    this.boardChangeSubject.next();
   }
 
   /**
