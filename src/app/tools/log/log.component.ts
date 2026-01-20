@@ -7,6 +7,7 @@ import { NzMessageService } from 'ng-zorro-antd/message';
 import { UiService } from '../../services/ui.service';
 import { ProjectService } from '../../services/project.service';
 import { ElectronService } from '../../services/electron.service';
+import { stripAnsi } from 'fancy-ansi';
 
 @Component({
   selector: 'app-log',
@@ -173,10 +174,20 @@ export class LogComponent {
     this.copyLogItemToChat(item);
   }
 
+  // 清理日志内容：去除 ANSI 格式化字符和每行开头的状态标识
+  private cleanLogContent(text: string): string {
+    if (!text) return '';
+    // 先去除 ANSI 格式化字符
+    let cleaned = stripAnsi(text);
+    // 再去除每行开头的状态标识，如 [ERROR]、[INFO]、[WARN] 等
+    cleaned = cleaned.replace(/^\s*\[(ERROR|INFO|WARN|WARNING|DEBUG|TRACE|FATAL)\]\s*/gim, '');
+    return cleaned;
+  }
+
   // 单击复制日志内容到剪切板
   async copyLogItemToClipboard(item: any) {
     try {
-      const logContent = `${item.detail}`;
+      const logContent = this.cleanLogContent(item.detail);
       await navigator.clipboard.writeText(logContent);
       this.message.success('日志内容已复制到剪切板');
     } catch (err) {
@@ -189,8 +200,9 @@ export class LogComponent {
     // 这里可以实现将日志内容发送到AI助手的逻辑
     // 例如，调用一个服务方法来处理这个操作
     this.uiService.openTool("aily-chat");
+    const cleanDetail = this.cleanLogContent(item.detail);
     setTimeout(() => {
-      window.sendToAilyChat(`运行日志：\n${item.detail}`, {
+      window.sendToAilyChat(`运行日志：\n${cleanDetail}`, {
         sender: 'LogComponent',
         type: 'log'
       });
