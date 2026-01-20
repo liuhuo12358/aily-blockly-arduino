@@ -265,6 +265,81 @@ contextBridge.exposeInMainWorld("electronAPI", {
       return () => {
         ipcRenderer.removeListener(`cmd-data-${streamId}`, listener);
       };
+    },
+    // 后台静默执行命令（用于不需要用户感知的后台任务）
+    execBackground: (command, options = {}) => {
+      const execOptions = {
+        windowsHide: true,
+        ...options
+      };
+      const childProcess = exec(command, execOptions);
+      
+      const processInfo = {
+        pid: childProcess.pid,
+        kill: () => {
+          try {
+            if (childProcess && !childProcess.killed) {
+              // 在Windows上需要强制终止整个进程树
+              if (process.platform === 'win32') {
+                exec(`taskkill /pid ${childProcess.pid} /T /F`, (err) => {
+                  if (err) console.warn('终止进程失败:', err.message);
+                });
+              } else {
+                childProcess.kill('SIGTERM');
+              }
+              return true;
+            }
+            return false;
+          } catch (err) {
+            console.warn('终止后台进程失败:', err);
+            return false;
+          }
+        }
+      };
+      
+      // Promise用于等待完成
+      const promise = new Promise((resolve, reject) => {
+        childProcess.on('exit', (code, signal) => {
+          if (code === 0 || signal === 'SIGTERM') {
+            resolve({ stdout: '', stderr: '' });
+          } else if (signal) {
+            reject({ error: `Process terminated with signal ${signal}`, stderr: '' });
+          } else {
+            reject({ error: `Process exited with code ${code}`, stderr: '' });
+          }
+        });
+        
+        childProcess.on('error', (error) => {
+          reject({ error: error.message, stderr: '' });
+        });
+      });
+      
+      return { processInfo, promise };
+    },
+    // 通过PID终止后台进程
+    killBackgroundProcess: (pid) => {
+      return new Promise((resolve, reject) => {
+        try {
+          if (process.platform === 'win32') {
+            exec(`taskkill /pid ${pid} /T /F`, (error) => {
+              if (error) {
+                reject({ error: error.message });
+              } else {
+                resolve({ success: true });
+              }
+            });
+          } else {
+            try {
+              process.kill(pid, 'SIGTERM');
+              resolve({ success: true });
+            } catch (err) {
+              reject({ error: err.message });
+            }
+          }
+        } catch (err) {
+          reject({ error: err.message });
+        }
+      });
     }
   },
   updater: {
