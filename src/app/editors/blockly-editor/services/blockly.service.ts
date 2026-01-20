@@ -30,6 +30,7 @@ export class BlocklyService {
   loadedLibraries = new Set<string>(); // libPackagePath
 
   codeSubject = new BehaviorSubject<string>('');
+  dependencySubject = new BehaviorSubject<string>('');
 
   boardConfig;
 
