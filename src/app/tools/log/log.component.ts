@@ -1,6 +1,6 @@
-import { Component, OnDestroy, OnInit, AfterViewInit, ViewChild, ElementRef } from '@angular/core';
+import { Component, OnDestroy, OnInit, AfterViewInit, ViewChild, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Datasource, SizeStrategy, UiScrollModule } from 'ngx-ui-scroll';
+import { ScrollingModule, CdkVirtualScrollViewport } from '@angular/cdk/scrolling';
 import { LogService, LogOptions } from '../../services/log.service';
 import { AnsiPipe } from './ansi.pipe';
 import { NzMessageService } from 'ng-zorro-antd/message';
@@ -8,149 +8,104 @@ import { UiService } from '../../services/ui.service';
 import { ProjectService } from '../../services/project.service';
 import { ElectronService } from '../../services/electron.service';
 import { stripAnsi } from 'fancy-ansi';
+import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-log',
-  imports: [CommonModule, AnsiPipe, UiScrollModule],
+  imports: [CommonModule, AnsiPipe, ScrollingModule],
   templateUrl: './log.component.html',
   styleUrl: './log.component.scss',
 })
-export class LogComponent {
+export class LogComponent implements OnInit, AfterViewInit, OnDestroy {
   private clickTimeout: any;
   private preventSingleClick = false;
+  private subscription: Subscription = new Subscription();
 
-  // 虚拟滚动数据源
-  datasource;
+  // 虚拟滚动视口引用
+  @ViewChild(CdkVirtualScrollViewport) viewport!: CdkVirtualScrollViewport;
 
-  // = new Datasource<LogOptions>({
-  //   get: (index: number, count: number) => {
-  //     console.log(`Datasource get called: index=${index}, count=${count}, total=${this.logService.list.length}`);
-  //     const data: LogOptions[] = [];
-  //     const startIndex = Math.max(0, index);
-  //     const endIndex = Math.min(this.logService.list.length, startIndex + count);
+  // 日志列表 - 使用属性而非 getter，以便 CDK 正确检测变化
+  logList: LogOptions[] = [];
 
-  //     for (let i = startIndex; i < endIndex; i++) {
-  //       if (this.logService.list[i]) {
-  //         this.logService.list[i]['id'] = i; // 确保每个日志项都有唯一的 ID
-  //         data.push(this.logService.list[i]);
-  //       }
-  //     }
-
-  //     console.log(`Datasource returning ${data.length} items for range [${startIndex}, ${endIndex})`);
-
-  //     return Promise.resolve(data);
-  //   },
-
-  //   settings: {
-  //     minIndex: 0,
-  //     startIndex: 0,
-  //     bufferSize: 30, // 减少缓冲区大小，降低内存使用
-  //     padding: 0.3, // 适中的 padding 值
-  //     sizeStrategy: SizeStrategy.Frequent
-  //   }
-  // });
-
-  get logList() {
-    return this.logService.list;
-  }
+  // 每项的高度 (24px + 3px margin-bottom)
+  readonly itemSize = 27;
 
   constructor(
     private logService: LogService,
     private message: NzMessageService,
     private uiService: UiService,
     private projectService: ProjectService,
-    private electronService: ElectronService
+    private electronService: ElectronService,
+    private cdr: ChangeDetectorRef
   ) { }
 
   ngOnInit() {
-    let startIndex = 0;
-    if (this.logService.list.length > 0) {
-      startIndex = this.logService.list.length - 1;
-    }
-
-    this.datasource = new Datasource<LogOptions>({
-      get: (index: number, count: number) => {
-        // console.log(`Datasource get called: index=${index}, count=${count}, total=${this.logService.list.length}`);
-        const data: LogOptions[] = [];
-        const startIndex = Math.max(0, index);
-        const endIndex = Math.min(this.logService.list.length, startIndex + count);
-
-        for (let i = startIndex; i < endIndex; i++) {
-          if (this.logService.list[i]) {
-            this.logService.list[i]['id'] = i; // 确保每个日志项都有唯一的 ID
-            data.push(this.logService.list[i]);
-          }
-        }
-        return Promise.resolve(data);
-      },
-
-      settings: {
-        minIndex: 0,
-        startIndex,
-        bufferSize: 30, // 增加缓冲区大小,提升滚动流畅度
-        padding: 0.5, // 适中的 padding 值
-        itemSize: 24,
-        sizeStrategy: SizeStrategy.Average
-      }
-    });
+    // 初始化日志列表
+    this.logList = this.logService.list;
   }
 
   ngAfterViewInit() {
+    // 初始化时检查视口尺寸
+    setTimeout(() => {
+      if (this.viewport) {
+        this.viewport.checkViewportSize();
+      }
+    }, 100);
+
     // 监听日志更新
-    this.logService.stateSubject.subscribe((opts) => {
-      this.handleLogUpdate();
-    });
+    this.subscription.add(
+      this.logService.stateSubject.subscribe(() => {
+        this.handleLogUpdate();
+      })
+    );
 
     if (this.logService.list.length > 0) {
       this.scrollToBottom();
     }
   }
 
-  @ViewChild('logBox', { static: false }) logBoxRef!: ElementRef<HTMLDivElement>;
   scrollToBottom() {
     setTimeout(() => {
       requestAnimationFrame(() => {
-        if (this.logBoxRef) {
-          const element = this.logBoxRef.nativeElement;
-          // 使用 scrollTo 方法实现平滑滚动
-          element.scrollTo({
-            top: element.scrollHeight,
-            behavior: 'auto'
-          });
+        if (this.viewport) {
+          this.viewport.checkViewportSize();
+          this.viewport.scrollToIndex(this.logList.length - 1, 'smooth');
         }
       });
-    }, 100);
+    }, 50);
   }
 
-  // 处理日志更新的新方法
+  // 处理日志更新
   private handleLogUpdate() {
-    const currentLogCount = this.logService.list.length;
-
-    // 如果日志被清空
-    if (currentLogCount === 0) {
-      if (this.datasource.adapter) {
-        this.datasource.adapter.reload(0);
+    // 给每个日志项添加唯一 id
+    this.logService.list.forEach((item, index) => {
+      if (item['id'] === undefined) {
+        item['id'] = index;
       }
-      return;
-    }
-    const startIndex = currentLogCount - 1;
-    this.datasource.adapter.reload(startIndex).then(() => {
-      this.scrollToBottom();
     });
+    // 更新引用以触发变更检测
+    this.logList = [...this.logService.list];
+    this.cdr.detectChanges();
+    // 滚动到底部
+    this.scrollToBottom();
   }
 
   clear() {
     this.logService.clear();
-    if (this.datasource.adapter) {
-      this.datasource.adapter.reload(0);
-    }
+    this.logList = [];
+    this.cdr.detectChanges();
+  }
+
+  // trackBy 函数，用于优化虚拟滚动性能
+  trackByFn(index: number, item: LogOptions): number {
+    return item['id'] ?? index;
   }
 
   ngOnDestroy() {
     if (this.clickTimeout) {
       clearTimeout(this.clickTimeout);
     }
-    // this.lastLogCount = 0;
+    this.subscription.unsubscribe();
   }
 
   // 处理点击事件，区分单击和双击
