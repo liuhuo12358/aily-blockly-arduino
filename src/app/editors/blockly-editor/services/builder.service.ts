@@ -80,7 +80,13 @@ export class _BuilderService {
     }, 'builder-compile-reset');
 
     // 保存订阅引用以便后续取消
-    this.dependencySubscription = this.blocklyService.dependencySubject.subscribe(async () => {
+    this.dependencySubscription = this.blocklyService.dependencySubject.subscribe(async (data) => {
+      // 检查项目加载状态，如果正在加载中则跳过预处理
+      if (!data || this.projectService.stateSubject.value === 'loading') {
+        console.log('项目正在加载中，跳过依赖预处理');
+        return;
+      }
+
       // 删除temp目录下的preprocess.json文件，并在后台运行预处理
       const tempPath = this.electronService.pathJoin(this.projectService.currentProjectPath, '.temp');
       const preprocessCachePath = this.electronService.pathJoin(tempPath, 'preprocess.json');
@@ -112,6 +118,9 @@ export class _BuilderService {
       // 2. 在后台运行预处理脚本
       try {
         const code = arduinoGenerator.workspaceToCode(this.blocklyService.workspace);
+        if (!code) {
+          return;
+        }
         const ailyBuilderPath = window['path'].getAilyBuilderPath();
         const boardModule = await this.projectService.getBoardModule();
 
@@ -328,7 +337,7 @@ export class _BuilderService {
         if (this.preprocessProcess) {
           this.safeUpdateNotice({
             title: "编译准备中",
-            text: "后台预编译正在运行",
+            text: "预编译正在运行",
             state: 'doing',
             progress: 0,
             setTimeout: 0,
