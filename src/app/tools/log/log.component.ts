@@ -66,21 +66,43 @@ export class LogComponent implements OnInit, AfterViewInit, OnDestroy {
     }
   }
 
+  // 滚动到底部，使用多次尝试确保内容完全渲染
   scrollToBottom() {
-    setTimeout(() => {
+    // 取消之前的滚动请求
+    if (this.scrollTimeoutId) {
+      clearTimeout(this.scrollTimeoutId);
+    }
+
+    const doScroll = (attempts = 0) => {
+      if (!this.viewport) return;
+
+      const element = this.viewport.elementRef.nativeElement;
+      this.viewport.checkViewportSize();
+      
+      const scrollHeight = element.scrollHeight;
+      const currentScroll = element.scrollTop + element.clientHeight;
+      
+      // 滚动到底部
+      element.scrollTo({
+        top: scrollHeight,
+        behavior: attempts === 0 ? 'auto' : 'smooth'
+      });
+
+      // 如果还没到底部且尝试次数不超过3次，继续尝试
+      if (attempts < 3 && scrollHeight > currentScroll + 10) {
+        this.scrollTimeoutId = setTimeout(() => doScroll(attempts + 1), 100);
+      }
+    };
+
+    // 等待变更检测和渲染完成后再滚动
+    this.scrollTimeoutId = setTimeout(() => {
       requestAnimationFrame(() => {
-        if (this.viewport) {
-          this.viewport.checkViewportSize();
-          // autosize 策略不支持 scrollToIndex，使用原生滚动
-          const element = this.viewport.elementRef.nativeElement;
-          element.scrollTo({
-            top: element.scrollHeight,
-            behavior: 'smooth'
-          });
-        }
+        doScroll(0);
       });
     }, 50);
   }
+
+  private scrollTimeoutId: any;
 
   // 处理日志更新
   private handleLogUpdate() {
@@ -111,6 +133,9 @@ export class LogComponent implements OnInit, AfterViewInit, OnDestroy {
   ngOnDestroy() {
     if (this.clickTimeout) {
       clearTimeout(this.clickTimeout);
+    }
+    if (this.scrollTimeoutId) {
+      clearTimeout(this.scrollTimeoutId);
     }
     this.subscription.unsubscribe();
   }
