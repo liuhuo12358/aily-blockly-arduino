@@ -1,4 +1,4 @@
-<cdk-virtual-scroll-viewport [itemSize]="itemSize" class="log-box">
+<cdk-virtual-scroll-viewport autosize class="log-box">
   <div *cdkVirtualFor="let item of logList; trackBy: trackByFn" 
        class="item" 
        [ngClass]="{'error':item.state=='error','warn':item.state=='warn','info':item.state=='info'}"

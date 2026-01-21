@@ -21,11 +21,11 @@
   }
 
   .item {
-    height: 27px; // 包含 margin，CDK 需要固定高度
+    min-height: 24px; // 最小高度
     box-sizing: border-box;
     display: flex;
-    // align-items: center;
-    // flex-wrap: wrap;
+    flex-wrap: wrap; // 允许换行
+    align-items: flex-start;
     padding-left: 10px;
     cursor: pointer;
     margin-bottom: 3px;
@@ -70,9 +70,10 @@
 
     .text {
       color: #eee;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
+      flex: 1;
+      min-width: 0;
+      word-wrap: break-word;
+      white-space: pre-wrap; // 保留空白并允许换行
     }
 
     .btns {

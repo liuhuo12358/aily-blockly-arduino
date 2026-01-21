@@ -1,6 +1,7 @@
 import { Component, OnDestroy, OnInit, AfterViewInit, ViewChild, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ScrollingModule, CdkVirtualScrollViewport } from '@angular/cdk/scrolling';
+import { CdkAutoSizeVirtualScroll } from '@angular/cdk-experimental/scrolling';
 import { LogService, LogOptions } from '../../services/log.service';
 import { AnsiPipe } from './ansi.pipe';
 import { NzMessageService } from 'ng-zorro-antd/message';
@@ -12,7 +13,7 @@ import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-log',
-  imports: [CommonModule, AnsiPipe, ScrollingModule],
+  imports: [CommonModule, AnsiPipe, ScrollingModule, CdkAutoSizeVirtualScroll],
   templateUrl: './log.component.html',
   styleUrl: './log.component.scss',
 })
@@ -27,8 +28,9 @@ export class LogComponent implements OnInit, AfterViewInit, OnDestroy {
   // 日志列表 - 使用属性而非 getter，以便 CDK 正确检测变化
   logList: LogOptions[] = [];
 
-  // 每项的高度 (24px + 3px margin-bottom)
-  readonly itemSize = 27;
+  // 每项的估算高度（用于初始渲染）
+  readonly minBufferPx = 200;
+  readonly maxBufferPx = 400;
 
   constructor(
     private logService: LogService,
@@ -69,7 +71,12 @@ export class LogComponent implements OnInit, AfterViewInit, OnDestroy {
       requestAnimationFrame(() => {
         if (this.viewport) {
           this.viewport.checkViewportSize();
-          this.viewport.scrollToIndex(this.logList.length - 1, 'smooth');
+          // autosize 策略不支持 scrollToIndex，使用原生滚动
+          const element = this.viewport.elementRef.nativeElement;
+          element.scrollTo({
+            top: element.scrollHeight,
+            behavior: 'smooth'
+          });
         }
       });
     }, 50);
