@@ -463,7 +463,7 @@ export class _BuilderService {
           });
 
           // 启动进度初始化定时器（3秒后如果还没有进度就显示初始进度）
-          this.startProgressInitTimer(boardName);
+          // this.startProgressInitTimer(boardName);
 
           this.buildSubscription = this.cmdService.run(compileCommand, null, false).subscribe({
             next: (output: CmdOutput) => {
