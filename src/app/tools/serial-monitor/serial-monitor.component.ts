@@ -1,5 +1,4 @@
-import { ChangeDetectorRef, Component, ViewChild, ElementRef } from '@angular/core';
-import { BehaviorSubject, Observable, Subscription } from 'rxjs';
+import { ChangeDetectorRef, Component, ViewChild, ElementRef, AfterViewInit, OnDestroy } from '@angular/core';
 import { NzSelectModule } from 'ng-zorro-antd/select';
 import { FormsModule } from '@angular/forms';
 import { NzInputModule } from 'ng-zorro-antd/input';
@@ -26,9 +25,11 @@ import { SettingMoreComponent } from './components/setting-more/setting-more.com
 import { QuickSendEditorComponent } from './components/quick-send-editor/quick-send-editor.component';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { SearchBoxComponent } from './components/search-box/search-box.component';
+import { SerialChartComponent } from './components/serial-chart/serial-chart.component';
 import { Buffer } from 'buffer';
-import { TranslateService } from '@ngx-translate/core';
+import { TranslateService, TranslateModule } from '@ngx-translate/core';
 import { ConfigService } from '../../services/config.service';
+import { ElectronService } from '../../services/electron.service';
 
 @Component({
   selector: 'app-serial-monitor',
@@ -51,7 +52,9 @@ import { ConfigService } from '../../services/config.service';
     SettingMoreComponent,
     QuickSendEditorComponent,
     SearchBoxComponent,
-    UiScrollModule
+    SerialChartComponent,
+    UiScrollModule,
+    TranslateModule
   ],
   templateUrl: './serial-monitor.component.html',
   styleUrl: './serial-monitor.component.scss',
@@ -150,14 +153,15 @@ export class SerialMonitorComponent {
     private message: NzMessageService,
     private translate: TranslateService,
     private configService: ConfigService,
+    private electronService: ElectronService
   ) { }
 
   async ngOnInit() {
     this.currentUrl = this.router.url;
-    
+
     // 加载保存的串口监视器配置
     this.loadSavedConfig();
-    
+
     if (this.serialService.currentPort) {
       this.currentPort = this.serialService.currentPort;
     }
@@ -211,26 +215,18 @@ export class SerialMonitorComponent {
   }
 
   @ViewChild('dataListBox', { static: false }) dataListBoxRef!: ElementRef<HTMLDivElement>;
+  @ViewChild('serialChart') serialChartRef!: SerialChartComponent;
 
-  private scrollToBottom(fast = false) {
+  private scrollToBottom() {
     if (!this.autoScroll) return;
     setTimeout(() => {
-      // console.log('scroll To Bottom');
       requestAnimationFrame(() => {
         if (this.dataListBoxRef) {
           const element = this.dataListBoxRef.nativeElement;
-          if (fast) {
-            element.scrollTop = element.scrollHeight;
-          } else {
-            // 使用 scrollTo 实现平滑滚动
-            element.scrollTo({
-              top: element.scrollHeight,
-              behavior: 'smooth'
-            });
-          }
+          element.scrollTop = element.scrollHeight;
         }
       });
-    }, fast ? 50 : 100);
+    }, 50);
   }
 
   // 处理数据更新
@@ -278,7 +274,7 @@ export class SerialMonitorComponent {
     }
     this.cd.detectChanges();
     // 如果开启自动滚动,滚动到底部
-    this.scrollToBottom(true);
+    this.scrollToBottom();
   }
 
 
@@ -430,7 +426,7 @@ export class SerialMonitorComponent {
     if (!this.switchValue) {
       const result = await this.serialMonitorService.disconnect();
       if (result) {
-        this.message.success('串口已关闭');
+        this.message.success(this.translate.instant('SERIAL.PORT_CLOSED'));
       }
       return;
     }
@@ -454,7 +450,7 @@ export class SerialMonitorComponent {
       });
 
       if (result) {
-        this.message.success('串口已打开');
+        this.message.success(this.translate.instant('SERIAL.PORT_OPENED'));
         // 发送DTR信号
         setTimeout(() => {
           this.serialMonitorService.sendSignal('DTR');
@@ -481,6 +477,10 @@ export class SerialMonitorComponent {
     if (this.datasource && this.datasource.adapter) {
       // 清空时使用 reload 是合理的,因为需要完全重置
       this.datasource.adapter.reload(0);
+    }
+    // 清空图表数据
+    if (this.serialChartRef) {
+      this.serialChartRef.clearChartData();
     }
   }
 
@@ -650,5 +650,27 @@ export class SerialMonitorComponent {
 
   onDataItemClick(item: dataItem) {
     console.log(item);
+  }
+
+  showChartBox = false;
+
+  openChartBox() {
+    this.showChartBox = !this.showChartBox;
+    if (this.showChartBox) {
+      // 延迟初始化图表，确保 DOM 元素已渲染
+      setTimeout(() => {
+        if (this.serialChartRef) {
+          this.serialChartRef.initChart();
+        }
+      }, 100);
+    } else {
+      if (this.serialChartRef) {
+        this.serialChartRef.destroyChart();
+      }
+    }
+  }
+
+  openUrl(url) {
+    this.electronService.openUrl(url);
   }
 }

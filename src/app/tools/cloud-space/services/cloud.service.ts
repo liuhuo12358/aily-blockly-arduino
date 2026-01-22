@@ -35,8 +35,8 @@ export class CloudService {
   /** 
    * 获取公开列表
    */
-  getPublicProjects(page, perPage, keyword, id=''): Observable<any> {
-    return this.http.get<any>(`${API.cloudPublicProjects}?page=${page}&perPage=${perPage}&keywords=${keyword}&id=${id}`)
+  getPublicProjects(page, perPage, keyword, id='', board=''): Observable<any> {
+    return this.http.get<any>(`${API.cloudPublicProjects}?page=${page}&perPage=${perPage}&keywords=${keyword}&id=${id}&board=${board}`)
       .pipe(
         catchError(this.handleError)
       );
