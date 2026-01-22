@@ -253,6 +253,7 @@ export class _BuilderService {
       }
 
       // 使用 Electron API 运行预处理脚本
+      console.log('运行命令:', preprocessCommand);
       const { processInfo, promise } = window['cmd'].execBackground(preprocessCommand);
       
       // 保存进程引用

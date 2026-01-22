@@ -255,6 +255,7 @@ async function main() {
         const pre_args = [
             `"${path.join(ailyBuilderPath, 'index.js')}"`,
             'preprocess',
+            // `...parseArgs(compilerParam)`,
             `"${sketchFilePath}"`,
             '--board', `"${boardType}"`,
             '--libraries-path', `"${librariesPath}"`,
@@ -263,6 +264,28 @@ async function main() {
             '--tool-versions', `"${toolVersions.join(',')}"`,
             '--save-result', `"${preprocessCachePath}"`
         ];
+
+        // 添加项目配置参数（如 UploadSpeed, FlashMode, FlashSize, PartitionScheme, PSRAM 等）
+        if (projectConfig) {
+            for (const [key, value] of Object.entries(projectConfig)) {
+                if (value !== null && value !== undefined && value !== '') {
+                    pre_args.push('--board-options', `${key}=${value}`);
+                }
+            }
+        }
+
+        // 添加宏定义参数
+        if (macros && macros.length > 0) {
+            macros.forEach(macroDef => {
+                if (Array.isArray(macroDef)) {
+                    macroDef.forEach(macro => {
+                        pre_args.push('--build-macros', macro);
+                    });
+                } else if (typeof macroDef === 'string') {
+                    pre_args.push('--build-macros', macroDef);
+                }
+            });
+        }
 
         logger.log(`执行预编译: node ${pre_args.join(' ')}`);
 
