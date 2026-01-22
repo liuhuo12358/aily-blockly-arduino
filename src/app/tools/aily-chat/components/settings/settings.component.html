@@ -24,12 +24,14 @@
                     </label>
                 </div>
                 <div class="items-container">
-                    <div *ngFor="let option of workspaceOptions" class="item-wrapper">
+                    @for (option of workspaceOptions; track option.displayName) {
+                    <div class="item-wrapper">
                         <label nz-checkbox [(ngModel)]="option.enabled" (ngModelChange)="onWorkspaceCheckedChange()"
                             class="list-item">
                             {{ option.displayName }}
                         </label>
                     </div>
+                    }
                 </div>
             </div>
         </div>
@@ -71,7 +73,8 @@
 
                 <!-- API密钥列表 -->
                 <div class="items-container sscroll">
-                    <div *ngFor="let apiKey of apiKeysList" class="item-wrapper api-key-item">
+                    @for (apiKey of apiKeysList; track apiKey.id) {
+                    <div class="item-wrapper api-key-item">
                         <div class="api-key-info">
                             <label nz-checkbox [(ngModel)]="apiKey.enabled" (ngModelChange)="toggleApiKeyEnabled(apiKey.id)"
                                 class="list-item">
@@ -84,6 +87,7 @@
                             <i class="fa-light fa-trash"></i>
                         </button>
                     </div>
+                    }
                 </div>
             </div>
         </div>
@@ -120,11 +124,13 @@
                     </div>
                     <div class="form-row">
                         <nz-select [(ngModel)]="newModel.apiKeyId" nzPlaceHolder="使用的API" nzAllowClear>
-                            <nz-option *ngFor="let apiKey of apiKeysList" 
+                            @for (apiKey of apiKeysList; track apiKey.id) {
+                            <nz-option 
                                 [nzValue]="apiKey.id" 
                                 [nzLabel]="apiKey.name"
                                 [nzDisabled]="!apiKey.enabled">
                             </nz-option>
+                            }
                         </nz-select>
                     </div>
                     <div class="form-actions">
@@ -136,7 +142,8 @@
                 }
                 
                 <div class="items-container sscroll">
-                    <div *ngFor="let model of modelList" class="item-wrapper model-item">
+                    @for (model of modelList; track model.model) {
+                    <div class="item-wrapper model-item">
                         <div class="model-info">
                             <label nz-checkbox [(ngModel)]="model.enabled" (ngModelChange)="onModelCheckedChange()"
                                 class="list-item">
@@ -156,6 +163,7 @@
                             <i class="fa-light fa-trash"></i>
                         </button>
                     </div>
+                    }
                 </div>
             </div>
         </div>
@@ -174,12 +182,14 @@
                     <span class="items-count">{{ enabledToolsCount }} / {{ availableTools.length }} 已启用</span>
                 </div>
                 <div class="items-container sscroll">
-                    <div *ngFor="let tool of availableTools" class="item-wrapper">
+                    @for (tool of availableTools; track tool.displayName) {
+                    <div class="item-wrapper">
                         <label nz-checkbox [(ngModel)]="tool.enabled" (ngModelChange)="onToolCheckedChange()"
                             class="list-item">
                             {{ tool.displayName }}
                         </label>
                     </div>
+                    }
                 </div>
             </div>
         </div>

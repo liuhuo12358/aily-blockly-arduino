@@ -45,6 +45,7 @@ export class ExampleListComponent implements OnInit, AfterViewInit, OnDestroy {
   resourceUrl: string = '';
   keyword: string = '';
   id: string = '';
+  board: string = '';
   params: any = {};
   version: string = '';
   sessionId: string = '';
@@ -113,6 +114,7 @@ export class ExampleListComponent implements OnInit, AfterViewInit, OnDestroy {
         // console.log('URL参数:', params);
         this.id = params['id'] || '';
         this.sessionId = params['sessionId'] || '';
+        this.board = params['board'] || '';
 
         this.keyword = params['keyword'] || '';
         this.params = this.parseParams(params['params'] || '');
@@ -155,7 +157,7 @@ export class ExampleListComponent implements OnInit, AfterViewInit, OnDestroy {
     if (this.examplesSub) {
       this.examplesSub.unsubscribe();
     }
-    this.examplesSub = this.cloudService.getPublicProjects(this.pageIndex, this.pageSize, this.keyword, this.id)
+    this.examplesSub = this.cloudService.getPublicProjects(this.pageIndex, this.pageSize, this.keyword, this.id, this.board)
       .pipe(takeUntil(this.destroy$))
       .subscribe(res => {
       if (res && res.status === 200) {
