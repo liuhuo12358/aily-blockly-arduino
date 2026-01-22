@@ -166,9 +166,19 @@ export class _BuilderService {
               this.preprocessStreamId = output.streamId;
               console.log('捕获到预处理 streamId:', this.preprocessStreamId);
             }
+            
+            // 将预编译输出发送到日志
+            if (output.data) {
+              this.logService.update({ "detail": output.data, "state": "doing" });
+            }
+            if (output.error) {
+              this.logService.update({ "detail": output.error, "state": "error" });
+            }
           },
           error: (error) => {
-            console.warn('后台预处理失败:', error.error || error);
+            const errorMsg = error.error || error.message || error;
+            console.warn('后台预处理失败:', errorMsg);
+            this.logService.update({ "detail": '后台预处理失败: ' + errorMsg, "state": "error" });
             // 清理引用
             if (this.preprocessProcess === subscription) {
               this.preprocessProcess = null;
@@ -177,6 +187,7 @@ export class _BuilderService {
           },
           complete: () => {
             console.log('后台预处理完成');
+            this.logService.update({ "detail": '后台预处理完成', "state": "done" });
             // 清理引用
             if (this.preprocessProcess === subscription) {
               this.preprocessProcess = null;
@@ -291,9 +302,19 @@ export class _BuilderService {
             this.preprocessStreamId = output.streamId;
             console.log('捕获到同步预处理 streamId:', this.preprocessStreamId);
           }
+          
+          // 将预编译输出发送到日志
+          if (output.data) {
+            this.logService.update({ "detail": output.data, "state": "doing" });
+          }
+          if (output.error) {
+            this.logService.update({ "detail": output.error, "state": "error" });
+          }
         },
         error: (error) => {
-          console.error('同步预处理失败:', error.error || error);
+          const errorMsg = error.error || error.message || error;
+          console.error('同步预处理失败:', errorMsg);
+          this.logService.update({ "detail": '同步预处理失败: ' + errorMsg, "state": "error" });
           // 清理引用
           if (this.preprocessProcess === subscription) {
             this.preprocessProcess = null;
@@ -303,6 +324,7 @@ export class _BuilderService {
         },
         complete: () => {
           console.log('同步预处理完成');
+          this.logService.update({ "detail": '同步预处理完成', "state": "done" });
           // 清理引用
           if (this.preprocessProcess === subscription) {
             this.preprocessProcess = null;
