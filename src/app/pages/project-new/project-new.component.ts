@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { ChangeDetectorRef, Component } from '@angular/core';
 import { CommonModule, Location } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { NzButtonModule } from 'ng-zorro-antd/button';
@@ -92,6 +92,7 @@ export class ProjectNewComponent {
     private npmService: NpmService,
     private platformService: PlatformService,
     private cloudService: CloudService,
+    private cd: ChangeDetectorRef
   ) { }
 
   async ngOnInit() {
@@ -160,8 +161,7 @@ export class ProjectNewComponent {
     this.cloudService.getPublicProjects(1, 1, '', '', boardName).subscribe(res => {
       if (res && res.status === 200 && res.data && res.data.total > 0) {
         this.hasExamples = true;
-      } else {
-        this.hasExamples = false;
+        this.cd.detectChanges();
       }
     });
   }
@@ -359,7 +359,7 @@ export class ProjectNewComponent {
   }
 
   nextStepFromProjectHub() {
-    this.router.navigate(['main', 'playground','list'], { queryParams: { board: this.currentBoard.name } })
+    this.router.navigate(['main', 'playground', 'list'], { queryParams: { board: this.currentBoard.name } })
     // this.router.navigate(['/main/playground']);
   }
 }
