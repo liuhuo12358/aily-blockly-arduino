@@ -123,6 +123,22 @@ contextBridge.exposeInMainWorld("electronAPI", {
       ipcRenderer.on("window-blur", listener);
       return () => ipcRenderer.removeListener("window-blur", listener);
     },
+    // 监听窗口全屏状态变化事件
+    onFullScreenChanged: (callback) => {
+      const listener = (event, isFullScreen) => callback(isFullScreen);
+      ipcRenderer.on("window-full-screen-changed", listener);
+      return () => ipcRenderer.removeListener("window-full-screen-changed", listener);
+    },
+    // 监听 Mac 平台下系统关闭按钮的关闭请求
+    onCloseRequest: (callback) => {
+      const listener = () => callback();
+      ipcRenderer.on("window-close-request", listener);
+      return () => ipcRenderer.removeListener("window-close-request", listener);
+    },
+    // 确认关闭窗口（Mac 平台使用）
+    confirmClose: () => {
+      ipcRenderer.send("window-close-confirmed");
+    },
   },
   subWindow: {
     open: (options) => ipcRenderer.send("window-open", options),
@@ -453,7 +469,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
         try {
           const { pattern, path: searchPath, limit = 100 } = params;
           const glob = require("glob");
-          
+
           const options = {
             absolute: true,
             nodir: true,
@@ -465,18 +481,18 @@ contextBridge.exposeInMainWorld("electronAPI", {
               '**/.angular/**'
             ]
           };
-          
+
           if (searchPath) {
             options.cwd = searchPath;
           }
-          
+
           const startTime = Date.now();
           const files = glob.sync(pattern, options);
           const durationMs = Date.now() - startTime;
-          
+
           const truncated = files.length > limit;
           const limitedFiles = files.slice(0, limit);
-          
+
           resolve({
             is_error: false,
             content: limitedFiles.join('\n'),
