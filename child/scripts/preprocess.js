@@ -301,7 +301,7 @@ async function main() {
                 if (code !== 0) {
                     reject(new Error(`预编译失败，退出码: ${code}`));
                 } else {
-                    logger.log('预编译完成');
+                    // logger.log('预编译完成');
                     resolve();
                 }
             });
@@ -311,7 +311,7 @@ async function main() {
             });
         });
 
-        logger.log('预处理完成');
+        // logger.log('预处理完成');
         process.exit(0);
 
     } catch (error) {

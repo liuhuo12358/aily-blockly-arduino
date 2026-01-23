@@ -45,7 +45,8 @@ export class _BuilderService {
   private currentProgress: number = 0; // 当前显示的进度
   private hasReceivedRealProgress: boolean = false; // 是否已收到真实进度
   private dependencySubscription: any = null; // 保存依赖变化订阅引用
-  private preprocessProcess: any = null; // 保存当前运行的预处理进程
+  private preprocessProcess: any = null; // 保存当前运行的预处理订阅
+  private preprocessStreamId: string | null = null; // 保存预处理的 streamId
 
   currentProjectPath = "";
   lastCode = "";
@@ -94,11 +95,19 @@ export class _BuilderService {
       console.log('检测到依赖变化，准备重新预处理');
 
       // 1. 先终止正在运行的预处理进程（如果有）
-      if (this.preprocessProcess) {
+      if (this.preprocessProcess || this.preprocessStreamId) {
         console.log('终止正在运行的预处理进程...');
         try {
-          this.preprocessProcess.kill();
-          this.preprocessProcess = null;
+          // 先取消订阅
+          if (this.preprocessProcess) {
+            this.preprocessProcess.unsubscribe();
+            this.preprocessProcess = null;
+          }
+          // 再 kill 进程
+          if (this.preprocessStreamId) {
+            await this.cmdService.kill(this.preprocessStreamId);
+            this.preprocessStreamId = null;
+          }
         } catch (error) {
           console.warn('终止旧的预处理进程失败:', error);
         }
@@ -149,27 +158,46 @@ export class _BuilderService {
 
         console.log('开始后台运行预处理脚本');
 
-        // 使用 Electron API 后台静默运行预处理脚本
-        const { processInfo, promise } = window['cmd'].execBackground(preprocessCommand);
-        
-        // 保存进程引用以便后续终止
-        this.preprocessProcess = processInfo;
-        
-        promise
-          .then(() => {
+        // 使用 cmdService 后台静默运行预处理脚本
+        const subscription = this.cmdService.run(preprocessCommand, null, false).subscribe({
+          next: (output) => {
+            // 捕获 streamId
+            if (!this.preprocessStreamId && output.streamId) {
+              this.preprocessStreamId = output.streamId;
+              console.log('捕获到预处理 streamId:', this.preprocessStreamId);
+            }
+            
+            // 将预编译输出发送到日志
+            if (output.data) {
+              this.logService.update({ "detail": output.data, "state": "doing" });
+            }
+            if (output.error) {
+              this.logService.update({ "detail": output.error, "state": "error" });
+            }
+          },
+          error: (error) => {
+            const errorMsg = error.error || error.message || error;
+            console.warn('后台预处理失败:', errorMsg);
+            this.logService.update({ "detail": '后台预处理失败: ' + errorMsg, "state": "error" });
+            // 清理引用
+            if (this.preprocessProcess === subscription) {
+              this.preprocessProcess = null;
+              this.preprocessStreamId = null;
+            }
+          },
+          complete: () => {
             console.log('后台预处理完成');
-            // 清理进程引用
-            if (this.preprocessProcess === processInfo) {
+            this.logService.update({ "detail": '后台预处理完成', "state": "done" });
+            // 清理引用
+            if (this.preprocessProcess === subscription) {
               this.preprocessProcess = null;
+              this.preprocessStreamId = null;
             }
-          })
-          .catch((error) => {
-            console.warn('后台预处理失败:', error.error || error);
-            // 清理进程引用
-            if (this.preprocessProcess === processInfo) {
-              this.preprocessProcess = null;
-            }
-          });
+          }
+        });
+        
+        // 保存订阅引用以便后续终止
+        this.preprocessProcess = subscription;
       } catch (error) {
         console.warn('启动后台预处理失败:', error);
       }
@@ -182,10 +210,18 @@ export class _BuilderService {
     this.clearProgressTimer(); // 清理定时器
     
     // 终止正在运行的预处理进程
-    if (this.preprocessProcess) {
+    if (this.preprocessProcess || this.preprocessStreamId) {
       try {
-        this.preprocessProcess.kill();
-        this.preprocessProcess = null;
+        // 先取消订阅
+        if (this.preprocessProcess) {
+          this.preprocessProcess.unsubscribe();
+          this.preprocessProcess = null;
+        }
+        // 再 kill 进程
+        if (this.preprocessStreamId) {
+          this.cmdService.kill(this.preprocessStreamId);
+          this.preprocessStreamId = null;
+        }
         console.log('已终止预处理进程');
       } catch (error) {
         console.warn('终止预处理进程失败:', error);
@@ -242,40 +278,64 @@ export class _BuilderService {
 
     return new Promise((resolve, reject) => {
       // 启动前再次确认并清理旧进程
-      if (this.preprocessProcess) {
+      if (this.preprocessProcess || this.preprocessStreamId) {
         console.log('启动前发现残留进程，立即清理...');
         try {
-          this.preprocessProcess.kill();
+          if (this.preprocessProcess) {
+            this.preprocessProcess.unsubscribe();
+          }
+          if (this.preprocessStreamId) {
+            this.cmdService.kill(this.preprocessStreamId);
+          }
         } catch (error) {
           console.warn('清理残留进程失败:', error);
         }
         this.preprocessProcess = null;
+        this.preprocessStreamId = null;
       }
 
-      // 使用 Electron API 运行预处理脚本
-      console.log('运行命令:', preprocessCommand);
-      const { processInfo, promise } = window['cmd'].execBackground(preprocessCommand);
-      
-      // 保存进程引用
-      this.preprocessProcess = processInfo;
-      
-      promise
-        .then(() => {
-          console.log('同步预处理完成');
-          // 清理进程引用
-          if (this.preprocessProcess === processInfo) {
-            this.preprocessProcess = null;
+      // 使用 cmdService 运行预处理脚本
+      const subscription = this.cmdService.run(preprocessCommand, null, false).subscribe({
+        next: (output) => {
+          // 捕获 streamId
+          if (!this.preprocessStreamId && output.streamId) {
+            this.preprocessStreamId = output.streamId;
+            console.log('捕获到同步预处理 streamId:', this.preprocessStreamId);
           }
-          resolve();
-        })
-        .catch((error) => {
-          console.error('同步预处理失败:', error.error || error);
-          // 清理进程引用
-          if (this.preprocessProcess === processInfo) {
+          
+          // 将预编译输出发送到日志
+          if (output.data) {
+            this.logService.update({ "detail": output.data, "state": "doing" });
+          }
+          if (output.error) {
+            this.logService.update({ "detail": output.error, "state": "error" });
+          }
+        },
+        error: (error) => {
+          const errorMsg = error.error || error.message || error;
+          console.error('同步预处理失败:', errorMsg);
+          this.logService.update({ "detail": '同步预处理失败: ' + errorMsg, "state": "error" });
+          // 清理引用
+          if (this.preprocessProcess === subscription) {
             this.preprocessProcess = null;
+            this.preprocessStreamId = null;
           }
           reject(error);
-        });
+        },
+        complete: () => {
+          console.log('同步预处理完成');
+          this.logService.update({ "detail": '同步预处理完成', "state": "done" });
+          // 清理引用
+          if (this.preprocessProcess === subscription) {
+            this.preprocessProcess = null;
+            this.preprocessStreamId = null;
+          }
+          resolve();
+        }
+      });
+      
+      // 保存订阅引用
+      this.preprocessProcess = subscription;
     });
   }
 
@@ -368,11 +428,17 @@ export class _BuilderService {
           }
           
           // 超时或完成检查
-          if (this.preprocessProcess) {
+          if (this.preprocessProcess || this.preprocessStreamId) {
             console.warn('等待预编译超时，尝试终止并重新运行');
             try {
-              this.preprocessProcess.kill();
-              this.preprocessProcess = null;
+              if (this.preprocessProcess) {
+                this.preprocessProcess.unsubscribe();
+                this.preprocessProcess = null;
+              }
+              if (this.preprocessStreamId) {
+                await this.cmdService.kill(this.preprocessStreamId);
+                this.preprocessStreamId = null;
+              }
             } catch (error) {
               console.warn('终止超时的预编译进程失败:', error);
             }
@@ -464,7 +530,7 @@ export class _BuilderService {
           });
 
           // 启动进度初始化定时器（3秒后如果还没有进度就显示初始进度）
-          this.startProgressInitTimer(boardName);
+          // this.startProgressInitTimer(boardName);
 
           this.buildSubscription = this.cmdService.run(compileCommand, null, false).subscribe({
             next: (output: CmdOutput) => {
