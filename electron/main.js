@@ -898,9 +898,7 @@ function loadEnv() {
 
   // TODO 下一版本删除，强制将cn区域的api_server地址设置为https://aapi.diandeng.tech
   conf.regions["cn"]["api_server"] = "https://aapi.diandeng.tech";
-  
-  console.log("conf: ", conf);
-
+  // console.log("conf: ", conf);
   // 从 regions 配置中获取当前区域的服务地址
   const currentRegion = conf.region || 'cn';
   const regionConfig = conf.regions && conf.regions[currentRegion] ? conf.regions[currentRegion] : conf.regions['cn'];

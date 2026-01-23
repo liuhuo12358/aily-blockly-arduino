@@ -157,6 +157,7 @@
         },
         "BUTTONS": {
             "USE_THIS": "Dieses Board verwenden",
+            "USE_THIS_FROM_HUB": "Projekt aus dem Hub laden",
             "NEXT": "Weiter",
             "PREV": "Zurück",
             "CREATE": "Projekt erstellen",

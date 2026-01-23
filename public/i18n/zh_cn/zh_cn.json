@@ -208,7 +208,8 @@
             "NAME_EXISTS": "项目名称已存在，请修改"
         },
         "BUTTONS": {
-            "USE_THIS": "使用此开发板",
+            "USE_THIS": "创建新项目",
+            "USE_THIS_FROM_HUB": "从广场加载项目",
             "NEXT": "下一步",
             "PREV": "上一步",
             "CREATE": "创建项目",

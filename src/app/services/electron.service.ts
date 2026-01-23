@@ -288,6 +288,23 @@ export class ElectronService {
     }
   }
 
+  /**
+   * 监听窗口全屏状态变化事件
+   * @param callback 回调函数，参数为是否全屏
+   * @returns 取消监听的函数
+   */
+  onWindowFullScreenChanged(callback: (isFullScreen: boolean) => void): () => void {
+    if (!this.isElectron) {
+      return () => {};
+    }
+
+    try {
+      return window['iWindow'].onFullScreenChanged(callback);
+    } catch (error) {
+      console.error('Listen window full screen changed error:', error);
+      return () => {};
+    }
+  }
 
   openByExplorer(path){
     window['other'].openByExplorer(path);
@@ -314,6 +331,34 @@ export class ElectronService {
     } catch (error) {
       console.error('Get current region error:', error);
       return '';
+    }
+  }
+
+  /**
+   * 计算字符串内容的 SHA256 哈希值
+   * @param content 要计算哈希的字符串内容
+   * @returns SHA256 哈希值（十六进制字符串）
+   */
+  async calculateHash(content: string): Promise<string> {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(content);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  }
+
+  /**
+   * 计算文件的 SHA256 哈希值
+   * @param filePath 文件路径
+   * @returns SHA256 哈希值（十六进制字符串）
+   */
+  async calculateFileHash(filePath: string): Promise<string> {
+    try {
+      const content = this.readFile(filePath);
+      return await this.calculateHash(content);
+    } catch (error) {
+      console.error('计算文件哈希值失败:', error);
+      throw error;
     }
   }
 }

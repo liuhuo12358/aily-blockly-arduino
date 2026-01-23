@@ -157,6 +157,7 @@
         },
         "BUTTONS": {
             "USE_THIS": "Utiliser cette Carte",
+            "USE_THIS_FROM_HUB": "Charger le projet depuis le Hub",
             "NEXT": "Suivant",
             "PREV": "Précédent",
             "CREATE": "Créer Projet",

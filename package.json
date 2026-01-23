@@ -1,7 +1,7 @@
 {
   "name": "aily-blockly",
   "productName": "aily blockly",
-  "version": "0.9.14",
+  "version": "0.9.17",
   "author": "coloz",
   "description": "aily blockly dev",
   "main": "electron/main.js",
@@ -124,6 +124,7 @@
   "private": true,
   "dependencies": {
     "@angular/animations": "^19.0.0",
+    "@angular/cdk-experimental": "^19.2.19",
     "@angular/common": "^19.0.0",
     "@angular/compiler": "^19.0.0",
     "@angular/core": "^19.0.0",
