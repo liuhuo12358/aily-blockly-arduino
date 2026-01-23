@@ -495,10 +495,21 @@ export class _BuilderService {
         let completeTitle: string = `编译完成`;
 
         try {
-          // 预编译已经处理了配置文件，这里直接使用
+          // 获取最新代码
+          const code = arduinoGenerator.workspaceToCode(this.blocklyService.workspace);
+          this.lastCode = code;
+          
           const boardModule = await this.projectService.getBoardModule();
           const boardName = boardModule.replace('@aily-project/board-', '');
           const configFilePath = this.electronService.pathJoin(tempPath, 'build-config.json');
+
+          // 更新配置文件中的 code（compile.js 会负责写入 sketch 文件）
+          let buildConfig: any = {};
+          if (window['path'].isExists(configFilePath)) {
+            buildConfig = JSON.parse(window['fs'].readFileSync(configFilePath, 'utf8'));
+          }
+          buildConfig.code = code;
+          window['fs'].writeFileSync(configFilePath, JSON.stringify(buildConfig, null, 2));
 
           // 运行编译脚本
           const compileScriptPath = this.electronService.pathJoin(window['path'].getAilyChildPath(), 'scripts', 'compile.js');

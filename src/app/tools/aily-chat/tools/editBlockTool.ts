@@ -7416,8 +7416,9 @@ function formatWorkspaceOverviewText(
         }
       } else {
         lines.push('  ❌ 发现语法问题:');
-        lines.push('【修复原则】⚠️严禁随意删除代码块，必须严格遵守以下原则：');
-        lines.push('- 诊断优先：先分析代码逻辑和块结构，定位具体问题');
+        lines.push('【修复原则】⚠️**严禁随意删除代码块，必须严格遵守以下原则**：');
+        lines.push('- 诊断优先：先完整分析代码逻辑和块结构，定位具体问题');
+        lines.push('  · 读取对应库readme和文档');
         lines.push('- 最小改动：精确修复，保持结构稳定');
         lines.push('- 分级处理：');
         lines.push('  · 简单问题（缺块/块错误/连接错误） → 分析根本原因→ 新建块或使用connect_blocks_tool连接');

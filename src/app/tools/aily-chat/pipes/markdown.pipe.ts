@@ -64,13 +64,16 @@ export class MarkdownPipe implements PipeTransform {
         langPrefix: 'hljs language-',
         highlight: async (code: string, lang: string) => {
           try {
+            // 标准化语言名称（用于 aily 类型检测）
+            const ailyLang = lang?.trim()?.toLowerCase() || '';
+            
             // 检查是否为特殊的 Aily 代码块类型
-            if (this.isAilyCodeBlock(lang)) {
-              return this.renderAilyCodeBlockWithComponent(code, lang as any);
+            if (this.isAilyCodeBlock(ailyLang)) {
+              return this.renderAilyCodeBlockWithComponent(code, ailyLang);
             }
 
             // 检查是否为 Mermaid 图表 - 改为 aily-mermaid 类型
-            if (lang?.toLowerCase() === 'mermaid') {
+            if (ailyLang === 'mermaid') {
               return this.renderAilyCodeBlockWithComponent(code, 'aily-mermaid');
             }
 
@@ -127,8 +130,10 @@ export class MarkdownPipe implements PipeTransform {
    * 检查是否为特殊的 Aily 代码块类型
    */
   private isAilyCodeBlock(lang: string): boolean {
-    const ailyTypes = ['aily-blockly', 'aily-board', 'aily-library', 'aily-state', 'aily-button', 'aily-error', 'aily-mermaid', 'mermaid', 'aily-task-action'];
-    return ailyTypes.includes(lang);
+    const ailyTypes = ['aily-blockly', 'aily-board', 'aily-library', 'aily-state', 'aily-button', 'aily-error', 'aily-mermaid', 'mermaid', 'aily-task-action', 'aily-think'];
+    // 确保 lang 被正确 trim，避免空格或换行符导致匹配失败
+    const normalizedLang = lang?.trim()?.toLowerCase() || '';
+    return ailyTypes.includes(normalizedLang);
   }/**
    * 渲染 Aily 特殊代码块为组件占位符
    */
@@ -266,6 +271,26 @@ export class MarkdownPipe implements PipeTransform {
               ...jsonData.metadata
             },
             isHistory: jsonData.isHistory || false
+          };
+        case 'aily-think':
+          // 解码 content（如果是 base64 编码的）
+          let thinkContent = jsonData.content || jsonData.text || '';
+          if (jsonData.encoded && typeof thinkContent === 'string') {
+            try {
+              thinkContent = decodeURIComponent(atob(thinkContent));
+            } catch (e) {
+              // 解码失败，使用原始内容
+              console.warn('Failed to decode think content:', e);
+            }
+          }
+          if (typeof thinkContent === 'object') {
+            thinkContent = JSON.stringify(thinkContent);
+          }
+          return {
+            type: 'aily-think',
+            content: String(thinkContent),
+            isComplete: jsonData.isComplete !== false,
+            metadata: jsonData.metadata || {}
           };
         default:
           console.warn(`Unknown aily type: ${type}, using raw data`);

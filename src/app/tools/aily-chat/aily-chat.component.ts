@@ -1865,7 +1865,7 @@ ${JSON.stringify(errData)}
             let resultState = "done";
             let resultText = '';
 
-            console.log("工具调用请求: ", data.tool_name, toolArgs);
+            // console.log("工具调用请求: ", data.tool_name, toolArgs);
 
             // 定义 block 工具列表
             const blockTools = [
@@ -3205,7 +3205,7 @@ ${JSON.stringify(errData)}
                 newProject = false;
                 // Blockly 工具失败时：同时包含 keyInfo 和 rules
                 toolContent += `\n${keyInfo}\n
-<rules>Blockly块创建规范流程：
+<rules>Blockly块创建规范流程，**严格遵守**：
 
 【准备阶段】
 1. 使用get_workspace_overview_tool分析当前工作区的已有块和结构
@@ -3214,15 +3214,16 @@ ${JSON.stringify(errData)}
 4. 如果需要的库未安装，则使用工具查询并安装所需库，安装完成后重新执行步骤1-3
 
 【创建阶段】
-4. 使用smart_block_tool和create_code_structure_tool按README定义创建块
+4. **完整规划代码逻辑和块结构**
+5. 使用smart_block_tool和create_code_structure_tool按README定义创建块
    - 严格匹配块的类型、字段、输入、连接定义
-   - 分解逻辑，逐个分步骤创建小块；全局变量/setup/loop/回调函数独立创建
+   - 分层拆分创建：全局变量/setup/loop/回调函数等独立创建，每个部分内部也逐步拆分，避免一次性创建大型代码结构
    - 多次创建失败时，安装@aily-project/lib-core-custom使用自定义块进行创建
-5. 检查工具反馈，修复问题（失败时检查是否遗漏库README）
-6. 重复步骤4-5直至完成
+6. 检查工具反馈，修复问题（失败时检查是否遗漏库README）
+7. 重复步骤4-6直至完成
 
-【修复原则】⚠️严禁随意删除代码块，必须严格遵守以下原则：
-- 诊断优先：先分析代码逻辑和块结构，定位具体问题
+【修复原则】⚠️**严禁随意删除代码块，必须严格遵守以下原则**：
+- 诊断优先：先完整分析代码逻辑和块结构，定位具体问题
   · 读取对应库readme和文档
 - 最小改动：精确修复，保持结构稳定
 - 分级处理：
@@ -3267,7 +3268,7 @@ Your role is ASK (Advisory & Quick Support) - you provide analysis, recommendati
               this.completeToolCall(data.tool_id, data.tool_name, finalState, resultText);
             }
 
-            console.log(`工具调用结果: `, toolResult, resultText);
+            // console.log(`工具调用结果: `, toolResult, resultText);
 
             this.send("tool", JSON.stringify({
               "type": "tool",

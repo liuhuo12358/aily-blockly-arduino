@@ -27,8 +27,16 @@ async function main() {
     const {
         currentProjectPath,
         boardModule,
+        code,
         ailyBuilderPath
     } = config;
+
+    // 辅助函数：递归创建目录
+    function mkdirp(dir) {
+        if (!fs.existsSync(dir)) {
+            fs.mkdirSync(dir, { recursive: true });
+        }
+    }
 
     try {
         // 1. 路径准备
@@ -37,11 +45,12 @@ async function main() {
         const sketchFilePath = path.join(sketchPath, 'sketch.ino');
         const preprocessCachePath = path.join(tempPath, 'preprocess.json');
 
-        // 2. 检查必要文件是否存在
-        if (!fs.existsSync(sketchFilePath)) {
-            throw new Error(`未找到sketch文件: ${sketchFilePath}，请先运行预处理脚本`);
-        }
+        // 2. 确保目录存在并写入最新代码
+        mkdirp(tempPath);
+        mkdirp(sketchPath);
+        fs.writeFileSync(sketchFilePath, code);
 
+        // 3. 检查预编译缓存是否存在
         if (!fs.existsSync(preprocessCachePath)) {
             throw new Error(`未找到预编译缓存: ${preprocessCachePath}，请先运行预处理脚本`);
         }
