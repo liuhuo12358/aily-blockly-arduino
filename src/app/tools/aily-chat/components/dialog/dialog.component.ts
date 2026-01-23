@@ -664,8 +664,8 @@ export class DialogComponent implements OnInit, OnChanges, OnDestroy {
   }
 
   /**
-   * 过滤 think 标签内容，支持实时过滤
-   * 当遇到 <think> 时开始隐藏内容，直到遇到 </think> 才继续显示
+   * 将 think 标签内容转换为 aily-think 代码块
+   * 使用自定义组件实现可折叠的思考过程显示
    */
   private filterThinkContent(content: string): string {
     if (!content) return content;
@@ -673,11 +673,13 @@ export class DialogComponent implements OnInit, OnChanges, OnDestroy {
     let result = '';
     let i = 0;
     let inThinkBlock = false;
+    let thinkContent = '';
     
     while (i < content.length) {
       // 检查是否遇到 <think> 标签
       if (!inThinkBlock && content.substring(i, i + 7) === '<think>') {
         inThinkBlock = true;
+        thinkContent = '';
         i += 7; // 跳过 <think>
         continue;
       }
@@ -685,17 +687,45 @@ export class DialogComponent implements OnInit, OnChanges, OnDestroy {
       // 检查是否遇到 </think> 标签
       if (inThinkBlock && content.substring(i, i + 8) === '</think>') {
         inThinkBlock = false;
+        // // 将 think 内容转换为 aily-think 代码块
+        // if (thinkContent.trim()) {
+        //   // 使用 base64 编码 content 避免换行符转义问题
+        //   const encodedContent = btoa(encodeURIComponent(thinkContent.trim()));
+        //   const thinkData = {
+        //     content: encodedContent,
+        //     isComplete: true,
+        //     encoded: true
+        //   };
+        //   // 确保代码块前后有正确的换行
+        //   result += '```aily-think\n' + JSON.stringify(thinkData) + '\n```';
+        // }
+        // thinkContent = '';
         i += 8; // 跳过 </think>
         continue;
       }
       
-      // 如果不在 think 块内，添加字符到结果中
-      if (!inThinkBlock) {
+      // 收集 think 块内的内容或添加到结果中
+      if (inThinkBlock) {
+        // thinkContent += content[i];
+      } else {
         result += content[i];
       }
       
       i++;
     }
+    
+    // // 如果内容结束时仍在 think 块内（流式传输中），显示正在思考的状态
+    // if (inThinkBlock && thinkContent.trim()) {
+    //   // 使用 base64 编码 content 避免换行符转义问题
+    //   const encodedContent = btoa(encodeURIComponent(thinkContent.trim()));
+    //   const thinkData = {
+    //     content: encodedContent,
+    //     isComplete: false,
+    //     encoded: true
+    //   };
+    //   // 确保代码块前后有正确的换行
+    //   result += '```aily-think\n' + JSON.stringify(thinkData) + '\n```';
+    // }
     
     return result;
   }
@@ -716,6 +746,7 @@ export class DialogComponent implements OnInit, OnChanges, OnDestroy {
       .replace(/\s*```aily-state/g, '\n```aily-state\n')
       .replace(/\s*```aily-button/g, '\n```aily-button\n')
       .replace(/\s*```aily-task-action/g, '\n```aily-task-action\n')
+      .replace(/\s*```aily-think/g, '\n```aily-think\n')
       .replace(/\[thinking...\]/g, '');
   }
 
@@ -724,7 +755,7 @@ export class DialogComponent implements OnInit, OnChanges, OnDestroy {
    */
   private fixCodeBlockEndings(content: string): string {
     // 定义 aily 代码块类型
-    const ailyTypes = ['aily-blockly', 'aily-board', 'aily-library', 'aily-state', 'aily-button', 'aily-error', 'aily-mermaid', 'aily-task-action'];
+    const ailyTypes = ['aily-blockly', 'aily-board', 'aily-library', 'aily-state', 'aily-button', 'aily-error', 'aily-mermaid', 'aily-task-action', 'aily-think'];
 
     // 只处理代码块结束符号 ``` (不是开始符号)
     // 查找所有的 ``` 并判断是否为结束符号
