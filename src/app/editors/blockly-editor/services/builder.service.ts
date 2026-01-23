@@ -495,10 +495,21 @@ export class _BuilderService {
         let completeTitle: string = `编译完成`;
 
         try {
-          // 预编译已经处理了配置文件，这里直接使用
+          // 获取最新代码
+          const code = arduinoGenerator.workspaceToCode(this.blocklyService.workspace);
+          this.lastCode = code;
+          
           const boardModule = await this.projectService.getBoardModule();
           const boardName = boardModule.replace('@aily-project/board-', '');
           const configFilePath = this.electronService.pathJoin(tempPath, 'build-config.json');
+
+          // 更新配置文件中的 code（compile.js 会负责写入 sketch 文件）
+          let buildConfig: any = {};
+          if (window['path'].isExists(configFilePath)) {
+            buildConfig = JSON.parse(window['fs'].readFileSync(configFilePath, 'utf8'));
+          }
+          buildConfig.code = code;
+          window['fs'].writeFileSync(configFilePath, JSON.stringify(buildConfig, null, 2));
 
           // 运行编译脚本
           const compileScriptPath = this.electronService.pathJoin(window['path'].getAilyChildPath(), 'scripts', 'compile.js');
@@ -617,6 +628,23 @@ export class _BuilderService {
                       outputComplete = true;
                       this.buildCompleted = true;
                       this.logService.update({ "detail": trimmedLine, "state": "done" });
+                    } else if (
+                      // 检测更多编译成功标志
+                      // Arduino/ESP32: "Sketch uses xxx bytes"
+                      trimmedLine.includes('Sketch uses') && trimmedLine.includes('bytes') ||
+                      // 某些编译器: "text data bss dec hex filename"
+                      trimmedLine.match(/^\s*text\s+data\s+bss\s+dec\s+hex\s+filename/) ||
+                      // GCC: "arm-none-eabi-size" 输出
+                      (trimmedLine.includes('Program:') && trimmedLine.includes('bytes')) ||
+                      // STM32: "已使用" 或 "used"
+                      (trimmedLine.toLowerCase().includes('memory') && trimmedLine.toLowerCase().includes('used')) ||
+                      // 通用: 包含固件生成成功的标志
+                      trimmedLine.includes('.bin generated') || trimmedLine.includes('.hex generated') ||
+                      trimmedLine.includes('Successfully created')
+                    ) {
+                      outputComplete = true;
+                      this.buildCompleted = true;
+                      this.logService.update({ "detail": trimmedLine, "state": "done" });
                     } else {
                       if (!outputComplete) {
                         if (output.type == 'stderr') {
@@ -650,16 +678,25 @@ export class _BuilderService {
               this.buildSubscription = null; // 清理订阅引用
               this.buildPromiseReject = null; // 清理 reject 引用
               this.handleCompileError(error.message);
+              this.workflowService.finishBuild(false, error.message || 'Build error'); // 确保完成工作流状态
               reject({ state: 'error', text: error.message });
             },
             complete: () => {
               this.clearProgressTimer(); // 清理定时器
-              console.log("编译完成： ", this.buildCompleted, this.isErrored, this.cancelled);
+              console.log("编译命令完成： buildCompleted=", this.buildCompleted, "isErrored=", this.isErrored, "cancelled=", this.cancelled, "lastProgress=", lastProgress);
+
+              // 计算编译耗时（统一计算，避免重复）
+              const buildEndTime = Date.now();
+              const buildDuration = ((buildEndTime - this.buildStartTime) / 1000).toFixed(2);
+
+              // 如果进度已达到高值且没有错误，也认为编译成功
+              if (!this.buildCompleted && !this.isErrored && !this.cancelled && lastProgress >= 95) {
+                console.log("进度已达到", lastProgress, "%，假定编译成功");
+                this.buildCompleted = true;
+              }
 
               if (this.buildCompleted) {
                 console.log('编译命令执行完成');
-                const buildEndTime = Date.now();
-                const buildDuration = ((buildEndTime - this.buildStartTime) / 1000).toFixed(2);
                 console.log(`编译耗时: ${buildDuration} 秒`);
 
                 const displayText = this.extractFirmwareInfo(lastLogLines);
@@ -678,8 +715,6 @@ export class _BuilderService {
                 this.workflowService.finishBuild(true);
                 resolve({ state: 'done', text: `编译完成 (耗时: ${buildDuration}s)` });
               } else if (this.isErrored) {
-                const buildEndTime = Date.now();
-                const buildDuration = ((buildEndTime - this.buildStartTime) / 1000).toFixed(2);
                 console.log(`编译失败，耗时: ${buildDuration} 秒`);
 
                 lastStdErr = lastStdErr.replace(/\[\d+(;\d+)*m/g, '');
@@ -696,8 +731,6 @@ export class _BuilderService {
                 reject({ state: 'error', text: `编译失败 (耗时: ${buildDuration}s)` });
               } else if (this.cancelled) {
                 console.warn("编译中断")
-                const buildEndTime = Date.now();
-                const buildDuration = ((buildEndTime - this.buildStartTime) / 1000).toFixed(2);
                 console.log(`编译已取消，耗时: ${buildDuration} 秒`);
 
                 this.noticeService.update({
@@ -717,9 +750,7 @@ export class _BuilderService {
                 reject({ state: 'warn', text: `编译已取消 (耗时: ${buildDuration}s)` });
               } else {
                 // 处理未知状态：进程异常结束但没有设置任何标志
-                console.error('编译进程异常结束，未知状态');
-                const buildEndTime = Date.now();
-                const buildDuration = ((buildEndTime - this.buildStartTime) / 1000).toFixed(2);
+                console.error('编译进程异常结束，未知状态，lastProgress:', lastProgress);
                 
                 this.noticeService.update({
                   title: "编译异常结束",

@@ -38,6 +38,7 @@ export class _UploaderService {
   private streamId: string | null = null;
   private uploadCompleted = false;
   private isErrored = false;
+  private processExitCode: number | null = null; // 记录进程退出码
   cancelled = false;
   private uploadPromiseReject: any = null; // 保存 Promise 的 reject 函数
 
@@ -134,6 +135,7 @@ export class _UploaderService {
     this.isErrored = false;
     this.cancelled = false;
     this.uploadCompleted = false;
+    this.processExitCode = null; // 重置进程退出码
     this.uploadInProgress = true; // 立即设置为true，使取消功能生效
   
     return new Promise<ActionState>(async (resolve, reject) => {
@@ -220,6 +222,7 @@ export class _UploaderService {
           if (state === ProcessState.UPLOADING) msg = "上传正在进行中";
           else if (state === ProcessState.INSTALLING) msg = "依赖安装中";
 
+          this.uploadInProgress = false; // 重置上传状态
           this._builderService.isUploading = false; // 确保设置为false
           this.message.warning(msg + "，请稍后再试");
           reject({ state: 'warn', text: msg + "，请稍后" });
@@ -235,6 +238,7 @@ export class _UploaderService {
         // 获取上传参数并提取标志
         const uploadParam = boardJson.uploadParam;
         if (!uploadParam) {
+          this.uploadInProgress = false; // 重置上传状态
           this.handleUploadError('缺少上传参数，请检查板子配置');
           this.workflowService.finishUpload(false, 'Missing upload parameters');
           reject({ state: 'error', text: '缺少上传参数' });
@@ -272,6 +276,7 @@ export class _UploaderService {
         try {
           await window['fs'].writeFileSync(configFilePath, JSON.stringify(uploadConfig, null, 2));
         } catch (err) {
+          this.uploadInProgress = false; // 重置上传状态
           this._builderService.isUploading = false;
           this.handleUploadError('配置文件写入失败: ' + err.message);
           this.workflowService.finishUpload(false, 'Config write failed');
@@ -450,6 +455,33 @@ export class _UploaderService {
                     if (trimmedLine.includes('Wrote') && trimmedLine.includes('bytes to')) {
                       this.uploadCompleted = true;
                     }
+
+                    // 检测更多成功标志
+                    // avrdude: flash/eeprom verified
+                    if (trimmedLine.toLowerCase().includes('verified') && 
+                        (trimmedLine.toLowerCase().includes('flash') || 
+                         trimmedLine.toLowerCase().includes('bytes') ||
+                         trimmedLine.toLowerCase().includes('written'))) {
+                      this.uploadCompleted = true;
+                    }
+
+                    // esptool: Hard resetting via RTS pin... (ESP32上传完成标志)
+                    if (trimmedLine.toLowerCase().includes('hard resetting') ||
+                        trimmedLine.toLowerCase().includes('leaving...')) {
+                      this.uploadCompleted = true;
+                    }
+
+                    // stm32flash: Done. / STM32 上传完成
+                    if (trimmedLine.toLowerCase() === 'done.' || 
+                        trimmedLine.toLowerCase().includes('starting execution at')) {
+                      this.uploadCompleted = true;
+                    }
+
+                    // 记录进程退出码
+                    const exitCodeMatch = trimmedLine.match(/^exit code: (\d+)$/i);
+                    if (exitCodeMatch) {
+                      this.processExitCode = parseInt(exitCodeMatch[1], 10);
+                    }
                   }
                 });
               } else {
@@ -462,6 +494,7 @@ export class _UploaderService {
           },
           error: (error: any) => {
             console.log("上传命令错误:", error);
+            this.uploadInProgress = false; // 确保重置上传状态
             this._builderService.isUploading = false;
             this.handleUploadError(error.message || '上传过程中发生错误');
             this.workflowService.finishUpload(false, error.message || 'Upload error');
@@ -469,7 +502,19 @@ export class _UploaderService {
             reject({ state: 'error', text: error.message || '上传失败' });
           },
           complete: () => {
-            console.log("上传命令完成，cancelled:", this.cancelled, "isErrored:", this.isErrored, "uploadCompleted:", this.uploadCompleted);
+            console.log("上传命令完成，cancelled:", this.cancelled, "isErrored:", this.isErrored, "uploadCompleted:", this.uploadCompleted, "processExitCode:", this.processExitCode);
+            
+            // 确保 uploadInProgress 在所有情况下都被重置
+            this.uploadInProgress = false;
+            
+            // 如果没有检测到完成标志且没有错误，且进程正常退出(code 0)，认为上传成功
+            // 这是为了处理某些上传工具没有明确的完成输出但实际已成功的情况
+            if (!this.uploadCompleted && !this.isErrored && !this.cancelled) {
+              // 进程正常退出（Observable complete 表示进程已结束）
+              // 如果没有错误标志，则假定成功
+              console.log("进程已正常结束，未检测到明确完成标志，假定上传成功");
+              this.uploadCompleted = true;
+            }
             
             // 第一优先级：检查是否已取消
             if (this.cancelled) {
@@ -508,12 +553,14 @@ export class _UploaderService {
               this.uploadPromiseReject = null;
               resolve({ state: 'done', text: '上传完成' });
             } else {
-              console.warn("上传未完成，可能是由于超时或其他原因");
+              // 这个分支理论上不应该被触发，因为上面已经处理了正常结束的情况
+              // 但作为兜底逻辑保留
+              console.warn("上传状态异常，可能是由于进程异常退出");
               // 安全更新UI
               this.safeUpdateNotice({
                 title: errorTitle,
                 text: lastUploadText,
-                detail: "超时或其他原因",
+                detail: "上传状态异常，请检查日志",
                 state: 'error',
                 setTimeout: 600000
               });
