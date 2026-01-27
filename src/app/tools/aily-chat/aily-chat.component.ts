@@ -3196,6 +3196,8 @@ ${JSON.stringify(errData)}
               // 只在 Blockly 工具失败或警告时添加规则提示
               const needsRules = isBlocklyTool && (toolResult?.is_error || resultState === 'warn');
 
+              // console.log('needsRules:', needsRules, 'isBlocklyTool:', isBlocklyTool, 'needsPathInfo:', needsPathInfo, 'resultState:', resultState, 'toolResult.is_error:', toolResult?.is_error);
+
               // 智能决定是否包含 keyInfo：需要路径信息的工具 或 工具失败/警告时
               const shouldIncludeKeyInfo = needsPathInfo || toolResult?.is_error || resultState === 'warn';
 
@@ -3222,10 +3224,16 @@ ${JSON.stringify(errData)}
 6. 检查工具反馈，修复问题（失败时检查是否遗漏库README）
 7. 重复步骤4-6直至完成
 
-【修复原则】⚠️**严禁随意删除代码块，必须严格遵守以下原则**：
+【修复原则】⚠️**严禁直接删除代码块，必须严格遵守以下原则**：
 - 诊断优先：先完整分析代码逻辑和块结构，定位具体问题
-  · 读取对应库readme和文档
+  · 问题定位：逻辑错误/缺块/块错误/连接错误
+  · 根本原因：变量作用域/块连接位置/块定义理解错误
+  · 读取对应库readme和文档，确认块定义和使用方法
 - 最小改动：精确修复，保持结构稳定
+  · 逻辑错误 → 调整块位置和连接
+  · 缺块 → 精确创建所需块
+  · 块错误 → 重新创建正确块，替换错误块
+  · 连接错误 → 使用connect_blocks_tool重新连接
 - 分级处理：
   · 简单问题（缺块/块错误/连接错误） → 分析根本原因→ 新建块或使用connect_blocks_tool连接
   · 复杂问题 → 分析根本原因 → 新建/配置块 → 连接 → 检查反馈 → 循环修复（3次失败后才可删除）
