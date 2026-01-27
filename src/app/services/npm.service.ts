@@ -109,7 +109,8 @@ export class NpmService {
     }
     this.isInstalling = true;
     this.workflowService.startInstall();
-    const appDataPath = this.configService.data.appdata_path[this.configService.data.platform].replace('%HOMEPATH%', window['path'].getUserHome());
+    // const appDataPath = this.configService.data.appdata_path[this.configService.data.platform].replace('%HOMEPATH%', window['path'].getUserHome());
+    const appDataPath = window['path'].getAppDataPath();
     const cmd = `npm install ${board.name}@${board.version} --prefix "${appDataPath}"`;
     this.uiService.updateFooterState({ state: 'doing', text: `正在安装${board.name}...`, timeout: 300000 });
     // 添加超时保护和正确的参数名
@@ -139,7 +140,8 @@ export class NpmService {
       this.isInstalling = true;
       this.workflowService.startInstall();
       console.log('开始安装开发板依赖...');
-      const appDataPath = this.configService.data.appdata_path[this.configService.data.platform].replace('%HOMEPATH%', window['path'].getUserHome());
+      // const appDataPath = this.configService.data.appdata_path[this.configService.data.platform].replace('%HOMEPATH%', window['path'].getUserHome());
+      const appDataPath = window['path'].getAppDataPath();
       const boardDependencies = packageJson.boardDependencies || {};
 
       // console.log("boardDependencies: ", boardDependencies);
@@ -201,7 +203,8 @@ export class NpmService {
   // 卸载开发板依赖
   async uninstallBoardDependencies(depName, packageJson: any) {
     try {
-      const appDataPath = this.configService.data.appdata_path[this.configService.data.platform].replace('%HOMEPATH%', window['path'].getUserHome());
+      // const appDataPath = this.configService.data.appdata_path[this.configService.data.platform].replace('%HOMEPATH%', window['path'].getUserHome());
+      const appDataPath = window['path'].getAppDataPath();
       const boardDependenciesToUninstall = packageJson.boardDependencies || {};
 
       // 获取所有已安装的包
@@ -285,7 +288,8 @@ export class NpmService {
 
   // 卸载开发板
   async uninstallBoard(board: any) {
-    const appDataPath = this.configService.data.appdata_path[this.configService.data.platform].replace('%HOMEPATH%', window['path'].getUserHome());
+    // const appDataPath = this.configService.data.appdata_path[this.configService.data.platform].replace('%HOMEPATH%', window['path'].getUserHome());
+    const appDataPath = window['path'].getAppDataPath();
     const packageJson = JSON.parse(window['fs'].readFileSync(`${appDataPath}/node_modules/${board.name}/template/package.json`));
     // 卸载开发板
     const cmd = `npm uninstall ${board.name} --prefix "${appDataPath}"`;
@@ -299,7 +303,8 @@ export class NpmService {
 
   // 通用安装方法
   private async installPackage(packageInfo: any, type: string, version?: string) {
-    const appDataPath = this.configService.data.appdata_path[this.configService.data.platform].replace('%HOMEPATH%', window['path'].getUserHome());
+    // const appDataPath = this.configService.data.appdata_path[this.configService.data.platform].replace('%HOMEPATH%', window['path'].getUserHome());
+    const appDataPath = window['path'].getAppDataPath();
 
     if (!packageInfo || !packageInfo.name) {
       throw new Error(`${type}名称不能为空`);
@@ -345,7 +350,8 @@ export class NpmService {
 
   // 通用卸载方法
   private async uninstallPackage(packageInfo: any, type: string) {
-    const appDataPath = this.configService.data.appdata_path[this.configService.data.platform].replace('%HOMEPATH%', window['path'].getUserHome());
+    // const appDataPath = this.configService.data.appdata_path[this.configService.data.platform].replace('%HOMEPATH%', window['path'].getUserHome());
+    const appDataPath = window['path'].getAppDataPath();
 
     if (!packageInfo || !packageInfo.name) {
       throw new Error(`${type}名称不能为空`);
