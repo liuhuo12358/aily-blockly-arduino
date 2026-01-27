@@ -113,12 +113,11 @@ export class ProjectNewComponent {
     this._boardList = this.configService.sortBoardsByUsage(processedBoardList);
 
     this.boardList = JSON.parse(JSON.stringify(this._boardList));
-    this.currentBoard = this.boardList[0];
 
-    this.newProjectData.board.nickname = this.currentBoard.nickname;
-    this.newProjectData.board.name = this.currentBoard.name;
-    this.newProjectData.board.version = this.currentBoard.version;
-    this.newProjectData.devmode = this.currentBoard.mode ? this.currentBoard.mode[0] : 'Arduino';
+    // 使用 selectBoard 方法来初始化，确保触发 checkHasExamples
+    if (this.boardList.length > 0) {
+      this.selectBoard(this.boardList[0]);
+    }
     this.newProjectData.name = this.projectService.generateUniqueProjectName(this.newProjectData.path, 'project_');
   }
 

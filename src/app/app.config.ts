@@ -1,5 +1,5 @@
 import { ApplicationConfig, importProvidersFrom, provideZoneChangeDetection } from '@angular/core';
-import { provideRouter, withHashLocation, withPreloading, PreloadAllModules } from '@angular/router';
+import { provideRouter, withHashLocation } from '@angular/router';
 import { provideTranslateService } from "@ngx-translate/core";
 import { routes } from './app.routes';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
