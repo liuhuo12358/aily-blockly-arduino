@@ -79,18 +79,22 @@ export class LogComponent implements OnInit, AfterViewInit, OnDestroy {
       const element = this.viewport.elementRef.nativeElement;
       this.viewport.checkViewportSize();
       
+      // 获取当前 scrollHeight（虚拟滚动的估算总高度）
       const scrollHeight = element.scrollHeight;
-      const currentScroll = element.scrollTop + element.clientHeight;
+      const clientHeight = element.clientHeight;
       
-      // 滚动到底部
+      // 计算目标滚动位置：scrollHeight - clientHeight 确保底部内容可见
+      // 减去一个小的偏移量（如 10px）避免滚动过多导致空白
+      const targetScroll = Math.max(0, scrollHeight - clientHeight - 10);
+      
       element.scrollTo({
-        top: scrollHeight,
-        behavior: attempts === 0 ? 'auto' : 'smooth'
+        top: targetScroll,
+        behavior: 'auto'
       });
 
-      // 如果还没到底部且尝试次数不超过3次，继续尝试
-      if (attempts < 3 && scrollHeight > currentScroll + 10) {
-        this.scrollTimeoutId = setTimeout(() => doScroll(attempts + 1), 100);
+      // 多次尝试以确保内容渲染完成后滚动到正确位置
+      if (attempts < 3) {
+        this.scrollTimeoutId = setTimeout(() => doScroll(attempts + 1), 80);
       }
     };
 
@@ -99,7 +103,7 @@ export class LogComponent implements OnInit, AfterViewInit, OnDestroy {
       requestAnimationFrame(() => {
         doScroll(0);
       });
-    }, 50);
+    }, 30);
   }
 
   private scrollTimeoutId: any;
