@@ -121,7 +121,7 @@ export class NpmService {
       title: '正在安装', 
       text: this.translate.instant('NPM.INSTALLING', { name: board.name }), 
       state: 'doing',
-      showProgress: true,
+      showProgress: false,
       setTimeout: 300000
     });
     // 添加超时保护和正确的参数名
@@ -190,7 +190,7 @@ export class NpmService {
           title: '正在安装', 
           text: this.translate.instant('NPM.INSTALLING_DEPENDENCY', { name: key }), 
           state: 'doing',
-          showProgress: true,
+          showProgress: false,
           setTimeout: 300000
         });
 
@@ -282,7 +282,7 @@ export class NpmService {
         title: '正在卸载', 
         text: this.translate.instant('NPM.UNINSTALLING_UNUSED_DEPS'), 
         state: 'doing',
-        showProgress: true,
+        showProgress: false,
         setTimeout: 300000
       });
 
@@ -351,7 +351,7 @@ export class NpmService {
       title: '正在卸载', 
       text: this.translate.instant('NPM.UNINSTALLING', { name: board.name }), 
       state: 'doing',
-      showProgress: true,
+      showProgress: false,
       setTimeout: 300000
     });
     // 添加超时保护和正确的参数名
@@ -384,7 +384,7 @@ export class NpmService {
       title: '正在安装', 
       text: this.translate.instant('NPM.INSTALLING', { name: packageInfo.name }), 
       state: 'doing',
-      showProgress: true,
+      showProgress: false,
       setTimeout: 300000
     });
 
@@ -460,7 +460,7 @@ export class NpmService {
       title: '正在卸载', 
       text: this.translate.instant('NPM.UNINSTALLING', { name: packageInfo.name }), 
       state: 'doing',
-      showProgress: true,
+      showProgress: false,
       setTimeout: 300000
     });
 
