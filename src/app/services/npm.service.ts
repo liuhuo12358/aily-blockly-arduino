@@ -8,6 +8,7 @@ import { ProjectService } from './project.service';
 import { CmdService } from './cmd.service';
 import { WorkflowService } from './workflow.service';
 import { TranslateService } from '@ngx-translate/core';
+import { NoticeService } from './notice.service';
 
 @Injectable({
   providedIn: 'root'
@@ -21,7 +22,8 @@ export class NpmService {
     private prjService: ProjectService,
     private cmdService: CmdService,
     private workflowService: WorkflowService,
-    private translate: TranslateService
+    private translate: TranslateService,
+    private noticeService: NoticeService
   ) { }
 
   isInstalling = false;
@@ -114,7 +116,14 @@ export class NpmService {
     // const appDataPath = this.configService.data.appdata_path[this.configService.data.platform].replace('%HOMEPATH%', window['path'].getUserHome());
     const appDataPath = window['path'].getAppDataPath();
     const cmd = `npm install ${board.name}@${board.version} --prefix "${appDataPath}"`;
-    this.uiService.updateFooterState({ state: 'doing', text: this.translate.instant('NPM.INSTALLING', { name: board.name }), timeout: 300000 });
+    // this.uiService.updateFooterState({ state: 'doing', text: this.translate.instant('NPM.INSTALLING', { name: board.name }), timeout: 300000 });
+    this.noticeService.update({ 
+      title: '正在安装', 
+      text: this.translate.instant('NPM.INSTALLING', { name: board.name }), 
+      state: 'doing',
+      showProgress: true,
+      setTimeout: 300000
+    });
     // 添加超时保护和正确的参数名
     await Promise.race([
       window['npm'].run({ cmd: cmd }),
@@ -123,7 +132,13 @@ export class NpmService {
       )
     ]);
 
-    this.uiService.updateFooterState({ state: 'done', text: this.translate.instant('NPM.BOARD_INSTALL_COMPLETE') });
+    // this.uiService.updateFooterState({ state: 'done', text: this.translate.instant('NPM.BOARD_INSTALL_COMPLETE') });
+    this.noticeService.update({ 
+      title: '安装完成', 
+      text: this.translate.instant('NPM.BOARD_INSTALL_COMPLETE'), 
+      state: 'done',
+      setTimeout: 3000
+    });
     this.isInstalling = false;
     this.workflowService.finishInstall(true);
     // return template/package.json
@@ -170,7 +185,14 @@ export class NpmService {
         //   continue;
         // }
 
-        this.uiService.updateFooterState({ state: 'doing', text: this.translate.instant('NPM.INSTALLING_DEPENDENCY', { name: key }), timeout: 300000 });
+        // this.uiService.updateFooterState({ state: 'doing', text: this.translate.instant('NPM.INSTALLING_DEPENDENCY', { name: key }), timeout: 300000 });
+        this.noticeService.update({ 
+          title: '正在安装', 
+          text: this.translate.instant('NPM.INSTALLING_DEPENDENCY', { name: key }), 
+          state: 'doing',
+          showProgress: true,
+          setTimeout: 300000
+        });
 
         try {
           // 安装成功的条件是需要安装目录指私有源或者全局已经设置私有源
@@ -191,11 +213,22 @@ export class NpmService {
         }
       }
 
-      this.uiService.updateFooterState({ state: 'done', text: this.translate.instant('NPM.BOARD_DEPS_INSTALL_COMPLETE') });
+      // this.uiService.updateFooterState({ state: 'done', text: this.translate.instant('NPM.BOARD_DEPS_INSTALL_COMPLETE') });
+      this.noticeService.update({ 
+        title: '安装完成', 
+        text: this.translate.instant('NPM.BOARD_DEPS_INSTALL_COMPLETE'), 
+        state: 'done',
+        setTimeout: 3000
+      });
       this.workflowService.finishInstall(true);
     } catch (error) {
       console.error('安装开发板依赖时出错:', error);
-      this.uiService.updateFooterState({ state: 'error', text: this.translate.instant('NPM.BOARD_DEPS_INSTALL_FAILED') });
+      // this.uiService.updateFooterState({ state: 'error', text: this.translate.instant('NPM.BOARD_DEPS_INSTALL_FAILED') });
+      this.noticeService.update({ 
+        title: '安装失败', 
+        text: this.translate.instant('NPM.BOARD_DEPS_INSTALL_FAILED'), 
+        state: 'error'
+      });
       this.workflowService.finishInstall(false, this.translate.instant('NPM.BOARD_DEPS_INSTALL_FAILED'));
     } finally {
       this.isInstalling = false;
@@ -244,7 +277,14 @@ export class NpmService {
         }
       }
 
-      this.uiService.updateFooterState({ state: 'doing', text: this.translate.instant('NPM.UNINSTALLING_UNUSED_DEPS'), timeout: 300000 });
+      // this.uiService.updateFooterState({ state: 'doing', text: this.translate.instant('NPM.UNINSTALLING_UNUSED_DEPS'), timeout: 300000 });
+      this.noticeService.update({ 
+        title: '正在卸载', 
+        text: this.translate.instant('NPM.UNINSTALLING_UNUSED_DEPS'), 
+        state: 'doing',
+        showProgress: true,
+        setTimeout: 300000
+      });
 
       // 检查每个依赖是否被其他开发板使用
       console.log("installedBoards: ", installedBoards);
@@ -281,10 +321,21 @@ export class NpmService {
         }
       }
 
-      this.uiService.updateFooterState({ state: 'done', text: this.translate.instant('NPM.DEPS_UNINSTALL_COMPLETE') });
+      // this.uiService.updateFooterState({ state: 'done', text: this.translate.instant('NPM.DEPS_UNINSTALL_COMPLETE') });
+      this.noticeService.update({ 
+        title: '卸载完成', 
+        text: this.translate.instant('NPM.DEPS_UNINSTALL_COMPLETE'), 
+        state: 'done',
+        setTimeout: 3000
+      });
     } catch (error) {
       console.error('卸载开发板依赖时出错:', error);
-      this.uiService.updateFooterState({ state: 'error', text: this.translate.instant('NPM.DEPS_UNINSTALL_FAILED') });
+      // this.uiService.updateFooterState({ state: 'error', text: this.translate.instant('NPM.DEPS_UNINSTALL_FAILED') });
+      this.noticeService.update({ 
+        title: '卸载失败', 
+        text: this.translate.instant('NPM.DEPS_UNINSTALL_FAILED'), 
+        state: 'error'
+      });
     }
   }
 
@@ -295,10 +346,23 @@ export class NpmService {
     const packageJson = JSON.parse(window['fs'].readFileSync(`${appDataPath}/node_modules/${board.name}/template/package.json`));
     // 卸载开发板
     const cmd = `npm uninstall ${board.name} --prefix "${appDataPath}"`;
-    this.uiService.updateFooterState({ state: 'doing', text: this.translate.instant('NPM.UNINSTALLING', { name: board.name }), timeout: 300000 });
+    // this.uiService.updateFooterState({ state: 'doing', text: this.translate.instant('NPM.UNINSTALLING', { name: board.name }), timeout: 300000 });
+    this.noticeService.update({ 
+      title: '正在卸载', 
+      text: this.translate.instant('NPM.UNINSTALLING', { name: board.name }), 
+      state: 'doing',
+      showProgress: true,
+      setTimeout: 300000
+    });
     // 添加超时保护和正确的参数名
     window['npm'].run({ cmd: cmd });
-    this.uiService.updateFooterState({ state: 'done', text: this.translate.instant('NPM.BOARD_UNINSTALL_COMPLETE') });
+    // this.uiService.updateFooterState({ state: 'done', text: this.translate.instant('NPM.BOARD_UNINSTALL_COMPLETE') });
+    this.noticeService.update({ 
+      title: '卸载完成', 
+      text: this.translate.instant('NPM.BOARD_UNINSTALL_COMPLETE'), 
+      state: 'done',
+      setTimeout: 3000
+    });
 
     return packageJson;
   }
@@ -315,7 +379,14 @@ export class NpmService {
     const packageName = version ? `${packageInfo.name}@${version}` : packageInfo.name;
     const cmd = `npm install ${packageName} --prefix "${appDataPath}"`;
 
-    this.uiService.updateFooterState({ state: 'doing', text: this.translate.instant('NPM.INSTALLING', { name: packageInfo.name }), timeout: 300000 });
+    // this.uiService.updateFooterState({ state: 'doing', text: this.translate.instant('NPM.INSTALLING', { name: packageInfo.name }), timeout: 300000 });
+    this.noticeService.update({ 
+      title: '正在安装', 
+      text: this.translate.instant('NPM.INSTALLING', { name: packageInfo.name }), 
+      state: 'doing',
+      showProgress: true,
+      setTimeout: 300000
+    });
 
     try {
       // // 添加超时保护
@@ -328,9 +399,20 @@ export class NpmService {
 
       await this.cmdService.runAsync(cmd, appDataPath);
 
-      this.uiService.updateFooterState({ state: 'done', text: this.translate.instant('NPM.INSTALL_COMPLETE', { name: packageInfo.name }) });
+      // this.uiService.updateFooterState({ state: 'done', text: this.translate.instant('NPM.INSTALL_COMPLETE', { name: packageInfo.name }) });
+      this.noticeService.update({ 
+        title: '安装完成', 
+        text: this.translate.instant('NPM.INSTALL_COMPLETE', { name: packageInfo.name }), 
+        state: 'done',
+        setTimeout: 3000
+      });
     } catch (error) {
-      this.uiService.updateFooterState({ state: 'error', text: this.translate.instant('NPM.INSTALL_FAILED', { name: packageInfo.name }) });
+      // this.uiService.updateFooterState({ state: 'error', text: this.translate.instant('NPM.INSTALL_FAILED', { name: packageInfo.name }) });
+      this.noticeService.update({ 
+        title: '安装失败', 
+        text: this.translate.instant('NPM.INSTALL_FAILED', { name: packageInfo.name }), 
+        state: 'error'
+      });
       throw error;
     }
   }
@@ -373,7 +455,14 @@ export class NpmService {
     //   console.log(`${type}执行清理失败:`, error);
     // }
 
-    this.uiService.updateFooterState({ state: 'doing', text: this.translate.instant('NPM.UNINSTALLING', { name: packageInfo.name }), timeout: 300000 });
+    // this.uiService.updateFooterState({ state: 'doing', text: this.translate.instant('NPM.UNINSTALLING', { name: packageInfo.name }), timeout: 300000 });
+    this.noticeService.update({ 
+      title: '正在卸载', 
+      text: this.translate.instant('NPM.UNINSTALLING', { name: packageInfo.name }), 
+      state: 'doing',
+      showProgress: true,
+      setTimeout: 300000
+    });
 
     let cmd = `npm run uninstall`
     console.log("PackageNodeModulesPath: ", packageNodeModulesPath);
@@ -383,7 +472,13 @@ export class NpmService {
     cmd = `npm uninstall ${packageInfo.name} --prefix "${appDataPath}"`;
     // await window['npm'].run({ cmd: cmd });
     await this.cmdService.runAsync(cmd, appDataPath);
-    this.uiService.updateFooterState({ state: 'done', text: this.translate.instant('NPM.UNINSTALL_COMPLETE', { name: packageInfo.name }) });
+    // this.uiService.updateFooterState({ state: 'done', text: this.translate.instant('NPM.UNINSTALL_COMPLETE', { name: packageInfo.name }) });
+    this.noticeService.update({ 
+      title: '卸载完成', 
+      text: this.translate.instant('NPM.UNINSTALL_COMPLETE', { name: packageInfo.name }), 
+      state: 'done',
+      setTimeout: 3000
+    });
   }
 
   // 卸载SDK
