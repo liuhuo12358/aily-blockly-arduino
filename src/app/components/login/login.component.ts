@@ -75,21 +75,21 @@ export class LoginComponent {
 
   /**
    * 执行 altcha 隐式验证
-   * @returns Promise<boolean> 返回 true 表示验证成功，false 表示验证失败
+   * @returns Promise<string | null> 返回验证 token，验证失败返回 null
    */
-  private async verifyAltcha(): Promise<boolean> {
+  private async verifyAltcha(): Promise<string | null> {
     if (!this.altchaComponent) {
       // 如果 altcha 组件不存在，允许继续（向后兼容）
-      return true;
+      return null;
     }
 
     try {
-      await this.altchaComponent.triggerVerification();
-      return true;
+      const token = await this.altchaComponent.triggerVerification();
+      return token;
     } catch (error) {
       console.error('Altcha 验证失败:', error);
       this.message.error(this.translate.instant('LOGIN.VERIFICATION_FAILED') || '验证失败，请重试');
-      return false;
+      return null;
     }
   }
 
@@ -98,8 +98,8 @@ export class LoginComponent {
    */
   async loginByGithub() {
     try {
-      const verified = await this.verifyAltcha();
-      if (!verified) {
+      const altchaToken = await this.verifyAltcha();
+      if (altchaToken === null) {
         return;
       }
 
@@ -133,8 +133,8 @@ export class LoginComponent {
       return;
     }
 
-    const verified = await this.verifyAltcha();
-    if (!verified) {
+    const altchaToken = await this.verifyAltcha();
+    if (altchaToken === null) {
       return;
     }
 
@@ -143,7 +143,8 @@ export class LoginComponent {
     try {
       const loginData = {
         username: this.inputUsername,
-        password: sha256(this.inputPassword).toString()
+        password: sha256(this.inputPassword).toString(),
+        altcha: altchaToken
       };
 
       this.authService.login(loginData).subscribe({
