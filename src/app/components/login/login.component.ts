@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component } from '@angular/core';
+import { Component, ViewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzIconModule } from 'ng-zorro-antd/icon';
@@ -10,6 +10,7 @@ import { AuthService } from '../../services/auth.service';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { ElectronService } from '../../services/electron.service';
 import sha256 from 'crypto-js/sha256';
+import { AltchaComponent } from './altcha/altcha.component';
 
 @Component({
   selector: 'app-login',
@@ -20,12 +21,15 @@ import sha256 from 'crypto-js/sha256';
     NzIconModule,
     NzInputModule,
     TranslateModule,
+    AltchaComponent,
   ],
   templateUrl: './login.component.html',
   styleUrl: './login.component.scss'
 })
 export class LoginComponent {
   private destroy$ = new Subject<void>();
+
+  @ViewChild(AltchaComponent) altchaComponent!: AltchaComponent;
 
   showWeChatLogin = false;
   showPhoneLogin = true;
@@ -69,12 +73,36 @@ export class LoginComponent {
     }
   }
 
+  /**
+   * 执行 altcha 隐式验证
+   * @returns Promise<boolean> 返回 true 表示验证成功，false 表示验证失败
+   */
+  private async verifyAltcha(): Promise<boolean> {
+    if (!this.altchaComponent) {
+      // 如果 altcha 组件不存在，允许继续（向后兼容）
+      return true;
+    }
+
+    try {
+      await this.altchaComponent.triggerVerification();
+      return true;
+    } catch (error) {
+      console.error('Altcha 验证失败:', error);
+      this.message.error(this.translate.instant('LOGIN.VERIFICATION_FAILED') || '验证失败，请重试');
+      return false;
+    }
+  }
 
   /**
    * 执行实际的GitHub登录流程
    */
   async loginByGithub() {
     try {
+      const verified = await this.verifyAltcha();
+      if (!verified) {
+        return;
+      }
+
       // 直接通过 HTTP 请求启动 GitHub OAuth 流程
       this.authService.startGitHubOAuth().subscribe({
         next: (response) => {
@@ -102,6 +130,11 @@ export class LoginComponent {
   async loginByPhone() {
     if (!this.inputUsername || !this.inputPassword) {
       this.message.warning(this.translate.instant('LOGIN.ENTER_CREDENTIALS'));
+      return;
+    }
+
+    const verified = await this.verifyAltcha();
+    if (!verified) {
       return;
     }
 
