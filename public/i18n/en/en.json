@@ -535,5 +535,54 @@
             "NEXT": "Next",
             "DONE": "Done"
         }
+    },
+    "NPM": {
+        "INSTALLING": "Installing {{name}}...",
+        "INSTALLING_DEPENDENCY": "Installing {{name}} dependency...",
+        "INSTALL_TIMEOUT": "Installation timeout",
+        "INSTALL_COMPLETE": "{{name}} installed successfully",
+        "INSTALL_FAILED": "{{name}} installation failed",
+        "UNINSTALLING": "Uninstalling {{name}}...",
+        "UNINSTALLING_UNUSED_DEPS": "Uninstalling unused dependencies...",
+        "UNINSTALL_TIMEOUT": "Uninstallation timeout",
+        "UNINSTALL_COMPLETE": "{{name}} uninstalled successfully",
+        "BOARD_INSTALL_COMPLETE": "Board installed successfully",
+        "BOARD_UNINSTALL_COMPLETE": "Board uninstalled successfully",
+        "BOARD_DEPS_INSTALL_COMPLETE": "Board dependencies installed successfully",
+        "BOARD_DEPS_INSTALL_FAILED": "Board dependencies installation failed",
+        "DEPS_UNINSTALL_COMPLETE": "Dependencies uninstalled successfully",
+        "DEPS_UNINSTALL_FAILED": "Dependencies uninstallation failed",
+        "NAME_REQUIRED": "{{type}} name cannot be empty",
+        "TYPE_TOOL": "Tool",
+        "TYPE_SDK": "SDK",
+        "TYPE_COMPILER": "Compiler"
+    },
+    "BLOCKLY_EDITOR": {
+        "INSTALLING_DEPS": "Installing dependencies",
+        "LOADING_BOARD_CONFIG": "Loading board configuration",
+        "LOADING_BLOCKLY_LIB": "Loading Blockly libraries",
+        "LOADING_LIB": "Loading {{name}}",
+        "LOADING_BLOCKLY_PROGRAM": "Loading Blockly program",
+        "PROJECT_LOAD_SUCCESS": "Project loaded successfully"
+    },
+    "PLAYGROUND": {
+        "LOADING_EXAMPLE": "Loading example...",
+        "EXAMPLE_LOAD_SUCCESS": "Example loaded successfully",
+        "EXAMPLE_LOAD_FAILED": "Failed to load example",
+        "NO_TUTORIAL_PROVIDED": "No tutorial provided by the library author"
+    },
+    "PROJECT": {
+        "CANNOT_OPEN_PROJECT": "Cannot open project: ",
+        "CREATING_PROJECT": "Creating project...",
+        "PROJECT_CREATED": "Project created successfully",
+        "PATH_NOT_EXIST": "Project path does not exist, please select another project",
+        "SWITCHING_BOARD_CONFIG": "Switching board configuration...",
+        "BOARD_SWITCH_COMPLETE": "Board switch complete",
+        "BOARD_SWITCH_SUCCESS": "Board switched successfully",
+        "SWITCHING_BOARD": "Switching board...",
+        "UNINSTALLING_CURRENT_BOARD": "Uninstalling current board...",
+        "INSTALLING_NEW_BOARD": "Installing new board...",
+        "UPDATING_PROJECT_CONFIG": "Updating project configuration...",
+        "BOARD_SWITCH_FAILED": "Board switch failed: "
     }
 }
