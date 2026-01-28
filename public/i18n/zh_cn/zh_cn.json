@@ -555,7 +555,13 @@
         "NAME_REQUIRED": "{{type}}名称不能为空",
         "TYPE_TOOL": "工具",
         "TYPE_SDK": "SDK",
-        "TYPE_COMPILER": "编译器"
+        "TYPE_COMPILER": "编译器",
+        "INSTALLING_TITLE": "正在安装",
+        "INSTALL_COMPLETE_TITLE": "安装完成",
+        "INSTALL_FAILED_TITLE": "安装失败",
+        "UNINSTALLING_TITLE": "正在卸载",
+        "UNINSTALL_COMPLETE_TITLE": "卸载完成",
+        "UNINSTALL_FAILED_TITLE": "卸载失败"
     },
     "BLOCKLY_EDITOR": {
         "INSTALLING_DEPS": "正在安装依赖",
