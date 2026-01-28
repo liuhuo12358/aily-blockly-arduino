@@ -338,6 +338,7 @@
     "FLOAT_SIDER": {
         "PROJECT_SETTINGS": "Paramètres du Projet",
         "PINMAP": "Schéma des Broches",
+        "CIRCUIT": "Schéma de Câblage",
         "DOCUMENTATION": "Documentation",
         "FEEDBACK": "Retour d'information",
         "NO_PINMAP": "Schéma des broches non disponible pour cette carte",
@@ -473,5 +474,8 @@
         "LOGIN_SUCCESS": "Connexion réussie",
         "LOGIN_FAILED": "Échec de la connexion",
         "LOGIN_NETWORK_ERROR": "Échec de la connexion, veuillez vérifier la connexion réseau"
+    },
+    "COMMON": {
+        "FEATURE_COMING_SOON": "Fonctionnalité bientôt disponible"
     }
 }

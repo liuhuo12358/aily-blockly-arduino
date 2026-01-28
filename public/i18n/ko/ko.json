@@ -334,6 +334,7 @@
     "FLOAT_SIDER": {
         "PROJECT_SETTINGS": "프로젝트 설정",
         "PINMAP": "핀 맵",
+        "CIRCUIT": "회로 연결도",
         "DOCUMENTATION": "문서",
         "FEEDBACK": "피드백",
         "NO_PINMAP": "이 보드에 대한 핀 맵을 사용할 수 없습니다",
@@ -469,5 +470,8 @@
         "LOGIN_SUCCESS": "로그인 성공",
         "LOGIN_FAILED": "로그인 실패",
         "LOGIN_NETWORK_ERROR": "로그인 실패, 네트워크 연결을 확인하세요"
+    },
+    "COMMON": {
+        "FEATURE_COMING_SOON": "기능 출시 예정"
     }
 }

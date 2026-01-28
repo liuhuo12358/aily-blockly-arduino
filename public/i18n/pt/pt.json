@@ -338,6 +338,7 @@
     "FLOAT_SIDER": {
         "PROJECT_SETTINGS": "Configurações do Projeto",
         "PINMAP": "Mapa de Pinos",
+        "CIRCUIT": "Diagrama de Circuito",
         "DOCUMENTATION": "Documentação",
         "FEEDBACK": "Feedback",
         "NO_PINMAP": "Mapa de pinos não disponível para esta placa",
@@ -473,5 +474,8 @@
         "LOGIN_SUCCESS": "Login bem-sucedido",
         "LOGIN_FAILED": "Falha no login",
         "LOGIN_NETWORK_ERROR": "Falha no login, verifique a conexão de rede"
+    },
+    "COMMON": {
+        "FEATURE_COMING_SOON": "Recurso em breve"
     }
 }

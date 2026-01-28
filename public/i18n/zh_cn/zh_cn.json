@@ -390,6 +390,7 @@
     "FLOAT_SIDER": {
         "PROJECT_SETTINGS": "项目设置",
         "PINMAP": "引脚图",
+        "CIRCUIT": "电路连接",
         "DOCUMENTATION": "文档",
         "FEEDBACK": "反馈",
         "NO_PINMAP": "该开发板没有提供引脚图",
@@ -527,6 +528,7 @@
         "LOGIN_NETWORK_ERROR": "登录失败，请检查网络连接"
     },
     "COMMON": {
+        "FEATURE_COMING_SOON": "功能即将上线",
         "ONBOARDING": {
             "SKIP": "跳过",
             "PREV": "上一步",

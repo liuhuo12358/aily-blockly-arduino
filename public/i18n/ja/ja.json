@@ -338,6 +338,7 @@
     "FLOAT_SIDER": {
         "PROJECT_SETTINGS": "プロジェクト設定",
         "PINMAP": "ピン配置図",
+        "CIRCUIT": "回路接続図",
         "DOCUMENTATION": "ドキュメント",
         "FEEDBACK": "フィードバック",
         "NO_PINMAP": "このボードのピン配置図は利用できません",
@@ -473,5 +474,8 @@
         "LOGIN_SUCCESS": "ログイン成功",
         "LOGIN_FAILED": "ログイン失敗",
         "LOGIN_NETWORK_ERROR": "ログインに失敗しました。ネットワーク接続を確認してください"
+    },
+    "COMMON": {
+        "FEATURE_COMING_SOON": "機能は近日公開予定"
     }
 }

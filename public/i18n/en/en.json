@@ -390,6 +390,7 @@
     "FLOAT_SIDER": {
         "PROJECT_SETTINGS": "Project Settings",
         "PINMAP": "Pin Map",
+        "CIRCUIT": "Circuit Diagram",
         "DOCUMENTATION": "Documentation",
         "FEEDBACK": "Feedback",
         "NO_PINMAP": "Pin map not available for this board",
@@ -527,6 +528,7 @@
         "LOGIN_NETWORK_ERROR": "Login failed, please check network connection"
     },
     "COMMON": {
+        "FEATURE_COMING_SOON": "Feature coming soon",
         "ONBOARDING": {
             "SKIP": "Skip",
             "PREV": "Previous",

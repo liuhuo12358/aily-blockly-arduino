@@ -338,6 +338,7 @@
     "FLOAT_SIDER": {
         "PROJECT_SETTINGS": "Projekteinstellungen",
         "PINMAP": "Pin-Belegung",
+        "CIRCUIT": "Schaltplan",
         "DOCUMENTATION": "Dokumentation",
         "FEEDBACK": "Feedback",
         "NO_PINMAP": "Pin-Belegung für dieses Board nicht verfügbar",
@@ -473,5 +474,8 @@
         "LOGIN_SUCCESS": "Anmeldung erfolgreich",
         "LOGIN_FAILED": "Anmeldung fehlgeschlagen",
         "LOGIN_NETWORK_ERROR": "Anmeldung fehlgeschlagen, bitte überprüfen Sie die Netzwerkverbindung"
+    },
+    "COMMON": {
+        "FEATURE_COMING_SOON": "Funktion demnächst verfügbar"
     }
 }
