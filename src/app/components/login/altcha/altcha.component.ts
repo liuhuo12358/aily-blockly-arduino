@@ -16,7 +16,7 @@ import {
 
 import 'altcha';
 import "altcha/i18n/zh-cn";
-// import { environment } from '../../../../environments/environment';
+import { API } from '../../../configs/api.config';
 
 @Component({
   selector: 'app-altcha',
@@ -40,10 +40,7 @@ import "altcha/i18n/zh-cn";
 export class AltchaComponent implements ControlValueAccessor, Validator, AfterViewInit {
   @ViewChild('altchaWidget', { static: true }) altchaWidget!: ElementRef;
 
-  environment = {
-    altchaApiUrl: 'https://api.aily.pro/api/v1/altcha',
-    altchaApiKey: '1234567890',
-  };
+  altchaChallenge = API.altchaChallenge;
 
   value = '';
   onChange: CallableFunction = () => undefined;
