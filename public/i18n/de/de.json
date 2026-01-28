@@ -497,7 +497,13 @@
         "NAME_REQUIRED": "{{type}}-Name darf nicht leer sein",
         "TYPE_TOOL": "Werkzeug",
         "TYPE_SDK": "SDK",
-        "TYPE_COMPILER": "Compiler"
+        "TYPE_COMPILER": "Compiler",
+        "INSTALLING_TITLE": "Installation",
+        "INSTALL_COMPLETE_TITLE": "Installation Abgeschlossen",
+        "INSTALL_FAILED_TITLE": "Installation Fehlgeschlagen",
+        "UNINSTALLING_TITLE": "Deinstallation",
+        "UNINSTALL_COMPLETE_TITLE": "Deinstallation Abgeschlossen",
+        "UNINSTALL_FAILED_TITLE": "Deinstallation Fehlgeschlagen"
     },
     "BLOCKLY_EDITOR": {
         "INSTALLING_DEPS": "Abhängigkeiten werden installiert",

@@ -497,7 +497,13 @@
         "NAME_REQUIRED": "{{type}}名稱不能為空",
         "TYPE_TOOL": "工具",
         "TYPE_SDK": "SDK",
-        "TYPE_COMPILER": "編譯器"
+        "TYPE_COMPILER": "編譯器",
+        "INSTALLING_TITLE": "正在安裝",
+        "INSTALL_COMPLETE_TITLE": "安裝完成",
+        "INSTALL_FAILED_TITLE": "安裝失敗",
+        "UNINSTALLING_TITLE": "正在卸載",
+        "UNINSTALL_COMPLETE_TITLE": "卸載完成",
+        "UNINSTALL_FAILED_TITLE": "卸載失敗"
     },
     "BLOCKLY_EDITOR": {
         "INSTALLING_DEPS": "正在安裝依賴",

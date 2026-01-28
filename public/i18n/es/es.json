@@ -497,7 +497,13 @@
         "NAME_REQUIRED": "El nombre de {{type}} no puede estar vacío",
         "TYPE_TOOL": "Herramienta",
         "TYPE_SDK": "SDK",
-        "TYPE_COMPILER": "Compilador"
+        "TYPE_COMPILER": "Compilador",
+        "INSTALLING_TITLE": "Instalando",
+        "INSTALL_COMPLETE_TITLE": "Instalación Completada",
+        "INSTALL_FAILED_TITLE": "Instalación Fallida",
+        "UNINSTALLING_TITLE": "Desinstalando",
+        "UNINSTALL_COMPLETE_TITLE": "Desinstalación Completada",
+        "UNINSTALL_FAILED_TITLE": "Desinstalación Fallida"
     },
     "BLOCKLY_EDITOR": {
         "INSTALLING_DEPS": "Instalando dependencias",

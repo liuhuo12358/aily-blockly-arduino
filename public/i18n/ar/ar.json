@@ -497,7 +497,13 @@
         "NAME_REQUIRED": "لا يمكن أن يكون اسم {{type}} فارغًا",
         "TYPE_TOOL": "أداة",
         "TYPE_SDK": "SDK",
-        "TYPE_COMPILER": "مترجم"
+        "TYPE_COMPILER": "مترجم",
+        "INSTALLING_TITLE": "جاري التثبيت",
+        "INSTALL_COMPLETE_TITLE": "اكتمل التثبيت",
+        "INSTALL_FAILED_TITLE": "فشل التثبيت",
+        "UNINSTALLING_TITLE": "جاري إلغاء التثبيت",
+        "UNINSTALL_COMPLETE_TITLE": "اكتمل إلغاء التثبيت",
+        "UNINSTALL_FAILED_TITLE": "فشل إلغاء التثبيت"
     },
     "BLOCKLY_EDITOR": {
         "INSTALLING_DEPS": "جاري تثبيت التبعيات",
