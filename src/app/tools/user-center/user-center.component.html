@@ -4,7 +4,8 @@
 <ng-template #windowBoxTemplate>
     <div class="window-box">
         <div class="user-info">
-            <div class="avatar ccenter">
+            <div class="avatar ccenter" (click)="onAvatarClick()" [style.cursor]="isLoggedIn ? 'pointer' : 'default'" 
+                 [title]="isLoggedIn ? '点击打开管理后台' : ''">
                 <i class="fa-thin fa-user"></i>
             </div>
             <div class="username">
