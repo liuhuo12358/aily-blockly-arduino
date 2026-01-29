@@ -918,7 +918,9 @@ export class AuthService {
           return throwError(() => new Error('用户未登录'));
         }
 
-        const requestBody: any = {};
+        const requestBody: any = {
+          target_type: 'console',
+        };
         if (targetUrl) {
           requestBody.target_url = targetUrl;
         }
