@@ -782,7 +782,8 @@ const {
   getRunningSubappConfig,
   nativeSubappRegistry,
 } = require("./window");
-const { registerNpmHandlers, killAllNpmProcesses, getActiveNpmProcesses, beginNpmShutdown } = require("./npm");
+const { registerNpmHandlers, killAllNpmProcesses, killOwnerProjectNpmProcesses, getActiveNpmProcesses, beginNpmShutdown } = require("./npm");
+const { cancelProjectTaskScope } = require('./project-task-scope');
 const { registerUpdaterHandlers } = require("./updater");
 const { registerCmdHandlers, killAllCmdProcesses, killOwnerProjectCmdProcesses, getActiveCmdProcesses, beginCommandShutdown } = require("./cmd");
 const { registerAilyServicesStreamHandlers, cancelAllAilyServicesStreams, getActiveAilyServicesStreams } = require("./aily-services-stream");
@@ -3254,7 +3255,14 @@ ipcMain.handle('project-commands-stop', async (event, data) => {
       || typeof data?.projectPath !== 'string' || !path.isAbsolute(data.projectPath)) {
     return { ok: false, error: 'Invalid project close owner.' };
   }
-  return { ok: await killOwnerProjectCmdProcesses(event.sender, data.projectPath) };
+  let scope;
+  try { scope = cancelProjectTaskScope(event.sender, data); }
+  catch { return { ok: false, error: 'Invalid project task scope.' }; }
+  const stopped = await Promise.all([
+    killOwnerProjectCmdProcesses(event.sender, scope.projectPath, scope.projectSessionId),
+    killOwnerProjectNpmProcesses(event.sender, scope.projectPath, scope.projectSessionId),
+  ]);
+  return { ok: stopped.every(Boolean) };
 });
 
 ipcMain.handle("project-lock-try", (event, data) => {

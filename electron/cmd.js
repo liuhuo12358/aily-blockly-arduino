@@ -6,6 +6,7 @@ const os = require('os');
 const path = require('path');
 const { isWin32, isDarwin, isLinux } = require('./platform');
 const { killRegisteredProcessTree } = require('./process-tree');
+const { assertProjectTaskActive, matchesProjectTask } = require('./project-task-scope');
 const { createBuildWorkspaceSupervisor } = require('./build-workspace-supervisor');
 let commandShutdown = false;
 const {
@@ -525,6 +526,8 @@ class CommandManager {
       buildWorkspacePath: options.buildWorkspace,
       startedAt,
       ownerWebContents: options.ownerWebContents,
+      projectPath: options.projectPath,
+      projectSessionId: options.projectSessionId,
       stopRequested: false,
     };
 
@@ -536,7 +539,8 @@ class CommandManager {
       // command. Interrupted build markers still require confirmed cleanup.
       const safeExit = !child.pid || (Number.isInteger(code) && !signal);
       entry.completedNormally = safeExit;
-      if (entry.terminationConfirmed || (!entry.stopRequested && (!entry.buildWorkspace
+      if (entry.terminationConfirmed || (!entry.stopRequested && !entry.terminationUnconfirmed
+          && (!entry.projectSessionId || safeExit) && (!entry.buildWorkspace
           || (safeExit && entry.buildWorkspace.canReleaseResources())))) {
         entry.terminationConfirmed = true;
         this.releaseCommandResources(streamId, entry);
@@ -636,6 +640,7 @@ class CommandManager {
             const completedBuild = entry.closed && entry.completedNormally
               && entry.buildWorkspace?.canReleaseResources();
             if (!stopped && !completedBuild) {
+              if (entry.projectSessionId) entry.terminationUnconfirmed = true;
               console.warn('[PROC_TRACE][CMD_RESOURCE_RETAINED]', {
                 streamId, pid: entry.process.pid, reason: 'termination-failed',
               });
@@ -654,7 +659,7 @@ class CommandManager {
         } finally {
           if (!entry.terminationConfirmed) {
             entry.stopRequested = false;
-            if (entry.closed && !entry.buildWorkspace) this.releaseCommandResources(streamId, entry);
+            if (entry.closed && !entry.buildWorkspace && !entry.projectSessionId) this.releaseCommandResources(streamId, entry);
           }
         }
       })().finally(() => { entry.stopPromise = undefined; });
@@ -799,15 +804,10 @@ class CommandManager {
     return stopped.every(Boolean);
   }
 
-  async killOwnerProjectProcesses(owner, projectPath) {
+  async killOwnerProjectProcesses(owner, projectPath, projectSessionId) {
     if (typeof projectPath !== 'string' || !path.isAbsolute(projectPath)) return false;
-    const normalize = value => isWin32 ? path.resolve(value).toLowerCase() : path.resolve(value);
-    const root = normalize(projectPath);
-    const matches = entry => {
-      const project = entry.buildWorkspacePath || entry.cwd;
-      return entry.ownerWebContents === owner && project && normalize(project) === root;
-    };
-    const entries = [...this.processes, ...this.pendingCommands].filter(([, entry]) => matches(entry));
+    const entries = [...this.processes, ...this.pendingCommands]
+      .filter(([, entry]) => matchesProjectTask(entry, owner, projectPath, projectSessionId));
     const stopped = await Promise.all(entries.map(([streamId]) => this.killProcess(streamId)));
     return stopped.every(Boolean);
   }
@@ -833,10 +833,12 @@ function registerCmdHandlers(mainWindow, { buildDeliveryAuthority } = {}) {
     const senderWindow = event.sender; // 获取发送请求的窗口
     let delivery;
     const pending = { ownerWebContents: senderWindow, cwd: options.cwd || process.cwd(),
-      buildWorkspacePath: options.buildWorkspace, cancelled: false };
+      buildWorkspacePath: options.buildWorkspace, projectPath: options.projectPath,
+      projectSessionId: options.projectSessionId, cancelled: false };
 
     try {
       if (commandShutdown) throw new Error('COMMAND_SHUTDOWN_IN_PROGRESS');
+      assertProjectTaskActive(senderWindow, options);
       if (commandManager.pendingCommands.has(streamId) || commandManager.processes.has(streamId)) {
         throw new Error('Command stream is already registered.');
       }
@@ -848,6 +850,7 @@ function registerCmdHandlers(mainWindow, { buildDeliveryAuthority } = {}) {
       }
       if (pending.cancelled) throw new Error('COMMAND_CANCELLED_BEFORE_LAUNCH');
       if (senderWindow.isDestroyed()) throw new Error('Command owner was destroyed before launch.');
+      assertProjectTaskActive(senderWindow, options);
       const result = commandManager.executeCommand({ ...options, streamId, ownerWebContents: senderWindow,
         ...(delivery ? { messagePort: { transport: 'node-ipc-v1', maxMessageBytes: 4096 } } : {}),
       });
@@ -1000,7 +1003,7 @@ module.exports = {
   getCmdProcessMessagePortInfo: (streamId) => commandManager.getProcessMessagePortInfo(streamId),
   killCmdProcess: (streamId) => commandManager.killProcess(streamId),
   killAllCmdProcesses: () => commandManager.killAllProcesses(),
-  killOwnerProjectCmdProcesses: (owner, projectPath) => commandManager.killOwnerProjectProcesses(owner, projectPath),
+  killOwnerProjectCmdProcesses: (owner, projectPath, projectSessionId) => commandManager.killOwnerProjectProcesses(owner, projectPath, projectSessionId),
   beginCommandShutdown: () => { commandShutdown = true; },
   getActiveCmdProcesses: () => commandManager.getActiveProcessSummaries(),
   onCmdProcessMessage: (listener) => commandManager.onProcessMessage(listener),

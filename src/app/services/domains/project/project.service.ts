@@ -1,9 +1,11 @@
 import { Injectable, Injector } from '@angular/core';
 import { ProjectLifecycleError, ProjectLifecycleGate, type ProjectLifecycleLease } from './project-lifecycle-gate';
+import { ProjectDependencyLifecycle, type ProjectDependencySession } from './project-dependency-lifecycle';
 import { BehaviorSubject, Subject } from 'rxjs';
 import {
   CmdService,
   ElectronService,
+  LogService,
   PlatformService,
 } from '@core/platform/public-api';
 import { NzMessageService } from 'ng-zorro-antd/message';
@@ -158,6 +160,8 @@ export class ProjectService {
     const existing = this.coderProjectContexts.get(key);
     if (existing) return existing;
     if (this.getProjectMode(path) !== 'coder') throw new Error('请选择 Coder 工程文件夹');
+    // Initialize before cloning so every Coder context shares the path-scoped registry.
+    void this.dependencyLifecycle;
     const context: ProjectService = Object.assign(Object.create(ProjectService.prototype), this);
     Object.assign(context, {
       isCoderProjectContext: true,
@@ -173,12 +177,18 @@ export class ProjectService {
     context.currentProjectPath$ = context.currentProjectPathSubject.asObservable();
     context.projectOpen = this.projectOpen.bind(this);
     context.beginCoderOperation = this.beginCoderOperation.bind(this);
-    context.syncCurrentBoardConfig = async () => {
+    context.syncCurrentBoardConfig = async (session?: ProjectDependencySession) => {
       try {
-        context.currentBoardConfig = await context.getBoardJson();
+        if (session) context.assertProjectDependencySession(session);
+        const board = await context.getBoardJson();
+        if (session) context.assertProjectDependencySession(session);
+        context.currentBoardConfig = board;
         context.boardConfigUpdatedSubject.next(context.currentBoardConfig);
         return true;
-      } catch { return false; }
+      } catch (error) {
+        if (session) context.assertProjectDependencySession(session);
+        return false;
+      }
     };
     const project = path;
     context.stateSubject.subscribe(() => {
@@ -505,7 +515,9 @@ export class ProjectService {
     if (this.isSameProjectPath(path, this.currentProjectPath)) throw new Error('请先切换到另一个 Coder 工程，再移除此工程');
     const folder = this.coderProjects.find(item => this.isSameProjectPath(item.path, path));
     if (!folder) return;
-    const lease = this.acquireProjectLifecycle([path]);
+    // A previous unconfirmed stop must remain retryable from this close entry.
+    if (this.application.hasActiveProjectMutation(path)) throw new ProjectLifecycleError('PROJECT_OPERATION_BUSY', '项目正在写入，请等待完成后关闭。');
+    const lease = this.projectLifecycle.acquire([path]);
     try {
       await this.stopProjectCommands(folder.path);
       const group = this.storedCoderWorkspaceFor(folder.path);
@@ -520,8 +532,9 @@ export class ProjectService {
 
   private projectActivationSubject = new Subject<ProjectActivationEvent>();
   projectActivation$ = this.projectActivationSubject.asObservable();
-  private projectOpenTask: { path: string; promise: Promise<boolean> } | null = null;
+  private projectOpenTask: { path: string; paths: string[]; promise: Promise<boolean>; lease: ProjectLifecycleLease } | null = null;
   private readonly projectLifecycle = new ProjectLifecycleGate();
+  private dependencyLifecycleState?: ProjectDependencyLifecycle;
   private boardSwitchLifecycle: { projectPath: string; token: symbol } | null = null;
   private loadingBlocklyProjectPath = '';
   private loadedBlocklyProjectPath = '';
@@ -716,6 +729,7 @@ export class ProjectService {
     private platformService: PlatformService,
     private translate: TranslateService,
     private injector: Injector,
+    private logService: LogService,
   ) {
     this.translate.onLangChange.subscribe((event) => {
       void this.loadCurrentBoardMenuTranslations(event.lang);
@@ -726,11 +740,45 @@ export class ProjectService {
     return this.injector.get(PROJECT_APPLICATION_PORT);
   }
 
+  private get dependencyLifecycle(): ProjectDependencyLifecycle {
+    return this.dependencyLifecycleState ??= new ProjectDependencyLifecycle(path => {
+      const normalized = path.replace(/\\/g, '/').replace(/\/+$/, '');
+      return this.platformService?.isWindows?.() ? normalized.toLowerCase() : normalized;
+    });
+  }
+
+  getProjectDependencySession(projectPath = this.currentProjectPath): ProjectDependencySession {
+    return this.dependencyLifecycle.ensure(projectPath);
+  }
+
+  assertProjectDependencySession(session: ProjectDependencySession): void {
+    this.dependencyLifecycle.assertCurrent(session);
+  }
+
+  runProjectDependencyTask<T>(session: ProjectDependencySession, work: () => Promise<T>): Promise<T> {
+    return this.dependencyLifecycle.run(session, work);
+  }
+
+  finishProjectDependencyPreparation(session: ProjectDependencySession): void {
+    this.dependencyLifecycle.finishPreparation(session);
+  }
+
+  isProjectDependencyPreparationInProgress(projectPath = this.currentProjectPath): boolean {
+    return this.dependencyLifecycle.isBusy(projectPath);
+  }
+
+  get projectDependencyChanges() {
+    return this.dependencyLifecycle.changes;
+  }
+
   isProjectTransitionInProgress(projectPath = this.currentProjectPath): boolean {
-    return this.projectLifecycle.hasActive(projectPath);
+    return this.projectLifecycle.hasActive(projectPath) || this.dependencyLifecycle.isStopping(projectPath);
   }
 
   private acquireProjectLifecycle(paths: string[], owner?: symbol, checkMutation = true): ProjectLifecycleLease {
+    if (paths.some(path => this.dependencyLifecycle.isStopping(path))) {
+      throw new ProjectLifecycleError('PROJECT_OPERATION_BUSY', '项目任务尚未确认停止，请重试关闭项目。');
+    }
     if (checkMutation && paths.some(path => this.application.hasActiveProjectMutation(path))) {
       throw new ProjectLifecycleError('PROJECT_OPERATION_BUSY', '项目正在写入或执行宿主操作，请等待操作完成后再切换或关闭。会话思考和读取不会锁定项目。');
     }
@@ -1196,12 +1244,22 @@ export class ProjectService {
     let lease: ProjectLifecycleLease;
     try { lease = this.acquireProjectLifecycle(paths, options.lifecycleOwner, !coderActivation); }
     catch (error) { this.message.warning((error as Error).message); return false; }
-    const promise = this.projectOpenInternal(projectPath, options);
-    this.projectOpenTask = { path: projectPath, promise };
+    let session: ProjectDependencySession | undefined;
+    const promise = this.projectOpenInternal(projectPath, options, current => { session = current; });
+    const task = { path: projectPath, paths, promise, lease };
+    this.projectOpenTask = task;
     try {
-      return await promise;
+      const opened = await promise;
+      if (!opened) {
+        if (session) this.dependencyLifecycle.finishPreparation(session);
+      }
+      return opened;
+    } catch (error) {
+      if (session) this.dependencyLifecycle.finishPreparation(session);
+      if ((error as { code?: string })?.code === 'PROJECT_DEPENDENCY_CANCELLED') return false;
+      throw error;
     } finally {
-      lease.release();
+      task.lease.release();
       if (this.projectOpenTask?.promise === promise) {
         this.projectOpenTask = null;
       }
@@ -1361,7 +1419,7 @@ export class ProjectService {
     });
   }
 
-  private async projectOpenInternal(projectPath = this.currentProjectPath, options: ProjectOpenOptions = {}): Promise<boolean> {
+  private async projectOpenInternal(projectPath = this.currentProjectPath, options: ProjectOpenOptions = {}, onPreparation?: (session: ProjectDependencySession) => void): Promise<boolean> {
     const previousProjectPath = this.currentProjectPath;
     const activationReason = options.reason || (this.isSameProjectPath(previousProjectPath, projectPath) ? 'reload' : 'open');
     const isSwitchingProject = !!previousProjectPath
@@ -1385,7 +1443,9 @@ export class ProjectService {
         if (this.getCoderOperation(projectPath)) throw new Error('工程正在编译或上传，请等待完成后重新加载');
         const saved = await this.application.dispatchProjectSave(projectPath, 15_000);
         if (!saved.success) throw new Error(saved.error || '重新加载前保存工程失败');
+        await this.stopProjectCommands(projectPath);
       }
+      const retained = this.coderProjects.some(project => this.isSameProjectPath(project.path, projectPath));
       if (!this.coderProjects.some(project => this.isSameProjectPath(project.path, projectPath))) {
         if (window['projectLock']) {
           const lock = await window['projectLock'].tryAcquire(projectPath);
@@ -1394,13 +1454,18 @@ export class ProjectService {
         this.registerCoderProject(projectPath);
         await this.restoreCoderWorkspaceTabs(projectPath);
       }
+      const session = !retained || reload
+        ? this.dependencyLifecycle.beginPreparation(projectPath)
+        : this.dependencyLifecycle.get(projectPath);
+      if (session && (!retained || reload)) onPreparation?.(session);
       const context = this.getCoderProjectContext(projectPath);
       this.currentProjectPath = projectPath;
       this.publishCoderProjectContext(context);
       void window['ipcRenderer']?.invoke?.('logger-set-project-path', projectPath).catch(() => undefined);
       this.electronService.setTitle(`${this.configService.getApplicationName()} - ${context.currentPackageData.name}`);
       this.projectActivationSubject.next({ path: projectPath, previousPath: previousProjectPath, reason: activationReason, sessionResource: options.sessionResource ?? null });
-      await context.syncCurrentBoardConfig();
+      await context.syncCurrentBoardConfig(session);
+      if (session) this.assertProjectDependencySession(session);
       // The retained Coder frame reloads from projectActivation$, independently
       // of navigation. Angular skips an already-active URL with `false`; that
       // is not a refused project reload. A different route must still navigate.
@@ -1451,6 +1516,16 @@ export class ProjectService {
       return false;
     }
 
+    if (previousProjectPath && !this.coderProjects.some(folder => this.isSameProjectPath(folder.path, previousProjectPath))) {
+      try {
+        await this.stopProjectCommands(previousProjectPath);
+      } catch (error) {
+        if (isSwitchingProject) await window['projectLock']?.release(projectPath);
+        this.message.warning((error as Error).message);
+        return false;
+      }
+    }
+
     if (this.electronService.isElectron
       && previousProjectPath
       && !this.isSameProjectPath(previousProjectPath, projectPath)
@@ -1463,6 +1538,8 @@ export class ProjectService {
       }
     }
 
+    const session = this.dependencyLifecycle.beginPreparation(projectPath);
+    onPreparation?.(session);
     this.beginBlocklyProjectLoad(projectPath);
 
     const abiIsExist = this.getProjectMode(projectPath) === 'blockly';
@@ -1472,6 +1549,7 @@ export class ProjectService {
       // awaited SPA hop so ngOnDestroy can dispose the old workspace/runtime
       // before currentProjectPath starts pointing at the next project.
       await this.router.navigate(['/main/guide'], { replaceUrl: true });
+      this.assertProjectDependencySession(session);
     }
 
     // 更新当前项目路径和包数据
@@ -1489,6 +1567,7 @@ export class ProjectService {
       // editor first so its services/workspace are destroyed and the project is really
       // rebuilt from disk instead of remaining in the loading state until the timeout.
       await this.router.navigate(['/main/guide'], { skipLocationChange: true });
+      this.assertProjectDependencySession(session);
     }
 
     let navigationCompleted: boolean;
@@ -1510,16 +1589,17 @@ export class ProjectService {
       });
     }
 
+    this.assertProjectDependencySession(session);
     if (!navigationCompleted) {
       this.stateSubject.next('error');
       throw new Error(`Project editor navigation was not completed: ${projectPath}`);
     }
 
-    await this.waitForProjectOpenCompletion(projectPath);
+    await this.waitForProjectOpenCompletion(projectPath, session);
     return true;
   }
 
-  private waitForProjectOpenCompletion(projectPath: string): Promise<void> {
+  private waitForProjectOpenCompletion(projectPath: string, session?: ProjectDependencySession): Promise<void> {
     return new Promise((resolve, reject) => {
       let settled = false;
       let subscription: { unsubscribe: () => void } | null = null;
@@ -1529,6 +1609,7 @@ export class ProjectService {
         }
         settled = true;
         clearTimeout(timeoutId);
+        session?.signal.removeEventListener('abort', onAbort);
         subscription?.unsubscribe();
         if (error) {
           reject(error);
@@ -1536,12 +1617,16 @@ export class ProjectService {
           resolve();
         }
       };
+      const onAbort = () => finish(Object.assign(new Error('项目依赖准备已取消。'), { code: 'PROJECT_DEPENDENCY_CANCELLED' }));
       const timeoutId = setTimeout(() => {
         const error = new Error(`项目加载超时: ${projectPath}`);
         this.markBlocklyProjectLoadFailed(projectPath, error.message);
         finish(error);
         console.warn('[ProjectService] project open completion timed out:', projectPath);
       }, 120000);
+
+      if (session?.signal.aborted) { onAbort(); return; }
+      session?.signal.addEventListener('abort', onAbort, { once: true });
 
       subscription = this.stateSubject.subscribe((state) => {
         const isBlocklyProject = this.getProjectMode(projectPath) === 'blockly';
@@ -1746,15 +1831,37 @@ export class ProjectService {
   }
 
   async close(options: { save?: boolean } = {}) {
+    if (this.coderOperationsSubject.value.size) {
+      this.message.warning('工程正在编译或上传');
+      return false;
+    }
     const paths = [this.currentProjectPath, ...this.coderProjects.map(project => project.path)].filter(Boolean);
     if (paths.some(path => this.application.hasActiveProjectMutation(path))) {
       this.message.warning('项目正在写入或执行宿主操作，请等待完成后再关闭。');
       return false;
     }
+    const opening = this.projectOpenTask;
+    if (opening && !this.boardSwitchLifecycle && this.dependencyLifecycle.get(opening.path)) {
+      // Transfer admission to close so it can cancel an opening that waits for editor readiness.
+      opening.lease.release();
+    }
     let lease: ProjectLifecycleLease;
     try { lease = this.projectLifecycle.acquire(['*']); }
-    catch (error) { this.message.warning((error as Error).message); return false; }
+    catch (error) {
+      if (opening && !this.boardSwitchLifecycle && this.dependencyLifecycle.get(opening.path)) {
+        opening.lease = this.projectLifecycle.acquire(opening.paths);
+      }
+      this.message.warning((error as Error).message); return false;
+    }
     try {
+      const closingPaths = [...new Set([...paths, opening?.path].filter((path): path is string => !!path))];
+      // Once renderer work is aborted, native cleanup must run even if saving or closing a child window fails.
+      const stopped = await Promise.allSettled(closingPaths.map(path => this.stopProjectCommands(path)));
+      const failed = stopped.find((result): result is PromiseRejectedResult => result.status === 'rejected');
+      if (failed) {
+        this.message.warning(failed.reason?.message || '项目任务未确认停止，请重试关闭项目。');
+        return false;
+      }
       // Tool-triggered close must protect both the save and disposal, without
       // an await gap in which another project can become active.
       const path = this.currentProjectPath;
@@ -1762,39 +1869,41 @@ export class ProjectService {
         const saved = await this.save(path);
         if (!saved.success) throw new ProjectLifecycleError('PROJECT_SAVE_FAILED', `关闭项目前保存失败：${saved.error || '未知错误'}`);
       }
-      return await this.closeInternal();
+      return await this.closeInternal(closingPaths);
     } finally { lease.release(); }
   }
 
   private async stopProjectCommands(projectPath: string): Promise<void> {
-    if (!this.electronService.isElectron) return;
-    try {
-      const stopped = await window['ipcRenderer'].invoke('project-commands-stop', { projectPath });
-      if (!stopped?.ok) throw new Error('项目任务未确认停止。');
-    } catch (error) {
-      console.warn('[ProjectService] Project command stop failed:', error);
+    const lifecycle = this.dependencyLifecycle;
+    const interrupted = lifecycle.isBusy(projectPath);
+    const session = lifecycle.get(projectPath) ?? lifecycle.ensure(projectPath);
+    lifecycle.cancel(projectPath);
+    if (this.electronService.isElectron) {
+      const stopped = await window['ipcRenderer'].invoke('project-commands-stop', {
+        projectPath, projectSessionId: session.projectSessionId,
+      });
+      if (!stopped?.ok) throw new Error('项目任务未确认停止，请重试关闭项目。');
+    }
+    await lifecycle.waitForIdle(session);
+    lifecycle.release(session);
+    if (interrupted) {
+      this.logService.update({
+        title: this.translate.instant('PROJECT.DEPENDENCY_TASKS_STOPPED'),
+        detail: projectPath,
+        state: 'warn',
+      });
     }
   }
 
-  private async closeInternal() {
-    if (this.coderOperationsSubject.value.size) {
-      this.message.warning('工程正在编译或上传');
-      return false;
-    }
+  private async closeInternal(paths: string[]) {
     if (this.currentProjectPath && !(await this.application.closeConnectionGraphWindows())) {
       this.warnConnectionGraphWindowCloseFailure();
       return false;
     }
 
-    if (this.electronService.isElectron) {
-      // close() holds the project lifecycle gate while main stops project commands.
-      const paths = [...new Set([this.currentProjectPath, ...this.coderProjects.map(folder => folder.path)].filter(Boolean))];
-      await Promise.all(paths.map(projectPath => this.stopProjectCommands(projectPath)));
-    }
-
     if (this.electronService.isElectron && this.currentProjectPath && window['projectLock']) {
       try {
-        for (const path of new Set([this.currentProjectPath, ...this.coderProjects.map(folder => folder.path)])) {
+        for (const path of paths) {
           await window['projectLock'].release(path);
         }
       } catch (e) {
@@ -2305,14 +2414,17 @@ export class ProjectService {
    * 从工程 node_modules 主板包同步 board.json 到 currentBoardConfig。
    * Blockly 在 loadProject 内设置；Aily Code（code-editor-pro）在依赖就绪后调用。
    */
-  async syncCurrentBoardConfig(): Promise<boolean> {
+  async syncCurrentBoardConfig(session?: ProjectDependencySession): Promise<boolean> {
     try {
+      if (session) this.assertProjectDependencySession(session);
       const boardJson = await this.getBoardJson();
+      if (session) this.assertProjectDependencySession(session);
       this.currentBoardConfig = boardJson;
       window['boardConfig'] = boardJson;
       this.boardConfigUpdatedSubject.next(boardJson);
       return true;
     } catch (e) {
+      if (session) this.assertProjectDependencySession(session);
       console.warn('同步开发板配置失败:', e);
       return false;
     }

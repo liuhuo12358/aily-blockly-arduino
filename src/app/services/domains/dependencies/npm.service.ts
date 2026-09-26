@@ -41,6 +41,7 @@ import {
 } from './ports/dependency-application.port';
 
 type GlobalDependencyUsageFile = GlobalDependencyUsageState;
+type ProjectDependencySession = ReturnType<ProjectService['getProjectDependencySession']>;
 
 export interface GlobalDependencyRemovalResult {
   packageNames: string[];
@@ -73,7 +74,21 @@ export class NpmService {
 
   isInstalling = false;
   private boardDependencyInstallProgress?: BoardDependencyInstallProgress;
-  private boardDepsInstallPromise?: Promise<void>;
+  private boardDepsInstallPromise?: { session: ProjectDependencySession; promise: Promise<void> };
+
+  private isDependencySessionCurrent(session?: ProjectDependencySession): boolean {
+    if (!session) return true;
+    try {
+      this.prjService.assertProjectDependencySession(session);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  private assertDependencySession(session?: ProjectDependencySession): void {
+    if (session) this.prjService.assertProjectDependencySession(session);
+  }
 
   private getNpmErrorMessage(error: any): string {
     return (error?.message || String(error)).replace(/^Error invoking remote method 'npm-run': Error:\s*/i, '');
@@ -96,6 +111,7 @@ export class NpmService {
   }
 
   private updateBoardDependencyNotice(progress: BoardDependencyInstallProgress, value: number) {
+    if (!this.isDependencySessionCurrent(progress.session)) return;
     const nextProgress = Math.max(progress.lastProgress, this.clampProgress(value));
 
     progress.lastProgress = nextProgress;
@@ -137,7 +153,7 @@ export class NpmService {
   private handleBoardDependencyProgressLog(log: LogOptions) {
     const progress = this.boardDependencyInstallProgress;
 
-    if (!progress) {
+    if (!progress || !this.isDependencySessionCurrent(progress.session)) {
       return;
     }
 
@@ -477,37 +493,39 @@ export class NpmService {
     }
   }
 
-  /** Blockly / Aily Code 共用：工程 npm 就绪后后台检查主板平台依赖（与 blockly-editor loadProject 一致） */
-  ensureProjectAndBoardDeps(
+  /** Blockly / Aily Code 共用：等待工程 npm 和主板平台依赖全部完成。 */
+  async ensureProjectAndBoardDeps(
     projectPath: string,
-    options?: { onRetryInstall?: () => void; onBoardDepsSettled?: () => void },
+    options?: { onRetryInstall?: () => void; onBoardDepsSettled?: () => void | Promise<void> },
+    session = this.prjService.getProjectDependencySession(projectPath),
   ): Promise<boolean> {
-    return this.ensureProjectDependenciesInstalled(projectPath, options).then((ok) => {
-      if (!ok) {
-        return false;
-      }
-
-      void this.installBoardDeps()
-        .then(() => options?.onBoardDepsSettled?.())
-        .catch((err) => console.error('install board dependencies error', err));
-
+    return this.prjService.runProjectDependencyTask(session, async () => {
+      if (!(await this.ensureProjectDependenciesInstalled(projectPath, options, session))) return false;
+      this.assertDependencySession(session);
+      await this.installBoardDeps(session);
+      this.assertDependencySession(session);
+      await options?.onBoardDepsSettled?.();
       return true;
     });
   }
 
-  async installBoardDeps() {
-    if (this.boardDepsInstallPromise) {
-      return this.boardDepsInstallPromise;
+  async installBoardDeps(session = this.prjService.getProjectDependencySession()) {
+    this.assertDependencySession(session);
+    if (this.boardDepsInstallPromise?.session === session) {
+      return this.boardDepsInstallPromise.promise;
     }
 
-    this.boardDepsInstallPromise = (async () => {
+    const promise: Promise<void> = this.prjService.runProjectDependencyTask(session, async () => {
       let installStateStarted = false;
 
       try {
         const boardPackageJson = await this.prjService.getBoardPackageJson() || {};
+        this.assertDependencySession(session);
         const projectPackageJson = await this.prjService.getPackageJson() || {};
+        this.assertDependencySession(session);
         const boardDependencies: Record<string, string> = boardPackageJson.boardDependencies || {};
         const boardPlatformDepsReady = await this.areBoardPlatformDepsReady(boardDependencies);
+        this.assertDependencySession(session);
 
         if (!boardPlatformDepsReady) {
           this.isInstalling = true;
@@ -515,30 +533,36 @@ export class NpmService {
         }
 
         try {
-          await this.recordGlobalDependencyUsage(projectPackageJson, boardPackageJson);
+          await this.recordGlobalDependencyUsage(projectPackageJson, boardPackageJson, session);
         } catch (error) {
+          this.assertDependencySession(session);
           console.warn('Failed to record global dependency usage:', error);
         }
+        this.assertDependencySession(session);
 
         // console.log("boardPackageJson: ", boardPackageJson);
         if (!boardPlatformDepsReady) {
-          await this.installBoardDependencies(boardPackageJson, false, true);
+          await this.installBoardDependencies(boardPackageJson, false, true, session);
         } else {
           console.log('[installBoardDeps] 平台依赖已就绪，跳过安装状态');
         }
+        this.assertDependencySession(session);
 
         try {
           // A missing resource may have been installed above. Record again so
           // that concrete on-disk version starts with a fresh timestamp.
-          await this.recordGlobalDependencyUsage(projectPackageJson, boardPackageJson);
+          await this.recordGlobalDependencyUsage(projectPackageJson, boardPackageJson, session);
         } catch (error) {
+          this.assertDependencySession(session);
           console.warn('Failed to record installed global dependency resources:', error);
         }
+        this.assertDependencySession(session);
 
         if (installStateStarted && this.application.currentProcessState === "INSTALLING") {
           this.application.finishInstall(true);
         }
       } catch (error) {
+        this.assertDependencySession(session);
         const errorMessage = this.getNpmErrorMessage(error);
 
         if (installStateStarted && this.application.currentProcessState === "INSTALLING") {
@@ -547,13 +571,19 @@ export class NpmService {
 
         throw error;
       } finally {
-        this.isInstalling = false;
-        this.boardDependencyInstallProgress = undefined;
-        this.boardDepsInstallPromise = undefined;
+        if (this.boardDepsInstallPromise?.promise === promise) {
+          if (session.signal.aborted && installStateStarted && this.application.currentProcessState === "INSTALLING") {
+            this.application.finishInstall(false);
+          }
+          this.isInstalling = false;
+          this.boardDependencyInstallProgress = undefined;
+          this.boardDepsInstallPromise = undefined;
+        }
       }
-    })();
+    });
+    this.boardDepsInstallPromise = { session, promise };
 
-    return this.boardDepsInstallPromise;
+    return promise;
   }
 
   private isAilyCodeProjectRoot(projectPath: string): boolean {
@@ -702,11 +732,13 @@ export class NpmService {
     return keys;
   }
 
-  private async recordGlobalDependencyUsage(projectPackageJson: any, boardPackageJson: any): Promise<void> {
+  private async recordGlobalDependencyUsage(projectPackageJson: any, boardPackageJson: any, session?: ProjectDependencySession): Promise<void> {
     const appDataPath = window['path'].getAppDataPath();
     const bases = await this.getPlatformPathBases();
+    this.assertDependencySession(session);
     const resourceBasePaths = [bases.sdkBase, bases.compilersBase, bases.toolsBase];
     const boardDependencies = await this.prjService.getBoardDependencies();
+    this.assertDependencySession(session);
 
     const usedNames = new Set<string>([
       ...this.getDependencyNames(projectPackageJson),
@@ -732,6 +764,7 @@ export class NpmService {
       pathApi: window['path'],
       fsApi: window['fsp'],
     });
+    this.assertDependencySession(session);
 
     const usage = this.syncGlobalDependencyUsage(
       appDataPath,
@@ -1019,14 +1052,17 @@ export class NpmService {
     return missingDependencies;
   }
   // 安装开发板依赖
-  async installBoardDependencies(packageJson: any, manageInstallState: boolean = true, force = false) {
+  async installBoardDependencies(packageJson: any, manageInstallState: boolean = true, force = false, session?: ProjectDependencySession) {
+    this.assertDependencySession(session);
     const boardDependencies: Record<string, string> = packageJson.boardDependencies || {};
 
     if (!force && await this.areBoardPlatformDepsReady(boardDependencies)) {
+      this.assertDependencySession(session);
       console.log('[installBoardDependencies] 平台依赖已就绪，跳过');
 
       return;
     }
+    this.assertDependencySession(session);
 
     try {
       if (manageInstallState) {
@@ -1044,6 +1080,7 @@ export class NpmService {
       // Python 项目的板依赖从 Linux 仓库安装；Arduino 留空并沿用既有 managed npm 配置。
       const registry = this.configService.getNpmRegistryForProject(packageJson);
       const platformBases = await this.getPlatformPathBases();
+      this.assertDependencySession(session);
       const dependencies = Object.entries(boardDependencies);
 
       this.traceToAppLog('DEPS_START', {
@@ -1053,6 +1090,7 @@ export class NpmService {
       });
 
       for (const [index, [key, version]] of dependencies.entries()) {
+        this.assertDependencySession(session);
         const declaredVersion = String(version);
         const depPath = `${appDataPath}/node_modules/${key}`;
         const depPathPackageJson = `${depPath}/package.json`;
@@ -1089,7 +1127,8 @@ export class NpmService {
             });
 
             try {
-              await this.cmdService.runAsyncChecked('npm run postinstall', depPath, true, false);
+              await this.cmdService.runAsyncChecked('npm run postinstall', depPath, true, false, session);
+              this.assertDependencySession(session);
 
               if (this.isPlatformPackageOnDisk(key, versionStr, platformBases)) {
                 this.traceToAppLog('DEP_SKIP', { name: key, declaredVersion: versionStr, installedVersion: depPackageJson.version, platformReady: true, afterPostinstall: true });
@@ -1097,6 +1136,7 @@ export class NpmService {
                 continue;
               }
             } catch (error) {
+              this.assertDependencySession(session);
               console.warn(`依赖 ${key} postinstall 失败，将重新 npm install:`, error);
             }
           } else {
@@ -1119,6 +1159,7 @@ export class NpmService {
         this.boardDependenciesChanged = true;
 
         const progress: BoardDependencyInstallProgress = {
+          session,
           total: dependencies.length,
           index,
           name: dependency.name,
@@ -1138,7 +1179,10 @@ export class NpmService {
 
           console.log(`执行命令: ${uninstallCmd}, 时间: ${new Date().toISOString()}`);
           this.traceToAppLog('DEP_UNINSTALL_START', { name: dependency.name, version: dependency.version });
-          await window['npm'].run({ cmd: uninstallCmd });
+          await window['npm'].run({ cmd: uninstallCmd, ...(session ? {
+            projectPath: session.projectPath, projectSessionId: session.projectSessionId,
+          } : {}) });
+          this.assertDependencySession(session);
         }
 
         // --save-exact：与开发板声明版本一致写入 prefix 下 package.json，避免 ^ 导致再次解析到更高版
@@ -1149,7 +1193,10 @@ export class NpmService {
 
         console.log(`执行命令: ${npmCmd}, 时间: ${new Date().toISOString()}`);
         this.traceToAppLog('DEP_INSTALL_START', { name: dependency.name, version: dependency.version });
-        await window['npm'].run({ cmd: npmCmd });
+        await window['npm'].run({ cmd: npmCmd, ...(session ? {
+          projectPath: session.projectPath, projectSessionId: session.projectSessionId,
+        } : {}) });
+        this.assertDependencySession(session);
         this.updateBoardDependencyNotice(progress, ((index + 1) / dependencies.length) * 100);
         console.log(`依赖 ${dependency.name} 安装成功, 时间: ${new Date().toISOString()}`);
         this.traceToAppLog('DEP_INSTALL_DONE', { name: dependency.name, version: dependency.version });
@@ -1168,6 +1215,7 @@ export class NpmService {
         this.application.finishInstall(true);
       }
     } catch (error) {
+      this.assertDependencySession(session);
       const errorMessage = this.getNpmErrorMessage(error);
 
       console.error(error);
@@ -1187,9 +1235,11 @@ export class NpmService {
 
       throw error;
     } finally {
-      this.boardDependencyInstallProgress = undefined;
+      if (this.boardDependencyInstallProgress?.session === session) {
+        this.boardDependencyInstallProgress = undefined;
+      }
 
-      if (manageInstallState) {
+      if (manageInstallState && this.isDependencySessionCurrent(session)) {
         this.isInstalling = false;
       }
     }
@@ -1582,14 +1632,29 @@ export class NpmService {
   async ensureProjectDependenciesInstalled(
     projectPath: string,
     options?: { onRetryInstall?: () => void },
+    session = this.prjService.getProjectDependencySession(projectPath),
+  ): Promise<boolean> {
+    const guardedOptions = options?.onRetryInstall ? { onRetryInstall: () => {
+      if (this.isDependencySessionCurrent(session)) options.onRetryInstall();
+    } } : options;
+    return this.prjService.runProjectDependencyTask(session, () => this.installProjectDependencies(projectPath, guardedOptions, session));
+  }
+
+  private async installProjectDependencies(
+    projectPath: string,
+    options: { onRetryInstall?: () => void } | undefined,
+    session: ProjectDependencySession,
   ): Promise<boolean> {
     // 已完整安装则不再跑 npm install，缩短冷启动
-    if (await this.installedOk(projectPath)) {
-      return this.ensureCoderDependencyLibrarySources(projectPath, options);
+    const installed = await this.installedOk(projectPath);
+    this.assertDependencySession(session);
+    if (installed) {
+      return this.ensureCoderDependencyLibrarySources(projectPath, options, session);
     }
 
     // 与 Blockly 一致：下一帧再挂通知，避免变更检测/弹层偶发不同步
     setTimeout(() => {
+      if (!this.isDependencySessionCurrent(session)) return;
       this.application.updateNotice({
         title: this.translate.instant('NPM.INSTALLING_TITLE'),
         text: this.translate.instant('BLOCKLY_EDITOR.INSTALLING_DEPS'),
@@ -1613,10 +1678,17 @@ export class NpmService {
     const npmResult = await this.cmdService.runAsync(
       this.configService.withProjectNpmRegistry('npm install', projectPackageJson),
       projectPath,
+      true,
+      false,
+      session,
     );
+    this.assertDependencySession(session);
 
-    if (!(await this.installedOk(projectPath))) {
+    const installedAfterAttempt = await this.installedOk(projectPath);
+    this.assertDependencySession(session);
+    if (!installedAfterAttempt) {
       setTimeout(() => {
+        if (!this.isDependencySessionCurrent(session)) return;
         this.application.updateNotice({
           title: this.translate.instant('NPM.INSTALL_FAILED_TITLE'),
           text: this.translate.instant('NPM.BOARD_DEPS_INSTALL_FAILED'),
@@ -1630,11 +1702,13 @@ export class NpmService {
       return false;
     }
 
-    if (!(await this.ensureCoderDependencyLibrarySources(projectPath, options))) {
+    if (!(await this.ensureCoderDependencyLibrarySources(projectPath, options, session))) {
       return false;
     }
+    this.assertDependencySession(session);
 
     setTimeout(() => {
+      if (!this.isDependencySessionCurrent(session)) return;
       this.application.updateNotice({
         title: this.translate.instant('NPM.INSTALL_COMPLETE_TITLE'),
         text: this.translate.instant('NPM.DEPS_INSTALL_COMPLETE'),
@@ -1650,14 +1724,17 @@ export class NpmService {
   private async ensureCoderDependencyLibrarySources(
     projectPath: string,
     options?: { onRetryInstall?: () => void },
+    session?: ProjectDependencySession,
   ): Promise<boolean> {
     if (!this.isAilyCodeProjectRoot(projectPath)) return true;
 
     try {
       await this.application.materializeCoderProjectLibraries(projectPath);
+      this.assertDependencySession(session);
 
       return true;
     } catch (error) {
+      this.assertDependencySession(session);
       this.application.updateNotice({
         title: this.translate.instant('NPM.INSTALL_FAILED_TITLE'),
         text: this.translate.instant('NPM.BOARD_DEPS_INSTALL_FAILED'),
@@ -1710,6 +1787,7 @@ interface BoardDependencyToInstall {
 }
 
 interface BoardDependencyInstallProgress {
+  session?: ProjectDependencySession;
   total: number;
   index: number;
   name: string;

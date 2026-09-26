@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { BehaviorSubject, Subject, debounceTime, filter, firstValueFrom, map, switchMap, take, timer } from 'rxjs';
+import { BehaviorSubject, Subject, debounceTime, filter, firstValueFrom, fromEvent, map, switchMap, take, takeUntil, timer } from 'rxjs';
 import * as Blockly from 'blockly';
 import { installBlocklyVariableComparator, loadBlocklyWorkspace } from '../utils/blockly-performance';
 import { processI18n, processJsonVar, processStaticFilePath, processToolboxI18n, resolveSerialPortValueAfterCdcDisabled } from '../components/blockly/abf';
@@ -529,15 +529,17 @@ export class BlocklyService {
     setTimeout(bindObserver, 0);
   }
 
-  waitForWorkspace(): Promise<Blockly.WorkspaceSvg> {
+  waitForWorkspace(signal?: AbortSignal): Promise<Blockly.WorkspaceSvg> {
+    if (signal?.aborted) return Promise.reject(signal.reason);
     if (this._workspace) {
       return Promise.resolve(this._workspace);
     }
 
-    return firstValueFrom(this.workspaceReadySubject.pipe(
+    const ready = this.workspaceReadySubject.pipe(
       filter((workspace): workspace is Blockly.WorkspaceSvg => !!workspace),
       take(1),
-    ));
+    );
+    return firstValueFrom(signal ? ready.pipe(takeUntil(fromEvent(signal, 'abort'))) : ready);
   }
 
   /** 生成当前工作区的独立 SVG；具体导出细节由 workspace-svg-exporter 负责。 */

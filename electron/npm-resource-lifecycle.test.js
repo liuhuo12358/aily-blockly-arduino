@@ -5,34 +5,46 @@ const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 const { EventEmitter } = require('node:events');
+const os = require('node:os');
 
-function fixture() {
+function fixture({ native = false, cwd } = {}) {
   const handlers = new Map(), children = [], timers = [], kills = [];
+  const nativeResult = { code: undefined, signal: undefined, stdout: '', stderr: '' };
   const owner = Object.assign(new EventEmitter(), { id: 1, destroyed: false,
     isDestroyed() { return this.destroyed; }, destroy() { this.destroyed = true; this.emit('destroyed'); } });
-  const state = { spawnError: undefined, kill: async () => true };
+  const state = { spawnError: undefined, kill: native
+    ? pid => require('./process-tree').killRegisteredProcessTree(pid, 'npm-lifecycle-fixture')
+    : async () => true };
   const dependencies = {
     electron: { ipcMain: { handle: (name, handler) => handlers.set(name, handler) } },
-    child_process: { spawn: () => {
+    child_process: { spawn: (...args) => {
       if (state.spawnError) throw state.spawnError;
-      const child = Object.assign(new EventEmitter(), { pid: 100 + children.length, stdout: new EventEmitter(), stderr: new EventEmitter() });
+      const child = native ? require('node:child_process').spawn(args[0], { ...args[1], cwd })
+        : Object.assign(new EventEmitter(), { pid: 100 + children.length, stdout: new EventEmitter(), stderr: new EventEmitter() });
+      if (native) {
+        for (const stream of ['stdout', 'stderr']) child[stream].on('data', chunk => {
+          nativeResult[stream] = (nativeResult[stream] + String(chunk)).slice(-1000);
+        });
+        child.on('close', (code, signal) => Object.assign(nativeResult, { code, signal }));
+      }
       children.push(child); return child;
     } },
-    './process-tree': { killRegisteredProcessTree: async pid => { kills.push(pid); return state.kill(); } },
+    './process-tree': { killRegisteredProcessTree: async pid => { kills.push(pid); return state.kill(pid); } },
+    './project-task-scope': require('./project-task-scope'),
   };
   const module = { exports: {} };
   vm.runInNewContext(fs.readFileSync(path.join(__dirname, 'npm.js'), 'utf8'), {
     module, exports: module.exports, require: name => {
       assert.ok(dependencies[name], name); return dependencies[name];
     }, process, AbortController, console: { log() {}, error() {}, warn() {}, info() {} },
-    setTimeout: callback => { const timer = { callback }; timers.push(timer); return timer; },
-    clearTimeout: timer => { timer.cleared = true; },
+    setTimeout: native ? setTimeout : callback => { const timer = { callback }; timers.push(timer); return timer; },
+    clearTimeout: native ? clearTimeout : timer => { timer.cleared = true; },
   }, { filename: 'npm.js' });
   const api = module.exports; api.registerNpmHandlers();
-  const run = (options = {}) => handlers.get('npm-run')({ sender: owner }, {
+  const run = (options = {}, sender = owner) => handlers.get('npm-run')({ sender }, {
     cmd: 'npm install fixture', ...options,
   });
-  return { api, run, owner, children, timers, kills, state };
+  return { api, run, owner, children, timers, kills, state, nativeResult };
 }
 const tick = () => new Promise(resolve => setImmediate(resolve));
 const busy = child => { child.stderr.emit('data', 'npm error EBUSY rename fixture'); child.emit('close', 1, null); };
@@ -96,15 +108,27 @@ test('parent close during cancellation keeps the command registered until the tr
   assert.equal(f.api.getActiveNpmProcesses().length, 0);
 });
 
-test('failed termination keeps a live process registered but never retargets its closed PID', async () => {
+test('failed termination stays unresolved after root close and never retargets its closed PID', async () => {
   const f = fixture(), pending = f.run();
   const rejected = assert.rejects(pending, /CANCELLED/);
   f.state.kill = async () => false;
   assert.equal(await f.api.killAllNpmProcesses(), false);
   assert.equal(f.api.getActiveNpmProcesses().length, 1);
   f.children[0].emit('close', 0, null); await rejected;
+  assert.equal(f.api.getActiveNpmProcesses().length, 1);
+  assert.equal(await f.api.killAllNpmProcesses(), false); assert.equal(f.kills.length, 1);
+});
+
+test('failed termination can be retried while its registered root is still alive', async () => {
+  const f = fixture(), pending = f.run();
+  const rejected = assert.rejects(pending, /CANCELLED/);
+  f.state.kill = async () => false;
+  assert.equal(await f.api.killAllNpmProcesses(), false);
+  f.state.kill = async () => true;
+  assert.equal(await f.api.killAllNpmProcesses(), true);
+  f.children[0].emit('close', null, 'SIGTERM'); await rejected;
   assert.equal(f.api.getActiveNpmProcesses().length, 0);
-  assert.equal(await f.api.killAllNpmProcesses(), true); assert.equal(f.kills.length, 1);
+  assert.equal(f.kills.length, 2);
 });
 
 test('spawn error waits for close; synchronous spawn failure also removes the entry', async () => {
@@ -127,12 +151,74 @@ test('shutdown and destroyed owners cannot start npm commands', async () => {
   assert.equal(closing.children.length, 0);
 });
 
-test('abnormal exit neither retries busy output nor targets a dead PID', async () => {
+test('abnormal exit stays unresolved without retrying busy output or targeting a dead PID', async () => {
   const f = fixture(), pending = f.run();
   f.children[0].stderr.emit('data', 'npm error EBUSY rename fixture');
   f.children[0].emit('close', null, 'SIGKILL'); await assert.rejects(pending);
-  assert.equal(f.api.getActiveNpmProcesses().length, 0);
-  assert.equal(await f.api.killAllNpmProcesses(), true);
+  assert.equal(f.api.getActiveNpmProcesses().length, 1);
+  assert.equal(await f.api.killAllNpmProcesses(), false);
   assert.equal(f.timers.length, 0);
   assert.equal(f.kills.length, 0);
+});
+
+test('project stop isolates npm owners and sessions and rejects late cancelled requests', async () => {
+  const { cancelProjectTaskScope } = require('./project-task-scope');
+  const f = fixture(), scope = { projectPath: path.resolve('npm-project'), projectSessionId: 'a' };
+  const otherOwner = Object.assign(new EventEmitter(), { isDestroyed: () => false });
+  const first = f.run(scope), samePath = f.run({ ...scope, projectSessionId: 'b' }), other = f.run(scope, otherOwner);
+  const rejected = assert.rejects(first, /CANCELLED/);
+  cancelProjectTaskScope(f.owner, scope);
+  assert.equal(await f.api.killOwnerProjectNpmProcesses(f.owner, scope.projectPath, scope.projectSessionId), true);
+  assert.deepEqual(f.kills, [100]);
+  f.children[0].emit('close', null, 'SIGTERM'); await rejected;
+  await assert.rejects(f.run(scope), /PROJECT_TASK_CANCELLED/);
+  assert.equal(f.children.length, 3);
+  const reopened = f.run({ ...scope, projectSessionId: 'reopened' });
+  for (const child of f.children.slice(1)) { child.stdout.emit('data', 'done'); child.emit('close', 0, null); }
+  await Promise.all([samePath, other, reopened]);
+  assert.equal(f.api.getActiveNpmProcesses().length, 0);
+});
+
+test('Windows local npm postinstall cancellation confirms its real descendants exited', { skip: process.platform !== 'win32' }, async t => {
+  const npmCli = path.join(path.dirname(process.execPath), 'node_modules/npm/bin/npm-cli.js');
+  if (!fs.existsSync(npmCli)) return t.skip('Node installation has no bundled npm CLI.');
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'aily-npm-cancel-'));
+  const receipt = path.join(root, 'fixture-pids.json');
+  const f = fixture({ native: true, cwd: root });
+  let pids = [];
+  t.after(async () => {
+    await f.api.killAllNpmProcesses();
+    for (const pid of pids) {
+      try { process.kill(pid, 0); }
+      catch (error) { if (error.code === 'ESRCH') continue; throw error; }
+      assert.equal(await require('./process-tree').killRegisteredProcessTree(pid, 'npm-fixture-cleanup'), true);
+    }
+    assert.equal(path.dirname(fs.realpathSync(root)), fs.realpathSync(os.tmpdir()));
+    assert.ok(path.basename(root).startsWith('aily-npm-cancel-'));
+    fs.rmSync(root, { recursive: true, force: true });
+  });
+  fs.writeFileSync(path.join(root, 'package.json'), JSON.stringify({ name: 'aily-local-cancel-fixture', version: '1.0.0',
+    scripts: { postinstall: 'node postinstall.js' } }));
+  fs.writeFileSync(path.join(root, 'postinstall.js'), `
+    const fs = require('node:fs');
+    const child = require('node:child_process').spawn(process.execPath, ['-e', 'setInterval(() => {}, 1000)'], { windowsHide: true, stdio: 'ignore' });
+    fs.writeFileSync(require('node:path').join(__dirname, 'fixture-pids.json'), JSON.stringify([process.pid, child.pid]));
+    setInterval(() => {}, 1000);
+  `);
+  const scope = { projectPath: root, projectSessionId: 'native-install' };
+  const pending = f.run({ ...scope,
+    cmd: `"${process.execPath}" "${npmCli}" install --offline --no-audit --no-fund --ignore-scripts=false --foreground-scripts --prefix "${root}"` });
+  const outcome = pending.then(() => null, error => error);
+  const deadline = Date.now() + 10000;
+  while (!fs.existsSync(receipt) && Date.now() < deadline) await new Promise(resolve => setTimeout(resolve, 20));
+  t.diagnostic(JSON.stringify({ ...f.nativeResult, reachedPostinstall: fs.existsSync(receipt) }));
+  assert.ok(fs.existsSync(receipt), 'Local npm must reach postinstall before cancellation.');
+  pids = JSON.parse(fs.readFileSync(receipt, 'utf8'));
+  assert.equal(pids.length, 2);
+  assert.equal(await f.api.killOwnerProjectNpmProcesses(f.owner, scope.projectPath, scope.projectSessionId), true);
+  assert.match((await outcome)?.message || '', /CANCELLED/);
+  for (const pid of pids) assert.throws(() => process.kill(pid, 0), { code: 'ESRCH' });
+  assert.equal(f.api.getActiveNpmProcesses().length, 0);
+  t.diagnostic(JSON.stringify({ rootExitCode: f.nativeResult.code, rootSignal: f.nativeResult.signal,
+    cancellation: 'confirmed', verifiedExitedDescendants: pids.length }));
 });

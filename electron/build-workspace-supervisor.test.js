@@ -212,6 +212,44 @@ test('duplicate pending command streams are rejected without replacing the origi
   assert.equal(f.spawnCalls, 0);
 });
 
+test('cancelled project scopes fence pending and late commands while allowing a reopened session', async () => {
+  const { cancelProjectTaskScope } = require('./project-task-scope');
+  const f = cancellationFixture({ viaIpc: true });
+  let resume;
+  f.api.registerCmdHandlers(undefined, { buildDeliveryAuthority: {
+    begin: () => new Promise(resolve => { resume = () => resolve({ abandon() {} }); }),
+  } });
+  const owner = Object.assign(new EventEmitter(), { mainFrame: {}, isDestroyed: () => false, send() {} });
+  const event = { sender: owner, senderFrame: owner.mainFrame };
+  const scope = { projectPath: path.resolve('owned-project'), projectSessionId: 'first' };
+  const options = { command: process.execPath, streamId: 'pending-owned', cwd: os.tmpdir(),
+    shellProfile: false, buildDeliveryRequest: 'request.json', ...scope };
+  const pending = f.handlers.get('cmd-run')(event, options);
+  cancelProjectTaskScope(owner, scope);
+  assert.equal(await f.api.killOwnerProjectCmdProcesses(owner, scope.projectPath, scope.projectSessionId), true);
+  resume();
+  assert.equal((await pending).success, false);
+  const late = await f.handlers.get('cmd-run')(event, { ...options, buildDeliveryRequest: undefined });
+  assert.equal(late.success, false); assert.match(late.error, /PROJECT_TASK_CANCELLED/);
+  assert.equal(f.spawnCalls, 0);
+  const reopened = await f.handlers.get('cmd-run')(event, { ...options, buildDeliveryRequest: undefined, projectSessionId: 'second' });
+  assert.equal(reopened.success, true);
+  f.child.emit('close', 0, null);
+});
+
+test('scoped command cancellation failure survives root close without killing its dead PID again', async () => {
+  const f = cancellationFixture({ viaIpc: true, terminate: async () => false });
+  f.api.registerCmdHandlers();
+  const owner = { isDestroyed: () => false, send() {} };
+  const scope = { projectPath: path.resolve('owned-project'), projectSessionId: 'first' };
+  await f.handlers.get('cmd-run')({ sender: owner }, { command: process.execPath, streamId: 'uncertain', cwd: os.tmpdir(), ...scope });
+  assert.equal(await f.api.killOwnerProjectCmdProcesses(owner, scope.projectPath, scope.projectSessionId), false);
+  f.child.emit('close', 0, null);
+  assert.equal(await f.api.killOwnerProjectCmdProcesses(owner, scope.projectPath, scope.projectSessionId), false);
+  assert.equal(f.killCalls, 1);
+  assert.equal(f.api.getActiveCmdProcesses().length, 1);
+});
+
 test('unrelated commands do not get a build lifecycle; invalid workspace is refused', () => {
   assert.equal(createBuildWorkspaceSupervisor(undefined), undefined);
   assert.throws(() => createBuildWorkspaceSupervisor('relative/path'), /absolute/);
@@ -322,10 +360,12 @@ test('project stop targets its owner and exact project, including commands witho
   manager.processes.set('other-tab', { ownerWebContents: other, cwd: root });
   manager.processes.set('prefix-only', { ownerWebContents: owner, cwd: `${root}-other` });
   manager.processes.set('upload', { ownerWebContents: owner, cwd: root });
+  manager.processes.set('scoped-shared-cwd', { ownerWebContents: owner, cwd: os.tmpdir(), projectPath: root, projectSessionId: 'first' });
+  manager.processes.set('other-session', { ownerWebContents: owner, cwd: root, projectPath: root, projectSessionId: 'other' });
   const stopped = [];
   manager.killProcess = async id => { stopped.push(id); return id !== 'supervised'; };
-  assert.equal(await manager.killOwnerProjectProcesses(owner, root), false);
-  assert.deepEqual(stopped, ['project', 'supervised', 'upload']);
+  assert.equal(await manager.killOwnerProjectProcesses(owner, root, 'first'), false);
+  assert.deepEqual(stopped, ['project', 'supervised', 'upload', 'scoped-shared-cwd']);
   assert.equal(await manager.killAllProcesses(), false);
   manager.processes.clear();
   assert.equal(await manager.killAllProcesses(), true);

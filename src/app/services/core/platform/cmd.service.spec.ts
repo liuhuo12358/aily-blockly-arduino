@@ -55,4 +55,69 @@ describe('CmdService command lifecycle', () => {
       buildDeliveryRequest: request, buildWorkspace: '/project', shellProfile: false,
     }));
   });
+
+  it('removes a cancelled queued project command without spawning it or dropping another project', async () => {
+    const listeners = new Map<string, (event: any) => void>();
+    const run = jasmine.createSpy('run').and.resolveTo({ success: true });
+    window['cmd'] = { run, onData: (id: string, listener: (event: any) => void) => {
+      listeners.set(id, listener); return () => listeners.delete(id);
+    } };
+    const service = new CmdService({ update() {} } as any);
+    const blocker = service.runAsync('node blocker', '/other', true, true, { streamId: 'blocker' });
+    const controller = new AbortController();
+    const cancelled = service.runAsyncChecked('npm install', '/project', true, false, {
+      projectPath: '/project', projectSessionId: 'opening-1', signal: controller.signal,
+    });
+    const rejected = expectAsync(cancelled).toBeRejectedWith(jasmine.objectContaining({ code: 'PROJECT_COMMAND_CANCELLED' }));
+    const other = service.runAsyncChecked('npm install', '/other', true, true, {
+      streamId: 'other', projectPath: '/other', projectSessionId: 'opening-2',
+    });
+    expect(service.getQueueLength()).toBe(2);
+    controller.abort();
+    await rejected;
+    expect(service.getQueueLength()).toBe(1);
+    expect(run).toHaveBeenCalledTimes(1);
+    listeners.get('blocker')!({ type: 'close', streamId: 'blocker', code: 0 });
+    await blocker;
+    expect(run).toHaveBeenCalledTimes(2);
+    expect(run.calls.mostRecent().args[0]).toEqual(jasmine.objectContaining({
+      projectPath: '/other', projectSessionId: 'opening-2',
+    }));
+    listeners.get('other')!({ type: 'close', streamId: 'other', code: 0 });
+    await other;
+    expect(listeners.size).toBe(0);
+  });
+
+  it('strips the signal from IPC and suppresses late output after cancelling an active command', async () => {
+    let listener!: (event: any) => void;
+    const removeListener = jasmine.createSpy('removeListener');
+    const run = jasmine.createSpy('run').and.resolveTo({ success: true });
+    window['cmd'] = { run, onData: (_id: string, callback: (event: any) => void) => {
+      listener = callback; return removeListener;
+    } };
+    const log = { update: jasmine.createSpy('log') };
+    const service = new CmdService(log as any);
+    const controller = new AbortController();
+    const pending = service.runAsyncChecked('npm run postinstall', '/package', false, true, {
+      streamId: 'install', projectPath: '/project', projectSessionId: 'opening', signal: controller.signal,
+    });
+    const rejected = expectAsync(pending).toBeRejectedWith(jasmine.objectContaining({ code: 'PROJECT_COMMAND_CANCELLED' }));
+    const options = run.calls.mostRecent().args[0];
+    expect(options.projectPath).toBe('/project');
+    expect(options.projectSessionId).toBe('opening');
+    expect('signal' in options).toBeFalse();
+    controller.abort();
+    await rejected;
+    listener({ type: 'stderr', streamId: 'install', data: 'late failure' });
+    listener({ type: 'close', streamId: 'install', code: 1 });
+    expect(removeListener).toHaveBeenCalledTimes(1);
+    expect(log.update).not.toHaveBeenCalled();
+    await expectAsync(service.runAsyncChecked('npm install', '/project', true, false, {
+      signal: controller.signal,
+    })).toBeRejected();
+    await expectAsync(service.runAsyncChecked('npm install', '/project', false, false, {
+      signal: controller.signal,
+    })).toBeRejected();
+    expect(run).toHaveBeenCalledTimes(1);
+  });
 });

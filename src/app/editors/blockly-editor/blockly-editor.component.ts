@@ -38,6 +38,7 @@ import {
 
 /** The libraries and toolbox are valid; the saved workspace must stay unopened. */
 class ProjectToolboxOnlyLoadError extends Error {}
+type ProjectDependencySession = ReturnType<ProjectService['getProjectDependencySession']>;
 
 @Component({
   selector: 'app-blockly-editor',
@@ -165,6 +166,7 @@ export class BlocklyEditorComponent implements OnInit, OnDestroy {
           // An old normalization/publication may finish after navigation. It must
           // neither load into nor tear down the new project's workspace/Realm.
           if (!isCurrent() || (dataSession !== null && this.projectService.currentProjectPath !== requestedProjectPath)) return;
+          if ((error as { code?: string })?.code === 'PROJECT_DEPENDENCY_CANCELLED') return;
           console.error('加载项目失败', error);
           const detail = this.formatProjectLoadError(error);
           if (error instanceof ProjectToolboxOnlyLoadError) {
@@ -258,6 +260,19 @@ export class BlocklyEditorComponent implements OnInit, OnDestroy {
   }
 
   async loadProject(projectPath, assertCurrent: () => void = () => {}) {
+    const session = this.projectService.getProjectDependencySession(projectPath);
+    const assertSession = () => {
+      assertCurrent();
+      this.projectService.assertProjectDependencySession(session);
+    };
+    try {
+      await this.projectService.runProjectDependencyTask(session, () => this.prepareProject(projectPath, session, assertSession));
+    } finally {
+      this.projectService.finishProjectDependencyPreparation(session);
+    }
+  }
+
+  private async prepareProject(projectPath: string, session: ProjectDependencySession, assertCurrent: () => void) {
     assertCurrent();
     this.stopPackageJsonDependencyWatch();
     this.clearProjectLoadedCodeRefreshTimer();
@@ -288,7 +303,7 @@ export class BlocklyEditorComponent implements OnInit, OnDestroy {
       .some(([name, version]) => version.startsWith('file:')
         && !this.isBlocklyLibraryPackageReady(projectPath, name));
     const dependenciesInstalled = hasMissingLocalLibrary
-      ? false : await this.npmService.ensureProjectDependenciesInstalled(projectPath);
+      ? false : await this.npmService.ensureProjectDependenciesInstalled(projectPath, undefined, session);
     assertCurrent();
     if (!dependenciesInstalled && !hasMissingLocalLibrary) {
       throw new Error('项目依赖安装未完成，无法继续加载 Blockly 项目。');
@@ -302,6 +317,7 @@ export class BlocklyEditorComponent implements OnInit, OnDestroy {
       // 终端进入项目目录，安装项目依赖
       // this.uiService.updateFooterState({ state: 'doing', text: this.translate.instant('BLOCKLY_EDITOR.INSTALLING_DEPS') });
       setTimeout(() => {
+        try { assertCurrent(); } catch { return; }
         this.noticeService.update({
           title: this.translate.instant('NPM.INSTALLING_TITLE'),
           text: this.translate.instant('BLOCKLY_EDITOR.INSTALLING_DEPS'),
@@ -315,8 +331,12 @@ export class BlocklyEditorComponent implements OnInit, OnDestroy {
         await this.cmdService.runAsyncChecked(
           this.configService.withProjectNpmRegistry('npm install', packageJson),
           projectPath,
+          true,
+          false,
+          session,
         );
       } catch (error) {
+        assertCurrent();
         dependencyInstallError = (error as Error)?.message || String(error);
         console.warn('[ProjectLoad] npm install failed:', error);
       }
@@ -336,6 +356,7 @@ export class BlocklyEditorComponent implements OnInit, OnDestroy {
             ? `缺失依赖：${missingDependencies.join(', ')}`
             : 'npm install 执行完成但依赖检查未通过';
           setTimeout(() => {
+            try { assertCurrent(); } catch { return; }
             this.noticeService.update({
               title: this.translate.instant('NPM.INSTALL_FAILED_TITLE'),
               text: this.translate.instant('NPM.BOARD_DEPS_INSTALL_FAILED'),
@@ -353,6 +374,7 @@ export class BlocklyEditorComponent implements OnInit, OnDestroy {
         console.error('[ProjectLoad] continuing with missing Blockly libraries:', missingLibraries);
       } else {
         setTimeout(() => {
+          try { assertCurrent(); } catch { return; }
           this.noticeService.update({
             title: this.translate.instant('NPM.INSTALL_COMPLETE_TITLE'),
             text: this.translate.instant('NPM.DEPS_INSTALL_COMPLETE'),
@@ -388,7 +410,7 @@ export class BlocklyEditorComponent implements OnInit, OnDestroy {
     ).map((item) => item.name);
     assertCurrent();
 
-    await this.blocklyService.waitForWorkspace();
+    await this.blocklyService.waitForWorkspace(session.signal);
     assertCurrent();
     this.generatorRuntime.updateContext({
       projectPath,
@@ -416,12 +438,12 @@ export class BlocklyEditorComponent implements OnInit, OnDestroy {
     const {
       document: projectDocument,
       usedBoardTemplate: usedBoardTemplateAbi,
-    } = await this.loadProjectAbiDocument(projectPath, assertCurrent);
+    } = await this.loadProjectAbiDocument(projectPath, assertCurrent, session.signal);
     assertCurrent();
 
     const missingProjectLibraries = this.getMissingProjectLibraries(projectPath, packageJson, projectDocument);
     if (missingProjectLibraries.length > 0) {
-      const restored = await this.restoreMissingProjectLibraries(projectPath, missingProjectLibraries);
+      const restored = await this.restoreMissingProjectLibraries(projectPath, missingProjectLibraries, session);
       assertCurrent();
       if (!restored) {
         this.handleMissingProjectLibrariesCancelled(missingProjectLibraries);
@@ -434,7 +456,7 @@ export class BlocklyEditorComponent implements OnInit, OnDestroy {
       assertCurrent();
     }
 
-    await this.waitForNextFrame();
+    await this.waitForNextFrame(session.signal);
     assertCurrent();
     const missingBlockDefinitions = this.blocklyService.getMissingBlockDefinitions(projectDocument);
     if (missingBlockDefinitions.length > 0) {
@@ -467,7 +489,7 @@ export class BlocklyEditorComponent implements OnInit, OnDestroy {
     this.generatorRuntime.markReady(projectPath);
     this.projectService.markBlocklyLibraryRuntimeReady(projectPath);
     this.scheduleProjectLoadedCodeRefresh();
-    void this.promptLoginForAuthRequiredBoard(projectPath);
+    void this.promptLoginForAuthRequiredBoard(projectPath, session);
 
     if (missingDeclaredLibraries.length > 0) {
       const libraryNames = missingDeclaredLibraries.join(', ');
@@ -486,17 +508,18 @@ export class BlocklyEditorComponent implements OnInit, OnDestroy {
     this.checkBlocklyOnboarding();
 
     // 7. 后台安装开发板依赖
-    this.npmService
-      .installBoardDeps()
-      .then(() => {
-        console.log('install board dependencies success');
-      })
-      .catch(() => undefined);
+    try {
+      await this.npmService.installBoardDeps(session);
+    } catch (error) {
+      assertCurrent();
+      console.error('install board dependencies error', error);
+    }
   }
 
-  private async promptLoginForAuthRequiredBoard(projectPath: string): Promise<void> {
+  private async promptLoginForAuthRequiredBoard(projectPath: string, session: ProjectDependencySession): Promise<void> {
     try {
       const boardPackageJson = await this.projectService.getBoardPackageJson();
+      this.projectService.assertProjectDependencySession(session);
       if (!boardRequiresCloudAuth(boardPackageJson)) {
         return;
       }
@@ -504,6 +527,7 @@ export class BlocklyEditorComponent implements OnInit, OnDestroy {
       const authState = this.authService.getAuthInitializationState();
       if (authState === 'idle' || authState === 'checking') {
         await this.authService.initializeAuth();
+        this.projectService.assertProjectDependencySession(session);
       }
 
       if (
@@ -523,7 +547,7 @@ export class BlocklyEditorComponent implements OnInit, OnDestroy {
     }
   }
 
-  private async loadProjectAbiDocument(projectPath: string, assertCurrent: () => void): Promise<{
+  private async loadProjectAbiDocument(projectPath: string, assertCurrent: () => void, signal?: AbortSignal): Promise<{
     document: BlocklyProjectDocument;
     usedBoardTemplate: boolean;
   }> {
@@ -531,7 +555,7 @@ export class BlocklyEditorComponent implements OnInit, OnDestroy {
     assertCurrent();
     let abiContent = await this.electronService.readFileAsync(abiPath);
     assertCurrent();
-    let projectAbi = await this.parseProjectAbiContent(abiContent);
+    let projectAbi = await this.parseProjectAbiContent(abiContent, signal);
     assertCurrent();
     projectAbi = await this.projectService.ensureProjectDataSchemaForLoad(
       projectPath,
@@ -544,7 +568,7 @@ export class BlocklyEditorComponent implements OnInit, OnDestroy {
 
     let usedBoardTemplate = false;
     if (this.hasEmptyLegacyWorkspace(projectAbi)) {
-      const boardTemplateAbi = await this.readCurrentBoardTemplateAbi(projectPath);
+      const boardTemplateAbi = await this.readCurrentBoardTemplateAbi(projectPath, signal);
       assertCurrent();
       if (boardTemplateAbi && !this.hasEmptyLegacyWorkspace(boardTemplateAbi)) {
         projectAbi = await this.projectService.ensureProjectDataSchemaForLoad(
@@ -569,7 +593,7 @@ export class BlocklyEditorComponent implements OnInit, OnDestroy {
     return Array.isArray(projectAbi?.blocks?.blocks) && projectAbi.blocks.blocks.length === 0;
   }
 
-  private async readCurrentBoardTemplateAbi(projectPath: string): Promise<any | null> {
+  private async readCurrentBoardTemplateAbi(projectPath: string, signal?: AbortSignal): Promise<any | null> {
     try {
       const boardModule = await this.projectService.getBoardModule();
       if (!boardModule) {
@@ -585,31 +609,34 @@ export class BlocklyEditorComponent implements OnInit, OnDestroy {
       }
 
       const templateContent = await this.electronService.readFileAsync(templateAbiPath);
-      return await this.parseProjectAbiContent(templateContent);
+      return await this.parseProjectAbiContent(templateContent, signal);
     } catch (error) {
+      if (signal?.aborted) throw signal.reason;
       console.warn('[ProjectAbi] failed to load board template project.abi:', error);
       return null;
     }
   }
 
-  private async parseProjectAbiContent(content: string): Promise<any> {
+  private async parseProjectAbiContent(content: string, signal?: AbortSignal): Promise<any> {
+    if (signal?.aborted) throw signal.reason;
     if (typeof Worker === 'undefined') {
-      return this.parseProjectAbiContentOnMainThread(content);
+      return this.parseProjectAbiContentOnMainThread(content, signal);
     }
 
     try {
-      return await this.parseProjectAbiContentInWorker(content);
+      return await this.parseProjectAbiContentInWorker(content, signal);
     } catch (error) {
+      if (signal?.aborted) throw signal.reason;
       if ((error as Error)?.name === 'ProjectAbiParseError') {
         throw error;
       }
 
       console.warn('[ProjectAbiParser] worker unavailable, falling back to main thread parse:', error);
-      return this.parseProjectAbiContentOnMainThread(content);
+      return this.parseProjectAbiContentOnMainThread(content, signal);
     }
   }
 
-  private parseProjectAbiContentInWorker(content: string): Promise<any> {
+  private parseProjectAbiContentInWorker(content: string, signal?: AbortSignal): Promise<any> {
     return new Promise((resolve, reject) => {
       const requestId = Date.now();
       let worker: Worker;
@@ -624,7 +651,12 @@ export class BlocklyEditorComponent implements OnInit, OnDestroy {
         return;
       }
 
-      const cleanup = () => worker.terminate();
+      const cleanup = () => {
+        worker.terminate();
+        signal?.removeEventListener('abort', onAbort);
+      };
+      const onAbort = () => { cleanup(); reject(signal?.reason); };
+      signal?.addEventListener('abort', onAbort, { once: true });
 
       worker.onmessage = (event: MessageEvent<{ id: number; data?: any; error?: string }>) => {
         const message = event.data;
@@ -657,19 +689,33 @@ export class BlocklyEditorComponent implements OnInit, OnDestroy {
     });
   }
 
-  private async parseProjectAbiContentOnMainThread(content: string): Promise<any> {
-    await this.waitForNextFrame();
+  private async parseProjectAbiContentOnMainThread(content: string, signal?: AbortSignal): Promise<any> {
+    await this.waitForNextFrame(signal);
     return JSON.parse(content);
   }
 
-  private waitForNextFrame(): Promise<void> {
-    return new Promise((resolve) => {
+  private waitForNextFrame(signal?: AbortSignal): Promise<void> {
+    return new Promise((resolve, reject) => {
+      let frame: number | undefined;
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      const onAbort = () => {
+        if (frame !== undefined) cancelAnimationFrame(frame);
+        if (timer !== undefined) clearTimeout(timer);
+        signal?.removeEventListener('abort', onAbort);
+        reject(signal?.reason);
+      };
+      const complete = () => {
+        signal?.removeEventListener('abort', onAbort);
+        resolve();
+      };
+      if (signal?.aborted) { onAbort(); return; }
+      signal?.addEventListener('abort', onAbort, { once: true });
       if (typeof requestAnimationFrame === 'function') {
-        requestAnimationFrame(() => resolve());
+        frame = requestAnimationFrame(complete);
         return;
       }
 
-      setTimeout(resolve, 0);
+      timer = setTimeout(complete, 0);
     });
   }
 
@@ -1425,8 +1471,9 @@ export class BlocklyEditorComponent implements OnInit, OnDestroy {
     return this.electronService.pathJoin(projectPath, filePath);
   }
 
-  private async restoreMissingProjectLibraries(projectPath: string, missingLibraries: MissingLibInfo[]): Promise<boolean> {
+  private async restoreMissingProjectLibraries(projectPath: string, missingLibraries: MissingLibInfo[], session: ProjectDependencySession): Promise<boolean> {
     try {
+      this.projectService.assertProjectDependencySession(session);
       await new Promise<void>((resolve, reject) => {
         const modalRef = this.modal.create({
           nzTitle: null,
@@ -1442,13 +1489,19 @@ export class BlocklyEditorComponent implements OnInit, OnDestroy {
               : '项目中仍在使用以下积木库，但 package.json 或 node_modules 中已缺失。需要先恢复库，再加载项目。',
             confirmText: '恢复并加载项目',
             installFn: async (libs: MissingLibInfo[]) => {
-              await this.installMissingBlocklyLibraries(projectPath, libs);
+              await this.projectService.runProjectDependencyTask(session, () => this.installMissingBlocklyLibraries(projectPath, libs, session));
             },
           },
           nzWidth: '450px',
         });
 
+        const onAbort = () => {
+          modalRef.destroy();
+          try { this.projectService.assertProjectDependencySession(session); } catch (error) { reject(error); }
+        };
+        session.signal.addEventListener('abort', onAbort, { once: true });
         modalRef.afterClose.subscribe((result: any) => {
+          session.signal.removeEventListener('abort', onAbort);
           if (result?.result === 'installed') {
             resolve();
           } else {
@@ -1456,8 +1509,10 @@ export class BlocklyEditorComponent implements OnInit, OnDestroy {
           }
         });
       });
+      this.projectService.assertProjectDependencySession(session);
       return true;
     } catch (error) {
+      this.projectService.assertProjectDependencySession(session);
       if ((error as Error)?.message !== 'cancelled') {
         console.error('恢复项目缺失库失败:', error);
       }
@@ -1465,7 +1520,8 @@ export class BlocklyEditorComponent implements OnInit, OnDestroy {
     }
   }
 
-  private async installMissingBlocklyLibraries(projectPath: string, libraries: MissingLibInfo[]): Promise<void> {
+  private async installMissingBlocklyLibraries(projectPath: string, libraries: MissingLibInfo[], session: ProjectDependencySession): Promise<void> {
+    this.projectService.assertProjectDependencySession(session);
     const localLibraries = libraries.filter((lib) => lib.localPath);
     const npmLibraries = libraries.filter((lib) => !lib.localPath);
 
@@ -1488,11 +1544,14 @@ export class BlocklyEditorComponent implements OnInit, OnDestroy {
       if (lib.localPath !== destPath) {
         if (this.electronService.exists(destPath)) {
           await this.crossPlatformCmdService.removeItem(destPath, true, true);
+          this.projectService.assertProjectDependencySession(session);
         }
         await this.crossPlatformCmdService.copyItem(lib.localPath, destPath, true, true);
+        this.projectService.assertProjectDependencySession(session);
       }
 
-      await this.cmdService.runAsyncChecked(`npm install "${destPath}"`, projectPath);
+      await this.cmdService.runAsyncChecked(`npm install "${destPath}"`, projectPath, true, false, session);
+      this.projectService.assertProjectDependencySession(session);
     }
 
     if (npmLibraries.length > 0) {
@@ -1504,11 +1563,16 @@ export class BlocklyEditorComponent implements OnInit, OnDestroy {
           this.projectService.currentPackageData,
         ),
         projectPath,
+        true,
+        false,
+        session,
       );
+      this.projectService.assertProjectDependencySession(session);
     }
 
     for (const lib of libraries) {
       await this.blocklyService.loadLibrary(lib.name, projectPath);
+      this.projectService.assertProjectDependencySession(session);
     }
   }
 

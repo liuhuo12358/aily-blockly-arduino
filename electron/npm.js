@@ -2,6 +2,7 @@
 const { ipcMain } = require("electron");
 const { spawn } = require('child_process');
 const { killRegisteredProcessTree } = require('./process-tree');
+const { assertProjectTaskActive, matchesProjectTask } = require('./project-task-scope');
 
 const activeNpmProcesses = new Map();
 let npmShutdown = false;
@@ -148,6 +149,7 @@ function logNpmOutput(type, output, mainWindow, sourceId) {
 function runNpmCommand(entry, option, mainWindow) {
     return new Promise((resolve, reject) => {
         const { cmd, sourceId } = entry;
+        assertProjectTaskActive(entry.ownerWebContents, entry);
         const child = spawn(cmd, {
             shell: true,
             windowsHide: true,
@@ -196,6 +198,7 @@ function runNpmCommand(entry, option, mainWindow) {
         child.once('close', (code, signal) => {
             entry.closed = true;
             entry.completedNormally = Number.isInteger(code) && !signal;
+            if (!entry.completedNormally && child.pid && !processError) entry.terminationUnconfirmed = true;
             if (entry.cancelled) return reject(new Error('NPM_COMMAND_CANCELLED'));
             if (processError) return option?.ignoreErr ? resolve(false) : reject(processError);
             if (code !== 0) {
@@ -239,13 +242,15 @@ async function runNpmWithRetries(entry, option, mainWindow) {
 }
 
 function registerNpmHandlers(mainWindow) {
-    ipcMain.handle('npm-run', async (event, { cmd, option = {} }) => {
+    ipcMain.handle('npm-run', async (event, { cmd, option = {}, projectPath, projectSessionId }) => {
         if (npmShutdown) throw new Error('NPM_SHUTDOWN_IN_PROGRESS');
         if (event.sender.isDestroyed()) throw new Error('NPM_OWNER_DESTROYED');
+        assertProjectTaskActive(event.sender, { projectPath, projectSessionId });
         cmd = ensureForegroundScripts(cmd);
         console.log('npm run cmd: ', cmd);
         const sourceId = `npm_${Date.now()}_${Math.random().toString(36).slice(2)}`;
         const entry = { sourceId, cmd, startedAt: Date.now(), closed: true,
+            ownerWebContents: event.sender, projectPath, projectSessionId,
             retryAbort: new AbortController(), cancelled: false, stopRequested: false };
         activeNpmProcesses.set(sourceId, entry);
         const owner = event.sender;
@@ -263,7 +268,7 @@ function registerNpmHandlers(mainWindow) {
             owner.removeListener('render-process-gone', onDestroyed);
             owner.removeListener('destroyed', onDestroyed);
             // Keep in-flight cancellation registered until its tree result arrives.
-            if (!entry.stopRequested) releaseNpmEntry(entry);
+            if (!entry.stopRequested && !entry.terminationUnconfirmed) releaseNpmEntry(entry);
         }
     });
 }
@@ -278,13 +283,15 @@ async function stopNpmEntry(entry) {
     entry.retryAbort.abort();
     // A closed PID may have been reused. Do not target it during a retry wait.
     if (entry.closed) {
+        if (entry.terminationUnconfirmed) return false;
         releaseNpmEntry(entry);
         return true;
     }
     entry.stopRequested = true;
     entry.stopPromise = (async () => {
         const stopped = await killRegisteredProcessTree(entry.process?.pid, `npm:${entry.sourceId}`).catch(() => false);
-        if (stopped || entry.closed) releaseNpmEntry(entry);
+        entry.terminationUnconfirmed = !stopped;
+        if (stopped) releaseNpmEntry(entry);
         entry.stopRequested = false;
         return stopped;
     })();
@@ -308,9 +315,17 @@ async function killAllNpmProcesses() {
     return results.every(Boolean);
 }
 
+async function killOwnerProjectNpmProcesses(owner, projectPath, projectSessionId) {
+    const entries = [...activeNpmProcesses.values()]
+        .filter(entry => matchesProjectTask(entry, owner, projectPath, projectSessionId));
+    const results = await Promise.all(entries.map(stopNpmEntry));
+    return results.every(Boolean);
+}
+
 module.exports = {
     registerNpmHandlers,
     killAllNpmProcesses,
+    killOwnerProjectNpmProcesses,
     getActiveNpmProcesses,
     beginNpmShutdown: () => { npmShutdown = true; },
 };
